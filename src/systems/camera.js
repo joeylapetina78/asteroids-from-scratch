@@ -1,34 +1,45 @@
-const MAX_SHIP_OFFSET = 96;
-const OFFSET_SPEED = 360;
-const OFFSET_CURVE = 0.42;
+const SPRING_STRENGTH = 18;
+const SPRING_DAMPING = 5.4;
+const MAX_SHIP_OFFSET = 150;
 
 export function createCamera(canvas) {
   return {
     x: 0,
     y: 0,
+    centerX: 0,
+    centerY: 0,
+    velocityX: 0,
+    velocityY: 0,
 
-    follow(target) {
-      const lookAhead = getStylizedLookAhead(target.velocity);
+    follow(target, deltaSeconds) {
+      const displacementX = target.position.x - this.centerX;
+      const displacementY = target.position.y - this.centerY;
+      const accelerationX = displacementX * SPRING_STRENGTH - this.velocityX * SPRING_DAMPING;
+      const accelerationY = displacementY * SPRING_STRENGTH - this.velocityY * SPRING_DAMPING;
 
-      this.x = target.position.x + lookAhead.x - canvas.width / 2;
-      this.y = target.position.y + lookAhead.y - canvas.height / 2;
+      this.velocityX += accelerationX * deltaSeconds;
+      this.velocityY += accelerationY * deltaSeconds;
+      this.centerX += this.velocityX * deltaSeconds;
+      this.centerY += this.velocityY * deltaSeconds;
+
+      this.keepShipNearCenter(target);
+
+      this.x = this.centerX - canvas.width / 2;
+      this.y = this.centerY - canvas.height / 2;
     },
-  };
-}
 
-function getStylizedLookAhead(velocity) {
-  const speed = Math.hypot(velocity.x, velocity.y);
+    keepShipNearCenter(target) {
+      const offsetX = target.position.x - this.centerX;
+      const offsetY = target.position.y - this.centerY;
+      const offsetDistance = Math.hypot(offsetX, offsetY);
 
-  if (speed === 0) {
-    return { x: 0, y: 0 };
-  }
+      if (offsetDistance <= MAX_SHIP_OFFSET) {
+        return;
+      }
 
-  const speedRatio = Math.min(speed / OFFSET_SPEED, 1);
-  const offsetDistance = Math.pow(speedRatio, OFFSET_CURVE) * MAX_SHIP_OFFSET;
-  const scale = offsetDistance / speed;
-
-  return {
-    x: velocity.x * scale,
-    y: velocity.y * scale,
+      const scale = MAX_SHIP_OFFSET / offsetDistance;
+      this.centerX = target.position.x - offsetX * scale;
+      this.centerY = target.position.y - offsetY * scale;
+    },
   };
 }

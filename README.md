@@ -22,8 +22,8 @@ Then open `http://127.0.0.1:8123/`.
 
 ## Current Slice
 
-The ship can rotate, thrust, coast, and brake. The ship moves through world space while the camera follows it, so the grid scrolls underneath the player.
+The ship can rotate, thrust, coast, brake, and fire. The ship moves through world space while a springy camera follows it, so the grid scrolls underneath the player with a little lag and catch-up.
 
 Asteroids are generated from an invisible resource field. Dense regions contain more asteroids, and resource mixes influence color and size.
 
-Next likely milestone: add a scanner that points toward nearby asteroids.
+Next likely milestone: add a scanner that points toward nearby asteroids, or make bullets collide with mineable rocks.

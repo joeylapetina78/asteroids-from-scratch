@@ -43,7 +43,7 @@ export class Game {
     this.bullets.forEach((bullet) => bullet.update(deltaSeconds));
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
     this.asteroids.forEach((asteroid) => asteroid.update(deltaSeconds));
-    this.camera.follow(this.ship);
+    this.camera.follow(this.ship, deltaSeconds);
     this.input.finishFrame();
   }
 
