@@ -1,6 +1,7 @@
 import { createRandomAsteroid } from "../entities/Asteroid.js";
+import { createRandom, hashNumbers, randomRange } from "./random.js";
 
-export function createAsteroidField(canvas) {
+export function createAsteroidField(canvas, resourceField) {
   const asteroids = [];
   const cellSize = canvas.width;
   const cellRadius = 4;
@@ -11,15 +12,37 @@ export function createAsteroidField(canvas) {
         continue;
       }
 
-      const x = cellX * cellSize + randomRange(-cellSize * 0.35, cellSize * 0.35);
-      const y = cellY * cellSize + randomRange(-cellSize * 0.35, cellSize * 0.35);
-      asteroids.push(createRandomAsteroid(x, y));
+      const cellSeed = hashNumbers(42, cellX, cellY);
+      const random = createRandom(cellSeed);
+      const centerX = cellX * cellSize;
+      const centerY = cellY * cellSize;
+      const profile = resourceField.getProfile(centerX, centerY);
+      const asteroidCount = getAsteroidCount(profile.density, random);
+
+      for (let index = 0; index < asteroidCount; index += 1) {
+        const x = centerX + randomRange(random, -cellSize * 0.42, cellSize * 0.42);
+        const y = centerY + randomRange(random, -cellSize * 0.42, cellSize * 0.42);
+        const asteroidProfile = resourceField.getProfile(x, y);
+        asteroids.push(createRandomAsteroid(x, y, asteroidProfile, hashNumbers(cellSeed, index)));
+      }
     }
   }
 
   return asteroids;
 }
 
-function randomRange(min, max) {
-  return min + Math.random() * (max - min);
+function getAsteroidCount(density, random) {
+  if (density < 0.3) {
+    return random() < 0.35 ? 1 : 0;
+  }
+
+  if (density < 0.55) {
+    return random() < 0.75 ? 1 : 2;
+  }
+
+  if (density < 0.78) {
+    return 2 + Math.floor(random() * 2);
+  }
+
+  return 3 + Math.floor(random() * 3);
 }

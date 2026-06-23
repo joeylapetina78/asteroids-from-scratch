@@ -1,16 +1,19 @@
+import { createRandom, randomRange } from "../systems/random.js";
+
 const SPRING_STRENGTH = 0.012;
 const DRIFT_DAMPING = 0.999;
 
 export class Asteroid {
-  constructor({ x, y, radius, color, points, velocity }) {
+  constructor({ x, y, radius, color, resources, points, velocity, rotation, rotationSpeed }) {
     this.origin = { x, y };
     this.position = { x, y };
     this.velocity = velocity;
     this.radius = radius;
     this.color = color;
+    this.resources = resources;
     this.points = points;
-    this.rotation = Math.random() * Math.PI * 2;
-    this.rotationSpeed = randomRange(-0.25, 0.25);
+    this.rotation = rotation;
+    this.rotationSpeed = rotationSpeed;
   }
 
   update(deltaSeconds) {
@@ -58,15 +61,16 @@ export class Asteroid {
   }
 }
 
-export function createRandomAsteroid(x, y) {
-  const radius = randomRange(34, 92);
-  const pointCount = Math.floor(randomRange(8, 15));
+export function createRandomAsteroid(x, y, profile, seed) {
+  const random = createRandom(seed);
+  const radius = randomRange(random, 30, 72) + profile.richness * 26;
+  const pointCount = Math.floor(randomRange(random, 8, 15));
   const points = [];
 
   for (let index = 0; index < pointCount; index += 1) {
     points.push({
       angle: (Math.PI * 2 * index) / pointCount,
-      distance: radius * randomRange(0.68, 1.18),
+      distance: radius * randomRange(random, 0.68, 1.18),
     });
   }
 
@@ -74,20 +78,14 @@ export function createRandomAsteroid(x, y) {
     x,
     y,
     radius,
-    color: randomColor(),
+    color: profile.color,
+    resources: profile.resources,
     points,
     velocity: {
-      x: randomRange(-10, 10),
-      y: randomRange(-10, 10),
+      x: randomRange(random, -10, 10),
+      y: randomRange(random, -10, 10),
     },
+    rotation: random() * Math.PI * 2,
+    rotationSpeed: randomRange(random, -0.25, 0.25),
   });
-}
-
-function randomColor() {
-  const colors = ["#5cc8ff", "#ffcc66", "#ff7a90", "#9dff8a", "#d99cff", "#ffffff"];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
-
-function randomRange(min, max) {
-  return min + Math.random() * (max - min);
 }

@@ -3,6 +3,7 @@ import { createAsteroidField } from "./systems/asteroidField.js";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
+import { createResourceField } from "./systems/resourceField.js";
 
 export class Game {
   constructor(canvas) {
@@ -11,7 +12,8 @@ export class Game {
     this.input = createInput();
     this.camera = createCamera(canvas);
     this.ship = new Ship(0, 0);
-    this.asteroids = createAsteroidField(canvas);
+    this.resourceField = createResourceField();
+    this.asteroids = createAsteroidField(canvas, this.resourceField);
     this.lastFrameTime = 0;
   }
 
