@@ -21,6 +21,6 @@ Then open `http://127.0.0.1:8123/`.
 
 ## Current Slice
 
-The ship can rotate, thrust, coast, brake, and wrap around the screen edges.
+The ship can rotate, thrust, coast, and brake. The ship moves through world space while the camera follows it, so the grid scrolls underneath the player.
 
 Next likely milestone: add bullets.

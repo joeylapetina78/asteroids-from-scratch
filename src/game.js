@@ -1,4 +1,5 @@
 import { Ship } from "./entities/Ship.js";
+import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js";
 import { clearScreen, drawGrid, drawVector } from "./systems/rendering.js";
 
@@ -7,7 +8,8 @@ export class Game {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
     this.input = createInput();
-    this.ship = new Ship(canvas.width / 2, canvas.height / 2);
+    this.camera = createCamera(canvas);
+    this.ship = new Ship(0, 0);
     this.lastFrameTime = 0;
   }
 
@@ -26,13 +28,14 @@ export class Game {
   }
 
   update(deltaSeconds) {
-    this.ship.update(deltaSeconds, this.input, this.canvas);
+    this.ship.update(deltaSeconds, this.input);
+    this.camera.follow(this.ship);
   }
 
   draw() {
     clearScreen(this.context, this.canvas);
-    drawGrid(this.context, this.canvas);
-    drawVector(this.context, this.ship.position, this.ship.velocity);
-    this.ship.draw(this.context);
+    drawGrid(this.context, this.canvas, this.camera);
+    drawVector(this.context, this.ship.position, this.ship.velocity, this.camera);
+    this.ship.draw(this.context, this.camera);
   }
 }

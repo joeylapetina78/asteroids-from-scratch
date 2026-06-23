@@ -2,7 +2,6 @@ const ROTATION_SPEED = 4.5;
 const THRUST_POWER = 280;
 const BRAKE_DRAG = 0.92;
 const SPACE_DRAG = 0.995;
-const SHIP_RADIUS = 18;
 
 export class Ship {
   constructor(x, y) {
@@ -12,7 +11,7 @@ export class Ship {
     this.isThrusting = false;
   }
 
-  update(deltaSeconds, input, bounds) {
+  update(deltaSeconds, input) {
     if (input.isDown("KeyA")) {
       this.angle -= ROTATION_SPEED * deltaSeconds;
     }
@@ -37,27 +36,14 @@ export class Ship {
 
     this.position.x += this.velocity.x * deltaSeconds;
     this.position.y += this.velocity.y * deltaSeconds;
-
-    this.wrapAround(bounds);
   }
 
-  wrapAround(bounds) {
-    if (this.position.x < -SHIP_RADIUS) {
-      this.position.x = bounds.width + SHIP_RADIUS;
-    } else if (this.position.x > bounds.width + SHIP_RADIUS) {
-      this.position.x = -SHIP_RADIUS;
-    }
+  draw(context, camera) {
+    const screenX = this.position.x - camera.x;
+    const screenY = this.position.y - camera.y;
 
-    if (this.position.y < -SHIP_RADIUS) {
-      this.position.y = bounds.height + SHIP_RADIUS;
-    } else if (this.position.y > bounds.height + SHIP_RADIUS) {
-      this.position.y = -SHIP_RADIUS;
-    }
-  }
-
-  draw(context) {
     context.save();
-    context.translate(this.position.x, this.position.y);
+    context.translate(screenX, screenY);
     context.rotate(this.angle);
 
     context.lineWidth = 2;
