@@ -18,6 +18,7 @@ Then open `http://127.0.0.1:8123/`.
 - D: rotate right
 - W: thrust
 - S: brake
+- Space: fire
 
 ## Current Slice
 

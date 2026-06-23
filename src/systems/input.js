@@ -1,10 +1,15 @@
 export function createInput() {
   const pressedKeys = new Set();
-  const gameKeys = new Set(["KeyA", "KeyD", "KeyW", "KeyS"]);
+  const justPressedKeys = new Set();
+  const gameKeys = new Set(["KeyA", "KeyD", "KeyW", "KeyS", "Space"]);
 
   window.addEventListener("keydown", (event) => {
     if (gameKeys.has(event.code)) {
       event.preventDefault();
+    }
+
+    if (!pressedKeys.has(event.code)) {
+      justPressedKeys.add(event.code);
     }
 
     pressedKeys.add(event.code);
@@ -17,6 +22,14 @@ export function createInput() {
   return {
     isDown(code) {
       return pressedKeys.has(code);
+    },
+
+    wasPressed(code) {
+      return justPressedKeys.has(code);
+    },
+
+    finishFrame() {
+      justPressedKeys.clear();
     },
   };
 }
