@@ -1,6 +1,6 @@
 const BULLET_SPEED = 620;
 const BULLET_LIFETIME = 1.4;
-const BULLET_RADIUS = 3;
+const BULLET_RADIUS = 1.25;
 
 export class Bullet {
   constructor(ship) {
@@ -31,9 +31,7 @@ export class Bullet {
     const screenY = this.position.y - camera.y;
 
     context.save();
-    context.fillStyle = "#ffef99";
-    context.shadowColor = "#ffef99";
-    context.shadowBlur = 8;
+    context.fillStyle = "#ffffff";
     context.beginPath();
     context.arc(screenX, screenY, BULLET_RADIUS, 0, Math.PI * 2);
     context.fill();
