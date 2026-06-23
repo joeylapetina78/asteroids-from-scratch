@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Asteroids From Scratch</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <section class="hud" aria-label="Game status">
+        <div>
+          <strong>Asteroids</strong>
+          <span>first playable slice</span>
+        </div>
+        <div class="controls">
+          <span>Left/Right: rotate</span>
+          <span>Up: thrust</span>
+          <span>Space: brake</span>
+        </div>
+      </section>
+
+      <canvas id="game" width="960" height="540" aria-label="Asteroids game canvas"></canvas>
+    </main>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
