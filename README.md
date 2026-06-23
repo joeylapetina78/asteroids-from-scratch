@@ -14,10 +14,10 @@ Then open `http://127.0.0.1:8123/`.
 
 ## Controls
 
-- Left arrow: rotate left
-- Right arrow: rotate right
-- Up arrow: thrust
-- Space: brake
+- A: rotate left
+- D: rotate right
+- W: thrust
+- S: brake
 
 ## Current Slice
 

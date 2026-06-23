@@ -29,3 +29,10 @@ The ship has state:
 - `isThrusting`: whether to draw the flame.
 
 The first rule of keeping a project understandable is that each file should have one obvious job.
+
+## Controls
+
+- `A` rotates left.
+- `D` rotates right.
+- `W` thrusts.
+- `S` brakes.
