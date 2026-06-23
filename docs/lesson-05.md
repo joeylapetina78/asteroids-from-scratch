@@ -1,22 +1,22 @@
-# Lesson 05: Camera Feel and Ship Stretch
+# Lesson 05: Camera Feel
 
 The camera no longer follows the exact center of the ship.
 
-Instead, it looks a little ahead in the direction of travel:
+Instead, it looks ahead in the direction of travel. Because the camera looks ahead, the ship appears slightly behind the center of the screen. That gives movement a stronger sense of speed and weight.
 
 ```js
-lookAhead.x = ship.velocity.x * LOOK_AHEAD_SECONDS;
-lookAhead.y = ship.velocity.y * LOOK_AHEAD_SECONDS;
+const speedRatio = Math.min(speed / OFFSET_SPEED, 1);
+const offsetDistance = Math.pow(speedRatio, OFFSET_CURVE) * MAX_SHIP_OFFSET;
 ```
 
-Because the camera looks ahead, the ship appears slightly behind the center of the screen. That gives the movement a stronger sense of speed and weight.
+The important design choice is the curve.
 
-The look-ahead is clamped so the ship never gets pushed too far from the center.
+Linear movement would spend a lot of time in the middle of the offset range. This version uses an exponent below `1`, which pushes the visible offset outward sooner and makes the ship spend more time near the expressive extremes.
 
-The ship also gets a subtle stretch at higher speeds:
+The ship itself does not change shape. The feel comes from the relationship between:
 
-```js
-context.scale(1 + stretch, 1 - stretch * 0.45);
-```
+- the ship's real world position
+- the camera's look-ahead position
+- the screen center
 
-This is visual only. It does not change the ship's real position, collision shape, or physics. That distinction matters: game feel can be layered on top of the simulation without making the simulation harder to reason about.
+This is still visual only. It does not change the ship's real position, collision shape, or physics. That distinction matters: game feel can be layered on top of the simulation without making the simulation harder to reason about.
