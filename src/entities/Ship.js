@@ -14,7 +14,7 @@ export class Ship {
 
   update(deltaSeconds, input) {
     if (!this.state.isPowered) {
-      this.isThrusting = false;
+      this.stopThrusting();
       return;
     }
 
@@ -42,6 +42,10 @@ export class Ship {
 
     this.position.x += this.velocity.x * deltaSeconds;
     this.position.y += this.velocity.y * deltaSeconds;
+  }
+
+  stopThrusting() {
+    this.isThrusting = false;
   }
 
   draw(context, camera) {

@@ -1,4 +1,4 @@
-import { Game } from "./game.js";
+import { Game } from "./game.js?v=power-control";
 import { createGameState } from "./state/gameState.js";
 
 const canvas = document.querySelector("#game");
@@ -14,7 +14,7 @@ function updateShipPowerDisplay() {
 }
 
 powerButton.addEventListener("click", () => {
-  state.ship.isPowered = !state.ship.isPowered;
+  game.setShipPowered(!state.ship.isPowered);
   updateShipPowerDisplay();
 });
 

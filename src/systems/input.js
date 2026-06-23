@@ -28,6 +28,13 @@ export function createInput() {
       return justPressedKeys.has(code);
     },
 
+    clearGameKeys() {
+      gameKeys.forEach((code) => {
+        pressedKeys.delete(code);
+        justPressedKeys.delete(code);
+      });
+    },
+
     finishFrame() {
       justPressedKeys.clear();
     },

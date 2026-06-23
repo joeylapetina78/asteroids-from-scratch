@@ -1,8 +1,8 @@
 import { Bullet } from "./entities/Bullet.js";
-import { Ship } from "./entities/Ship.js";
+import { Ship } from "./entities/Ship.js?v=power-control";
 import { createAsteroidField } from "./systems/asteroidField.js";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js";
+import { createInput } from "./systems/input.js?v=power-control";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
 import { createGameState } from "./state/gameState.js";
@@ -28,6 +28,16 @@ export class Game {
     requestAnimationFrame((time) => this.frame(time));
   }
 
+  setShipPowered(isPowered) {
+    this.state.ship.isPowered = isPowered;
+
+    if (!isPowered) {
+      this.input.clearGameKeys();
+      this.fireCooldown = 0;
+      this.ship.stopThrusting();
+    }
+  }
+
   frame(time) {
     const deltaSeconds = Math.min((time - this.lastFrameTime) / 1000, 0.05);
     this.lastFrameTime = time;
@@ -39,6 +49,10 @@ export class Game {
   }
 
   update(deltaSeconds) {
+    if (!this.state.ship.isPowered) {
+      this.input.clearGameKeys();
+    }
+
     this.fireCooldown = Math.max(0, this.fireCooldown - deltaSeconds);
     this.ship.update(deltaSeconds, this.input);
     this.updateShooting();

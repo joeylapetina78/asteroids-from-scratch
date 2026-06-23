@@ -14,7 +14,8 @@ The page reads and writes that state. The game simulation also reads that state.
 For ship power:
 
 - `main.js` listens for clicks on the HTML button
-- the click toggles `state.ship.isPowered`
+- the click asks `Game` to change ship power
+- `Game` toggles `state.ship.isPowered` and clears active controls when power goes off
 - `Game` passes `state.ship` into the `Ship`
 - `Ship.update()` ignores controls while power is off
 - `Ship.draw()` changes color based on power
@@ -27,4 +28,4 @@ This is the pattern we can reuse later for bigger ideas:
 - buttons power systems on and off
 - collection systems add resources into shared inventory
 
-The important design boundary is that the button does not directly move the ship. It changes game state, and the ship decides what that means.
+The important design boundary is that the button does not directly move the ship. It asks the game to change power, and the game decides which state and input cleanup belong to that action.
