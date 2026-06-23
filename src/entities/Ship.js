@@ -2,6 +2,8 @@ const ROTATION_SPEED = 4.5;
 const THRUST_POWER = 280;
 const BRAKE_DRAG = 0.92;
 const SPACE_DRAG = 0.995;
+const STRETCH_SPEED = 520;
+const MAX_STRETCH = 0.16;
 
 export class Ship {
   constructor(x, y) {
@@ -45,6 +47,7 @@ export class Ship {
     context.save();
     context.translate(screenX, screenY);
     context.rotate(this.angle);
+    this.applySpeedStretch(context);
 
     context.lineWidth = 2;
     context.strokeStyle = "#f5f7fb";
@@ -69,5 +72,12 @@ export class Ship {
     }
 
     context.restore();
+  }
+
+  applySpeedStretch(context) {
+    const speed = Math.hypot(this.velocity.x, this.velocity.y);
+    const stretch = Math.min(speed / STRETCH_SPEED, 1) * MAX_STRETCH;
+
+    context.scale(1 + stretch, 1 - stretch * 0.45);
   }
 }
