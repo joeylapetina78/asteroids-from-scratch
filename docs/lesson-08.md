@@ -17,7 +17,7 @@ For ship power:
 - the click asks `Game` to change ship power
 - `Game` toggles `state.ship.isPowered` and clears active controls when power goes off
 - `Game` passes `state.ship` into the `Ship`
-- `Ship.update()` ignores controls while power is off
+- `Ship.update()` ignores controls while power is off, but still lets the ship drift
 - `Ship.draw()` changes color based on power
 - shooting also checks ship power before firing
 

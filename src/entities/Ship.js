@@ -15,26 +15,25 @@ export class Ship {
   update(deltaSeconds, input) {
     if (!this.state.isPowered) {
       this.stopThrusting();
-      return;
-    }
+    } else {
+      if (input.isDown("KeyA")) {
+        this.angle -= ROTATION_SPEED * deltaSeconds;
+      }
 
-    if (input.isDown("KeyA")) {
-      this.angle -= ROTATION_SPEED * deltaSeconds;
-    }
+      if (input.isDown("KeyD")) {
+        this.angle += ROTATION_SPEED * deltaSeconds;
+      }
 
-    if (input.isDown("KeyD")) {
-      this.angle += ROTATION_SPEED * deltaSeconds;
-    }
+      this.isThrusting = input.isDown("KeyW");
+      if (this.isThrusting) {
+        this.velocity.x += Math.cos(this.angle) * THRUST_POWER * deltaSeconds;
+        this.velocity.y += Math.sin(this.angle) * THRUST_POWER * deltaSeconds;
+      }
 
-    this.isThrusting = input.isDown("KeyW");
-    if (this.isThrusting) {
-      this.velocity.x += Math.cos(this.angle) * THRUST_POWER * deltaSeconds;
-      this.velocity.y += Math.sin(this.angle) * THRUST_POWER * deltaSeconds;
-    }
-
-    if (input.isDown("KeyS")) {
-      this.velocity.x *= BRAKE_DRAG;
-      this.velocity.y *= BRAKE_DRAG;
+      if (input.isDown("KeyS")) {
+        this.velocity.x *= BRAKE_DRAG;
+        this.velocity.y *= BRAKE_DRAG;
+      }
     }
 
     this.velocity.x *= SPACE_DRAG;
