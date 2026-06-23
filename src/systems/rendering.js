@@ -44,6 +44,19 @@ export function drawVector(context, position, velocity, camera) {
   context.restore();
 }
 
+export function isVisible(entity, canvas, camera) {
+  const margin = entity.radius ?? 0;
+  const screenX = entity.position.x - camera.x;
+  const screenY = entity.position.y - camera.y;
+
+  return (
+    screenX > -margin &&
+    screenX < canvas.width + margin &&
+    screenY > -margin &&
+    screenY < canvas.height + margin
+  );
+}
+
 function positiveModulo(value, size) {
   return ((value % size) + size) % size;
 }
