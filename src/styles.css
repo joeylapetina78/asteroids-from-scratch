@@ -47,6 +47,27 @@ body {
   gap: 10px;
 }
 
+.power-button {
+  border: 1px solid #4b5566;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: #191c22;
+  color: #f5f7fb;
+  cursor: pointer;
+  font: inherit;
+}
+
+.power-button:hover {
+  border-color: #7f8aa3;
+  background: #222733;
+}
+
+.power-button[aria-pressed="true"] {
+  border-color: #f5f7fb;
+  background: #f5f7fb;
+  color: #07080c;
+}
+
 canvas {
   width: 100%;
   aspect-ratio: 16 / 9;

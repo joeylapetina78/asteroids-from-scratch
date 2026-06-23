@@ -5,16 +5,18 @@ import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
+import { createGameState } from "./state/gameState.js";
 
 const FIRE_COOLDOWN_SECONDS = 0.18;
 
 export class Game {
-  constructor(canvas) {
+  constructor(canvas, state = createGameState()) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
+    this.state = state;
     this.input = createInput();
     this.camera = createCamera(canvas);
-    this.ship = new Ship(0, 0);
+    this.ship = new Ship(0, 0, state.ship);
     this.resourceField = createResourceField();
     this.asteroids = createAsteroidField(canvas, this.resourceField);
     this.bullets = [];
@@ -50,7 +52,7 @@ export class Game {
   updateShooting() {
     const wantsToFire = this.input.wasPressed("Space") || this.input.isDown("Space");
 
-    if (!wantsToFire || this.fireCooldown > 0) {
+    if (!this.state.ship.isPowered || !wantsToFire || this.fireCooldown > 0) {
       return;
     }
 

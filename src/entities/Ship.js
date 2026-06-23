@@ -4,14 +4,20 @@ const BRAKE_DRAG = 0.92;
 const SPACE_DRAG = 0.995;
 
 export class Ship {
-  constructor(x, y) {
+  constructor(x, y, state) {
     this.position = { x, y };
     this.velocity = { x: 0, y: 0 };
     this.angle = -Math.PI / 2;
+    this.state = state;
     this.isThrusting = false;
   }
 
   update(deltaSeconds, input) {
+    if (!this.state.isPowered) {
+      this.isThrusting = false;
+      return;
+    }
+
     if (input.isDown("KeyA")) {
       this.angle -= ROTATION_SPEED * deltaSeconds;
     }
@@ -47,8 +53,8 @@ export class Ship {
     context.rotate(this.angle);
 
     context.lineWidth = 2;
-    context.strokeStyle = "#f5f7fb";
-    context.fillStyle = "#07080c";
+    context.strokeStyle = this.state.isPowered ? "#f5f7fb" : "#555b66";
+    context.fillStyle = this.state.isPowered ? "#f5f7fb" : "#20242b";
 
     context.beginPath();
     context.moveTo(22, 0);
