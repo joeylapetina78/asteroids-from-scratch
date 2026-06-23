@@ -1,4 +1,4 @@
-const BULLET_SPEED = 620;
+const BULLET_SPEED = 500;
 const BULLET_LIFETIME = 1.4;
 const BULLET_RADIUS = 1.25;
 
