@@ -119,7 +119,7 @@ body {
 }
 
 .processor-panel {
-  margin-top: 0;
+  padding-top: 132px;
 }
 
 .processor-title {
@@ -178,6 +178,7 @@ body {
 
   .processor-panel {
     margin-top: 16px;
+    padding-top: 0;
     order: 2;
   }
 
