@@ -68,6 +68,17 @@ body {
   color: #07080c;
 }
 
+.inventory-summary {
+  min-width: 104px;
+  border: 1px solid #333846;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: #0c0e13;
+  color: #f5f7fb;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 canvas {
   width: 100%;
   aspect-ratio: 16 / 9;

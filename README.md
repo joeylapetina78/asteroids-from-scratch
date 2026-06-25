@@ -23,7 +23,7 @@ Then open `http://127.0.0.1:8123/`.
 
 ## Current Slice
 
-The page has a ship power button that changes shared game state. When powered off, the ship is dark and cannot move or fire. When powered on, the ship turns white and can rotate, thrust, coast, brake, and fire.
+The page has a ship power button that changes shared game state. When powered off, the ship is dark, cannot be controlled, and cannot fire, but it still drifts. When powered on, the ship turns white and can rotate, thrust, coast, brake, and fire.
 
 The ship moves through world space while a springy camera follows it, so the grid scrolls underneath the player with a little lag and catch-up.
 
@@ -31,4 +31,6 @@ Asteroids are generated from an invisible resource field. Dense regions contain 
 
 The field also contains many common white stone asteroids. Bullets and ship impacts break asteroids into smaller chunks before the smallest pieces disappear.
 
-Next likely milestone: make the smallest asteroid chunks collectible, or add a scanner that points toward nearby asteroids.
+Destroying the smallest resource rocks ejects colored square pickups. Flying over those squares collects them and increases the resource count on the page.
+
+Next likely milestone: expand the inventory display by resource type, or add a scanner that points toward nearby asteroids.

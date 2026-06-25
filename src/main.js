@@ -1,11 +1,12 @@
-import { Game } from "./game.js?v=asteroid-breaks";
-import { createGameState } from "./state/gameState.js";
+import { Game } from "./game.js?v=resource-pickups";
+import { createGameState } from "./state/gameState.js?v=resource-pickups";
 
 const canvas = document.querySelector("#game");
 const powerButton = document.querySelector("#ship-power");
+const resourceCount = document.querySelector("#resource-count");
 const shipStatus = document.querySelector("#ship-status");
 const state = createGameState();
-const game = new Game(canvas, state);
+const game = new Game(canvas, state, updateInventoryDisplay);
 
 function updateShipPowerDisplay() {
   powerButton.textContent = state.ship.isPowered ? "Power Down" : "Power Ship";
@@ -19,5 +20,10 @@ powerButton.addEventListener("click", () => {
 });
 
 updateShipPowerDisplay();
+updateInventoryDisplay();
 
 game.start();
+
+function updateInventoryDisplay() {
+  resourceCount.textContent = String(state.inventory.total);
+}

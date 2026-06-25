@@ -2,7 +2,7 @@ import { createRandom, randomRange } from "../systems/random.js";
 
 const SPRING_STRENGTH = 0.012;
 const DRIFT_DAMPING = 0.999;
-const WHITE_ASTEROID_COLOR = "#edf2ff";
+export const WHITE_ASTEROID_COLOR = "#edf2ff";
 const STONE_RESOURCES = {
   stone: 1,
   iron: 0,

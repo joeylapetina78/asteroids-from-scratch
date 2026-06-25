@@ -16,6 +16,9 @@
         <button id="ship-power" class="power-button" type="button" aria-pressed="false">
           Power Ship
         </button>
+        <div class="inventory-summary" aria-live="polite">
+          Resources: <span id="resource-count">0</span>
+        </div>
         <div class="controls">
           <span>A/D: rotate</span>
           <span>W: thrust</span>
@@ -27,6 +30,6 @@
       <canvas id="game" width="960" height="540" aria-label="Asteroids game canvas"></canvas>
     </main>
 
-    <script type="module" src="./src/main.js?v=asteroid-breaks"></script>
+    <script type="module" src="./src/main.js?v=resource-pickups"></script>
   </body>
 </html>
