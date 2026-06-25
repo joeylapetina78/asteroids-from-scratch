@@ -94,12 +94,42 @@ body {
   display: block;
 }
 
-canvas {
+#game,
+#processor {
   width: 100%;
-  aspect-ratio: 16 / 9;
   display: block;
   border: 1px solid #333846;
   background: #07080c;
+}
+
+#game {
+  aspect-ratio: 16 / 9;
+}
+
+.processor-panel {
+  margin-top: 16px;
+}
+
+.processor-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: #d9deea;
+}
+
+.processor-title strong,
+.processor-title span {
+  display: block;
+}
+
+.processor-title strong {
+  color: #ffffff;
+}
+
+#processor {
+  aspect-ratio: 48 / 13;
 }
 
 @media (max-width: 720px) {

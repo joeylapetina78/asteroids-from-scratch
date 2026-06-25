@@ -21,6 +21,7 @@ Then open `http://127.0.0.1:8123/`.
 - Space: fire
 - Power Ship button: toggles ship systems on and off
 - Scan button: sends a forward crystal scan from the ship nose
+- Processor click: destroys a collected unit
 
 ## Current Slice
 
@@ -32,8 +33,10 @@ Asteroids are generated from an invisible resource field. Dense regions contain 
 
 The field also contains many common white stone asteroids. Bullets and ship impacts break asteroids into smaller chunks before the smallest pieces disappear.
 
-Destroying the smallest resource rocks ejects red fuel squares or blue crystal squares. Flying over fuel refills the fuel gauge, while flying over crystals increases the crystal count. Thrust spends fuel.
+Destroying the smallest resource rocks ejects red fuel squares or blue crystal squares. Flying over those squares sends larger units into the processor canvas instead of immediately turning them into fuel or crystal value. Thrust spends fuel.
 
 The scan button sends out a forward cone pulse. If it detects resource asteroids ahead, it shows small edge markers: red for fuel rocks and blue for crystal rocks.
 
-Next likely milestone: tune fuel scarcity, or make the scanner consume fuel/energy.
+The processor canvas receives collected units from a pipe at the top. Units fall, stack, collide, and can be clicked to destroy them.
+
+Next likely milestone: add processor output modes so crushed red units can become fuel.

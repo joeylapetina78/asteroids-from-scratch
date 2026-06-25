@@ -16,11 +16,12 @@ const SHIP_HIT_COOLDOWN_SECONDS = 0.35;
 const PICKUP_COLLECT_RADIUS = 24;
 
 export class Game {
-  constructor(canvas, state = createGameState(), onHudChange = () => {}) {
+  constructor(canvas, state = createGameState(), onHudChange = () => {}, onResourceCollected = () => {}) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
     this.state = state;
     this.onHudChange = onHudChange;
+    this.onResourceCollected = onResourceCollected;
     this.input = createInput();
     this.camera = createCamera(canvas);
     this.scanner = createScanner(canvas);
@@ -167,11 +168,7 @@ export class Game {
       }
 
       collectedPickups.add(pickup);
-      if (pickup.type === "fuel") {
-        this.state.ship.fuel = Math.min(this.state.ship.maxFuel, this.state.ship.fuel + 1);
-      } else {
-        this.state.inventory.crystals += 1;
-      }
+      this.onResourceCollected(pickup.type);
     });
 
     if (collectedPickups.size === 0) {
@@ -179,7 +176,6 @@ export class Game {
     }
 
     this.pickups = this.pickups.filter((pickup) => !collectedPickups.has(pickup));
-    this.onHudChange(this.state);
   }
 
   draw() {

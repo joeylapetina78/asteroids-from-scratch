@@ -21,7 +21,6 @@
         </button>
         <div class="inventory-summary" aria-live="polite">
           <span>Fuel: <strong id="fuel-count">200</strong></span>
-          <span>Crystals: <strong id="crystal-count">0</strong></span>
         </div>
         <div class="controls">
           <span>A/D: rotate</span>
@@ -33,8 +32,15 @@
       </section>
 
       <canvas id="game" width="960" height="540" aria-label="Asteroids game canvas"></canvas>
+      <section class="processor-panel" aria-label="Resource processor">
+        <div class="processor-title">
+          <strong>Processor</strong>
+          <span>collected units arrive here</span>
+        </div>
+        <canvas id="processor" width="960" height="260" aria-label="Resource processing canvas"></canvas>
+      </section>
     </main>
 
-    <script type="module" src="./src/main.js?v=multi-resource-scanner"></script>
+    <script type="module" src="./src/main.js?v=processor-canvas"></script>
   </body>
 </html>

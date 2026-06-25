@@ -1,14 +1,16 @@
-import { Game } from "./game.js?v=multi-resource-scanner";
-import { createGameState } from "./state/gameState.js?v=multi-resource-scanner";
+import { Game } from "./game.js?v=processor-canvas";
+import { Processor } from "./systems/processor.js?v=processor-canvas";
+import { createGameState } from "./state/gameState.js?v=processor-canvas";
 
 const canvas = document.querySelector("#game");
-const crystalCount = document.querySelector("#crystal-count");
 const fuelCount = document.querySelector("#fuel-count");
 const powerButton = document.querySelector("#ship-power");
+const processorCanvas = document.querySelector("#processor");
 const scanButton = document.querySelector("#ship-scan");
 const shipStatus = document.querySelector("#ship-status");
 const state = createGameState();
-const game = new Game(canvas, state, updateHudDisplay);
+const processor = new Processor(processorCanvas);
+const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type));
 
 function updateShipPowerDisplay() {
   powerButton.textContent = state.ship.isPowered ? "Power Down" : "Power Ship";
@@ -29,8 +31,8 @@ updateShipPowerDisplay();
 updateHudDisplay();
 
 game.start();
+processor.start();
 
 function updateHudDisplay() {
   fuelCount.textContent = String(Math.floor(state.ship.fuel));
-  crystalCount.textContent = String(state.inventory.crystals);
 }
