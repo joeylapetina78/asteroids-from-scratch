@@ -79,6 +79,10 @@ body {
   text-align: center;
 }
 
+.inventory-summary span {
+  display: block;
+}
+
 canvas {
   width: 100%;
   aspect-ratio: 16 / 9;

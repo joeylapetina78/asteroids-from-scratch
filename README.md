@@ -31,6 +31,6 @@ Asteroids are generated from an invisible resource field. Dense regions contain 
 
 The field also contains many common white stone asteroids. Bullets and ship impacts break asteroids into smaller chunks before the smallest pieces disappear.
 
-Destroying the smallest resource rocks ejects colored square pickups. Flying over those squares collects them and increases the resource count on the page.
+Destroying the smallest resource rocks ejects red fuel squares or blue crystal squares. Flying over fuel refills the fuel gauge, while flying over crystals increases the crystal count. Thrust spends fuel.
 
-Next likely milestone: expand the inventory display by resource type, or add a scanner that points toward nearby asteroids.
+Next likely milestone: tune fuel scarcity, or add a scanner that points toward nearby asteroids.

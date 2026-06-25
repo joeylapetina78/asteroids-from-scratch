@@ -1,4 +1,4 @@
-import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=resource-pickups";
+import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fuel-crystals";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
 
 export function createAsteroidField(canvas, resourceField) {

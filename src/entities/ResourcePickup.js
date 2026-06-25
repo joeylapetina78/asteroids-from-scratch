@@ -4,19 +4,17 @@ import { createRandom, randomRange } from "../systems/random.js";
 const PICKUP_SIZE = 7;
 const PICKUP_RADIUS = 10;
 const PICKUP_DRAG = 0.985;
-const RESOURCE_COLORS = {
-  iron: "#ff7452",
-  copper: "#49e1b8",
-  ice: "#73d2ff",
-  crystal: "#de6fff",
+const PICKUP_TYPES = {
+  fuel: "#ff7452",
+  crystal: "#73d2ff",
 };
 
 export class ResourcePickup {
-  constructor({ x, y, resource, color, velocity }) {
+  constructor({ x, y, type, velocity }) {
     this.position = { x, y };
     this.velocity = velocity;
-    this.resource = resource;
-    this.color = color;
+    this.type = type;
+    this.color = PICKUP_TYPES[type];
     this.radius = PICKUP_RADIUS;
     this.size = PICKUP_SIZE;
   }
@@ -48,9 +46,9 @@ export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity
     return [];
   }
 
-  const resource = getDominantResource(asteroid.resources);
+  const pickupType = getPickupType(asteroid.resources);
 
-  if (!resource) {
+  if (!pickupType) {
     return [];
   }
 
@@ -66,8 +64,7 @@ export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity
       new ResourcePickup({
         x: asteroid.position.x + Math.cos(angle) * randomRange(random, 4, 12),
         y: asteroid.position.y + Math.sin(angle) * randomRange(random, 4, 12),
-        resource,
-        color: RESOURCE_COLORS[resource],
+        type: pickupType,
         velocity: {
           x: asteroid.velocity.x * 0.45 + Math.cos(angle) * speed + impactVelocity.x * 0.025,
           y: asteroid.velocity.y * 0.45 + Math.sin(angle) * speed + impactVelocity.y * 0.025,
@@ -79,11 +76,17 @@ export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity
   return pickups;
 }
 
-function getDominantResource(resources) {
-  return Object.entries(resources)
+function getPickupType(resources) {
+  const dominantResource = Object.entries(resources)
     .filter(([resource]) => resource !== "stone")
     .reduce((best, [resource, amount]) => (amount > best.amount ? { resource, amount } : best), {
       resource: null,
       amount: 0,
     }).resource;
+
+  if (!dominantResource) {
+    return null;
+  }
+
+  return dominantResource === "iron" ? "fuel" : "crystal";
 }

@@ -1,5 +1,6 @@
 const ROTATION_SPEED = 4.5;
 const THRUST_POWER = 280;
+const FUEL_BURN_RATE = 9;
 const BRAKE_DRAG = 0.92;
 const SPACE_DRAG = 0.995;
 
@@ -24,8 +25,9 @@ export class Ship {
         this.angle += ROTATION_SPEED * deltaSeconds;
       }
 
-      this.isThrusting = input.isDown("KeyW");
+      this.isThrusting = input.isDown("KeyW") && this.state.fuel > 0;
       if (this.isThrusting) {
+        this.state.fuel = Math.max(0, this.state.fuel - FUEL_BURN_RATE * deltaSeconds);
         this.velocity.x += Math.cos(this.angle) * THRUST_POWER * deltaSeconds;
         this.velocity.y += Math.sin(this.angle) * THRUST_POWER * deltaSeconds;
       }

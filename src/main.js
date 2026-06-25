@@ -1,12 +1,13 @@
-import { Game } from "./game.js?v=resource-pickups";
-import { createGameState } from "./state/gameState.js?v=resource-pickups";
+import { Game } from "./game.js?v=fuel-crystals";
+import { createGameState } from "./state/gameState.js?v=fuel-crystals";
 
 const canvas = document.querySelector("#game");
+const crystalCount = document.querySelector("#crystal-count");
+const fuelCount = document.querySelector("#fuel-count");
 const powerButton = document.querySelector("#ship-power");
-const resourceCount = document.querySelector("#resource-count");
 const shipStatus = document.querySelector("#ship-status");
 const state = createGameState();
-const game = new Game(canvas, state, updateInventoryDisplay);
+const game = new Game(canvas, state, updateHudDisplay);
 
 function updateShipPowerDisplay() {
   powerButton.textContent = state.ship.isPowered ? "Power Down" : "Power Ship";
@@ -20,10 +21,11 @@ powerButton.addEventListener("click", () => {
 });
 
 updateShipPowerDisplay();
-updateInventoryDisplay();
+updateHudDisplay();
 
 game.start();
 
-function updateInventoryDisplay() {
-  resourceCount.textContent = String(state.inventory.total);
+function updateHudDisplay() {
+  fuelCount.textContent = String(Math.floor(state.ship.fuel));
+  crystalCount.textContent = String(state.inventory.crystals);
 }

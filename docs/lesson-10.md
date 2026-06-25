@@ -6,25 +6,23 @@ The chain is:
 
 - large resource asteroid breaks into smaller rocks
 - final small resource rock is destroyed
-- colored square pickups eject into world space
+- red or blue square pickups eject into world space
 - the ship overlaps the squares
-- inventory state increases
+- fuel or crystal state increases
 - the page readout updates
 
 The pickup is its own entity instead of being counted immediately. That matters because the resource has a physical moment in the world: it appears, drifts, and has to be collected.
 
-The shared state now has an inventory:
+The shared state now has fuel and inventory:
 
 ```js
+ship: {
+  fuel: 100,
+  maxFuel: 100,
+},
 inventory: {
-  total: 0,
-  resources: {
-    iron: 0,
-    copper: 0,
-    ice: 0,
-    crystal: 0,
-  },
+  crystals: 0,
 }
 ```
 
-The page currently shows only the total. The detailed resource counts are already stored for later inventory, selling, fuel, crafting, or refinery rules.
+Red pickups are fuel. Blue pickups are crystals. Holding thrust spends fuel, so fuel is now part of the movement loop instead of just being a number on the page.

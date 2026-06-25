@@ -17,7 +17,8 @@
           Power Ship
         </button>
         <div class="inventory-summary" aria-live="polite">
-          Resources: <span id="resource-count">0</span>
+          <span>Fuel: <strong id="fuel-count">100</strong></span>
+          <span>Crystals: <strong id="crystal-count">0</strong></span>
         </div>
         <div class="controls">
           <span>A/D: rotate</span>
@@ -30,6 +31,6 @@
       <canvas id="game" width="960" height="540" aria-label="Asteroids game canvas"></canvas>
     </main>
 
-    <script type="module" src="./src/main.js?v=resource-pickups"></script>
+    <script type="module" src="./src/main.js?v=fuel-crystals"></script>
   </body>
 </html>

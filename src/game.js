@@ -1,13 +1,13 @@
-import { Bullet } from "./entities/Bullet.js?v=resource-pickups";
-import { breakAsteroid } from "./entities/Asteroid.js?v=resource-pickups";
-import { createResourcePickupsFromAsteroid } from "./entities/ResourcePickup.js?v=resource-pickups";
-import { Ship } from "./entities/Ship.js?v=power-control";
-import { createAsteroidField } from "./systems/asteroidField.js?v=resource-pickups";
+import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
+import { breakAsteroid } from "./entities/Asteroid.js?v=fuel-crystals";
+import { createResourcePickupsFromAsteroid } from "./entities/ResourcePickup.js?v=fuel-crystals";
+import { Ship } from "./entities/Ship.js?v=fuel-crystals";
+import { createAsteroidField } from "./systems/asteroidField.js?v=fuel-crystals";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=power-control";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
-import { createGameState } from "./state/gameState.js?v=resource-pickups";
+import { createGameState } from "./state/gameState.js?v=fuel-crystals";
 
 const FIRE_COOLDOWN_SECONDS = 0.18;
 const SHIP_COLLISION_RADIUS = 18;
@@ -15,11 +15,11 @@ const SHIP_HIT_COOLDOWN_SECONDS = 0.35;
 const PICKUP_COLLECT_RADIUS = 24;
 
 export class Game {
-  constructor(canvas, state = createGameState(), onInventoryChange = () => {}) {
+  constructor(canvas, state = createGameState(), onHudChange = () => {}) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
     this.state = state;
-    this.onInventoryChange = onInventoryChange;
+    this.onHudChange = onHudChange;
     this.input = createInput();
     this.camera = createCamera(canvas);
     this.ship = new Ship(0, 0, state.ship);
@@ -64,7 +64,11 @@ export class Game {
 
     this.fireCooldown = Math.max(0, this.fireCooldown - deltaSeconds);
     this.shipHitCooldown = Math.max(0, this.shipHitCooldown - deltaSeconds);
+    const previousFuel = this.state.ship.fuel;
     this.ship.update(deltaSeconds, this.input);
+    if (this.state.ship.fuel !== previousFuel) {
+      this.onHudChange(this.state);
+    }
     this.updateShooting();
     this.bullets.forEach((bullet) => bullet.update(deltaSeconds));
     this.updateAsteroidHits();
@@ -152,8 +156,11 @@ export class Game {
       }
 
       collectedPickups.add(pickup);
-      this.state.inventory.total += 1;
-      this.state.inventory.resources[pickup.resource] += 1;
+      if (pickup.type === "fuel") {
+        this.state.ship.fuel = Math.min(this.state.ship.maxFuel, this.state.ship.fuel + 1);
+      } else {
+        this.state.inventory.crystals += 1;
+      }
     });
 
     if (collectedPickups.size === 0) {
@@ -161,7 +168,7 @@ export class Game {
     }
 
     this.pickups = this.pickups.filter((pickup) => !collectedPickups.has(pickup));
-    this.onInventoryChange(this.state.inventory);
+    this.onHudChange(this.state);
   }
 
   draw() {
