@@ -26,6 +26,10 @@ export class Bullet {
     return this.age < BULLET_LIFETIME;
   }
 
+  destroy() {
+    this.age = BULLET_LIFETIME;
+  }
+
   draw(context, camera) {
     const screenX = this.position.x - camera.x;
     const screenY = this.position.y - camera.y;

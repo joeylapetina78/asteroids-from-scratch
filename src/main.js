@@ -1,4 +1,4 @@
-import { Game } from "./game.js?v=power-control";
+import { Game } from "./game.js?v=asteroid-breaks";
 import { createGameState } from "./state/gameState.js";
 
 const canvas = document.querySelector("#game");

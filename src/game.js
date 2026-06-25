@@ -1,6 +1,7 @@
-import { Bullet } from "./entities/Bullet.js";
+import { Bullet } from "./entities/Bullet.js?v=asteroid-breaks";
+import { breakAsteroid } from "./entities/Asteroid.js?v=asteroid-breaks";
 import { Ship } from "./entities/Ship.js?v=power-control";
-import { createAsteroidField } from "./systems/asteroidField.js";
+import { createAsteroidField } from "./systems/asteroidField.js?v=asteroid-breaks";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=power-control";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
@@ -8,6 +9,8 @@ import { createResourceField } from "./systems/resourceField.js";
 import { createGameState } from "./state/gameState.js";
 
 const FIRE_COOLDOWN_SECONDS = 0.18;
+const SHIP_COLLISION_RADIUS = 18;
+const SHIP_HIT_COOLDOWN_SECONDS = 0.35;
 
 export class Game {
   constructor(canvas, state = createGameState()) {
@@ -21,6 +24,8 @@ export class Game {
     this.asteroids = createAsteroidField(canvas, this.resourceField);
     this.bullets = [];
     this.fireCooldown = 0;
+    this.shipHitCooldown = 0;
+    this.impactSeed = 0;
     this.lastFrameTime = 0;
   }
 
@@ -54,9 +59,11 @@ export class Game {
     }
 
     this.fireCooldown = Math.max(0, this.fireCooldown - deltaSeconds);
+    this.shipHitCooldown = Math.max(0, this.shipHitCooldown - deltaSeconds);
     this.ship.update(deltaSeconds, this.input);
     this.updateShooting();
     this.bullets.forEach((bullet) => bullet.update(deltaSeconds));
+    this.updateAsteroidHits();
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
     this.asteroids.forEach((asteroid) => asteroid.update(deltaSeconds));
     this.camera.follow(this.ship, deltaSeconds);
@@ -74,6 +81,55 @@ export class Game {
     this.fireCooldown = FIRE_COOLDOWN_SECONDS;
   }
 
+  updateAsteroidHits() {
+    const hitAsteroids = new Set();
+    const newAsteroids = [];
+
+    this.bullets.forEach((bullet) => {
+      if (!bullet.isAlive) {
+        return;
+      }
+
+      const hitAsteroid = this.asteroids.find(
+        (asteroid) => !hitAsteroids.has(asteroid) && circlesOverlap(bullet.position, bullet.radius, asteroid.position, asteroid.radius),
+      );
+
+      if (!hitAsteroid) {
+        return;
+      }
+
+      bullet.destroy();
+      hitAsteroids.add(hitAsteroid);
+      newAsteroids.push(...this.breakAsteroid(hitAsteroid, bullet.velocity));
+    });
+
+    if (this.shipHitCooldown === 0) {
+      const shipHitAsteroid = this.asteroids.find(
+        (asteroid) =>
+          !hitAsteroids.has(asteroid) &&
+          circlesOverlap(this.ship.position, SHIP_COLLISION_RADIUS, asteroid.position, asteroid.radius),
+      );
+
+      if (shipHitAsteroid) {
+        this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
+        hitAsteroids.add(shipHitAsteroid);
+        newAsteroids.push(...this.breakAsteroid(shipHitAsteroid, this.ship.velocity));
+      }
+    }
+
+    if (hitAsteroids.size === 0) {
+      return;
+    }
+
+    this.asteroids = this.asteroids.filter((asteroid) => !hitAsteroids.has(asteroid));
+    this.asteroids.push(...newAsteroids);
+  }
+
+  breakAsteroid(asteroid, impactVelocity) {
+    this.impactSeed += 1;
+    return breakAsteroid(asteroid, this.impactSeed, impactVelocity);
+  }
+
   draw() {
     clearScreen(this.context, this.canvas);
     drawGrid(this.context, this.canvas, this.camera);
@@ -86,4 +142,12 @@ export class Game {
     drawVector(this.context, this.ship.position, this.ship.velocity, this.camera);
     this.ship.draw(this.context, this.camera);
   }
+}
+
+function circlesOverlap(firstPosition, firstRadius, secondPosition, secondRadius) {
+  const distanceX = firstPosition.x - secondPosition.x;
+  const distanceY = firstPosition.y - secondPosition.y;
+  const radius = firstRadius + secondRadius;
+
+  return distanceX * distanceX + distanceY * distanceY <= radius * radius;
 }

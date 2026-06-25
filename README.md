@@ -29,4 +29,6 @@ The ship moves through world space while a springy camera follows it, so the gri
 
 Asteroids are generated from an invisible resource field. Dense regions contain more asteroids, and resource mixes influence color and size.
 
-Next likely milestone: add a scanner that points toward nearby asteroids, or make bullets collide with mineable rocks.
+The field also contains many common white stone asteroids. Bullets and ship impacts break asteroids into smaller chunks before the smallest pieces disappear.
+
+Next likely milestone: make the smallest asteroid chunks collectible, or add a scanner that points toward nearby asteroids.
