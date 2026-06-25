@@ -8,11 +8,11 @@ import { createInput } from "./systems/input.js?v=power-control";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
 import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
-import { createGameState } from "./state/gameState.js?v=processor-outputs";
+import { createGameState } from "./state/gameState.js?v=left-processor-economy";
 
 const FIRE_COOLDOWN_SECONDS = 0.18;
 const AMMO_PER_SHOT = 1;
-const SCANERGY_PER_SCAN = 10;
+const SCANERGY_PER_SCAN = 100;
 const SHIP_COLLISION_RADIUS = 18;
 const SHIP_HIT_COOLDOWN_SECONDS = 0.35;
 const PICKUP_COLLECT_RADIUS = 24;

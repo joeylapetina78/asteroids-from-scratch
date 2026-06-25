@@ -1,4 +1,4 @@
-const UNIT_SIZE = 28;
+const UNIT_SIZE = 22;
 const GRAVITY = 780;
 const BOUNCE = 0.18;
 const FLOOR_FRICTION = 0.82;
@@ -24,15 +24,15 @@ export class Processor {
   }
 
   addUnit(type) {
-    const slot = this.units.length % 5;
+    const slot = this.units.length % 4;
     const spacing = UNIT_SIZE + 4;
 
     this.units.push({
       type,
       color: TYPE_COLORS[type],
-      x: this.canvas.width / 2 - spacing * 2.5 + slot * spacing,
-      y: 34,
-      vx: (slot - 2) * 12,
+      x: this.canvas.width / 2 - spacing * 2 + slot * spacing,
+      y: 30,
+      vx: (slot - 1.5) * 12,
       vy: 0,
       size: UNIT_SIZE,
     });
@@ -79,18 +79,18 @@ export class Processor {
   }
 
   drawPipe() {
-    const pipeWidth = 96;
+    const pipeWidth = 78;
     const pipeX = this.canvas.width / 2 - pipeWidth / 2;
 
     this.context.fillStyle = "#2a303b";
     this.context.strokeStyle = "#697386";
     this.context.lineWidth = 2;
-    this.context.fillRect(pipeX, 0, pipeWidth, 26);
-    this.context.strokeRect(pipeX, -2, pipeWidth, 28);
+    this.context.fillRect(pipeX, 0, pipeWidth, 22);
+    this.context.strokeRect(pipeX, -2, pipeWidth, 24);
 
     this.context.fillStyle = "#11151d";
-    this.context.fillRect(pipeX + 14, 26, pipeWidth - 28, 16);
-    this.context.strokeRect(pipeX + 14, 26, pipeWidth - 28, 16);
+    this.context.fillRect(pipeX + 12, 22, pipeWidth - 24, 14);
+    this.context.strokeRect(pipeX + 12, 22, pipeWidth - 24, 14);
   }
 
   keepInsideBounds(unit) {

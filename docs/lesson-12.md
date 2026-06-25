@@ -23,3 +23,5 @@ For this pass, the outputs are:
 - scanergy: +50% scan power
 
 The resource type does not constrain the output yet. That is intentionally loose so we can first prove the processor routing loop.
+
+The current starting values are 200 fuel, 100 ammo, and 0% scanergy. A scan costs 100%, so scanning only happens after the player has found and processed enough material.

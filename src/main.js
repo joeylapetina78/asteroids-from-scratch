@@ -1,6 +1,6 @@
-import { Game } from "./game.js?v=processor-outputs";
+import { Game } from "./game.js?v=left-processor-economy";
 import { Processor } from "./systems/processor.js?v=processor-outputs";
-import { createGameState } from "./state/gameState.js?v=processor-outputs";
+import { createGameState } from "./state/gameState.js?v=left-processor-economy";
 
 const PROCESS_OUTPUT_AMOUNT = 50;
 const ammoCount = document.querySelector("#ammo-count");

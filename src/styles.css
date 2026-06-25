@@ -19,7 +19,7 @@ body {
 
 .play-layout {
   display: grid;
-  grid-template-columns: minmax(720px, 960px) 480px;
+  grid-template-columns: 320px minmax(720px, 960px);
   align-items: start;
   justify-content: center;
   gap: 20px;
@@ -171,13 +171,18 @@ body {
   cursor: pointer;
 }
 
-@media (max-width: 1240px) {
+@media (max-width: 1080px) {
   .play-layout {
     grid-template-columns: minmax(0, 960px);
   }
 
   .processor-panel {
     margin-top: 16px;
+    order: 2;
+  }
+
+  .space-panel {
+    order: 1;
   }
 }
 

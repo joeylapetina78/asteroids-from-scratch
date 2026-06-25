@@ -4,9 +4,9 @@ export function createGameState() {
       isPowered: false,
       fuel: 200,
       maxFuel: 200,
-      ammo: 200,
+      ammo: 100,
       maxAmmo: 200,
-      scanergy: 200,
+      scanergy: 0,
       maxScanergy: 200,
     },
   };

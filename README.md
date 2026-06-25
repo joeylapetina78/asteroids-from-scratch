@@ -38,6 +38,6 @@ Destroying the smallest resource rocks ejects red fuel squares or blue crystal s
 
 The scan button sends out a forward cone pulse. If it detects resource asteroids ahead, it shows small edge markers: red for fuel rocks and blue for crystal rocks.
 
-The processor canvas receives collected units from a pipe at the top. Units fall, stack, collide, and can be clicked to crush them into the selected output: fuel, ammo, or scanergy.
+The smaller processor canvas sits to the left on wide screens. It receives collected units from a pipe at the top. Units fall, stack, collide, and can be clicked to crush them into the selected output: fuel, ammo, or scanergy.
 
 Next likely milestone: make output systems require power, or tune the fuel/ammo/scanergy costs.
