@@ -14,6 +14,12 @@ ship overlaps pickup
 -> unit falls out of the pipe into the processor canvas
 ```
 
-The processor has its own tiny simulation. Units fall with gravity, collide with the floor, stay inside the canvas, and push against each other. Clicking a unit destroys it.
+The processor has its own tiny simulation. Units fall with gravity, collide with the floor, stay inside the canvas, and push against each other. Clicking a unit crushes it into the selected output.
 
-Later, destroying a processor unit can send material into whichever output is selected: fuel, money, crafting, power, or something else. For now, clicking only removes the unit so we can prove the second canvas and processing space work.
+For this pass, the outputs are:
+
+- fuel: +50 fuel
+- ammo: +50 ammo
+- scanergy: +50% scan power
+
+The resource type does not constrain the output yet. That is intentionally loose so we can first prove the processor routing loop.

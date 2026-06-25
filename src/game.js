@@ -8,9 +8,11 @@ import { createInput } from "./systems/input.js?v=power-control";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
 import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
-import { createGameState } from "./state/gameState.js?v=multi-resource-scanner";
+import { createGameState } from "./state/gameState.js?v=processor-outputs";
 
 const FIRE_COOLDOWN_SECONDS = 0.18;
+const AMMO_PER_SHOT = 1;
+const SCANERGY_PER_SCAN = 10;
 const SHIP_COLLISION_RADIUS = 18;
 const SHIP_HIT_COOLDOWN_SECONDS = 0.35;
 const PICKUP_COLLECT_RADIUS = 24;
@@ -51,10 +53,12 @@ export class Game {
   }
 
   scanForCrystals() {
-    if (!this.state.ship.isPowered) {
+    if (!this.state.ship.isPowered || this.state.ship.scanergy < SCANERGY_PER_SCAN) {
       return;
     }
 
+    this.state.ship.scanergy -= SCANERGY_PER_SCAN;
+    this.onHudChange(this.state);
     this.scanner.scan(this.ship, this.asteroids);
   }
 
@@ -95,10 +99,12 @@ export class Game {
   updateShooting() {
     const wantsToFire = this.input.wasPressed("Space") || this.input.isDown("Space");
 
-    if (!this.state.ship.isPowered || !wantsToFire || this.fireCooldown > 0) {
+    if (!this.state.ship.isPowered || !wantsToFire || this.fireCooldown > 0 || this.state.ship.ammo < AMMO_PER_SHOT) {
       return;
     }
 
+    this.state.ship.ammo -= AMMO_PER_SHOT;
+    this.onHudChange(this.state);
     this.bullets.push(new Bullet(this.ship));
     this.fireCooldown = FIRE_COOLDOWN_SECONDS;
   }

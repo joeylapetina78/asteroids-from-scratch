@@ -1,4 +1,4 @@
-const UNIT_SIZE = 24;
+const UNIT_SIZE = 28;
 const GRAVITY = 780;
 const BOUNCE = 0.18;
 const FLOOR_FRICTION = 0.82;
@@ -9,9 +9,10 @@ const TYPE_COLORS = {
 };
 
 export class Processor {
-  constructor(canvas) {
+  constructor(canvas, onUnitProcessed = () => {}) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
+    this.onUnitProcessed = onUnitProcessed;
     this.units = [];
     this.lastFrameTime = 0;
 
@@ -23,14 +24,15 @@ export class Processor {
   }
 
   addUnit(type) {
-    const slot = this.units.length % 7;
+    const slot = this.units.length % 5;
+    const spacing = UNIT_SIZE + 4;
 
     this.units.push({
       type,
       color: TYPE_COLORS[type],
-      x: this.canvas.width / 2 - 72 + slot * 24,
-      y: 38,
-      vx: (slot - 3) * 12,
+      x: this.canvas.width / 2 - spacing * 2.5 + slot * spacing,
+      y: 34,
+      vx: (slot - 2) * 12,
       vy: 0,
       size: UNIT_SIZE,
     });
@@ -77,18 +79,18 @@ export class Processor {
   }
 
   drawPipe() {
-    const pipeWidth = 150;
+    const pipeWidth = 96;
     const pipeX = this.canvas.width / 2 - pipeWidth / 2;
 
     this.context.fillStyle = "#2a303b";
     this.context.strokeStyle = "#697386";
     this.context.lineWidth = 2;
-    this.context.fillRect(pipeX, 0, pipeWidth, 32);
-    this.context.strokeRect(pipeX, -2, pipeWidth, 34);
+    this.context.fillRect(pipeX, 0, pipeWidth, 26);
+    this.context.strokeRect(pipeX, -2, pipeWidth, 28);
 
     this.context.fillStyle = "#11151d";
-    this.context.fillRect(pipeX + 18, 32, pipeWidth - 36, 18);
-    this.context.strokeRect(pipeX + 18, 32, pipeWidth - 36, 18);
+    this.context.fillRect(pipeX + 14, 26, pipeWidth - 28, 16);
+    this.context.strokeRect(pipeX + 14, 26, pipeWidth - 28, 16);
   }
 
   keepInsideBounds(unit) {
@@ -157,7 +159,8 @@ export class Processor {
     );
 
     if (clickedIndex >= 0) {
-      this.units.splice(clickedIndex, 1);
+      const [unit] = this.units.splice(clickedIndex, 1);
+      this.onUnitProcessed(unit.type);
     }
   }
 }

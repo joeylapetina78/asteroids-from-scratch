@@ -16,8 +16,8 @@ The shared state keeps ship fuel:
 
 ```js
 ship: {
-  fuel: 100,
-  maxFuel: 100,
+  fuel: 200,
+  maxFuel: 200,
 }
 ```
 

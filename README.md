@@ -20,8 +20,9 @@ Then open `http://127.0.0.1:8123/`.
 - S: brake
 - Space: fire
 - Power Ship button: toggles ship systems on and off
-- Scan button: sends a forward crystal scan from the ship nose
-- Processor click: destroys a collected unit
+- Scan button: sends a forward resource scan from the ship nose
+- Processor output: chooses where crushed units go
+- Processor click: crushes a collected unit into the selected output
 
 ## Current Slice
 
@@ -37,6 +38,6 @@ Destroying the smallest resource rocks ejects red fuel squares or blue crystal s
 
 The scan button sends out a forward cone pulse. If it detects resource asteroids ahead, it shows small edge markers: red for fuel rocks and blue for crystal rocks.
 
-The processor canvas receives collected units from a pipe at the top. Units fall, stack, collide, and can be clicked to destroy them.
+The processor canvas receives collected units from a pipe at the top. Units fall, stack, collide, and can be clicked to crush them into the selected output: fuel, ammo, or scanergy.
 
-Next likely milestone: add processor output modes so crushed red units can become fuel.
+Next likely milestone: make output systems require power, or tune the fuel/ammo/scanergy costs.
