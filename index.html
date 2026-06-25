@@ -16,6 +16,9 @@
         <button id="ship-power" class="power-button" type="button" aria-pressed="false">
           Power Ship
         </button>
+        <button id="ship-scan" class="scan-button" type="button">
+          Scan
+        </button>
         <div class="inventory-summary" aria-live="polite">
           <span>Fuel: <strong id="fuel-count">100</strong></span>
           <span>Crystals: <strong id="crystal-count">0</strong></span>
@@ -25,12 +28,13 @@
           <span>W: thrust</span>
           <span>S: brake</span>
           <span>Space: fire</span>
+          <span>Scan: find crystals</span>
         </div>
       </section>
 
       <canvas id="game" width="960" height="540" aria-label="Asteroids game canvas"></canvas>
     </main>
 
-    <script type="module" src="./src/main.js?v=fuel-crystals"></script>
+    <script type="module" src="./src/main.js?v=crystal-scanner"></script>
   </body>
 </html>

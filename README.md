@@ -20,6 +20,7 @@ Then open `http://127.0.0.1:8123/`.
 - S: brake
 - Space: fire
 - Power Ship button: toggles ship systems on and off
+- Scan button: sends a forward crystal scan from the ship nose
 
 ## Current Slice
 
@@ -33,4 +34,6 @@ The field also contains many common white stone asteroids. Bullets and ship impa
 
 Destroying the smallest resource rocks ejects red fuel squares or blue crystal squares. Flying over fuel refills the fuel gauge, while flying over crystals increases the crystal count. Thrust spends fuel.
 
-Next likely milestone: tune fuel scarcity, or add a scanner that points toward nearby asteroids.
+The scan button sends out a forward cone pulse. If it detects a crystal-producing asteroid ahead, it shows a blue marker near the canvas edge in that direction.
+
+Next likely milestone: tune fuel scarcity, or make the scanner consume fuel/energy.

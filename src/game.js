@@ -7,6 +7,7 @@ import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=power-control";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
+import { createScanner } from "./systems/scanner.js?v=crystal-scanner";
 import { createGameState } from "./state/gameState.js?v=fuel-crystals";
 
 const FIRE_COOLDOWN_SECONDS = 0.18;
@@ -22,6 +23,7 @@ export class Game {
     this.onHudChange = onHudChange;
     this.input = createInput();
     this.camera = createCamera(canvas);
+    this.scanner = createScanner(canvas);
     this.ship = new Ship(0, 0, state.ship);
     this.resourceField = createResourceField();
     this.asteroids = createAsteroidField(canvas, this.resourceField);
@@ -45,6 +47,14 @@ export class Game {
       this.fireCooldown = 0;
       this.ship.stopThrusting();
     }
+  }
+
+  scanForCrystals() {
+    if (!this.state.ship.isPowered) {
+      return;
+    }
+
+    this.scanner.scan(this.ship, this.asteroids);
   }
 
   frame(time) {
@@ -76,6 +86,7 @@ export class Game {
     this.asteroids.forEach((asteroid) => asteroid.update(deltaSeconds));
     this.pickups.forEach((pickup) => pickup.update(deltaSeconds));
     this.collectPickups();
+    this.scanner.update(deltaSeconds);
     this.camera.follow(this.ship, deltaSeconds);
     this.input.finishFrame();
   }
@@ -186,6 +197,7 @@ export class Game {
     });
     this.bullets.forEach((bullet) => bullet.draw(this.context, this.camera));
     drawVector(this.context, this.ship.position, this.ship.velocity, this.camera);
+    this.scanner.draw(this.context, this.camera, this.ship);
     this.ship.draw(this.context, this.camera);
   }
 }
