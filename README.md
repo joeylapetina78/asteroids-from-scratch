@@ -34,6 +34,6 @@ The field also contains many common white stone asteroids. Bullets and ship impa
 
 Destroying the smallest resource rocks ejects red fuel squares or blue crystal squares. Flying over fuel refills the fuel gauge, while flying over crystals increases the crystal count. Thrust spends fuel.
 
-The scan button sends out a forward cone pulse. If it detects a crystal-producing asteroid ahead, it shows a blue marker near the canvas edge in that direction.
+The scan button sends out a forward cone pulse. If it detects resource asteroids ahead, it shows small edge markers: red for fuel rocks and blue for crystal rocks.
 
 Next likely milestone: tune fuel scarcity, or make the scanner consume fuel/energy.

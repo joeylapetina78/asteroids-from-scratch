@@ -2,8 +2,8 @@ export function createGameState() {
   return {
     ship: {
       isPowered: false,
-      fuel: 100,
-      maxFuel: 100,
+      fuel: 200,
+      maxFuel: 200,
     },
     inventory: {
       crystals: 0,

@@ -1,5 +1,5 @@
-import { Game } from "./game.js?v=crystal-scanner";
-import { createGameState } from "./state/gameState.js?v=fuel-crystals";
+import { Game } from "./game.js?v=multi-resource-scanner";
+import { createGameState } from "./state/gameState.js?v=multi-resource-scanner";
 
 const canvas = document.querySelector("#game");
 const crystalCount = document.querySelector("#crystal-count");

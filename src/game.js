@@ -7,8 +7,8 @@ import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=power-control";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
-import { createScanner } from "./systems/scanner.js?v=crystal-scanner";
-import { createGameState } from "./state/gameState.js?v=fuel-crystals";
+import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
+import { createGameState } from "./state/gameState.js?v=multi-resource-scanner";
 
 const FIRE_COOLDOWN_SECONDS = 0.18;
 const SHIP_COLLISION_RADIUS = 18;

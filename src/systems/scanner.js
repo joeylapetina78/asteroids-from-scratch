@@ -3,18 +3,20 @@ const SCAN_HALF_ANGLE = Math.PI / 5;
 const SCAN_PULSE_SECONDS = 0.45;
 const SCAN_MARKER_SECONDS = 3.5;
 const EDGE_MARGIN = 28;
+const MARKER_RADIUS = 7;
+const FUEL_COLOR = "#ff7452";
 const CRYSTAL_COLOR = "#73d2ff";
 
 export function createScanner(canvas) {
   return {
     pulseAge: SCAN_PULSE_SECONDS,
     markerAge: SCAN_MARKER_SECONDS,
-    target: null,
+    targets: [],
 
     scan(ship, asteroids) {
       this.pulseAge = 0;
-      this.target = findNearestCrystalAsteroid(ship, asteroids);
-      this.markerAge = this.target ? 0 : SCAN_MARKER_SECONDS;
+      this.targets = findResourceAsteroids(ship, asteroids);
+      this.markerAge = this.targets.length > 0 ? 0 : SCAN_MARKER_SECONDS;
     },
 
     update(deltaSeconds) {
@@ -22,46 +24,53 @@ export function createScanner(canvas) {
       this.markerAge += deltaSeconds;
 
       if (this.markerAge >= SCAN_MARKER_SECONDS) {
-        this.target = null;
+        this.targets = [];
       }
     },
 
     draw(context, camera, ship) {
       drawScanPulse(context, camera, ship, this.pulseAge);
 
-      if (this.target) {
-        drawTargetMarker(context, canvas, camera, ship, this.target, this.markerAge);
-      }
+      this.targets.forEach((target) => {
+        drawTargetMarker(context, canvas, camera, ship, target, this.markerAge);
+      });
     },
   };
 }
 
-function findNearestCrystalAsteroid(ship, asteroids) {
-  let nearestAsteroid = null;
-  let nearestDistance = SCAN_RANGE;
+function findResourceAsteroids(ship, asteroids) {
+  return asteroids
+    .map((asteroid) => {
+      const type = getResourceType(asteroid);
+      const offsetX = asteroid.position.x - ship.position.x;
+      const offsetY = asteroid.position.y - ship.position.y;
+      const distance = Math.hypot(offsetX, offsetY);
 
-  asteroids.forEach((asteroid) => {
-    if (!hasCrystal(asteroid)) {
-      return;
-    }
-
-    const offsetX = asteroid.position.x - ship.position.x;
-    const offsetY = asteroid.position.y - ship.position.y;
-    const distance = Math.hypot(offsetX, offsetY);
-
-    if (distance === 0 || distance > nearestDistance || !isInForwardCone(ship.angle, offsetX, offsetY)) {
-      return;
-    }
-
-    nearestAsteroid = asteroid;
-    nearestDistance = distance;
-  });
-
-  return nearestAsteroid;
+      return { asteroid, type, distance, offsetX, offsetY };
+    })
+    .filter(
+      (result) =>
+        result.type &&
+        result.distance > 0 &&
+        result.distance <= SCAN_RANGE &&
+        isInForwardCone(ship.angle, result.offsetX, result.offsetY),
+    )
+    .sort((first, second) => first.distance - second.distance);
 }
 
-function hasCrystal(asteroid) {
-  return (asteroid.resources.ice ?? 0) > 0.2 || (asteroid.resources.crystal ?? 0) > 0.2;
+function getResourceType(asteroid) {
+  const dominantResource = Object.entries(asteroid.resources)
+    .filter(([resource]) => resource !== "stone")
+    .reduce((best, [resource, amount]) => (amount > best.amount ? { resource, amount } : best), {
+      resource: null,
+      amount: 0,
+    }).resource;
+
+  if (!dominantResource) {
+    return null;
+  }
+
+  return dominantResource === "iron" ? "fuel" : "crystal";
 }
 
 function isInForwardCone(angle, offsetX, offsetY) {
@@ -98,8 +107,8 @@ function drawScanPulse(context, camera, ship, pulseAge) {
 function drawTargetMarker(context, canvas, camera, ship, target, markerAge) {
   const shipScreenX = ship.position.x - camera.x;
   const shipScreenY = ship.position.y - camera.y;
-  const directionX = target.position.x - ship.position.x;
-  const directionY = target.position.y - ship.position.y;
+  const directionX = target.asteroid.position.x - ship.position.x;
+  const directionY = target.asteroid.position.y - ship.position.y;
   const directionLength = Math.hypot(directionX, directionY);
 
   if (directionLength === 0) {
@@ -108,21 +117,30 @@ function drawTargetMarker(context, canvas, camera, ship, target, markerAge) {
 
   const edgePoint = getEdgePoint(shipScreenX, shipScreenY, directionX / directionLength, directionY / directionLength, canvas);
   const alpha = Math.max(0.18, 1 - markerAge / SCAN_MARKER_SECONDS);
+  const color = target.type === "fuel" ? FUEL_COLOR : CRYSTAL_COLOR;
 
   context.save();
-  context.strokeStyle = `rgba(115, 210, 255, ${alpha * 0.45})`;
-  context.fillStyle = `rgba(115, 210, 255, ${alpha * 0.7})`;
+  context.strokeStyle = getRgba(color, alpha * 0.45);
+  context.fillStyle = getRgba(color, alpha * 0.7);
   context.lineWidth = 2;
   context.beginPath();
   context.moveTo(shipScreenX, shipScreenY);
   context.lineTo(edgePoint.x, edgePoint.y);
   context.stroke();
   context.beginPath();
-  context.arc(edgePoint.x, edgePoint.y, 13, 0, Math.PI * 2);
+  context.arc(edgePoint.x, edgePoint.y, MARKER_RADIUS, 0, Math.PI * 2);
   context.fill();
-  context.strokeStyle = CRYSTAL_COLOR;
+  context.strokeStyle = color;
   context.stroke();
   context.restore();
+}
+
+function getRgba(hexColor, alpha) {
+  const red = Number.parseInt(hexColor.slice(1, 3), 16);
+  const green = Number.parseInt(hexColor.slice(3, 5), 16);
+  const blue = Number.parseInt(hexColor.slice(5, 7), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 function getEdgePoint(startX, startY, directionX, directionY, canvas) {
