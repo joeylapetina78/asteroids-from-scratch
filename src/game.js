@@ -1,14 +1,14 @@
 import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
 import { breakAsteroid } from "./entities/Asteroid.js?v=fuel-crystals";
 import { createResourcePickupsFromAsteroid } from "./entities/ResourcePickup.js?v=fuel-crystals";
-import { Ship } from "./entities/Ship.js?v=fuel-crystals";
+import { Ship } from "./entities/Ship.js?v=components";
 import { createAsteroidField } from "./systems/asteroidField.js?v=fuel-crystals";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=power-control";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
 import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
-import { createGameState } from "./state/gameState.js?v=left-processor-economy";
+import { createGameState } from "./state/gameState.js?v=components";
 
 const FIRE_COOLDOWN_SECONDS = 0.18;
 const AMMO_PER_SHOT = 1;
@@ -27,7 +27,7 @@ export class Game {
     this.input = createInput();
     this.camera = createCamera(canvas);
     this.scanner = createScanner(canvas);
-    this.ship = new Ship(0, 0, state.ship);
+    this.ship = new Ship(0, 0, state.components.engine);
     this.resourceField = createResourceField();
     this.asteroids = createAsteroidField(canvas, this.resourceField);
     this.bullets = [];
@@ -43,7 +43,7 @@ export class Game {
   }
 
   setShipPowered(isPowered) {
-    this.state.ship.isPowered = isPowered;
+    this.state.components.engine.powered = isPowered;
 
     if (!isPowered) {
       this.input.clearGameKeys();
@@ -53,11 +53,13 @@ export class Game {
   }
 
   scanForCrystals() {
-    if (!this.state.ship.isPowered || this.state.ship.scanergy < SCANERGY_PER_SCAN) {
+    const scanner = this.state.components.scanner;
+
+    if (!this.state.components.engine.powered || !scanner.installed || scanner.scanergy < SCANERGY_PER_SCAN) {
       return;
     }
 
-    this.state.ship.scanergy -= SCANERGY_PER_SCAN;
+    scanner.scanergy -= SCANERGY_PER_SCAN;
     this.onHudChange(this.state);
     this.scanner.scan(this.ship, this.asteroids);
   }
@@ -73,15 +75,15 @@ export class Game {
   }
 
   update(deltaSeconds) {
-    if (!this.state.ship.isPowered) {
+    if (!this.state.components.engine.powered) {
       this.input.clearGameKeys();
     }
 
     this.fireCooldown = Math.max(0, this.fireCooldown - deltaSeconds);
     this.shipHitCooldown = Math.max(0, this.shipHitCooldown - deltaSeconds);
-    const previousFuel = this.state.ship.fuel;
+    const previousFuel = this.state.components.engine.fuel;
     this.ship.update(deltaSeconds, this.input);
-    if (this.state.ship.fuel !== previousFuel) {
+    if (this.state.components.engine.fuel !== previousFuel) {
       this.onHudChange(this.state);
     }
     this.updateShooting();
@@ -99,11 +101,13 @@ export class Game {
   updateShooting() {
     const wantsToFire = this.input.wasPressed("Space") || this.input.isDown("Space");
 
-    if (!this.state.ship.isPowered || !wantsToFire || this.fireCooldown > 0 || this.state.ship.ammo < AMMO_PER_SHOT) {
+    const miner = this.state.components.miner;
+
+    if (!this.state.components.engine.powered || !miner.installed || !wantsToFire || this.fireCooldown > 0 || miner.ammo < AMMO_PER_SHOT) {
       return;
     }
 
-    this.state.ship.ammo -= AMMO_PER_SHOT;
+    miner.ammo -= AMMO_PER_SHOT;
     this.onHudChange(this.state);
     this.bullets.push(new Bullet(this.ship));
     this.fireCooldown = FIRE_COOLDOWN_SECONDS;

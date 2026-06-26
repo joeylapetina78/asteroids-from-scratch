@@ -1,6 +1,6 @@
-import { Game } from "./game.js?v=left-processor-economy";
+import { Game } from "./game.js?v=components";
 import { Processor } from "./systems/processor.js?v=processor-outputs";
-import { createGameState } from "./state/gameState.js?v=left-processor-economy";
+import { createGameState } from "./state/gameState.js?v=components";
 
 const PROCESS_OUTPUT_AMOUNT = 50;
 const ammoCount = document.querySelector("#ammo-count");
@@ -17,18 +17,26 @@ const processor = new Processor(processorCanvas, processUnit);
 const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type));
 
 function updateShipPowerDisplay() {
-  powerButton.textContent = state.ship.isPowered ? "Power Down" : "Power Ship";
-  powerButton.setAttribute("aria-pressed", String(state.ship.isPowered));
-  shipStatus.textContent = state.ship.isPowered ? "ship online" : "ship offline";
+  const engine = state.components.engine;
+
+  powerButton.textContent = engine.powered ? "Power Down" : "Power Ship";
+  powerButton.setAttribute("aria-pressed", String(engine.powered));
+  shipStatus.textContent = engine.powered ? "ship online" : "ship offline";
 }
 
 powerButton.addEventListener("click", () => {
-  game.setShipPowered(!state.ship.isPowered);
+  game.setShipPowered(!state.components.engine.powered);
   updateShipPowerDisplay();
 });
 
 scanButton.addEventListener("click", () => {
   game.scanForCrystals();
+});
+
+processorOutputControls.forEach((control) => {
+  control.addEventListener("change", () => {
+    state.components.processor.output = getSelectedProcessorOutput();
+  });
 });
 
 updateShipPowerDisplay();
@@ -38,20 +46,21 @@ game.start();
 processor.start();
 
 function updateHudDisplay() {
-  fuelCount.textContent = String(Math.floor(state.ship.fuel));
-  ammoCount.textContent = String(Math.floor(state.ship.ammo));
-  scanergyCount.textContent = `${Math.floor(state.ship.scanergy)}%`;
+  fuelCount.textContent = String(Math.floor(state.components.engine.fuel));
+  ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
+  scanergyCount.textContent = `${Math.floor(state.components.scanner.scanergy)}%`;
 }
 
 function processUnit() {
   const output = getSelectedProcessorOutput();
+  state.components.processor.output = output;
 
   if (output === "fuel") {
-    state.ship.fuel += PROCESS_OUTPUT_AMOUNT;
+    state.components.engine.fuel += PROCESS_OUTPUT_AMOUNT;
   } else if (output === "ammo") {
-    state.ship.ammo += PROCESS_OUTPUT_AMOUNT;
+    state.components.miner.ammo += PROCESS_OUTPUT_AMOUNT;
   } else {
-    state.ship.scanergy += PROCESS_OUTPUT_AMOUNT;
+    state.components.scanner.scanergy += PROCESS_OUTPUT_AMOUNT;
   }
 
   updateHudDisplay();

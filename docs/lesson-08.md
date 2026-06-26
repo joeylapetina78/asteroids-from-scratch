@@ -15,8 +15,8 @@ For ship power:
 
 - `main.js` listens for clicks on the HTML button
 - the click asks `Game` to change ship power
-- `Game` toggles `state.ship.isPowered` and clears active controls when power goes off
-- `Game` passes `state.ship` into the `Ship`
+- `Game` toggles `state.components.engine.powered` and clears active controls when power goes off
+- `Game` passes the engine component into the `Ship`
 - `Ship.update()` ignores controls while power is off, but still lets the ship drift
 - `Ship.draw()` changes color based on power
 - shooting also checks ship power before firing

@@ -5,16 +5,16 @@ const BRAKE_DRAG = 0.92;
 const SPACE_DRAG = 0.995;
 
 export class Ship {
-  constructor(x, y, state) {
+  constructor(x, y, engine) {
     this.position = { x, y };
     this.velocity = { x: 0, y: 0 };
     this.angle = -Math.PI / 2;
-    this.state = state;
+    this.engine = engine;
     this.isThrusting = false;
   }
 
   update(deltaSeconds, input) {
-    if (!this.state.isPowered) {
+    if (!this.engine.powered) {
       this.stopThrusting();
     } else {
       if (input.isDown("KeyA")) {
@@ -25,9 +25,9 @@ export class Ship {
         this.angle += ROTATION_SPEED * deltaSeconds;
       }
 
-      this.isThrusting = input.isDown("KeyW") && this.state.fuel > 0;
+      this.isThrusting = input.isDown("KeyW") && this.engine.fuel > 0;
       if (this.isThrusting) {
-        this.state.fuel = Math.max(0, this.state.fuel - FUEL_BURN_RATE * deltaSeconds);
+        this.engine.fuel = Math.max(0, this.engine.fuel - FUEL_BURN_RATE * deltaSeconds);
         this.velocity.x += Math.cos(this.angle) * THRUST_POWER * deltaSeconds;
         this.velocity.y += Math.sin(this.angle) * THRUST_POWER * deltaSeconds;
       }
@@ -58,8 +58,8 @@ export class Ship {
     context.rotate(this.angle);
 
     context.lineWidth = 2;
-    context.strokeStyle = this.state.isPowered ? "#f5f7fb" : "#555b66";
-    context.fillStyle = this.state.isPowered ? "#f5f7fb" : "#20242b";
+    context.strokeStyle = this.engine.powered ? "#f5f7fb" : "#555b66";
+    context.fillStyle = this.engine.powered ? "#f5f7fb" : "#20242b";
 
     context.beginPath();
     context.moveTo(22, 0);

@@ -26,7 +26,9 @@ Then open `http://127.0.0.1:8123/`.
 
 ## Current Slice
 
-The page has a ship power button that changes shared game state. When powered off, the ship is dark, cannot be controlled, and cannot fire, but it still drifts. When powered on, the ship turns white and can rotate, thrust, coast, brake, and fire.
+The ship is modeled as a set of installed components: engine, miner, scanner, and processor. The page controls are the ship interface for those components.
+
+The engine has a power button and fuel. When powered off, the ship is dark, cannot be controlled, and cannot fire, but it still drifts. When powered on, the ship turns white and can rotate, thrust, coast, brake, and fire.
 
 The ship moves through world space while a springy camera follows it, so the grid scrolls underneath the player with a little lag and catch-up.
 
