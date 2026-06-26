@@ -12,7 +12,7 @@ desired velocity - current velocity = steering force
 
 That same idea can be mixed in different ways:
 
-- Hunter: wanders until it senses the ship, then seeks it
+- Hunter: wanders until it senses a powered ship, then seeks it. If the ship powers down, the hunter loses lock. Hunters are destroyed by one shot or by ramming the ship.
 - Threadling: uses separation, alignment, and cohesion to move with nearby threadlings
 - Grazer: orbits rocks and flees the ship if it gets too close
 - Skitter: wanders quickly, avoids rocks, and flees the ship

@@ -5,7 +5,7 @@ import { Ship } from "./entities/Ship.js?v=components";
 import { createAsteroidField } from "./systems/asteroidField.js?v=fuel-crystals";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=power-control";
-import { createLifeField } from "./systems/lifeField.js?v=field-life-2";
+import { createLifeField } from "./systems/lifeField.js?v=field-life-3";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
 import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
@@ -112,8 +112,12 @@ export class Game {
         asteroids: activeAsteroids,
         lifeforms: activeLifeforms,
         ship: this.ship,
+        shipPowered: this.state.components.engine.powered,
       });
     });
+    this.updateHunterHits();
+    this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
+    this.lifeforms = this.lifeforms.filter((lifeform) => lifeform.isAlive);
     this.pickups.forEach((pickup) => pickup.update(deltaSeconds));
     this.updateParticles(deltaSeconds);
     this.updateCollector(deltaSeconds);
@@ -222,6 +226,55 @@ export class Game {
     this.asteroids.push(...newAsteroids);
   }
 
+  updateHunterHits() {
+    const hitHunters = new Set();
+
+    this.bullets.forEach((bullet) => {
+      if (!bullet.isAlive) {
+        return;
+      }
+
+      const hitHunter = this.lifeforms.find(
+        (lifeform) =>
+          lifeform.type === "hunter" &&
+          lifeform.isAlive &&
+          !hitHunters.has(lifeform) &&
+          circlesOverlap(bullet.position, bullet.radius, lifeform.position, lifeform.radius),
+      );
+
+      if (!hitHunter) {
+        return;
+      }
+
+      bullet.destroy();
+      hitHunter.destroy();
+      hitHunters.add(hitHunter);
+      this.createHunterBurst(hitHunter, bullet.velocity);
+    });
+
+    if (this.shipHitCooldown > 0) {
+      return;
+    }
+
+    const rammingHunter = this.lifeforms.find(
+      (lifeform) =>
+        lifeform.type === "hunter" &&
+        lifeform.isAlive &&
+        !hitHunters.has(lifeform) &&
+        circlesOverlap(this.ship.position, SHIP_COLLISION_RADIUS, lifeform.position, lifeform.radius),
+    );
+
+    if (!rammingHunter) {
+      return;
+    }
+
+    this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
+    this.damageHull(this.getImpactDamage(rammingHunter) * 0.5);
+    this.createShipSparks(rammingHunter);
+    this.createHunterBurst(rammingHunter, this.ship.velocity);
+    rammingHunter.destroy();
+  }
+
   damageHull(amount) {
     const hull = this.state.components.hull;
 
@@ -283,9 +336,34 @@ export class Game {
     }
   }
 
-  createShipSparks(asteroid) {
-    const angleToShip = Math.atan2(this.ship.position.y - asteroid.position.y, this.ship.position.x - asteroid.position.x);
-    const relativeSpeed = Math.hypot(this.ship.velocity.x - asteroid.velocity.x, this.ship.velocity.y - asteroid.velocity.y);
+  createHunterBurst(hunter, impactVelocity) {
+    const count = 22;
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = (Math.PI * 2 * index) / count + Math.random() * 0.55;
+      const speed = 80 + Math.random() * 230;
+
+      this.particles.push({
+        type: index % 3 === 0 ? "spark" : "square",
+        position: {
+          x: hunter.position.x + Math.cos(angle) * hunter.radius * 0.22,
+          y: hunter.position.y + Math.sin(angle) * hunter.radius * 0.22,
+        },
+        velocity: {
+          x: hunter.velocity.x * 0.35 + Math.cos(angle) * speed + impactVelocity.x * 0.025,
+          y: hunter.velocity.y * 0.35 + Math.sin(angle) * speed + impactVelocity.y * 0.025,
+        },
+        color: index % 4 === 0 ? "#ffffff" : "#ff5d6c",
+        size: 1.5 + Math.random() * 3,
+        life: 0.28 + Math.random() * 0.38,
+        maxLife: 0.66,
+      });
+    }
+  }
+
+  createShipSparks(impactBody) {
+    const angleToShip = Math.atan2(this.ship.position.y - impactBody.position.y, this.ship.position.x - impactBody.position.x);
+    const relativeSpeed = Math.hypot(this.ship.velocity.x - impactBody.velocity.x, this.ship.velocity.y - impactBody.velocity.y);
     const count = Math.min(34, 10 + Math.floor(relativeSpeed / 24));
 
     for (let index = 0; index < count; index += 1) {

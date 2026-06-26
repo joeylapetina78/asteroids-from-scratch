@@ -18,6 +18,7 @@ export class Lifeform {
     this.maxSpeed = getMaxSpeed(type);
     this.maxForce = getMaxForce(type);
     this.perception = getPerception(type);
+    this.isAlive = true;
   }
 
   update(deltaSeconds, world) {
@@ -39,11 +40,11 @@ export class Lifeform {
   updateHunter(deltaSeconds, world) {
     const distanceToShip = distance(this.position, world.ship.position);
 
-    if (distanceToShip < 1500) {
+    if (world.shipPowered && distanceToShip < 1500) {
       this.applySteer(seek(this, world.ship.position, this.maxSpeed), 2.25);
       this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 110), 78), 0.65);
     } else {
-      this.applySteer(this.wander(deltaSeconds), 0.8);
+      this.applySteer(this.wander(deltaSeconds), world.shipPowered ? 0.8 : 1.15);
     }
 
     this.applySteer(orbitNearestAsteroid(this, world.asteroids, 460, 90, deltaSeconds), 0.28);
@@ -194,6 +195,10 @@ export class Lifeform {
     }
 
     context.restore();
+  }
+
+  destroy() {
+    this.isAlive = false;
   }
 }
 
