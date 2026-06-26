@@ -48,3 +48,16 @@ Then the page can render component panels onto a dashboard grid and save their p
 The collector is the first component that continuously connects two systems. It belongs to the ship UI, but it spends scanner energy and affects resource pickups in the world. That is the pattern we can reuse later for things like shields, repair systems, cargo handling, or factory modules.
 
 The cargo hold is different from the processor. It uses the same falling-square physics, but its units are not clickable. They are stored for future systems, like quests that ask for a certain number of crystals.
+
+The collector now uses four named strengths instead of a free slider:
+
+```js
+Off -> 0
+Small -> 0.25
+Med -> 0.6
+Large -> 1
+```
+
+That gives the component a more switch-like cockpit feel. It also makes balancing easier, because each strength can eventually have a known power draw and range.
+
+White stone debris and ship sparks are visual feedback only. They are particles, not resources. That distinction matters: resources go through processor/cargo systems, while impact particles just help the world feel responsive.

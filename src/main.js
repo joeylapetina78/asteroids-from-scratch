@@ -1,14 +1,14 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=cargo-hull-panels";
+import { Game } from "./game.js?v=impact-effects";
 import { Processor } from "./systems/processor.js?v=cargo-hold";
-import { createGameState } from "./state/gameState.js?v=cargo-hull-panels";
+import { createGameState } from "./state/gameState.js?v=impact-effects";
 
 const PROCESS_OUTPUT_AMOUNT = 50;
 const ammoCount = document.querySelector("#ammo-count");
 const cargoCanvas = document.querySelector("#cargo");
 const canvas = document.querySelector("#game");
-const collectorRange = document.querySelector("#collector-range");
 const collectorRangeCount = document.querySelector("#collector-range-count");
+const collectorStrengthControls = document.querySelectorAll("input[name='collector-strength']");
 const fuelCount = document.querySelector("#fuel-count");
 const hullCount = document.querySelector("#hull-count");
 const minerArmed = document.querySelector("#miner-armed");
@@ -46,9 +46,11 @@ minerArmed.addEventListener("change", () => {
   state.components.miner.armed = minerArmed.checked;
 });
 
-collectorRange.addEventListener("input", () => {
-  state.components.collector.rangeSetting = Number(collectorRange.value) / 100;
-  updateHudDisplay();
+collectorStrengthControls.forEach((control) => {
+  control.addEventListener("change", () => {
+    state.components.collector.rangeSetting = Number(control.value);
+    updateHudDisplay();
+  });
 });
 
 scanButton.addEventListener("click", () => {
@@ -70,9 +72,28 @@ function updateHudDisplay() {
   fuelCount.textContent = String(Math.floor(state.components.engine.fuel));
   ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
   scanergyCount.textContent = `${Math.floor(state.components.scanner.scanergy)}%`;
-  collectorRangeCount.textContent = `${Math.round(state.components.collector.rangeSetting * 100)}%`;
+  collectorRangeCount.textContent = getCollectorStrengthLabel();
   hullCount.textContent = `${Math.ceil(state.components.hull.integrity)}%`;
   minerArmed.checked = state.components.miner.armed;
+  collectorStrengthControls.forEach((control) => {
+    control.checked = Number(control.value) === state.components.collector.rangeSetting;
+  });
+}
+
+function getCollectorStrengthLabel() {
+  if (state.components.collector.rangeSetting >= 1) {
+    return "Large";
+  }
+
+  if (state.components.collector.rangeSetting >= 0.6) {
+    return "Med";
+  }
+
+  if (state.components.collector.rangeSetting > 0) {
+    return "Small";
+  }
+
+  return "Off";
 }
 
 function processUnit(type) {

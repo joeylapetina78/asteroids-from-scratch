@@ -23,7 +23,7 @@ Then open `http://127.0.0.1:8123/`.
 - Thrust mode: chooses forward thrust or low-power reverse thrust
 - Scan button: sends a forward resource scan from the ship nose
 - Miner armed switch: enables or disables shooting
-- Collector range: pulls loose resource squares toward the ship and spends scanergy
+- Collector strength: Off, Small, Med, or Large pull field that spends scanergy
 - Processor output: chooses where crushed units go
 - Processor click: crushes a collected unit into the selected output
 - Panel title drag: moves component panels on a small snap grid
@@ -38,14 +38,14 @@ The ship moves through world space while a springy camera follows it, so the gri
 
 Asteroids are generated from an invisible resource field. Dense regions contain more asteroids, and resource mixes influence color and size.
 
-The field also contains many common white stone asteroids. Bullets and ship impacts break asteroids into smaller chunks before the smallest pieces disappear.
+The field also contains many common white stone asteroids. Bullets and ship impacts break asteroids into smaller chunks before the smallest pieces disappear. Final white stones burst into small white debris squares when destroyed.
 
 Destroying the smallest resource rocks ejects red fuel squares or blue crystal squares. Flying over those squares sends larger units into the processor canvas instead of immediately turning them into fuel or crystal value. Thrust spends fuel.
 
-The scan button sends out a forward cone pulse. If it detects resource asteroids ahead, it shows small edge markers: red for fuel rocks and blue for crystal rocks. The collector uses scanergy continuously to create a stronger pull field around the ship, drawing loose resource squares inward while the slider is above zero.
+The scan button sends out a forward cone pulse. If it detects resource asteroids ahead, it shows small edge markers: red for fuel rocks and blue for crystal rocks. The collector uses scanergy continuously to create a stronger pull field around the ship, drawing loose resource squares inward at one of four strengths.
 
 The smaller processor canvas sits to the left on wide screens. It receives collected units from a pipe at the top. Units fall, stack, collide, and can be clicked to crush them into the selected output. Available processor outputs are driven by installed components, so fuel comes from the engine, ammo comes from the miner, scanergy comes from the scanner, and cargo sends the unit into the cargo hold.
 
-The cargo hold has its own pipe and physics space. Units sent there are stored instead of processed, which gives future quests a place to check for delivered goods. The hull panel tracks ship integrity, and rock impacts reduce it.
+The cargo hold has its own pipe and physics space. Units sent there are stored instead of processed, which gives future quests a place to check for delivered goods. The hull panel tracks ship integrity. Rock impacts throw ship sparks and reduce integrity based on impact speed and asteroid size.
 
 Next likely milestone: save component panel positions, or add install/locked states so new systems can appear through progression.

@@ -266,13 +266,22 @@ body {
 }
 
 .collector-control {
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  font-size: 0.85rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
 }
 
-.collector-control input {
-  width: 100%;
+.collector-control label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 32px;
+  border: 1px solid #333846;
+  border-radius: 6px;
+  background: #07080c;
+  cursor: pointer;
+  font-size: 0.8rem;
 }
 
 .component-hints {

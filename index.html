@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=cargo-hull-panels" />
+    <link rel="stylesheet" href="./src/styles.css?v=impact-effects" />
   </head>
   <body>
     <main class="game-shell">
@@ -99,11 +99,13 @@
                   <span>resource pull field</span>
                 </div>
               </div>
-              <label class="collector-control">
-                <span>Range</span>
-                <input id="collector-range" type="range" min="0" max="100" value="0" />
-                <strong id="collector-range-count">0%</strong>
-              </label>
+              <div class="collector-control" role="group" aria-label="Collector strength">
+                <label><input type="radio" name="collector-strength" value="0" checked /> Off</label>
+                <label><input type="radio" name="collector-strength" value="0.25" /> Small</label>
+                <label><input type="radio" name="collector-strength" value="0.6" /> Med</label>
+                <label><input type="radio" name="collector-strength" value="1" /> Large</label>
+              </div>
+              <span>Pull: <strong id="collector-range-count">Off</strong></span>
             </div>
 
             <div class="component-panel hull-panel" data-panel-id="hull" aria-label="Hull component">
@@ -125,6 +127,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=cargo-hull-panels"></script>
+    <script type="module" src="./src/main.js?v=impact-effects"></script>
   </body>
 </html>

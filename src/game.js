@@ -1,5 +1,5 @@
 import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
-import { breakAsteroid } from "./entities/Asteroid.js?v=fuel-crystals";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fuel-crystals";
 import { createResourcePickupsFromAsteroid } from "./entities/ResourcePickup.js?v=fuel-crystals";
 import { Ship } from "./entities/Ship.js?v=components";
 import { createAsteroidField } from "./systems/asteroidField.js?v=fuel-crystals";
@@ -15,11 +15,11 @@ const AMMO_PER_SHOT = 1;
 const SCANERGY_PER_SCAN = 100;
 const SHIP_COLLISION_RADIUS = 18;
 const SHIP_HIT_COOLDOWN_SECONDS = 0.35;
-const HULL_DAMAGE_PER_ASTEROID_HIT = 7;
 const PICKUP_COLLECT_RADIUS = 24;
 const COLLECTOR_MIN_RADIUS = 54;
-const COLLECTOR_PULL_FORCE = 980;
+const COLLECTOR_PULL_FORCE = 1650;
 const COLLECTOR_MAX_SCANERGY_PER_SECOND = 50;
+const PARTICLE_DRAG = 0.94;
 
 export class Game {
   constructor(canvas, state = createGameState(), onHudChange = () => {}, onResourceCollected = () => {}) {
@@ -35,6 +35,7 @@ export class Game {
     this.resourceField = createResourceField();
     this.asteroids = createAsteroidField(canvas, this.resourceField);
     this.bullets = [];
+    this.particles = [];
     this.pickups = [];
     this.fireCooldown = 0;
     this.shipHitCooldown = 0;
@@ -97,6 +98,7 @@ export class Game {
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
     this.asteroids.forEach((asteroid) => asteroid.update(deltaSeconds));
     this.pickups.forEach((pickup) => pickup.update(deltaSeconds));
+    this.updateParticles(deltaSeconds);
     this.updateCollector(deltaSeconds);
     this.collectPickups();
     this.scanner.update(deltaSeconds);
@@ -150,7 +152,7 @@ export class Game {
       }
 
       const distance = Math.sqrt(distanceSquared);
-      const pullStrength = (1 - distance / radius) * collector.rangeSetting;
+      const pullStrength = Math.max(0.35, 1 - distance / radius) * (0.8 + collector.rangeSetting * 0.5);
 
       pickup.velocity.x += (distanceX / distance) * COLLECTOR_PULL_FORCE * pullStrength * deltaSeconds;
       pickup.velocity.y += (distanceY / distance) * COLLECTOR_PULL_FORCE * pullStrength * deltaSeconds;
@@ -188,7 +190,8 @@ export class Game {
 
       if (shipHitAsteroid) {
         this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
-        this.damageHull(HULL_DAMAGE_PER_ASTEROID_HIT);
+        this.damageHull(this.getImpactDamage(shipHitAsteroid));
+        this.createShipSparks(shipHitAsteroid);
         hitAsteroids.add(shipHitAsteroid);
         newAsteroids.push(...this.breakAsteroid(shipHitAsteroid, this.ship.velocity));
       }
@@ -213,6 +216,16 @@ export class Game {
     this.onHudChange(this.state);
   }
 
+  getImpactDamage(asteroid) {
+    const relativeVelocityX = this.ship.velocity.x - asteroid.velocity.x;
+    const relativeVelocityY = this.ship.velocity.y - asteroid.velocity.y;
+    const relativeSpeed = Math.hypot(relativeVelocityX, relativeVelocityY);
+    const massScale = asteroid.radius / 34;
+    const damage = 4 + relativeSpeed * 0.04 + relativeSpeed * massScale * 0.07 + asteroid.radius * 0.18;
+
+    return Math.min(100, Math.max(6, damage));
+  }
+
   breakAsteroid(asteroid, impactVelocity) {
     this.impactSeed += 1;
 
@@ -220,9 +233,76 @@ export class Game {
       this.pickups.push(
         ...createResourcePickupsFromAsteroid(asteroid, this.impactSeed + 50000, impactVelocity),
       );
+      if (asteroid.color === WHITE_ASTEROID_COLOR) {
+        this.createStoneBurst(asteroid, impactVelocity);
+      }
     }
 
     return breakAsteroid(asteroid, this.impactSeed, impactVelocity);
+  }
+
+  createStoneBurst(asteroid, impactVelocity) {
+    const count = 8 + Math.floor(asteroid.radius / 2);
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = (Math.PI * 2 * index) / count + Math.random() * 0.45;
+      const speed = 65 + Math.random() * 140;
+
+      this.particles.push({
+        type: "square",
+        position: {
+          x: asteroid.position.x + Math.cos(angle) * asteroid.radius * 0.2,
+          y: asteroid.position.y + Math.sin(angle) * asteroid.radius * 0.2,
+        },
+        velocity: {
+          x: asteroid.velocity.x * 0.35 + Math.cos(angle) * speed + impactVelocity.x * 0.035,
+          y: asteroid.velocity.y * 0.35 + Math.sin(angle) * speed + impactVelocity.y * 0.035,
+        },
+        color: "#edf2ff",
+        size: 2 + Math.random() * 3,
+        life: 0.45 + Math.random() * 0.35,
+        maxLife: 0.8,
+      });
+    }
+  }
+
+  createShipSparks(asteroid) {
+    const angleToShip = Math.atan2(this.ship.position.y - asteroid.position.y, this.ship.position.x - asteroid.position.x);
+    const relativeSpeed = Math.hypot(this.ship.velocity.x - asteroid.velocity.x, this.ship.velocity.y - asteroid.velocity.y);
+    const count = Math.min(34, 10 + Math.floor(relativeSpeed / 24));
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = angleToShip + (Math.random() - 0.5) * 1.7;
+      const speed = 90 + Math.random() * 230 + relativeSpeed * 0.18;
+
+      this.particles.push({
+        type: "spark",
+        position: {
+          x: this.ship.position.x - Math.cos(angleToShip) * SHIP_COLLISION_RADIUS,
+          y: this.ship.position.y - Math.sin(angleToShip) * SHIP_COLLISION_RADIUS,
+        },
+        velocity: {
+          x: Math.cos(angle) * speed,
+          y: Math.sin(angle) * speed,
+        },
+        color: Math.random() > 0.35 ? "#ffd36b" : "#ffffff",
+        size: 1 + Math.random() * 2,
+        life: 0.22 + Math.random() * 0.28,
+        maxLife: 0.5,
+      });
+    }
+  }
+
+  updateParticles(deltaSeconds) {
+    this.particles.forEach((particle) => {
+      particle.life -= deltaSeconds;
+      particle.velocity.x *= PARTICLE_DRAG;
+      particle.velocity.y *= PARTICLE_DRAG;
+      particle.position.x += particle.velocity.x * deltaSeconds;
+      particle.position.y += particle.velocity.y * deltaSeconds;
+    });
+
+    this.particles = this.particles.filter((particle) => particle.life > 0);
   }
 
   collectPickups() {
@@ -257,11 +337,33 @@ export class Game {
         pickup.draw(this.context, this.camera);
       }
     });
+    this.drawParticles();
     this.drawCollectorField();
     this.bullets.forEach((bullet) => bullet.draw(this.context, this.camera));
     drawVector(this.context, this.ship.position, this.ship.velocity, this.camera);
     this.scanner.draw(this.context, this.camera, this.ship);
     this.ship.draw(this.context, this.camera);
+  }
+
+  drawParticles() {
+    this.particles.forEach((particle) => {
+      const alpha = Math.max(0, particle.life / particle.maxLife);
+      const screenX = particle.position.x - this.camera.x;
+      const screenY = particle.position.y - this.camera.y;
+
+      this.context.save();
+      this.context.globalAlpha = alpha;
+      this.context.fillStyle = particle.color;
+      this.context.translate(screenX, screenY);
+
+      if (particle.type === "spark") {
+        this.context.fillRect(-particle.size * 1.5, -particle.size / 2, particle.size * 3, particle.size);
+      } else {
+        this.context.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
+      }
+
+      this.context.restore();
+    });
   }
 
   drawCollectorField() {
@@ -293,8 +395,8 @@ export class Game {
   }
 
   getCollectorRadius() {
-    const maxRadius = Math.min(this.canvas.width, this.canvas.height) * 0.44;
-    const rangeCurve = Math.pow(this.state.components.collector.rangeSetting, 0.85);
+    const maxRadius = Math.min(this.canvas.width, this.canvas.height) * 0.48;
+    const rangeCurve = Math.pow(this.state.components.collector.rangeSetting, 0.72);
 
     return COLLECTOR_MIN_RADIUS + (maxRadius - COLLECTOR_MIN_RADIUS) * rangeCurve;
   }
