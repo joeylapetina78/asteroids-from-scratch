@@ -38,6 +38,8 @@ The ship moves through world space while a springy camera follows it, so the gri
 
 Asteroids are generated from an invisible resource field. Dense regions contain more asteroids, and resource mixes influence color and size.
 
+The field also contains autonomous life forms: hunters, threadling flocks, grazers, and skitters. They use steering behaviors to seek, flee, wander, flock, and avoid rocks.
+
 The field also contains many common white stone asteroids. Bullets and ship impacts break asteroids into smaller chunks before the smallest pieces disappear. Final white stones burst into small white debris squares when destroyed.
 
 Destroying the smallest resource rocks ejects red fuel squares or blue crystal squares. Flying over those squares sends larger units into the processor canvas instead of immediately turning them into fuel or crystal value. Thrust spends fuel.

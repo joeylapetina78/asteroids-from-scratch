@@ -5,6 +5,7 @@ import { Ship } from "./entities/Ship.js?v=components";
 import { createAsteroidField } from "./systems/asteroidField.js?v=fuel-crystals";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=power-control";
+import { createLifeField } from "./systems/lifeField.js?v=field-life";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
 import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
@@ -34,6 +35,7 @@ export class Game {
     this.ship = new Ship(0, 0, state.components.engine);
     this.resourceField = createResourceField();
     this.asteroids = createAsteroidField(canvas, this.resourceField);
+    this.lifeforms = createLifeField(this.asteroids);
     this.bullets = [];
     this.particles = [];
     this.pickups = [];
@@ -97,6 +99,13 @@ export class Game {
     this.updateAsteroidHits();
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
     this.asteroids.forEach((asteroid) => asteroid.update(deltaSeconds));
+    this.lifeforms.forEach((lifeform) => {
+      lifeform.update(deltaSeconds, {
+        asteroids: this.asteroids,
+        lifeforms: this.lifeforms,
+        ship: this.ship,
+      });
+    });
     this.pickups.forEach((pickup) => pickup.update(deltaSeconds));
     this.updateParticles(deltaSeconds);
     this.updateCollector(deltaSeconds);
@@ -330,6 +339,11 @@ export class Game {
     this.asteroids.forEach((asteroid) => {
       if (isVisible(asteroid, this.canvas, this.camera)) {
         asteroid.draw(this.context, this.camera);
+      }
+    });
+    this.lifeforms.forEach((lifeform) => {
+      if (isVisible(lifeform, this.canvas, this.camera)) {
+        lifeform.draw(this.context, this.camera);
       }
     });
     this.pickups.forEach((pickup) => {
