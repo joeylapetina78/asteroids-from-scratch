@@ -5,7 +5,7 @@ import { Ship } from "./entities/Ship.js?v=components";
 import { createAsteroidField } from "./systems/asteroidField.js?v=fuel-crystals";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=power-control";
-import { createLifeField } from "./systems/lifeField.js?v=field-life-3";
+import { createLifeField } from "./systems/lifeField.js?v=ship-destruction";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
 import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
@@ -43,6 +43,7 @@ export class Game {
     this.fireCooldown = 0;
     this.shipHitCooldown = 0;
     this.impactSeed = 0;
+    this.shipDestroyed = false;
     this.lastFrameTime = 0;
   }
 
@@ -51,6 +52,10 @@ export class Game {
   }
 
   setShipPowered(isPowered) {
+    if (this.shipDestroyed) {
+      return;
+    }
+
     this.state.components.engine.powered = isPowered;
 
     if (!isPowered) {
@@ -63,7 +68,7 @@ export class Game {
   scanForCrystals() {
     const scanner = this.state.components.scanner;
 
-    if (!this.state.components.engine.powered || !scanner.installed || scanner.scanergy < SCANERGY_PER_SCAN) {
+    if (this.shipDestroyed || !this.state.components.engine.powered || !scanner.installed || scanner.scanergy < SCANERGY_PER_SCAN) {
       return;
     }
 
@@ -83,7 +88,7 @@ export class Game {
   }
 
   update(deltaSeconds) {
-    if (!this.state.components.engine.powered) {
+    if (!this.state.components.engine.powered || this.shipDestroyed) {
       this.input.clearGameKeys();
     }
 
@@ -135,7 +140,7 @@ export class Game {
 
     const miner = this.state.components.miner;
 
-    if (!this.state.components.engine.powered || !miner.installed || !miner.armed || !wantsToFire || this.fireCooldown > 0 || miner.ammo < AMMO_PER_SHOT) {
+    if (this.shipDestroyed || !this.state.components.engine.powered || !miner.installed || !miner.armed || !wantsToFire || this.fireCooldown > 0 || miner.ammo < AMMO_PER_SHOT) {
       return;
     }
 
@@ -149,7 +154,7 @@ export class Game {
     const collector = this.state.components.collector;
     const scanner = this.state.components.scanner;
 
-    if (!this.state.components.engine.powered || !collector.installed || collector.rangeSetting <= 0 || scanner.scanergy <= 0) {
+    if (this.shipDestroyed || !this.state.components.engine.powered || !collector.installed || collector.rangeSetting <= 0 || scanner.scanergy <= 0) {
       return;
     }
 
@@ -283,7 +288,20 @@ export class Game {
     }
 
     hull.integrity = Math.max(0, hull.integrity - amount);
+
+    if (hull.integrity === 0 && !this.shipDestroyed) {
+      this.destroyShip();
+    }
+
     this.onHudChange(this.state);
+  }
+
+  destroyShip() {
+    this.shipDestroyed = true;
+    this.state.components.engine.powered = false;
+    this.input.clearGameKeys();
+    this.ship.stopThrusting();
+    this.createShipDestructionBurst();
   }
 
   getImpactDamage(asteroid) {
@@ -384,6 +402,31 @@ export class Game {
         size: 1 + Math.random() * 2,
         life: 0.22 + Math.random() * 0.28,
         maxLife: 0.5,
+      });
+    }
+  }
+
+  createShipDestructionBurst() {
+    const count = 70;
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = (Math.PI * 2 * index) / count + Math.random() * 0.4;
+      const speed = 90 + Math.random() * 360;
+
+      this.particles.push({
+        type: "spark",
+        position: {
+          x: this.ship.position.x + Math.cos(angle) * Math.random() * SHIP_COLLISION_RADIUS,
+          y: this.ship.position.y + Math.sin(angle) * Math.random() * SHIP_COLLISION_RADIUS,
+        },
+        velocity: {
+          x: this.ship.velocity.x * 0.3 + Math.cos(angle) * speed,
+          y: this.ship.velocity.y * 0.3 + Math.sin(angle) * speed,
+        },
+        color: index % 5 === 0 ? "#ff5d6c" : index % 2 === 0 ? "#ffd36b" : "#ffffff",
+        size: 1.4 + Math.random() * 3.2,
+        life: 0.55 + Math.random() * 0.7,
+        maxLife: 1.25,
       });
     }
   }

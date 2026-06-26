@@ -1,5 +1,5 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=field-life-3";
+import { Game } from "./game.js?v=ship-destruction";
 import { Processor } from "./systems/processor.js?v=cargo-hold";
 import { createGameState } from "./state/gameState.js?v=impact-effects";
 
@@ -28,7 +28,8 @@ function updateShipPowerDisplay() {
 
   powerButton.textContent = engine.powered ? "Power Down" : "Power Ship";
   powerButton.setAttribute("aria-pressed", String(engine.powered));
-  shipStatus.textContent = engine.powered ? "ship online" : "ship offline";
+  powerButton.disabled = state.components.hull.integrity <= 0;
+  shipStatus.textContent = state.components.hull.integrity <= 0 ? "ship destroyed" : engine.powered ? "ship online" : "ship offline";
 }
 
 powerButton.addEventListener("click", () => {
@@ -68,6 +69,7 @@ makePanelsDraggable();
 
 function updateHudDisplay() {
   renderProcessorOutputs();
+  updateShipPowerDisplay();
 
   fuelCount.textContent = String(Math.floor(state.components.engine.fuel));
   ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
@@ -78,6 +80,18 @@ function updateHudDisplay() {
   collectorStrengthControls.forEach((control) => {
     control.checked = Number(control.value) === state.components.collector.rangeSetting;
   });
+  updateWarningPanels();
+}
+
+function updateWarningPanels() {
+  setPanelWarning("engine", state.components.engine.fuel <= 35);
+  setPanelWarning("miner", state.components.miner.ammo <= 20);
+  setPanelWarning("scanner", state.components.scanner.scanergy <= 25);
+  setPanelWarning("hull", state.components.hull.integrity <= 30);
+}
+
+function setPanelWarning(panelId, isWarning) {
+  document.querySelector(`[data-panel-id="${panelId}"]`)?.classList.toggle("is-low-resource", isWarning);
 }
 
 function getCollectorStrengthLabel() {
