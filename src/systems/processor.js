@@ -9,14 +9,17 @@ const TYPE_COLORS = {
 };
 
 export class Processor {
-  constructor(canvas, onUnitProcessed = () => {}) {
+  constructor(canvas, onUnitProcessed = () => {}, options = {}) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
     this.onUnitProcessed = onUnitProcessed;
+    this.isClickable = options.isClickable ?? true;
     this.units = [];
     this.lastFrameTime = 0;
 
-    canvas.addEventListener("click", (event) => this.handleClick(event));
+    if (this.isClickable) {
+      canvas.addEventListener("click", (event) => this.handleClick(event));
+    }
   }
 
   start() {

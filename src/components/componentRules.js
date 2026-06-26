@@ -25,6 +25,14 @@ export function getProcessorOutputs(components) {
     });
   }
 
+  if (components.cargoHold.installed) {
+    outputs.push({
+      id: "cargo",
+      label: "Cargo",
+      amountLabel: "store unit",
+    });
+  }
+
   return outputs;
 }
 

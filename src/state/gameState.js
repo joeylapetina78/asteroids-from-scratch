@@ -23,6 +23,14 @@ export function createGameState() {
         installed: true,
         output: "fuel",
       },
+      cargoHold: {
+        installed: true,
+      },
+      hull: {
+        installed: true,
+        integrity: 100,
+        maxIntegrity: 100,
+      },
       collector: {
         installed: true,
         rangeSetting: 0,

@@ -15,9 +15,10 @@ const AMMO_PER_SHOT = 1;
 const SCANERGY_PER_SCAN = 100;
 const SHIP_COLLISION_RADIUS = 18;
 const SHIP_HIT_COOLDOWN_SECONDS = 0.35;
+const HULL_DAMAGE_PER_ASTEROID_HIT = 7;
 const PICKUP_COLLECT_RADIUS = 24;
-const COLLECTOR_MIN_RADIUS = 38;
-const COLLECTOR_PULL_FORCE = 520;
+const COLLECTOR_MIN_RADIUS = 54;
+const COLLECTOR_PULL_FORCE = 980;
 const COLLECTOR_MAX_SCANERGY_PER_SECOND = 50;
 
 export class Game {
@@ -187,6 +188,7 @@ export class Game {
 
       if (shipHitAsteroid) {
         this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
+        this.damageHull(HULL_DAMAGE_PER_ASTEROID_HIT);
         hitAsteroids.add(shipHitAsteroid);
         newAsteroids.push(...this.breakAsteroid(shipHitAsteroid, this.ship.velocity));
       }
@@ -198,6 +200,17 @@ export class Game {
 
     this.asteroids = this.asteroids.filter((asteroid) => !hitAsteroids.has(asteroid));
     this.asteroids.push(...newAsteroids);
+  }
+
+  damageHull(amount) {
+    const hull = this.state.components.hull;
+
+    if (!hull.installed) {
+      return;
+    }
+
+    hull.integrity = Math.max(0, hull.integrity - amount);
+    this.onHudChange(this.state);
   }
 
   breakAsteroid(asteroid, impactVelocity) {

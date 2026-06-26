@@ -1,14 +1,16 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=collector-panel";
-import { Processor } from "./systems/processor.js?v=processor-outputs";
-import { createGameState } from "./state/gameState.js?v=collector-panel";
+import { Game } from "./game.js?v=cargo-hull-panels";
+import { Processor } from "./systems/processor.js?v=cargo-hold";
+import { createGameState } from "./state/gameState.js?v=cargo-hull-panels";
 
 const PROCESS_OUTPUT_AMOUNT = 50;
 const ammoCount = document.querySelector("#ammo-count");
+const cargoCanvas = document.querySelector("#cargo");
 const canvas = document.querySelector("#game");
 const collectorRange = document.querySelector("#collector-range");
 const collectorRangeCount = document.querySelector("#collector-range-count");
 const fuelCount = document.querySelector("#fuel-count");
+const hullCount = document.querySelector("#hull-count");
 const minerArmed = document.querySelector("#miner-armed");
 const powerButton = document.querySelector("#ship-power");
 const processorCanvas = document.querySelector("#processor");
@@ -18,6 +20,7 @@ const scanergyCount = document.querySelector("#scanergy-count");
 const shipStatus = document.querySelector("#ship-status");
 const state = createGameState();
 const processor = new Processor(processorCanvas, processUnit);
+const cargoHold = new Processor(cargoCanvas, () => {}, { isClickable: false });
 const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type));
 
 function updateShipPowerDisplay() {
@@ -58,6 +61,8 @@ updateHudDisplay();
 
 game.start();
 processor.start();
+cargoHold.start();
+makePanelsDraggable();
 
 function updateHudDisplay() {
   renderProcessorOutputs();
@@ -66,10 +71,11 @@ function updateHudDisplay() {
   ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
   scanergyCount.textContent = `${Math.floor(state.components.scanner.scanergy)}%`;
   collectorRangeCount.textContent = `${Math.round(state.components.collector.rangeSetting * 100)}%`;
+  hullCount.textContent = `${Math.ceil(state.components.hull.integrity)}%`;
   minerArmed.checked = state.components.miner.armed;
 }
 
-function processUnit() {
+function processUnit(type) {
   const output = getSelectedProcessorOutput();
   state.components.processor.output = output;
 
@@ -77,8 +83,10 @@ function processUnit() {
     state.components.engine.fuel += PROCESS_OUTPUT_AMOUNT;
   } else if (output === "ammo") {
     state.components.miner.ammo += PROCESS_OUTPUT_AMOUNT;
-  } else {
+  } else if (output === "scanergy") {
     state.components.scanner.scanergy += PROCESS_OUTPUT_AMOUNT;
+  } else if (output === "cargo") {
+    cargoHold.addUnit(type);
   }
 
   updateHudDisplay();
@@ -121,5 +129,58 @@ function renderProcessorOutputs() {
 
     label.append(input, output.label, detail);
     processorOutputPanel.append(label);
+  });
+}
+
+function makePanelsDraggable() {
+  const gridSize = 20;
+
+  document.querySelectorAll(".component-panel").forEach((panel) => {
+    const handle = panel.querySelector(".component-panel-title");
+
+    if (!handle) {
+      return;
+    }
+
+    const offset = { x: 0, y: 0 };
+    let drag = null;
+
+    handle.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) {
+        return;
+      }
+
+      drag = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        originX: offset.x,
+        originY: offset.y,
+      };
+      panel.classList.add("is-dragging");
+      handle.setPointerCapture(event.pointerId);
+    });
+
+    handle.addEventListener("pointermove", (event) => {
+      if (!drag || event.pointerId !== drag.pointerId) {
+        return;
+      }
+
+      offset.x = Math.round((drag.originX + event.clientX - drag.startX) / gridSize) * gridSize;
+      offset.y = Math.round((drag.originY + event.clientY - drag.startY) / gridSize) * gridSize;
+      panel.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
+    });
+
+    handle.addEventListener("pointerup", endDrag);
+    handle.addEventListener("pointercancel", endDrag);
+
+    function endDrag(event) {
+      if (!drag || event.pointerId !== drag.pointerId) {
+        return;
+      }
+
+      panel.classList.remove("is-dragging");
+      drag = null;
+    }
   });
 }

@@ -26,6 +26,14 @@ components: {
     installed: true,
     output: "fuel",
   },
+  cargoHold: {
+    installed: true,
+  },
+  hull: {
+    installed: true,
+    integrity: 100,
+    maxIntegrity: 100,
+  },
   collector: {
     installed: true,
     rangeSetting: 0,
@@ -41,6 +49,8 @@ Before this, fuel, ammo, scanergy, processor output, and ship power were loose s
 - the miner owns ammo and shooting
 - the scanner owns scanergy and scanning
 - the processor owns the selected output mode
+- the cargo hold owns stored quest goods
+- the hull owns ship integrity
 - the collector owns the resource pull field range
 
 This gives us a path toward the larger game idea:

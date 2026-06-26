@@ -8,6 +8,7 @@ Instead, `componentRules.js` looks at installed ship components and decides whic
 engine installed -> fuel output
 miner installed -> ammo output
 scanner installed -> scanergy output
+cargo hold installed -> cargo output
 ```
 
 That means components can start to affect each other.
@@ -20,6 +21,7 @@ For the current version, the miner and scanner are still installed at startup, s
 - ammo appears because the miner exists
 - scanergy appears because the scanner exists
 - fuel appears because the engine exists
+- cargo appears because the cargo hold exists
 
 This points toward the larger RPG structure:
 
@@ -28,9 +30,9 @@ This points toward the larger RPG structure:
 - buying or earning a miner or gun can add ammo as a processor output
 - damaged or unpowered components can eventually hide, disable, or weaken their connected controls
 
-The UI panels are also starting to match the fantasy. The engine, processor, scanner, miner, and collector are visible as separate ship component panels. They are still fixed in place for now, but this structure can grow into draggable panels later.
+The UI panels are also starting to match the fantasy. The engine, processor, scanner, miner, collector, cargo hold, and hull are visible as separate ship component panels. Panel titles can now be dragged, and the movement snaps to a small grid.
 
-Draggable panels are doable. The likely shape is:
+The current draggable behavior is visual and session-only. The likely saved version is:
 
 ```js
 components: {
@@ -44,3 +46,5 @@ components: {
 Then the page can render component panels onto a dashboard grid and save their positions. That is separate from the gameplay behavior, which is important: moving the scanner panel around should change the ship interface layout, not the scanner's world position.
 
 The collector is the first component that continuously connects two systems. It belongs to the ship UI, but it spends scanner energy and affects resource pickups in the world. That is the pattern we can reuse later for things like shields, repair systems, cargo handling, or factory modules.
+
+The cargo hold is different from the processor. It uses the same falling-square physics, but its units are not clickable. They are stored for future systems, like quests that ask for a certain number of crystals.

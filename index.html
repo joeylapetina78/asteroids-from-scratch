@@ -4,12 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=collector-panel" />
+    <link rel="stylesheet" href="./src/styles.css?v=cargo-hull-panels" />
   </head>
   <body>
     <main class="game-shell">
       <div class="play-layout">
-        <section class="component-panel processor-panel" aria-label="Resource processor">
+        <section class="component-stack">
+        <section class="component-panel processor-panel" data-panel-id="processor" aria-label="Resource processor">
           <div class="component-panel-title">
             <div>
               <strong>Processor</strong>
@@ -22,9 +23,20 @@
           </fieldset>
         </section>
 
+        <section class="component-panel cargo-panel" data-panel-id="cargo" aria-label="Cargo hold">
+          <div class="component-panel-title">
+            <div>
+              <strong>Cargo Hold</strong>
+              <span>stored quest goods</span>
+            </div>
+          </div>
+          <canvas id="cargo" width="320" height="180" aria-label="Cargo hold canvas"></canvas>
+        </section>
+        </section>
+
         <section class="space-panel">
           <section class="hud" aria-label="Game status">
-            <div class="component-panel engine-panel" aria-label="Engine component">
+            <div class="component-panel engine-panel" data-panel-id="engine" aria-label="Engine component">
               <div class="component-panel-title">
                 <div>
                   <strong>Engine</strong>
@@ -39,9 +51,14 @@
                 <label><input type="radio" name="thrust-mode" value="reverse" /> Reverse</label>
               </div>
               <span>Fuel: <strong id="fuel-count">200</strong></span>
+              <div class="component-hints">
+                <span>A/D rotate</span>
+                <span>W thrust</span>
+                <span>S brake</span>
+              </div>
             </div>
 
-            <div class="component-panel scanner-panel" aria-label="Scanner component">
+            <div class="component-panel scanner-panel" data-panel-id="scanner" aria-label="Scanner component">
               <div class="component-panel-title">
                 <div>
                   <strong>Scanner</strong>
@@ -56,7 +73,7 @@
               </div>
             </div>
 
-            <div class="component-panel miner-panel" aria-label="Miner component">
+            <div class="component-panel miner-panel" data-panel-id="miner" aria-label="Miner component">
               <div class="component-panel-title">
                 <div>
                   <strong>Miner</strong>
@@ -70,9 +87,12 @@
               <div class="system-readout" aria-live="polite">
                 <span>Ammo: <strong id="ammo-count">100</strong></span>
               </div>
+              <div class="component-hints">
+                <span>Space fire</span>
+              </div>
             </div>
 
-            <div class="component-panel collector-panel" aria-label="Resource collector component">
+            <div class="component-panel collector-panel" data-panel-id="collector" aria-label="Resource collector component">
               <div class="component-panel-title">
                 <div>
                   <strong>Collector</strong>
@@ -86,12 +106,16 @@
               </label>
             </div>
 
-            <div class="controls">
-              <span>A/D: rotate</span>
-              <span>W: thrust</span>
-              <span>S: brake</span>
-              <span>Space: fire</span>
-              <span>Scan: find resources</span>
+            <div class="component-panel hull-panel" data-panel-id="hull" aria-label="Hull component">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Hull</strong>
+                  <span>ship damage</span>
+                </div>
+              </div>
+              <div class="system-readout" aria-live="polite">
+                <span>Integrity: <strong id="hull-count">100%</strong></span>
+              </div>
             </div>
           </section>
 
@@ -101,6 +125,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=collector-panel"></script>
+    <script type="module" src="./src/main.js?v=cargo-hull-panels"></script>
   </body>
 </html>
