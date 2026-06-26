@@ -5,7 +5,7 @@ import { Ship } from "./entities/Ship.js?v=components";
 import { createAsteroidField } from "./systems/asteroidField.js?v=fuel-crystals";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=power-control";
-import { createLifeField } from "./systems/lifeField.js?v=field-life";
+import { createLifeField } from "./systems/lifeField.js?v=field-life-2";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
 import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
@@ -21,6 +21,7 @@ const COLLECTOR_MIN_RADIUS = 54;
 const COLLECTOR_PULL_FORCE = 1650;
 const COLLECTOR_MAX_SCANERGY_PER_SECOND = 50;
 const PARTICLE_DRAG = 0.94;
+const LIFE_SIMULATION_MARGIN = 900;
 
 export class Game {
   constructor(canvas, state = createGameState(), onHudChange = () => {}, onResourceCollected = () => {}) {
@@ -99,10 +100,17 @@ export class Game {
     this.updateAsteroidHits();
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
     this.asteroids.forEach((asteroid) => asteroid.update(deltaSeconds));
-    this.lifeforms.forEach((lifeform) => {
+    const activeLifeforms = this.lifeforms.filter((lifeform) =>
+      isNearSimulationArea(lifeform, this.canvas, this.camera, this.ship, LIFE_SIMULATION_MARGIN),
+    );
+    const activeAsteroids = this.asteroids.filter((asteroid) =>
+      isNearSimulationArea(asteroid, this.canvas, this.camera, this.ship, LIFE_SIMULATION_MARGIN),
+    );
+
+    activeLifeforms.forEach((lifeform) => {
       lifeform.update(deltaSeconds, {
-        asteroids: this.asteroids,
-        lifeforms: this.lifeforms,
+        asteroids: activeAsteroids,
+        lifeforms: activeLifeforms,
         ship: this.ship,
       });
     });
@@ -420,6 +428,25 @@ export class Game {
 
     return 2 + COLLECTOR_MAX_SCANERGY_PER_SECOND * rangeSetting * rangeSetting;
   }
+}
+
+function isNearSimulationArea(entity, canvas, camera, ship, margin) {
+  const radius = entity.radius ?? 0;
+  const screenX = entity.position.x - camera.x;
+  const screenY = entity.position.y - camera.y;
+  const nearCamera =
+    screenX > -margin - radius &&
+    screenX < canvas.width + margin + radius &&
+    screenY > -margin - radius &&
+    screenY < canvas.height + margin + radius;
+
+  if (nearCamera) {
+    return true;
+  }
+
+  const distanceToShip = Math.hypot(entity.position.x - ship.position.x, entity.position.y - ship.position.y);
+
+  return distanceToShip < margin * 1.8 + radius;
 }
 
 function circlesOverlap(firstPosition, firstRadius, secondPosition, secondRadius) {

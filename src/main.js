@@ -1,5 +1,5 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=field-life";
+import { Game } from "./game.js?v=field-life-2";
 import { Processor } from "./systems/processor.js?v=cargo-hold";
 import { createGameState } from "./state/gameState.js?v=impact-effects";
 

@@ -1,4 +1,4 @@
-import { Lifeform } from "../entities/Lifeform.js?v=field-life";
+import { Lifeform } from "../entities/Lifeform.js?v=field-life-2";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
 
 export function createLifeField(asteroids) {
@@ -6,7 +6,12 @@ export function createLifeField(asteroids) {
   const lifeforms = [];
   const anchors = asteroids
     .filter((asteroid) => Math.hypot(asteroid.position.x, asteroid.position.y) > 340)
-    .sort((first, second) => first.position.x - second.position.x || first.position.y - second.position.y);
+    .sort(
+      (first, second) =>
+        Math.hypot(first.position.x, first.position.y) - Math.hypot(second.position.x, second.position.y) ||
+        first.position.x - second.position.x ||
+        first.position.y - second.position.y,
+    );
 
   if (anchors.length === 0) {
     return lifeforms;
@@ -21,36 +26,36 @@ export function createLifeField(asteroids) {
 }
 
 function addHunters(lifeforms, anchors, random) {
-  for (let index = 0; index < 5; index += 1) {
-    const anchor = anchors[(index * 23 + 11) % anchors.length];
+  for (let index = 0; index < 10; index += 1) {
+    const anchor = anchors[(index * 17 + 3) % anchors.length];
 
-    lifeforms.push(createLifeformNear("hunter", anchor, random, 210, index));
+    lifeforms.push(createLifeformNear("hunter", anchor, random, 260, index));
   }
 }
 
 function addThreadlings(lifeforms, anchors, random) {
-  for (let flock = 0; flock < 4; flock += 1) {
-    const anchor = anchors[(flock * 31 + 7) % anchors.length];
+  for (let flock = 0; flock < 9; flock += 1) {
+    const anchor = anchors[(flock * 13 + 1) % anchors.length];
 
-    for (let index = 0; index < 9; index += 1) {
-      lifeforms.push(createLifeformNear("threadling", anchor, random, 120, 100 + flock * 20 + index));
+    for (let index = 0; index < 13; index += 1) {
+      lifeforms.push(createLifeformNear("threadling", anchor, random, 175, 100 + flock * 20 + index));
     }
   }
 }
 
 function addGrazers(lifeforms, anchors, random) {
-  for (let index = 0; index < 18; index += 1) {
-    const anchor = anchors[(index * 17 + 5) % anchors.length];
+  for (let index = 0; index < 44; index += 1) {
+    const anchor = anchors[(index * 7 + 5) % anchors.length];
 
-    lifeforms.push(createLifeformNear("grazer", anchor, random, 90, 300 + index));
+    lifeforms.push(createLifeformNear("grazer", anchor, random, 135, 300 + index));
   }
 }
 
 function addSkitters(lifeforms, anchors, random) {
-  for (let index = 0; index < 16; index += 1) {
-    const anchor = anchors[(index * 19 + 13) % anchors.length];
+  for (let index = 0; index < 42; index += 1) {
+    const anchor = anchors[(index * 11 + 9) % anchors.length];
 
-    lifeforms.push(createLifeformNear("skitter", anchor, random, 180, 500 + index));
+    lifeforms.push(createLifeformNear("skitter", anchor, random, 230, 500 + index));
   }
 }
 

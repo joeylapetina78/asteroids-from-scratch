@@ -39,28 +39,32 @@ export class Lifeform {
   updateHunter(deltaSeconds, world) {
     const distanceToShip = distance(this.position, world.ship.position);
 
-    if (distanceToShip < 980) {
-      this.applySteer(seek(this, world.ship.position, this.maxSpeed), 1.15);
+    if (distanceToShip < 1500) {
+      this.applySteer(seek(this, world.ship.position, this.maxSpeed), 2.25);
+      this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 110), 78), 0.65);
     } else {
       this.applySteer(this.wander(deltaSeconds), 0.8);
     }
 
-    this.avoidAsteroids(world.asteroids, 1.4);
+    this.applySteer(orbitNearestAsteroid(this, world.asteroids, 460, 90, deltaSeconds), 0.28);
+    this.avoidAsteroids(world.asteroids, 5.2);
   }
 
   updateThreadling(deltaSeconds, world) {
-    const neighbors = world.lifeforms.filter(
-      (lifeform) => lifeform !== this && lifeform.type === "threadling" && distanceSquared(this.position, lifeform.position) < 150 * 150,
-    );
+    const neighbors = nearbyLifeforms(this, world.lifeforms, 210, "threadling");
+    const mixedNeighbors = nearbyLifeforms(this, world.lifeforms, 135);
 
     if (neighbors.length > 0) {
-      this.applySteer(separate(this, neighbors, 42), 1.45);
-      this.applySteer(align(this, neighbors), 0.72);
-      this.applySteer(cohere(this, neighbors), 0.58);
+      this.applySteer(separate(this, neighbors, 48), 1.55);
+      this.applySteer(align(this, neighbors), 0.95);
+      this.applySteer(cohere(this, neighbors), 0.78);
     }
 
-    this.applySteer(this.wander(deltaSeconds), 0.35);
-    this.avoidAsteroids(world.asteroids, 1.1);
+    this.applySteer(separate(this, mixedNeighbors, 34), 0.35);
+    this.applySteer(orbitNearestAsteroid(this, world.asteroids, 520, 120, deltaSeconds), 0.9);
+    this.applySteer(fleeIfClose(this, world.ship.position, 185, this.maxSpeed * 1.1), 1.15);
+    this.applySteer(this.wander(deltaSeconds), 0.34);
+    this.avoidAsteroids(world.asteroids, 4.8);
   }
 
   updateGrazer(deltaSeconds, world) {
@@ -76,26 +80,25 @@ export class Lifeform {
       this.applySteer(this.wander(deltaSeconds), 0.75);
     }
 
-    if (distanceSquared(this.position, world.ship.position) < 220 * 220) {
-      this.applySteer(flee(this, world.ship.position, this.maxSpeed), 1.3);
-    }
+    this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 125), 58), 0.55);
+    this.applySteer(fleeIfClose(this, world.ship.position, 300, this.maxSpeed * 1.15), 1.8);
 
-    this.avoidAsteroids(world.asteroids, 1.0);
+    this.avoidAsteroids(world.asteroids, 4.2);
   }
 
   updateSkitter(deltaSeconds, world) {
     const asteroid = findNearestAsteroid(this.position, world.asteroids, 380);
 
     if (asteroid && distanceSquared(this.position, asteroid.position) < (asteroid.radius + 70) ** 2) {
-      this.applySteer(flee(this, asteroid.position, this.maxSpeed), 0.8);
+      this.applySteer(flee(this, asteroid.position, this.maxSpeed), 1.6);
+    } else {
+      this.applySteer(orbitNearestAsteroid(this, world.asteroids, 620, 150, deltaSeconds), 0.72);
     }
 
-    if (distanceSquared(this.position, world.ship.position) < 360 * 360) {
-      this.applySteer(flee(this, world.ship.position, this.maxSpeed * 1.2), 1.5);
-    }
-
+    this.applySteer(fleeIfClose(this, world.ship.position, 520, this.maxSpeed * 1.35), 2.15);
+    this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 95), 52), 0.9);
     this.applySteer(this.wander(deltaSeconds * 1.6), 1.0);
-    this.avoidAsteroids(world.asteroids, 1.55);
+    this.avoidAsteroids(world.asteroids, 5.6);
   }
 
   wander(deltaSeconds) {
@@ -126,9 +129,20 @@ export class Lifeform {
       }
 
       const distanceToRock = Math.sqrt(distanceToRockSquared);
-      const strength = (safeRadius - distanceToRock) / safeRadius;
-      avoid.x += ((this.position.x - asteroid.position.x) / distanceToRock) * strength;
-      avoid.y += ((this.position.y - asteroid.position.y) / distanceToRock) * strength;
+      const overlap = asteroid.radius + this.radius - distanceToRock;
+      const strength = ((safeRadius - distanceToRock) / safeRadius) ** 1.6;
+      const awayX = (this.position.x - asteroid.position.x) / distanceToRock;
+      const awayY = (this.position.y - asteroid.position.y) / distanceToRock;
+      avoid.x += awayX * strength;
+      avoid.y += awayY * strength;
+
+      if (overlap > 0) {
+        this.position.x += awayX * overlap * 0.18;
+        this.position.y += awayY * overlap * 0.18;
+        this.velocity.x += awayX * overlap * 0.7;
+        this.velocity.y += awayY * overlap * 0.7;
+      }
+
       count += 1;
     });
 
@@ -138,7 +152,7 @@ export class Lifeform {
 
     avoid.x /= count;
     avoid.y /= count;
-    this.applySteer(limit(avoid, this.maxForce * 2.8), weight);
+    this.applySteer(limit(avoid, this.maxForce * 7.5), weight);
   }
 
   applySteer(force, weight = 1) {
@@ -207,6 +221,23 @@ function flee(agent, target, speed) {
   );
 }
 
+function fleeIfClose(agent, target, range, speed) {
+  const distanceToTargetSquared = distanceSquared(agent.position, target);
+
+  if (distanceToTargetSquared > range * range) {
+    return { x: 0, y: 0 };
+  }
+
+  const force = flee(agent, target, speed);
+  const distanceToTarget = Math.sqrt(distanceToTargetSquared);
+  const closeness = 1 - distanceToTarget / range;
+
+  return {
+    x: force.x * (0.35 + closeness * 1.65),
+    y: force.y * (0.35 + closeness * 1.65),
+  };
+}
+
 function separate(agent, neighbors, desiredDistance) {
   const force = { x: 0, y: 0 };
 
@@ -222,6 +253,36 @@ function separate(agent, neighbors, desiredDistance) {
   });
 
   return limit(force, agent.maxForce * 1.7);
+}
+
+function nearbyLifeforms(agent, lifeforms, range, type = null) {
+  const rangeSquared = range * range;
+
+  return lifeforms.filter(
+    (lifeform) =>
+      lifeform !== agent &&
+      (type === null || lifeform.type === type) &&
+      distanceSquared(agent.position, lifeform.position) < rangeSquared,
+  );
+}
+
+function orbitNearestAsteroid(agent, asteroids, range, orbitDistance, deltaSeconds) {
+  const asteroid = findNearestAsteroid(agent.position, asteroids, range);
+
+  if (!asteroid) {
+    return { x: 0, y: 0 };
+  }
+
+  const angleToAgent = Math.atan2(agent.position.y - asteroid.position.y, agent.position.x - asteroid.position.x);
+  const orbitDirection = agent.seed % 2 === 0 ? -1 : 1;
+  const targetAngle = angleToAgent + orbitDirection * (0.75 + deltaSeconds * 0.2);
+  const targetDistance = asteroid.radius + orbitDistance;
+  const target = {
+    x: asteroid.position.x + Math.cos(targetAngle) * targetDistance,
+    y: asteroid.position.y + Math.sin(targetAngle) * targetDistance,
+  };
+
+  return seek(agent, target, agent.maxSpeed * 0.88);
 }
 
 function align(agent, neighbors) {
@@ -344,46 +405,46 @@ function getRadius(type) {
 
 function getMaxSpeed(type) {
   if (type === "hunter") {
-    return 150;
+    return 176;
   }
 
   if (type === "threadling") {
-    return 92;
+    return 114;
   }
 
   if (type === "grazer") {
-    return 76;
+    return 88;
   }
 
-  return 124;
+  return 154;
 }
 
 function getMaxForce(type) {
   if (type === "hunter") {
-    return 0.12;
+    return 0.22;
   }
 
   if (type === "threadling") {
-    return 0.08;
+    return 0.16;
   }
 
   if (type === "grazer") {
-    return 0.065;
+    return 0.13;
   }
 
-  return 0.14;
+  return 0.24;
 }
 
 function getPerception(type) {
   if (type === "hunter") {
-    return 115;
+    return 190;
   }
 
   if (type === "threadling") {
-    return 70;
+    return 125;
   }
 
-  return 90;
+  return 145;
 }
 
 function normalize(x, y, magnitude = 1) {

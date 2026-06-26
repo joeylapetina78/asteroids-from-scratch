@@ -17,6 +17,8 @@ That same idea can be mixed in different ways:
 - Grazer: orbits rocks and flees the ship if it gets too close
 - Skitter: wanders quickly, avoids rocks, and flees the ship
 
-The creatures do not damage, harvest, or drop anything yet. They are field life first: visible motion that makes the space feel inhabited.
+The creatures do not damage, harvest, or drop anything yet. They are field life first: visible motion that makes the space feel inhabited. They are more densely seeded near asteroid zones close to the start, then preserved farther out in the field.
+
+Drawing and simulation are separate. We only draw life forms inside the viewport, but we also keep a larger active area around the viewport and ship where they update. Life forms outside that padded area sleep until the player gets near them again.
 
 The important design line is that these are not scripted animations. They are agents with simple rules and limited perception. More complex behavior can emerge later by adding more goals, senses, or interactions.

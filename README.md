@@ -38,7 +38,7 @@ The ship moves through world space while a springy camera follows it, so the gri
 
 Asteroids are generated from an invisible resource field. Dense regions contain more asteroids, and resource mixes influence color and size.
 
-The field also contains autonomous life forms: hunters, threadling flocks, grazers, and skitters. They use steering behaviors to seek, flee, wander, flock, and avoid rocks.
+The field also contains autonomous life forms: hunters, threadling flocks, grazers, and skitters. They use steering behaviors to seek, flee, wander, flock, orbit around rocks, and avoid collisions. Life forms outside the padded camera/ship area are preserved but not simulated every frame.
 
 The field also contains many common white stone asteroids. Bullets and ship impacts break asteroids into smaller chunks before the smallest pieces disappear. Final white stones burst into small white debris squares when destroyed.
 
