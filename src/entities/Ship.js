@@ -1,5 +1,6 @@
 const ROTATION_SPEED = 4.5;
 const THRUST_POWER = 280;
+const REVERSE_THRUST_MULTIPLIER = 0.2;
 const FUEL_BURN_RATE = 9;
 const BRAKE_DRAG = 0.92;
 const SPACE_DRAG = 0.995;
@@ -27,9 +28,12 @@ export class Ship {
 
       this.isThrusting = input.isDown("KeyW") && this.engine.fuel > 0;
       if (this.isThrusting) {
+        const thrustDirection = this.engine.thrustMode === "reverse" ? -1 : 1;
+        const thrustPower = THRUST_POWER * (this.engine.thrustMode === "reverse" ? REVERSE_THRUST_MULTIPLIER : 1);
+
         this.engine.fuel = Math.max(0, this.engine.fuel - FUEL_BURN_RATE * deltaSeconds);
-        this.velocity.x += Math.cos(this.angle) * THRUST_POWER * deltaSeconds;
-        this.velocity.y += Math.sin(this.angle) * THRUST_POWER * deltaSeconds;
+        this.velocity.x += Math.cos(this.angle) * thrustPower * thrustDirection * deltaSeconds;
+        this.velocity.y += Math.sin(this.angle) * thrustPower * thrustDirection * deltaSeconds;
       }
 
       if (input.isDown("KeyS")) {
@@ -73,9 +77,15 @@ export class Ship {
     if (this.isThrusting) {
       context.strokeStyle = "#ffcc66";
       context.beginPath();
-      context.moveTo(-12, -6);
-      context.lineTo(-26 - Math.random() * 10, 0);
-      context.lineTo(-12, 6);
+      if (this.engine.thrustMode === "reverse") {
+        context.moveTo(16, -4);
+        context.lineTo(28 + Math.random() * 6, 0);
+        context.lineTo(16, 4);
+      } else {
+        context.moveTo(-12, -6);
+        context.lineTo(-26 - Math.random() * 10, 0);
+        context.lineTo(-12, 6);
+      }
       context.stroke();
     }
 

@@ -4,42 +4,59 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=align-canvases" />
+    <link rel="stylesheet" href="./src/styles.css?v=component-panels" />
   </head>
   <body>
     <main class="game-shell">
       <div class="play-layout">
-        <section class="processor-panel" aria-label="Resource processor">
-          <div class="processor-title">
-            <strong>Processor</strong>
-            <span>collected units arrive here</span>
+        <section class="component-panel processor-panel" aria-label="Resource processor">
+          <div class="component-panel-title">
+            <div>
+              <strong>Processor</strong>
+              <span>collected units arrive here</span>
+            </div>
           </div>
           <canvas id="processor" width="320" height="180" aria-label="Resource processing canvas"></canvas>
           <fieldset class="processor-outputs">
             <legend>Output</legend>
-            <label><input type="radio" name="processor-output" value="fuel" checked /> Fuel</label>
-            <label><input type="radio" name="processor-output" value="ammo" /> Ammo</label>
-            <label><input type="radio" name="processor-output" value="scanergy" /> Scanergy</label>
           </fieldset>
         </section>
 
         <section class="space-panel">
           <section class="hud" aria-label="Game status">
-            <div>
-              <strong>Asteroids</strong>
-              <span id="ship-status">ship offline</span>
-            </div>
-            <button id="ship-power" class="power-button" type="button" aria-pressed="false">
-              Power Ship
-            </button>
-            <button id="ship-scan" class="scan-button" type="button">
-              Scan
-            </button>
-            <div class="inventory-summary" aria-live="polite">
+            <div class="component-panel engine-panel" aria-label="Engine component">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Engine</strong>
+                  <span id="ship-status">ship offline</span>
+                </div>
+              </div>
+              <button id="ship-power" class="power-button" type="button" aria-pressed="false">
+                Power Ship
+              </button>
+              <div class="mode-toggle" role="group" aria-label="Thrust direction">
+                <label><input type="radio" name="thrust-mode" value="forward" checked /> Forward</label>
+                <label><input type="radio" name="thrust-mode" value="reverse" /> Reverse</label>
+              </div>
               <span>Fuel: <strong id="fuel-count">200</strong></span>
-              <span>Ammo: <strong id="ammo-count">100</strong></span>
-              <span>Scan: <strong id="scanergy-count">0%</strong></span>
             </div>
+
+            <div class="component-panel ship-panel" aria-label="Ship systems">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Ship Systems</strong>
+                  <span>installed components</span>
+                </div>
+              </div>
+              <button id="ship-scan" class="scan-button" type="button">
+                Scan
+              </button>
+              <div class="inventory-summary" aria-live="polite">
+                <span>Ammo: <strong id="ammo-count">100</strong></span>
+                <span>Scan: <strong id="scanergy-count">0%</strong></span>
+              </div>
+            </div>
+
             <div class="controls">
               <span>A/D: rotate</span>
               <span>W: thrust</span>
@@ -55,6 +72,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=components"></script>
+    <script type="module" src="./src/main.js?v=component-panels"></script>
   </body>
 </html>

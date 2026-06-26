@@ -20,6 +20,7 @@ Then open `http://127.0.0.1:8123/`.
 - S: brake
 - Space: fire
 - Power Ship button: toggles ship systems on and off
+- Thrust mode: chooses forward thrust or low-power reverse thrust
 - Scan button: sends a forward resource scan from the ship nose
 - Processor output: chooses where crushed units go
 - Processor click: crushes a collected unit into the selected output
@@ -28,7 +29,7 @@ Then open `http://127.0.0.1:8123/`.
 
 The ship is modeled as a set of installed components: engine, miner, scanner, and processor. The page controls are the ship interface for those components.
 
-The engine has a power button and fuel. When powered off, the ship is dark, cannot be controlled, and cannot fire, but it still drifts. When powered on, the ship turns white and can rotate, thrust, coast, brake, and fire.
+The engine has a power button, fuel, and a thrust-direction toggle. When powered off, the ship is dark, cannot be controlled, and cannot fire, but it still drifts. When powered on, the ship turns white and can rotate, thrust, coast, brake, and fire.
 
 The ship moves through world space while a springy camera follows it, so the grid scrolls underneath the player with a little lag and catch-up.
 
@@ -40,6 +41,6 @@ Destroying the smallest resource rocks ejects red fuel squares or blue crystal s
 
 The scan button sends out a forward cone pulse. If it detects resource asteroids ahead, it shows small edge markers: red for fuel rocks and blue for crystal rocks.
 
-The smaller processor canvas sits to the left on wide screens. It receives collected units from a pipe at the top. Units fall, stack, collide, and can be clicked to crush them into the selected output: fuel, ammo, or scanergy.
+The smaller processor canvas sits to the left on wide screens. It receives collected units from a pipe at the top. Units fall, stack, collide, and can be clicked to crush them into the selected output. Available processor outputs are driven by installed components, so fuel comes from the engine, ammo comes from the miner, and scanergy comes from the scanner.
 
-Next likely milestone: make output systems require power, or tune the fuel/ammo/scanergy costs.
+Next likely milestone: make component panels draggable, or add install/locked states so new systems can appear through progression.

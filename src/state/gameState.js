@@ -4,6 +4,7 @@ export function createGameState() {
       engine: {
         installed: true,
         powered: false,
+        thrustMode: "forward",
         fuel: 200,
         maxFuel: 200,
       },

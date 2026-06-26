@@ -31,7 +31,7 @@ body {
 
 .hud {
   display: flex;
-  align-items: end;
+  align-items: stretch;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 12px;
@@ -57,6 +57,49 @@ body {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.component-panel {
+  border: 1px solid #333846;
+  border-radius: 6px;
+  padding: 10px;
+  background: #0c0e13;
+}
+
+.component-panel-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: #d9deea;
+}
+
+.component-panel-title strong,
+.component-panel-title span {
+  display: block;
+}
+
+.component-panel-title strong {
+  color: #ffffff;
+}
+
+.engine-panel {
+  display: grid;
+  gap: 8px;
+  min-width: 170px;
+}
+
+.ship-panel {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 8px 12px;
+  align-items: end;
+}
+
+.ship-panel .component-panel-title {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
 }
 
 .power-button,
@@ -93,10 +136,7 @@ body {
 
 .inventory-summary {
   min-width: 104px;
-  border: 1px solid #333846;
-  border-radius: 6px;
-  padding: 8px 12px;
-  background: #0c0e13;
+  padding: 0;
   color: #f5f7fb;
   font-size: 0.9rem;
   text-align: center;
@@ -122,24 +162,6 @@ body {
   padding-top: 132px;
 }
 
-.processor-title {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-  color: #d9deea;
-}
-
-.processor-title strong,
-.processor-title span {
-  display: block;
-}
-
-.processor-title strong {
-  color: #ffffff;
-}
-
 #processor {
   aspect-ratio: 16 / 9;
 }
@@ -163,12 +185,37 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
   gap: 6px;
   min-height: 34px;
   border: 1px solid #333846;
   border-radius: 6px;
   background: #0c0e13;
   cursor: pointer;
+}
+
+.processor-output-detail {
+  color: #9aa4b8;
+  font-size: 0.75rem;
+}
+
+.mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.mode-toggle label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  border: 1px solid #333846;
+  border-radius: 6px;
+  background: #07080c;
+  cursor: pointer;
+  font-size: 0.85rem;
 }
 
 @media (max-width: 1080px) {

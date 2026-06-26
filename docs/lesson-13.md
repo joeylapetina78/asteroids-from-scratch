@@ -7,6 +7,7 @@ components: {
   engine: {
     installed: true,
     powered: false,
+    thrustMode: "forward",
     fuel: 200,
     maxFuel: 200,
   },
@@ -31,7 +32,7 @@ This does not change the visible game much yet. The point is to change what the 
 
 Before this, fuel, ammo, scanergy, processor output, and ship power were loose state values. Now they belong to ship components:
 
-- the engine owns fuel, power, and thrust
+- the engine owns fuel, power, and thrust mode
 - the miner owns ammo and shooting
 - the scanner owns scanergy and scanning
 - the processor owns the selected output mode
