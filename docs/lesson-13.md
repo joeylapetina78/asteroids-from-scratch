@@ -13,6 +13,7 @@ components: {
   },
   miner: {
     installed: true,
+    armed: false,
     ammo: 100,
     maxAmmo: 200,
   },
@@ -25,6 +26,10 @@ components: {
     installed: true,
     output: "fuel",
   },
+  collector: {
+    installed: true,
+    rangeSetting: 0,
+  },
 }
 ```
 
@@ -36,6 +41,7 @@ Before this, fuel, ammo, scanergy, processor output, and ship power were loose s
 - the miner owns ammo and shooting
 - the scanner owns scanergy and scanning
 - the processor owns the selected output mode
+- the collector owns the resource pull field range
 
 This gives us a path toward the larger game idea:
 

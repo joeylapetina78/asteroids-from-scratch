@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=component-panels" />
+    <link rel="stylesheet" href="./src/styles.css?v=collector-panel" />
   </head>
   <body>
     <main class="game-shell">
@@ -41,20 +41,49 @@
               <span>Fuel: <strong id="fuel-count">200</strong></span>
             </div>
 
-            <div class="component-panel ship-panel" aria-label="Ship systems">
+            <div class="component-panel scanner-panel" aria-label="Scanner component">
               <div class="component-panel-title">
                 <div>
-                  <strong>Ship Systems</strong>
-                  <span>installed components</span>
+                  <strong>Scanner</strong>
+                  <span>resource sweep</span>
                 </div>
               </div>
               <button id="ship-scan" class="scan-button" type="button">
                 Scan
               </button>
-              <div class="inventory-summary" aria-live="polite">
-                <span>Ammo: <strong id="ammo-count">100</strong></span>
+              <div class="system-readout" aria-live="polite">
                 <span>Scan: <strong id="scanergy-count">0%</strong></span>
               </div>
+            </div>
+
+            <div class="component-panel miner-panel" aria-label="Miner component">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Miner</strong>
+                  <span>rock cutter</span>
+                </div>
+              </div>
+              <label class="arm-toggle">
+                <input id="miner-armed" type="checkbox" />
+                Guns armed
+              </label>
+              <div class="system-readout" aria-live="polite">
+                <span>Ammo: <strong id="ammo-count">100</strong></span>
+              </div>
+            </div>
+
+            <div class="component-panel collector-panel" aria-label="Resource collector component">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Collector</strong>
+                  <span>resource pull field</span>
+                </div>
+              </div>
+              <label class="collector-control">
+                <span>Range</span>
+                <input id="collector-range" type="range" min="0" max="100" value="0" />
+                <strong id="collector-range-count">0%</strong>
+              </label>
             </div>
 
             <div class="controls">
@@ -72,6 +101,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=component-panels"></script>
+    <script type="module" src="./src/main.js?v=collector-panel"></script>
   </body>
 </html>

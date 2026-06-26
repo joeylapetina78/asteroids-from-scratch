@@ -32,8 +32,9 @@ body {
 .hud {
   display: flex;
   align-items: stretch;
-  justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 10px;
   margin-bottom: 12px;
   color: #d9deea;
 }
@@ -55,8 +56,10 @@ body {
 .controls {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: flex-start;
   gap: 10px;
+  max-width: 250px;
 }
 
 .component-panel {
@@ -64,6 +67,7 @@ body {
   border-radius: 6px;
   padding: 10px;
   background: #0c0e13;
+  min-width: 150px;
 }
 
 .component-panel-title {
@@ -84,22 +88,16 @@ body {
   color: #ffffff;
 }
 
-.engine-panel {
+.engine-panel,
+.scanner-panel,
+.miner-panel,
+.collector-panel {
   display: grid;
   gap: 8px;
-  min-width: 170px;
 }
 
-.ship-panel {
-  display: grid;
-  grid-template-columns: auto auto;
-  gap: 8px 12px;
-  align-items: end;
-}
-
-.ship-panel .component-panel-title {
-  grid-column: 1 / -1;
-  margin-bottom: 0;
+.collector-panel {
+  min-width: 210px;
 }
 
 .power-button,
@@ -134,7 +132,7 @@ body {
   background: #123044;
 }
 
-.inventory-summary {
+.system-readout {
   min-width: 104px;
   padding: 0;
   color: #f5f7fb;
@@ -142,7 +140,7 @@ body {
   text-align: center;
 }
 
-.inventory-summary span {
+.system-readout span {
   display: block;
 }
 
@@ -216,6 +214,34 @@ body {
   background: #07080c;
   cursor: pointer;
   font-size: 0.85rem;
+}
+
+.arm-toggle,
+.collector-control {
+  display: grid;
+  gap: 6px;
+}
+
+.arm-toggle {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  min-height: 32px;
+  border: 1px solid #333846;
+  border-radius: 6px;
+  padding: 0 8px;
+  background: #07080c;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.collector-control {
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.collector-control input {
+  width: 100%;
 }
 
 @media (max-width: 1080px) {

@@ -1,12 +1,15 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=components";
+import { Game } from "./game.js?v=collector-panel";
 import { Processor } from "./systems/processor.js?v=processor-outputs";
-import { createGameState } from "./state/gameState.js?v=components";
+import { createGameState } from "./state/gameState.js?v=collector-panel";
 
 const PROCESS_OUTPUT_AMOUNT = 50;
 const ammoCount = document.querySelector("#ammo-count");
 const canvas = document.querySelector("#game");
+const collectorRange = document.querySelector("#collector-range");
+const collectorRangeCount = document.querySelector("#collector-range-count");
 const fuelCount = document.querySelector("#fuel-count");
+const minerArmed = document.querySelector("#miner-armed");
 const powerButton = document.querySelector("#ship-power");
 const processorCanvas = document.querySelector("#processor");
 const processorOutputPanel = document.querySelector(".processor-outputs");
@@ -36,6 +39,15 @@ document.querySelectorAll("input[name='thrust-mode']").forEach((control) => {
   });
 });
 
+minerArmed.addEventListener("change", () => {
+  state.components.miner.armed = minerArmed.checked;
+});
+
+collectorRange.addEventListener("input", () => {
+  state.components.collector.rangeSetting = Number(collectorRange.value) / 100;
+  updateHudDisplay();
+});
+
 scanButton.addEventListener("click", () => {
   game.scanForCrystals();
 });
@@ -53,6 +65,8 @@ function updateHudDisplay() {
   fuelCount.textContent = String(Math.floor(state.components.engine.fuel));
   ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
   scanergyCount.textContent = `${Math.floor(state.components.scanner.scanergy)}%`;
+  collectorRangeCount.textContent = `${Math.round(state.components.collector.rangeSetting * 100)}%`;
+  minerArmed.checked = state.components.miner.armed;
 }
 
 function processUnit() {

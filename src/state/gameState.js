@@ -10,6 +10,7 @@ export function createGameState() {
       },
       miner: {
         installed: true,
+        armed: false,
         ammo: 100,
         maxAmmo: 200,
       },
@@ -21,6 +22,10 @@ export function createGameState() {
       processor: {
         installed: true,
         output: "fuel",
+      },
+      collector: {
+        installed: true,
+        rangeSetting: 0,
       },
     },
   };
