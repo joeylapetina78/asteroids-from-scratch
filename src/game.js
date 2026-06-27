@@ -871,25 +871,28 @@ export class Game {
 
     const duration = this.viewportTitle.kind === "dock" ? DOCK_MESSAGE_SECONDS : VIEWPORT_TITLE_SECONDS;
     const fade = Math.min(1, this.viewportTitleTimer / 0.55, (duration - this.viewportTitleTimer) / 0.5);
-    const centerX = this.canvas.width / 2;
-    const centerY = this.canvas.height * 0.28;
-    const width = this.viewportTitle.kind === "dock" ? 420 : 560;
-    const height = this.viewportTitle.kind === "dock" ? 70 : 92;
+    const x = 24;
+    const y = 34;
+    const width = this.canvas.width - 48;
+    const height = this.viewportTitle.kind === "dock" ? 58 : 72;
     const titleSize = this.viewportTitle.kind === "dock" ? 20 : 30;
 
     this.context.save();
     this.context.globalAlpha = Math.max(0, fade);
-    this.context.fillStyle = "rgba(7, 8, 12, 0.62)";
-    this.context.fillRect(centerX - width / 2, centerY - height / 2, width, height);
-    this.context.strokeStyle = "rgba(245, 247, 251, 0.64)";
-    this.context.strokeRect(centerX - width / 2 + 0.5, centerY - height / 2 + 0.5, width - 1, height - 1);
+    this.context.fillStyle = "rgba(7, 8, 12, 0.54)";
+    this.context.fillRect(x, y, width, height);
+    this.context.strokeStyle = "rgba(158, 232, 255, 0.54)";
+    this.context.beginPath();
+    this.context.moveTo(x, y + height);
+    this.context.lineTo(x + width, y + height);
+    this.context.stroke();
     this.context.fillStyle = "#ffffff";
     this.context.font = `${titleSize}px Inter, ui-sans-serif, system-ui, sans-serif`;
-    this.context.textAlign = "center";
-    this.context.fillText(this.viewportTitle.title, centerX, centerY - 8);
+    this.context.textAlign = "left";
+    this.context.fillText(this.viewportTitle.title, x + 18, y + 14);
     this.context.fillStyle = "#9ee8ff";
     this.context.font = "13px Inter, ui-sans-serif, system-ui, sans-serif";
-    this.context.fillText(this.viewportTitle.subtitle, centerX, centerY + 24);
+    this.context.fillText(this.viewportTitle.subtitle, x + 20, y + height - 20);
     this.context.restore();
   }
 
