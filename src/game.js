@@ -25,12 +25,13 @@ const PARTICLE_DRAG = 0.94;
 const LIFE_SIMULATION_MARGIN = 900;
 
 export class Game {
-  constructor(canvas, state = createGameState(), onHudChange = () => {}, onResourceCollected = () => {}) {
+  constructor(canvas, state = createGameState(), onHudChange = () => {}, onResourceCollected = () => {}, onDebugChange = () => {}) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
     this.state = state;
     this.onHudChange = onHudChange;
     this.onResourceCollected = onResourceCollected;
+    this.onDebugChange = onDebugChange;
     this.input = createInput();
     this.camera = createCamera(canvas);
     this.scanner = createScanner(canvas);
@@ -136,11 +137,12 @@ export class Game {
     if (this.state.components.scanner.scanergy !== previousScanergy) {
       this.onHudChange(this.state);
     }
+    this.updateDebugReadout();
     this.input.finishFrame();
   }
 
-  getDebugState() {
-    return {
+  updateDebugReadout() {
+    this.onDebugChange({
       worldX: this.ship.position.x,
       worldY: this.ship.position.y,
       zoneProfile: getZoneProfile(this.ship.position.x, this.ship.position.y),
@@ -148,7 +150,7 @@ export class Game {
       lifeformCount: this.lifeforms.length,
       activeLifeformCount: this.activeLifeformCount,
       pickupCount: this.pickups.length,
-    };
+    });
   }
 
   updateShooting() {
@@ -567,32 +569,6 @@ export class Game {
     drawVector(this.context, this.ship.position, this.ship.velocity, this.camera);
     this.scanner.draw(this.context, this.camera, this.ship);
     this.ship.draw(this.context, this.camera);
-    this.drawDebugOverlay();
-  }
-
-  drawDebugOverlay() {
-    const debug = this.getDebugState();
-    const zone = debug.zoneProfile;
-    const lines = [
-      `World: ${Math.round(debug.worldX)}, ${Math.round(debug.worldY)}`,
-      `Zone: ${zone.strongestZoneName} (${zone.strongestZoneId})`,
-      `Influence: ${Math.round(zone.influence * 100)}%  Danger: ${Math.round(zone.danger * 100)}%`,
-      `Asteroids: ${debug.asteroidCount}  Life: ${debug.lifeformCount}  Active: ${debug.activeLifeformCount}`,
-      `Pickups: ${debug.pickupCount}`,
-    ];
-
-    this.context.save();
-    this.context.font = "12px ui-monospace, SFMono-Regular, Consolas, monospace";
-    this.context.textBaseline = "top";
-    this.context.fillStyle = "rgba(7, 8, 12, 0.72)";
-    this.context.fillRect(10, 10, 318, 82);
-    this.context.strokeStyle = "rgba(127, 138, 163, 0.55)";
-    this.context.strokeRect(10.5, 10.5, 317, 81);
-    this.context.fillStyle = "#d9deea";
-    lines.forEach((line, index) => {
-      this.context.fillText(line, 18, 17 + index * 15);
-    });
-    this.context.restore();
   }
 
   drawParticles() {

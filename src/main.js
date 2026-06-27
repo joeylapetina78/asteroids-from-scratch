@@ -19,10 +19,20 @@ const processorOutputPanel = document.querySelector(".processor-outputs");
 const scanButton = document.querySelector("#ship-scan");
 const scanergyCount = document.querySelector("#scanergy-count");
 const shipStatus = document.querySelector("#ship-status");
+const worldDebugFields = {
+  position: document.querySelector("#debug-position"),
+  zone: document.querySelector("#debug-zone"),
+  influence: document.querySelector("#debug-influence"),
+  danger: document.querySelector("#debug-danger"),
+  asteroids: document.querySelector("#debug-asteroids"),
+  lifeforms: document.querySelector("#debug-lifeforms"),
+  activeLifeforms: document.querySelector("#debug-active-lifeforms"),
+  pickups: document.querySelector("#debug-pickups"),
+};
 const state = createGameState();
 const processor = new Processor(processorCanvas, processUnit);
 const cargoHold = new Processor(cargoCanvas, () => {}, { isClickable: false });
-const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type));
+const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type), updateWorldDebugDisplay);
 
 function updateShipPowerDisplay() {
   const engine = state.components.engine;
@@ -82,6 +92,19 @@ function updateHudDisplay() {
     control.checked = Number(control.value) === state.components.collector.rangeSetting;
   });
   updateWarningPanels();
+}
+
+function updateWorldDebugDisplay(debug) {
+  const zone = debug.zoneProfile;
+
+  worldDebugFields.position.textContent = `${Math.round(debug.worldX)}, ${Math.round(debug.worldY)}`;
+  worldDebugFields.zone.textContent = `${zone.strongestZoneName} (${zone.strongestZoneId})`;
+  worldDebugFields.influence.textContent = `${Math.round(zone.influence * 100)}%`;
+  worldDebugFields.danger.textContent = `${Math.round(zone.danger * 100)}%`;
+  worldDebugFields.asteroids.textContent = String(debug.asteroidCount);
+  worldDebugFields.lifeforms.textContent = String(debug.lifeformCount);
+  worldDebugFields.activeLifeforms.textContent = String(debug.activeLifeformCount);
+  worldDebugFields.pickups.textContent = String(debug.pickupCount);
 }
 
 function updateWarningPanels() {
