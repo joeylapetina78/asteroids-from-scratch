@@ -146,6 +146,7 @@ function updateHubServiceDisplay(siteState) {
   const site = siteState.dockedSite?.type === "hub" ? siteState.dockedSite : null;
 
   hubPanel.hidden = !site;
+  hubPanel.setAttribute("aria-hidden", String(!site));
 
   if (!site) {
     hubName.textContent = "Hub";

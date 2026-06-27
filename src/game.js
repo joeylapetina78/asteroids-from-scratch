@@ -179,7 +179,13 @@ export class Game {
 
     if (this.nearbySite && this.nearbySite.id !== previousNearbySiteId && !this.discoveredSiteIds.has(this.nearbySite.id)) {
       this.discoveredSiteIds.add(this.nearbySite.id);
-      this.showViewportTitle(this.nearbySite.name, getSiteSubtitle(this.nearbySite), "site");
+      this.showViewportTitle(
+        this.nearbySite.name,
+        getSiteSubtitle(this.nearbySite),
+        "site",
+        VIEWPORT_TITLE_SECONDS,
+        getTitleSideForPosition(this.ship.position, this.nearbySite.position),
+      );
     }
 
     if (this.input.wasPressed("KeyE") && this.nearbySite) {
@@ -191,7 +197,13 @@ export class Game {
     this.dockedSite = site;
 
     if (site) {
-      this.showViewportTitle(site.name, "docking tether connected", "dock", DOCK_MESSAGE_SECONDS);
+      this.showViewportTitle(
+        site.name,
+        "docking tether connected",
+        "dock",
+        DOCK_MESSAGE_SECONDS,
+        getTitleSideForPosition(this.ship.position, site.position),
+      );
     }
 
     this.updateSiteReadout();
@@ -205,11 +217,11 @@ export class Game {
     }
 
     this.currentZoneId = zoneProfile.strongestZoneId;
-    this.showViewportTitle(zoneProfile.strongestZoneName, "region entered", "zone");
+    this.showViewportTitle(zoneProfile.strongestZoneName, "region entered", "zone", VIEWPORT_TITLE_SECONDS, "left");
   }
 
-  showViewportTitle(title, subtitle, kind = "event", duration = VIEWPORT_TITLE_SECONDS) {
-    this.viewportTitle = { title, subtitle, kind };
+  showViewportTitle(title, subtitle, kind = "event", duration = VIEWPORT_TITLE_SECONDS, side = "left") {
+    this.viewportTitle = { title, subtitle, kind, side };
     this.viewportTitleTimer = duration;
   }
 
@@ -871,28 +883,28 @@ export class Game {
 
     const duration = this.viewportTitle.kind === "dock" ? DOCK_MESSAGE_SECONDS : VIEWPORT_TITLE_SECONDS;
     const fade = Math.min(1, this.viewportTitleTimer / 0.55, (duration - this.viewportTitleTimer) / 0.5);
-    const x = 24;
-    const y = 34;
-    const width = this.canvas.width - 48;
-    const height = this.viewportTitle.kind === "dock" ? 58 : 72;
-    const titleSize = this.viewportTitle.kind === "dock" ? 20 : 30;
+    const width = this.viewportTitle.kind === "dock" ? 300 : 340;
+    const height = this.viewportTitle.kind === "dock" ? 78 : 112;
+    const x = this.viewportTitle.side === "right" ? this.canvas.width - width - 24 : 24;
+    const y = this.canvas.height * 0.17;
+    const titleSize = this.viewportTitle.kind === "dock" ? 21 : 32;
 
     this.context.save();
     this.context.globalAlpha = Math.max(0, fade);
-    this.context.fillStyle = "rgba(7, 8, 12, 0.54)";
+    this.context.fillStyle = "rgba(7, 8, 12, 0.28)";
     this.context.fillRect(x, y, width, height);
     this.context.strokeStyle = "rgba(158, 232, 255, 0.54)";
     this.context.beginPath();
-    this.context.moveTo(x, y + height);
-    this.context.lineTo(x + width, y + height);
+    this.context.moveTo(x, y);
+    this.context.lineTo(x + width * 0.82, y);
     this.context.stroke();
     this.context.fillStyle = "#ffffff";
     this.context.font = `${titleSize}px Inter, ui-sans-serif, system-ui, sans-serif`;
     this.context.textAlign = "left";
-    this.context.fillText(this.viewportTitle.title, x + 18, y + 14);
+    this.context.fillText(this.viewportTitle.title, x + 18, y + 36);
     this.context.fillStyle = "#9ee8ff";
     this.context.font = "13px Inter, ui-sans-serif, system-ui, sans-serif";
-    this.context.fillText(this.viewportTitle.subtitle, x + 20, y + height - 20);
+    this.context.fillText(this.viewportTitle.subtitle, x + 20, y + 70);
     this.context.restore();
   }
 
@@ -992,4 +1004,8 @@ function getSiteSubtitle(site) {
   }
 
   return `${site.type} signal acquired`;
+}
+
+function getTitleSideForPosition(shipPosition, targetPosition) {
+  return targetPosition.x >= shipPosition.x ? "left" : "right";
 }
