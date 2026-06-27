@@ -57,8 +57,8 @@ export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity
   const pickups = [];
 
   for (let index = 0; index < pickupCount; index += 1) {
-    const angle = (Math.PI * 2 * index) / pickupCount + randomRange(random, -0.6, 0.6);
-    const speed = randomRange(random, 34, 92);
+    const angle = random() * Math.PI * 2;
+    const speed = randomRange(random, 62, 145);
 
     pickups.push(
       new ResourcePickup({
@@ -66,8 +66,8 @@ export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity
         y: asteroid.position.y + Math.sin(angle) * randomRange(random, 4, 12),
         type: pickupType,
         velocity: {
-          x: asteroid.velocity.x * 0.45 + Math.cos(angle) * speed + impactVelocity.x * 0.025,
-          y: asteroid.velocity.y * 0.45 + Math.sin(angle) * speed + impactVelocity.y * 0.025,
+          x: asteroid.velocity.x * 0.22 + Math.cos(angle) * speed + impactVelocity.x * 0.006,
+          y: asteroid.velocity.y * 0.22 + Math.sin(angle) * speed + impactVelocity.y * 0.006,
         },
       }),
     );

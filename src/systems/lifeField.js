@@ -1,4 +1,4 @@
-import { Lifeform } from "../entities/Lifeform.js?v=field-life-2";
+import { Lifeform } from "../entities/Lifeform.js?v=hunter-tuning";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
 
 export function createLifeField(asteroids) {
@@ -23,6 +23,25 @@ export function createLifeField(asteroids) {
   addSkitters(lifeforms, anchors, random);
 
   return lifeforms;
+}
+
+export function createHunterRespawn(ship, asteroids, seed) {
+  const anchors = asteroids
+    .filter((asteroid) => Math.hypot(asteroid.position.x - ship.position.x, asteroid.position.y - ship.position.y) > 1100)
+    .sort(
+      (first, second) =>
+        Math.hypot(first.position.x - ship.position.x, first.position.y - ship.position.y) -
+        Math.hypot(second.position.x - ship.position.x, second.position.y - ship.position.y),
+    );
+
+  if (anchors.length === 0) {
+    return null;
+  }
+
+  const random = createRandom(seed);
+  const anchor = anchors[Math.floor(random() * Math.min(18, anchors.length))];
+
+  return createLifeformNear("hunter", anchor, random, 340, seed);
 }
 
 function addHunters(lifeforms, anchors, random) {

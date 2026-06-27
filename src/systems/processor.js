@@ -15,6 +15,7 @@ export class Processor {
     this.onUnitProcessed = onUnitProcessed;
     this.isClickable = options.isClickable ?? true;
     this.units = [];
+    this.sparks = [];
     this.lastFrameTime = 0;
 
     if (this.isClickable) {
@@ -63,6 +64,15 @@ export class Processor {
       this.resolveUnitCollisions();
       this.units.forEach((unit) => this.keepInsideBounds(unit));
     }
+
+    this.sparks.forEach((spark) => {
+      spark.life -= deltaSeconds;
+      spark.vx *= 0.94;
+      spark.vy *= 0.94;
+      spark.x += spark.vx * deltaSeconds;
+      spark.y += spark.vy * deltaSeconds;
+    });
+    this.sparks = this.sparks.filter((spark) => spark.life > 0);
   }
 
   draw() {
@@ -78,6 +88,13 @@ export class Processor {
       this.context.lineWidth = 2;
       this.context.fillRect(unit.x, unit.y, unit.size, unit.size);
       this.context.strokeRect(unit.x, unit.y, unit.size, unit.size);
+    });
+
+    this.sparks.forEach((spark) => {
+      this.context.globalAlpha = Math.max(0, spark.life / spark.maxLife);
+      this.context.fillStyle = spark.color;
+      this.context.fillRect(spark.x, spark.y, spark.size, spark.size);
+      this.context.globalAlpha = 1;
     });
   }
 
@@ -163,7 +180,26 @@ export class Processor {
 
     if (clickedIndex >= 0) {
       const [unit] = this.units.splice(clickedIndex, 1);
+      this.createCrushSparks(unit);
       this.onUnitProcessed(unit.type);
+    }
+  }
+
+  createCrushSparks(unit) {
+    for (let index = 0; index < 18; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 40 + Math.random() * 170;
+
+      this.sparks.push({
+        x: unit.x + unit.size / 2,
+        y: unit.y + unit.size / 2,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: index % 4 === 0 ? "#ffffff" : unit.color,
+        size: 2 + Math.random() * 3,
+        life: 0.25 + Math.random() * 0.35,
+        maxLife: 0.6,
+      });
     }
   }
 }

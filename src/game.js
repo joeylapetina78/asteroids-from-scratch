@@ -1,11 +1,11 @@
 import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
 import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fuel-crystals";
-import { createResourcePickupsFromAsteroid } from "./entities/ResourcePickup.js?v=fuel-crystals";
+import { createResourcePickupsFromAsteroid } from "./entities/ResourcePickup.js?v=hunter-tuning";
 import { Ship } from "./entities/Ship.js?v=components";
 import { createAsteroidField } from "./systems/asteroidField.js?v=fuel-crystals";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=power-control";
-import { createLifeField } from "./systems/lifeField.js?v=ship-destruction";
+import { createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=hunter-tuning";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
 import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
@@ -43,6 +43,7 @@ export class Game {
     this.fireCooldown = 0;
     this.shipHitCooldown = 0;
     this.impactSeed = 0;
+    this.hunterRespawnSeed = 9000;
     this.shipDestroyed = false;
     this.lastFrameTime = 0;
   }
@@ -252,9 +253,10 @@ export class Game {
       }
 
       bullet.destroy();
-      hitHunter.destroy();
+      hitHunter.damage(100);
       hitHunters.add(hitHunter);
       this.createHunterBurst(hitHunter, bullet.velocity);
+      this.respawnHunter();
     });
 
     if (this.shipHitCooldown > 0) {
@@ -273,11 +275,28 @@ export class Game {
       return;
     }
 
+    const impactDamage = this.getImpactDamage(rammingHunter);
+
     this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
-    this.damageHull(this.getImpactDamage(rammingHunter) * 0.5);
+    this.damageHull(impactDamage * 0.5);
     this.createShipSparks(rammingHunter);
-    this.createHunterBurst(rammingHunter, this.ship.velocity);
-    rammingHunter.destroy();
+    rammingHunter.damage(impactDamage * 0.85);
+
+    if (rammingHunter.isAlive) {
+      this.createHunterImpactSparks(rammingHunter);
+    } else {
+      this.createHunterBurst(rammingHunter, this.ship.velocity);
+      this.respawnHunter();
+    }
+  }
+
+  respawnHunter() {
+    this.hunterRespawnSeed += 1;
+    const hunter = createHunterRespawn(this.ship, this.asteroids, this.hunterRespawnSeed);
+
+    if (hunter) {
+      this.lifeforms.push(hunter);
+    }
   }
 
   damageHull(amount) {
@@ -375,6 +394,29 @@ export class Game {
         size: 1.5 + Math.random() * 3,
         life: 0.28 + Math.random() * 0.38,
         maxLife: 0.66,
+      });
+    }
+  }
+
+  createHunterImpactSparks(hunter) {
+    for (let index = 0; index < 12; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 55 + Math.random() * 130;
+
+      this.particles.push({
+        type: "spark",
+        position: {
+          x: hunter.position.x,
+          y: hunter.position.y,
+        },
+        velocity: {
+          x: hunter.velocity.x * 0.2 + Math.cos(angle) * speed,
+          y: hunter.velocity.y * 0.2 + Math.sin(angle) * speed,
+        },
+        color: Math.random() > 0.35 ? "#ff5d6c" : "#ffffff",
+        size: 1 + Math.random() * 2,
+        life: 0.2 + Math.random() * 0.25,
+        maxLife: 0.45,
       });
     }
   }

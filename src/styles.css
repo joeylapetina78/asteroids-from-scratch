@@ -142,6 +142,14 @@ body {
   gap: 8px;
 }
 
+.viewport-panel {
+  padding: 8px;
+}
+
+.viewport-panel .component-panel-title {
+  margin-bottom: 6px;
+}
+
 .power-button,
 .scan-button {
   border: 1px solid #4b5566;

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=impact-effects" />
+    <link rel="stylesheet" href="./src/styles.css?v=hunter-tuning" />
   </head>
   <body>
     <main class="game-shell">
@@ -121,12 +121,20 @@
             </div>
           </section>
 
-          <canvas id="game" width="960" height="540" aria-label="Asteroids game canvas"></canvas>
+          <section class="component-panel viewport-panel" data-panel-id="viewport" aria-label="Space viewport">
+            <div class="component-panel-title">
+              <div>
+                <strong>Viewport</strong>
+                <span>local space view</span>
+              </div>
+            </div>
+            <canvas id="game" width="960" height="540" aria-label="Asteroids game canvas"></canvas>
+          </section>
         </section>
 
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=ship-destruction"></script>
+    <script type="module" src="./src/main.js?v=hunter-tuning"></script>
   </body>
 </html>

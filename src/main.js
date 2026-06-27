@@ -1,6 +1,6 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=ship-destruction";
-import { Processor } from "./systems/processor.js?v=cargo-hold";
+import { Game } from "./game.js?v=hunter-tuning";
+import { Processor } from "./systems/processor.js?v=hunter-tuning";
 import { createGameState } from "./state/gameState.js?v=impact-effects";
 
 const PROCESS_OUTPUT_AMOUNT = 50;

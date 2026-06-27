@@ -19,6 +19,7 @@ export class Lifeform {
     this.maxForce = getMaxForce(type);
     this.perception = getPerception(type);
     this.isAlive = true;
+    this.health = type === "hunter" ? 100 : 1;
   }
 
   update(deltaSeconds, world) {
@@ -41,7 +42,7 @@ export class Lifeform {
     const distanceToShip = distance(this.position, world.ship.position);
 
     if (world.shipPowered && distanceToShip < 1500) {
-      this.applySteer(seek(this, world.ship.position, this.maxSpeed), 2.25);
+      this.applySteer(seek(this, world.ship.position, this.maxSpeed), 3.1);
       this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 110), 78), 0.65);
     } else {
       this.applySteer(this.wander(deltaSeconds), world.shipPowered ? 0.8 : 1.15);
@@ -197,8 +198,12 @@ export class Lifeform {
     context.restore();
   }
 
-  destroy() {
-    this.isAlive = false;
+  damage(amount) {
+    this.health -= amount;
+
+    if (this.health <= 0) {
+      this.isAlive = false;
+    }
   }
 }
 
@@ -410,7 +415,7 @@ function getRadius(type) {
 
 function getMaxSpeed(type) {
   if (type === "hunter") {
-    return 176;
+    return 225;
   }
 
   if (type === "threadling") {
@@ -426,7 +431,7 @@ function getMaxSpeed(type) {
 
 function getMaxForce(type) {
   if (type === "hunter") {
-    return 0.22;
+    return 0.36;
   }
 
   if (type === "threadling") {
