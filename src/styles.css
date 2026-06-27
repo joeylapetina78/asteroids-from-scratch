@@ -128,8 +128,7 @@ body {
 .engine-panel,
 .scanner-panel,
 .miner-panel,
-.collector-panel,
-.world-panel {
+.collector-panel {
   display: grid;
   gap: 8px;
 }
@@ -193,31 +192,6 @@ body {
 
 .system-readout span {
   display: block;
-}
-
-.debug-readout {
-  display: grid;
-  gap: 4px;
-  min-width: 220px;
-  color: #d9deea;
-  font-size: 0.75rem;
-}
-
-.debug-readout span {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.debug-readout strong {
-  max-width: 150px;
-  overflow: hidden;
-  color: #ffffff;
-  font-size: 0.78rem;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 #game,
