@@ -42,6 +42,20 @@ export class Processor {
     });
   }
 
+  getUnitCounts() {
+    return this.units.reduce((counts, unit) => {
+      counts[unit.type] = (counts[unit.type] ?? 0) + 1;
+      return counts;
+    }, {});
+  }
+
+  drainUnits() {
+    const units = [...this.units];
+    this.units = [];
+
+    return units;
+  }
+
   frame(time) {
     const deltaSeconds = Math.min((time - this.lastFrameTime) / 1000, 0.05);
     this.lastFrameTime = time;

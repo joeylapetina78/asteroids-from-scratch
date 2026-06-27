@@ -28,6 +28,7 @@ const HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS = 0.38;
 const MAX_HUNTER_ENVIRONMENT_HITS_PER_FRAME = 6;
 const VIEWPORT_TITLE_SECONDS = 5.6;
 const DOCK_MESSAGE_SECONDS = 2.8;
+const REPAIR_CREDITS_PER_HULL = 2;
 
 export class Game {
   constructor(
@@ -240,10 +241,28 @@ export class Game {
       return;
     }
 
+    const repairCost = this.getRepairCost();
+
+    if (repairCost > this.state.components.account.credits) {
+      return;
+    }
+
+    this.state.components.account.credits -= repairCost;
     this.state.components.hull.integrity = this.state.components.hull.maxIntegrity;
     this.shipDestroyed = false;
     this.onHudChange(this.state);
     this.setDockedSite(site);
+  }
+
+  getRepairCost() {
+    const hull = this.state.components.hull;
+    const missingHull = Math.max(0, hull.maxIntegrity - hull.integrity);
+
+    return Math.ceil(missingHull * REPAIR_CREDITS_PER_HULL);
+  }
+
+  refreshSiteReadout() {
+    this.updateSiteReadout();
   }
 
   updateSiteReadout() {
@@ -255,6 +274,8 @@ export class Game {
       nearestSite: nearest?.site ?? null,
       nearestSiteDistance: nearest?.distance ?? 0,
       canRepair: Boolean(this.dockedSite?.capabilities.includes("repair")),
+      repairCost: this.getRepairCost(),
+      credits: this.state.components.account.credits,
       hullIntegrity: this.state.components.hull.integrity,
       hullMaxIntegrity: this.state.components.hull.maxIntegrity,
     });

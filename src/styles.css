@@ -160,6 +160,7 @@ body {
 .power-button,
 .scan-button,
 .dock-button,
+.sell-button,
 .repair-button {
   border: 1px solid #4b5566;
   border-radius: 6px;
@@ -173,6 +174,7 @@ body {
 .power-button:hover,
 .scan-button:hover,
 .dock-button:hover,
+.sell-button:hover,
 .repair-button:hover {
   border-color: #7f8aa3;
   background: #222733;
@@ -203,6 +205,12 @@ body {
   color: #dfffea;
 }
 
+.sell-button {
+  border-color: #786b42;
+  color: #fff0bd;
+}
+
+.sell-button:disabled,
 .repair-button:disabled {
   cursor: default;
   opacity: 0.45;

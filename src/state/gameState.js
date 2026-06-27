@@ -1,6 +1,9 @@
 export function createGameState() {
   return {
     components: {
+      account: {
+        credits: 0,
+      },
       engine: {
         installed: true,
         powered: false,

@@ -129,6 +129,7 @@
               </div>
               <div class="system-readout docking-readout" aria-live="polite">
                 <span>Target: <strong id="docking-target">None</strong></span>
+                <span>Credits: <strong id="credit-count">0</strong></span>
                 <span id="docking-detail">No dock target</span>
               </div>
               <button id="dock-toggle" class="dock-button" type="button" disabled>Dock</button>
@@ -144,7 +145,10 @@
               <div class="system-readout hub-readout" aria-live="polite">
                 <span id="hub-detail">Dock to access services</span>
                 <span>Hull: <strong id="hub-hull">100%</strong></span>
+                <span>Repair: <strong id="hub-repair-cost">0 cr</strong></span>
+                <span>Cargo: <strong id="hub-cargo-value">0 cr</strong></span>
               </div>
+              <button id="hub-sell-cargo" class="sell-button" type="button" disabled>Sell Cargo</button>
               <button id="hub-repair" class="repair-button" type="button" disabled>Repair</button>
             </div>
 
@@ -186,6 +190,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=panel-layout"></script>
+    <script type="module" src="./src/main.js?v=credits-cargo"></script>
   </body>
 </html>

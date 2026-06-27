@@ -1,16 +1,21 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=panel-layout";
+import { Game } from "./game.js?v=credits-cargo";
 import { Processor } from "./systems/processor.js?v=hunter-tuning";
 import { createGameState } from "./state/gameState.js?v=impact-effects";
 
 const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v1";
 const PROCESS_OUTPUT_AMOUNT = 50;
 const CRYSTAL_VALUE_MULTIPLIER = 5;
+const CARGO_UNIT_VALUES = {
+  fuel: 15,
+  crystal: 75,
+};
 const ammoCount = document.querySelector("#ammo-count");
 const cargoCanvas = document.querySelector("#cargo");
 const canvas = document.querySelector("#game");
 const collectorRangeCount = document.querySelector("#collector-range-count");
 const collectorStrengthControls = document.querySelectorAll("input[name='collector-strength']");
+const creditCount = document.querySelector("#credit-count");
 const fuelCount = document.querySelector("#fuel-count");
 const hullCount = document.querySelector("#hull-count");
 const dockToggleButton = document.querySelector("#dock-toggle");
@@ -18,10 +23,13 @@ const dockingDetail = document.querySelector("#docking-detail");
 const dockingStatus = document.querySelector("#docking-status");
 const dockingTarget = document.querySelector("#docking-target");
 const hubDetail = document.querySelector("#hub-detail");
+const hubCargoValue = document.querySelector("#hub-cargo-value");
 const hubHull = document.querySelector("#hub-hull");
 const hubName = document.querySelector("#hub-name");
 const hubPanel = document.querySelector("[data-panel-id='hub']");
 const hubRepairButton = document.querySelector("#hub-repair");
+const hubRepairCost = document.querySelector("#hub-repair-cost");
+const hubSellCargoButton = document.querySelector("#hub-sell-cargo");
 const hubStatus = document.querySelector("#hub-status");
 const minerArmed = document.querySelector("#miner-armed");
 const powerButton = document.querySelector("#ship-power");
@@ -91,6 +99,11 @@ dockToggleButton.addEventListener("click", () => {
 
 hubRepairButton.addEventListener("click", () => {
   game.repairAtDock();
+  updateHudDisplay();
+});
+
+hubSellCargoButton.addEventListener("click", () => {
+  sellCargoHold();
 });
 
 renderProcessorOutputs();
@@ -106,6 +119,7 @@ function updateHudDisplay() {
   renderProcessorOutputs();
   updateShipPowerDisplay();
 
+  creditCount.textContent = String(Math.floor(state.components.account.credits));
   fuelCount.textContent = String(Math.floor(state.components.engine.fuel));
   ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
   scanergyCount.textContent = `${Math.floor(state.components.scanner.scanergy)}%`;
@@ -156,6 +170,9 @@ function updateHubServiceDisplay(siteState) {
     hubStatus.textContent = "service window";
     hubDetail.textContent = "Dock to access services";
     hubHull.textContent = `${Math.ceil(siteState.hullIntegrity)}%`;
+    hubRepairCost.textContent = `${siteState.repairCost} cr`;
+    hubCargoValue.textContent = `${getCargoHoldValue()} cr`;
+    hubSellCargoButton.disabled = true;
     hubRepairButton.disabled = true;
     return;
   }
@@ -170,7 +187,10 @@ function updateHubServiceDisplay(siteState) {
   hubStatus.textContent = "service window";
   hubDetail.textContent = "Repair dock available";
   hubHull.textContent = `${hullPercent}%`;
-  hubRepairButton.disabled = !siteState.canRepair || hullPercent >= 100;
+  hubRepairCost.textContent = `${siteState.repairCost} cr`;
+  hubCargoValue.textContent = `${getCargoHoldValue()} cr`;
+  hubSellCargoButton.disabled = getCargoHoldValue() <= 0;
+  hubRepairButton.disabled = !siteState.canRepair || hullPercent >= 100 || siteState.credits < siteState.repairCost;
 }
 
 function updateWorldDebugDisplay(debug) {
@@ -233,6 +253,33 @@ function processUnit(type) {
   }
 
   updateHudDisplay();
+  game.refreshSiteReadout();
+}
+
+function sellCargoHold() {
+  if (hubPanel.hidden || hubSellCargoButton.disabled) {
+    return;
+  }
+
+  const cargoValue = getCargoHoldValue();
+
+  if (cargoValue <= 0) {
+    return;
+  }
+
+  cargoHold.drainUnits();
+  state.components.account.credits += cargoValue;
+  updateHudDisplay();
+  game.refreshSiteReadout();
+}
+
+function getCargoHoldValue() {
+  const counts = cargoHold.getUnitCounts();
+
+  return Object.entries(counts).reduce(
+    (total, [type, count]) => total + (CARGO_UNIT_VALUES[type] ?? 0) * count,
+    0,
+  );
 }
 
 function getUnitProcessValue(type) {
