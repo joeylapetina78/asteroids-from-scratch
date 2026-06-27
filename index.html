@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=hunter-tuning" />
+    <link rel="stylesheet" href="./src/styles.css?v=world-zones" />
   </head>
   <body>
     <main class="game-shell">
@@ -119,6 +119,25 @@
                 <span>Integrity: <strong id="hull-count">100%</strong></span>
               </div>
             </div>
+
+            <div class="component-panel world-panel" data-panel-id="world" aria-label="World debug component">
+              <div class="component-panel-title">
+                <div>
+                  <strong>World</strong>
+                  <span>zone debug</span>
+                </div>
+              </div>
+              <div class="debug-readout" aria-live="polite">
+                <span>Position <strong id="debug-position">0, 0</strong></span>
+                <span>Zone <strong id="debug-zone">Starter Drift</strong></span>
+                <span>Influence <strong id="debug-influence">100%</strong></span>
+                <span>Danger <strong id="debug-danger">4%</strong></span>
+                <span>Asteroids <strong id="debug-asteroids">0</strong></span>
+                <span>Life <strong id="debug-lifeforms">0</strong></span>
+                <span>Active Life <strong id="debug-active-lifeforms">0</strong></span>
+                <span>Pickups <strong id="debug-pickups">0</strong></span>
+              </div>
+            </div>
           </section>
 
           <section class="component-panel viewport-panel" data-panel-id="viewport" aria-label="Space viewport">
@@ -135,6 +154,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=ambusher-drops"></script>
+    <script type="module" src="./src/main.js?v=world-zones"></script>
   </body>
 </html>

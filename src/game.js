@@ -9,6 +9,7 @@ import { createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=h
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js";
 import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
+import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { createGameState } from "./state/gameState.js?v=collector-panel";
 
 const FIRE_COOLDOWN_SECONDS = 0.18;
@@ -24,12 +25,13 @@ const PARTICLE_DRAG = 0.94;
 const LIFE_SIMULATION_MARGIN = 900;
 
 export class Game {
-  constructor(canvas, state = createGameState(), onHudChange = () => {}, onResourceCollected = () => {}) {
+  constructor(canvas, state = createGameState(), onHudChange = () => {}, onResourceCollected = () => {}, onDebugChange = () => {}) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
     this.state = state;
     this.onHudChange = onHudChange;
     this.onResourceCollected = onResourceCollected;
+    this.onDebugChange = onDebugChange;
     this.input = createInput();
     this.camera = createCamera(canvas);
     this.scanner = createScanner(canvas);
@@ -45,6 +47,7 @@ export class Game {
     this.impactSeed = 0;
     this.hunterRespawnSeed = 9000;
     this.shipDestroyed = false;
+    this.activeLifeformCount = 0;
     this.lastFrameTime = 0;
   }
 
@@ -121,6 +124,7 @@ export class Game {
         shipPowered: this.state.components.engine.powered,
       });
     });
+    this.activeLifeformCount = activeLifeforms.length;
     this.updateHunterHits();
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
     this.lifeforms = this.lifeforms.filter((lifeform) => lifeform.isAlive);
@@ -133,7 +137,20 @@ export class Game {
     if (this.state.components.scanner.scanergy !== previousScanergy) {
       this.onHudChange(this.state);
     }
+    this.updateDebugReadout();
     this.input.finishFrame();
+  }
+
+  updateDebugReadout() {
+    this.onDebugChange({
+      worldX: this.ship.position.x,
+      worldY: this.ship.position.y,
+      zoneProfile: getZoneProfile(this.ship.position.x, this.ship.position.y),
+      asteroidCount: this.asteroids.length,
+      lifeformCount: this.lifeforms.length,
+      activeLifeformCount: this.activeLifeformCount,
+      pickupCount: this.pickups.length,
+    });
   }
 
   updateShooting() {
