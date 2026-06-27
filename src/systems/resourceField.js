@@ -1,4 +1,5 @@
 import { createValueNoise } from "./valueNoise.js";
+import { getZoneProfile } from "./worldZones.js?v=world-zones";
 
 const RESOURCE_COLORS = {
   stone: [170, 185, 210],
@@ -13,12 +14,14 @@ export function createResourceField(seed = 1337) {
 
   return {
     getProfile(x, y) {
-      const density = Math.pow(layeredNoise(noise, x + 1000, y - 1000, 1800, 0.18, 1), 1.15);
-      const iron = Math.pow(layeredNoise(noise, x + 9000, y + 1200, 2600, 0, 1), 1.6) * 1.5;
+      const zoneProfile = getZoneProfile(x, y);
+      const densityNoise = Math.pow(layeredNoise(noise, x + 1000, y - 1000, 1800, 0.18, 1), 1.15);
+      const density = clamp(densityNoise * zoneProfile.asteroidDensityMultiplier, 0, 1.35);
+      const iron = Math.pow(layeredNoise(noise, x + 9000, y + 1200, 2600, 0, 1), 1.6) * 1.5 * zoneProfile.redOreBias;
       const copper = Math.pow(layeredNoise(noise, x - 7000, y + 5400, 3200, 0, 1), 2.1) * 1.35;
       const ice = Math.pow(layeredNoise(noise, x + 2400, y - 8100, 3800, 0, 1), 1.8) * 1.35;
-      const crystal = Math.pow(layeredNoise(noise, x - 12000, y - 6000, 5200, 0, 1), 5.5) * 2.8;
-      const stone = 0.9 + layeredNoise(noise, x, y, 1400, 0, 0.25);
+      const crystal = Math.pow(layeredNoise(noise, x - 12000, y - 6000, 5200, 0, 1), 5.5) * 2.8 * zoneProfile.blueOreBias;
+      const stone = (0.9 + layeredNoise(noise, x, y, 1400, 0, 0.25)) * zoneProfile.commonRockBias;
       const resources = normalizeResources({ stone, iron, copper, ice, crystal });
 
       return {
@@ -26,6 +29,10 @@ export function createResourceField(seed = 1337) {
         resources,
         color: mixResourceColor(resources),
         richness: Math.max(iron, copper, ice, crystal),
+        commonRockBias: zoneProfile.commonRockBias,
+        // TODO: Use scrapBias when white/common rocks can drop trace salvage.
+        scrapBias: zoneProfile.scrapBias,
+        zoneProfile,
       };
     },
   };
@@ -83,4 +90,8 @@ function getDominantNonStoneResource(resources) {
     (best, [resource, amount]) => (amount > best.amount ? { resource, amount } : best),
     { resource: "iron", amount: 0 },
   );
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }

@@ -1,5 +1,5 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=world-zones";
+import { Game } from "./game.js?v=zone-aware";
 import { Processor } from "./systems/processor.js?v=hunter-tuning";
 import { createGameState } from "./state/gameState.js?v=impact-effects";
 
@@ -24,6 +24,8 @@ const worldDebugFields = {
   zone: document.querySelector("#debug-zone"),
   influence: document.querySelector("#debug-influence"),
   danger: document.querySelector("#debug-danger"),
+  density: document.querySelector("#debug-density"),
+  oreBias: document.querySelector("#debug-ore-bias"),
   asteroids: document.querySelector("#debug-asteroids"),
   lifeforms: document.querySelector("#debug-lifeforms"),
   activeLifeforms: document.querySelector("#debug-active-lifeforms"),
@@ -101,6 +103,8 @@ function updateWorldDebugDisplay(debug) {
   worldDebugFields.zone.textContent = `${zone.strongestZoneName} (${zone.strongestZoneId})`;
   worldDebugFields.influence.textContent = `${Math.round(zone.influence * 100)}%`;
   worldDebugFields.danger.textContent = `${Math.round(zone.danger * 100)}%`;
+  worldDebugFields.density.textContent = `${zone.asteroidDensityMultiplier.toFixed(2)}x`;
+  worldDebugFields.oreBias.textContent = `R ${zone.redOreBias.toFixed(2)} / B ${zone.blueOreBias.toFixed(2)}`;
   worldDebugFields.asteroids.textContent = String(debug.asteroidCount);
   worldDebugFields.lifeforms.textContent = String(debug.lifeformCount);
   worldDebugFields.activeLifeforms.textContent = String(debug.activeLifeformCount);
