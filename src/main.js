@@ -1,5 +1,5 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=zone-aware";
+import { Game } from "./game.js?v=life-zones";
 import { Processor } from "./systems/processor.js?v=hunter-tuning";
 import { createGameState } from "./state/gameState.js?v=impact-effects";
 
@@ -26,7 +26,9 @@ const worldDebugFields = {
   danger: document.querySelector("#debug-danger"),
   density: document.querySelector("#debug-density"),
   oreBias: document.querySelector("#debug-ore-bias"),
+  lifeBias: document.querySelector("#debug-life-bias"),
   asteroids: document.querySelector("#debug-asteroids"),
+  hunters: document.querySelector("#debug-hunters"),
   lifeforms: document.querySelector("#debug-lifeforms"),
   activeLifeforms: document.querySelector("#debug-active-lifeforms"),
   pickups: document.querySelector("#debug-pickups"),
@@ -105,7 +107,9 @@ function updateWorldDebugDisplay(debug) {
   worldDebugFields.danger.textContent = `${Math.round(zone.danger * 100)}%`;
   worldDebugFields.density.textContent = `${zone.asteroidDensityMultiplier.toFixed(2)}x`;
   worldDebugFields.oreBias.textContent = `R ${zone.redOreBias.toFixed(2)} / B ${zone.blueOreBias.toFixed(2)}`;
+  worldDebugFields.lifeBias.textContent = `H ${zone.hunterBias.toFixed(2)} / A ${zone.ambientLifeBias.toFixed(2)}`;
   worldDebugFields.asteroids.textContent = String(debug.asteroidCount);
+  worldDebugFields.hunters.textContent = `${debug.hunterCount} / ${debug.activeHunterCount} active`;
   worldDebugFields.lifeforms.textContent = String(debug.lifeformCount);
   worldDebugFields.activeLifeforms.textContent = String(debug.activeLifeformCount);
   worldDebugFields.pickups.textContent = String(debug.pickupCount);

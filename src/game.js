@@ -5,7 +5,7 @@ import { Ship } from "./entities/Ship.js?v=components";
 import { createAsteroidField } from "./systems/asteroidField.js?v=zone-aware";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=power-control";
-import { createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=hunter-tuning";
+import { createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=zone-aware";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
@@ -23,6 +23,8 @@ const COLLECTOR_PULL_FORCE = 1650;
 const COLLECTOR_MAX_SCANERGY_PER_SECOND = 50;
 const PARTICLE_DRAG = 0.94;
 const LIFE_SIMULATION_MARGIN = 900;
+const HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS = 0.38;
+const MAX_HUNTER_ENVIRONMENT_HITS_PER_FRAME = 6;
 
 export class Game {
   constructor(canvas, state = createGameState(), onHudChange = () => {}, onResourceCollected = () => {}, onDebugChange = () => {}) {
@@ -48,6 +50,7 @@ export class Game {
     this.hunterRespawnSeed = 9000;
     this.shipDestroyed = false;
     this.activeLifeformCount = 0;
+    this.activeHunterCount = 0;
     this.lastFrameTime = 0;
   }
 
@@ -125,6 +128,8 @@ export class Game {
       });
     });
     this.activeLifeformCount = activeLifeforms.length;
+    this.activeHunterCount = activeLifeforms.filter((lifeform) => lifeform.type === "hunter").length;
+    this.updateHunterEnvironmentalHits(activeLifeforms, activeAsteroids, deltaSeconds);
     this.updateHunterHits();
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
     this.lifeforms = this.lifeforms.filter((lifeform) => lifeform.isAlive);
@@ -149,8 +154,72 @@ export class Game {
       asteroidCount: this.asteroids.length,
       lifeformCount: this.lifeforms.length,
       activeLifeformCount: this.activeLifeformCount,
+      hunterCount: this.lifeforms.filter((lifeform) => lifeform.type === "hunter").length,
+      activeHunterCount: this.activeHunterCount,
       pickupCount: this.pickups.length,
     });
+  }
+
+  updateHunterEnvironmentalHits(activeLifeforms, activeAsteroids, deltaSeconds) {
+    const activeHunters = activeLifeforms.filter((lifeform) => lifeform.type === "hunter" && lifeform.isAlive);
+    let impactCount = 0;
+
+    activeHunters.forEach((hunter) => {
+      hunter.environmentHitCooldown = Math.max(0, (hunter.environmentHitCooldown ?? 0) - deltaSeconds);
+    });
+
+    for (const hunter of activeHunters) {
+      if (impactCount >= MAX_HUNTER_ENVIRONMENT_HITS_PER_FRAME || hunter.environmentHitCooldown > 0 || !hunter.isAlive) {
+        continue;
+      }
+
+      const hitAsteroid = activeAsteroids.find((asteroid) =>
+        circlesOverlap(hunter.position, hunter.radius, asteroid.position, asteroid.radius),
+      );
+
+      if (!hitAsteroid) {
+        continue;
+      }
+
+      this.bumpHunterFromBody(hunter, hitAsteroid, 0.85);
+      hunter.damage(this.getHunterEnvironmentDamage(hunter, hitAsteroid));
+      hunter.environmentHitCooldown = HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS;
+      this.createHunterImpactSparks(hunter);
+      this.destroyHunterIfNeeded(hunter);
+      impactCount += 1;
+    }
+
+    for (let firstIndex = 0; firstIndex < activeHunters.length; firstIndex += 1) {
+      const firstHunter = activeHunters[firstIndex];
+
+      if (impactCount >= MAX_HUNTER_ENVIRONMENT_HITS_PER_FRAME || !firstHunter.isAlive) {
+        break;
+      }
+
+      for (let secondIndex = firstIndex + 1; secondIndex < activeHunters.length; secondIndex += 1) {
+        const secondHunter = activeHunters[secondIndex];
+
+        if (
+          firstHunter.environmentHitCooldown > 0 ||
+          secondHunter.environmentHitCooldown > 0 ||
+          !secondHunter.isAlive ||
+          !circlesOverlap(firstHunter.position, firstHunter.radius, secondHunter.position, secondHunter.radius)
+        ) {
+          continue;
+        }
+
+        this.separateHunters(firstHunter, secondHunter);
+        firstHunter.damage(this.getHunterHunterDamage(firstHunter, secondHunter));
+        secondHunter.damage(this.getHunterHunterDamage(secondHunter, firstHunter));
+        firstHunter.environmentHitCooldown = HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS * 0.65;
+        secondHunter.environmentHitCooldown = HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS * 0.65;
+        this.createHunterImpactSparks(firstHunter);
+        this.destroyHunterIfNeeded(firstHunter);
+        this.destroyHunterIfNeeded(secondHunter);
+        impactCount += 1;
+        break;
+      }
+    }
   }
 
   updateShooting() {
@@ -318,6 +387,16 @@ export class Game {
     }
   }
 
+  destroyHunterIfNeeded(hunter) {
+    if (hunter.isAlive) {
+      return;
+    }
+
+    this.createHunterBurst(hunter, hunter.velocity);
+    this.createHunterDrops(hunter, hunter.velocity);
+    this.respawnHunter();
+  }
+
   damageHull(amount) {
     const hull = this.state.components.hull;
 
@@ -460,6 +539,64 @@ export class Game {
         maxLife: 0.45,
       });
     }
+  }
+
+  bumpHunterFromBody(hunter, body, strength = 1) {
+    const distanceX = hunter.position.x - body.position.x;
+    const distanceY = hunter.position.y - body.position.y;
+    const distance = Math.hypot(distanceX, distanceY) || 1;
+    const overlap = hunter.radius + body.radius - distance;
+
+    if (overlap <= 0) {
+      return;
+    }
+
+    const normalX = distanceX / distance;
+    const normalY = distanceY / distance;
+    hunter.position.x += normalX * overlap * strength;
+    hunter.position.y += normalY * overlap * strength;
+    hunter.velocity.x += normalX * (70 + overlap * 3);
+    hunter.velocity.y += normalY * (70 + overlap * 3);
+  }
+
+  separateHunters(firstHunter, secondHunter) {
+    const distanceX = firstHunter.position.x - secondHunter.position.x;
+    const distanceY = firstHunter.position.y - secondHunter.position.y;
+    const distance = Math.hypot(distanceX, distanceY) || 1;
+    const overlap = firstHunter.radius + secondHunter.radius - distance;
+
+    if (overlap <= 0) {
+      return;
+    }
+
+    const normalX = distanceX / distance;
+    const normalY = distanceY / distance;
+    const push = overlap * 0.5;
+
+    firstHunter.position.x += normalX * push;
+    firstHunter.position.y += normalY * push;
+    secondHunter.position.x -= normalX * push;
+    secondHunter.position.y -= normalY * push;
+    firstHunter.velocity.x += normalX * 45;
+    firstHunter.velocity.y += normalY * 45;
+    secondHunter.velocity.x -= normalX * 45;
+    secondHunter.velocity.y -= normalY * 45;
+  }
+
+  getHunterEnvironmentDamage(hunter, body) {
+    const relativeVelocityX = hunter.velocity.x - body.velocity.x;
+    const relativeVelocityY = hunter.velocity.y - body.velocity.y;
+    const relativeSpeed = Math.hypot(relativeVelocityX, relativeVelocityY);
+
+    return Math.min(34, Math.max(7, relativeSpeed * 0.055 + body.radius * 0.08));
+  }
+
+  getHunterHunterDamage(firstHunter, secondHunter) {
+    const relativeVelocityX = firstHunter.velocity.x - secondHunter.velocity.x;
+    const relativeVelocityY = firstHunter.velocity.y - secondHunter.velocity.y;
+    const relativeSpeed = Math.hypot(relativeVelocityX, relativeVelocityY);
+
+    return Math.min(12, Math.max(2, relativeSpeed * 0.025));
   }
 
   createShipSparks(impactBody) {
