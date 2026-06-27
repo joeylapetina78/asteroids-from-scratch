@@ -1,7 +1,7 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
 import { Game } from "./game.js?v=credits-cargo";
-import { Processor } from "./systems/processor.js?v=hunter-tuning";
-import { createGameState } from "./state/gameState.js?v=impact-effects";
+import { Processor } from "./systems/processor.js?v=credits-cargo";
+import { createGameState } from "./state/gameState.js?v=credits-cargo";
 
 const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v1";
 const PROCESS_OUTPUT_AMOUNT = 50;

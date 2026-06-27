@@ -11,7 +11,7 @@ import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=site-scanner";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=docking-services";
-import { createGameState } from "./state/gameState.js?v=collector-panel";
+import { createGameState } from "./state/gameState.js?v=credits-cargo";
 
 const FIRE_COOLDOWN_SECONDS = 0.18;
 const AMMO_PER_SHOT = 1;
