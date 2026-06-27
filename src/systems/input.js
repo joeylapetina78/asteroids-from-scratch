@@ -30,6 +30,10 @@ export function createInput() {
 
     clearGameKeys() {
       gameKeys.forEach((code) => {
+        if (code === "KeyE") {
+          return;
+        }
+
         pressedKeys.delete(code);
         justPressedKeys.delete(code);
       });

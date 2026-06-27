@@ -1,5 +1,5 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=hub-foundation";
+import { Game } from "./game.js?v=docking-services";
 import { Processor } from "./systems/processor.js?v=hunter-tuning";
 import { createGameState } from "./state/gameState.js?v=impact-effects";
 
@@ -12,8 +12,11 @@ const collectorRangeCount = document.querySelector("#collector-range-count");
 const collectorStrengthControls = document.querySelectorAll("input[name='collector-strength']");
 const fuelCount = document.querySelector("#fuel-count");
 const hullCount = document.querySelector("#hull-count");
+const dockToggleButton = document.querySelector("#dock-toggle");
+const dockingDetail = document.querySelector("#docking-detail");
+const dockingStatus = document.querySelector("#docking-status");
+const dockingTarget = document.querySelector("#docking-target");
 const hubDetail = document.querySelector("#hub-detail");
-const hubDockButton = document.querySelector("#hub-dock");
 const hubHull = document.querySelector("#hub-hull");
 const hubName = document.querySelector("#hub-name");
 const hubPanel = document.querySelector("[data-panel-id='hub']");
@@ -80,7 +83,7 @@ scanButton.addEventListener("click", () => {
   game.scanForCrystals();
 });
 
-hubDockButton.addEventListener("click", () => {
+dockToggleButton.addEventListener("click", () => {
   game.toggleDock();
 });
 
@@ -114,23 +117,52 @@ function updateHudDisplay() {
 }
 
 function updateHubDisplay(siteState) {
+  updateDockingDisplay(siteState);
+  updateHubServiceDisplay(siteState);
+}
+
+function updateDockingDisplay(siteState) {
   const site = siteState.dockedSite ?? siteState.nearbySite;
 
-  hubPanel.hidden = !site;
-
   if (!site) {
+    dockingStatus.textContent = "no target";
+    dockingTarget.textContent = "None";
+    dockingDetail.textContent = "No dock target";
+    dockToggleButton.textContent = "Dock";
+    dockToggleButton.disabled = true;
     return;
   }
 
   const isDocked = siteState.dockedSite?.id === site.id;
+
+  dockingStatus.textContent = isDocked ? "tether connected" : "tether available";
+  dockingTarget.textContent = site.name;
+  dockingDetail.textContent = isDocked ? "Docked" : "Press E to dock";
+  dockToggleButton.textContent = isDocked ? "Undock" : "Dock";
+  dockToggleButton.disabled = false;
+}
+
+function updateHubServiceDisplay(siteState) {
+  const site = siteState.dockedSite?.type === "hub" ? siteState.dockedSite : null;
+
+  hubPanel.hidden = !site;
+
+  if (!site) {
+    hubName.textContent = "Hub";
+    hubStatus.textContent = "service window";
+    hubDetail.textContent = "Dock to access services";
+    hubHull.textContent = `${Math.ceil(siteState.hullIntegrity)}%`;
+    hubRepairButton.disabled = true;
+    return;
+  }
+
   const hullPercent = Math.ceil(siteState.hullIntegrity);
 
   hubName.textContent = site.name;
-  hubStatus.textContent = isDocked ? "tether connected" : "in dock range";
-  hubDetail.textContent = isDocked ? "Service window open" : "Press E to dock";
+  hubStatus.textContent = "service window";
+  hubDetail.textContent = "Repair dock available";
   hubHull.textContent = `${hullPercent}%`;
-  hubDockButton.textContent = isDocked ? "Undock" : "Dock";
-  hubRepairButton.disabled = !isDocked || !siteState.canRepair || hullPercent >= 100;
+  hubRepairButton.disabled = !siteState.canRepair || hullPercent >= 100;
 }
 
 function updateWorldDebugDisplay(debug) {

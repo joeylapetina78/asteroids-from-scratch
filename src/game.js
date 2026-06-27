@@ -4,13 +4,13 @@ import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/Re
 import { Ship } from "./entities/Ship.js?v=components";
 import { createAsteroidField } from "./systems/asteroidField.js?v=zone-aware";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=power-control";
+import { createInput } from "./systems/input.js?v=docking-services";
 import { createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=zone-aware";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
-import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
+import { createScanner } from "./systems/scanner.js?v=site-scanner";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=hub-foundation";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=docking-services";
 import { createGameState } from "./state/gameState.js?v=collector-panel";
 
 const FIRE_COOLDOWN_SECONDS = 0.18;
@@ -26,7 +26,8 @@ const PARTICLE_DRAG = 0.94;
 const LIFE_SIMULATION_MARGIN = 900;
 const HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS = 0.38;
 const MAX_HUNTER_ENVIRONMENT_HITS_PER_FRAME = 6;
-const SITE_ARRIVAL_MESSAGE_SECONDS = 2.2;
+const VIEWPORT_TITLE_SECONDS = 2.8;
+const DOCK_MESSAGE_SECONDS = 1.4;
 
 export class Game {
   constructor(
@@ -64,8 +65,10 @@ export class Game {
     this.activeHunterCount = 0;
     this.nearbySite = null;
     this.dockedSite = null;
-    this.arrivalMessage = null;
-    this.arrivalMessageTimer = 0;
+    this.viewportTitle = null;
+    this.viewportTitleTimer = 0;
+    this.discoveredSiteIds = new Set();
+    this.currentZoneId = null;
     this.lastFrameTime = 0;
   }
 
@@ -96,7 +99,7 @@ export class Game {
 
     scanner.scanergy -= SCANERGY_PER_SCAN;
     this.onHudChange(this.state);
-    this.scanner.scan(this.ship, this.asteroids);
+    this.scanner.scan(this.ship, this.asteroids, this.worldSites);
   }
 
   frame(time) {
@@ -116,11 +119,12 @@ export class Game {
 
     this.fireCooldown = Math.max(0, this.fireCooldown - deltaSeconds);
     this.shipHitCooldown = Math.max(0, this.shipHitCooldown - deltaSeconds);
-    this.arrivalMessageTimer = Math.max(0, this.arrivalMessageTimer - deltaSeconds);
+    this.viewportTitleTimer = Math.max(0, this.viewportTitleTimer - deltaSeconds);
     const previousFuel = this.state.components.engine.fuel;
     const previousScanergy = this.state.components.scanner.scanergy;
     this.ship.update(deltaSeconds, this.input);
     this.updateWorldSiteInteraction();
+    this.updateZoneTitle();
     if (this.state.components.engine.fuel !== previousFuel) {
       this.onHudChange(this.state);
     }
@@ -166,10 +170,16 @@ export class Game {
 
   updateWorldSiteInteraction() {
     const nearby = getNearbyWorldSite(this.ship.position, this.worldSites);
+    const previousNearbySiteId = this.nearbySite?.id ?? null;
     this.nearbySite = nearby?.site ?? null;
 
     if (this.dockedSite && !isInSiteRange(this.ship.position, this.dockedSite)) {
       this.dockedSite = null;
+    }
+
+    if (this.nearbySite && this.nearbySite.id !== previousNearbySiteId && !this.discoveredSiteIds.has(this.nearbySite.id)) {
+      this.discoveredSiteIds.add(this.nearbySite.id);
+      this.showViewportTitle(this.nearbySite.name, getSiteSubtitle(this.nearbySite), "site");
     }
 
     if (this.input.wasPressed("KeyE") && this.nearbySite) {
@@ -181,11 +191,26 @@ export class Game {
     this.dockedSite = site;
 
     if (site) {
-      this.arrivalMessage = site.name;
-      this.arrivalMessageTimer = SITE_ARRIVAL_MESSAGE_SECONDS;
+      this.showViewportTitle(site.name, "docking tether connected", "dock", DOCK_MESSAGE_SECONDS);
     }
 
     this.updateSiteReadout();
+  }
+
+  updateZoneTitle() {
+    const zoneProfile = getZoneProfile(this.ship.position.x, this.ship.position.y);
+
+    if (zoneProfile.strongestZoneId === this.currentZoneId || zoneProfile.influence < 0.55) {
+      return;
+    }
+
+    this.currentZoneId = zoneProfile.strongestZoneId;
+    this.showViewportTitle(zoneProfile.strongestZoneName, "region entered", "zone");
+  }
+
+  showViewportTitle(title, subtitle, kind = "event", duration = VIEWPORT_TITLE_SECONDS) {
+    this.viewportTitle = { title, subtitle, kind };
+    this.viewportTitleTimer = duration;
   }
 
   toggleDock() {
@@ -217,7 +242,7 @@ export class Game {
       dockedSite: this.dockedSite,
       nearestSite: nearest?.site ?? null,
       nearestSiteDistance: nearest?.distance ?? 0,
-      canRepair: Boolean((this.dockedSite ?? this.nearbySite)?.capabilities.includes("repair")),
+      canRepair: Boolean(this.dockedSite?.capabilities.includes("repair")),
       hullIntegrity: this.state.components.hull.integrity,
       hullMaxIntegrity: this.state.components.hull.maxIntegrity,
     });
@@ -785,7 +810,7 @@ export class Game {
     drawVector(this.context, this.ship.position, this.ship.velocity, this.camera);
     this.scanner.draw(this.context, this.camera, this.ship);
     this.ship.draw(this.context, this.camera);
-    this.drawSiteArrivalMessage();
+    this.drawViewportTitle();
   }
 
   drawWorldSites() {
@@ -839,28 +864,32 @@ export class Game {
     });
   }
 
-  drawSiteArrivalMessage() {
-    if (this.arrivalMessageTimer <= 0 || !this.arrivalMessage) {
+  drawViewportTitle() {
+    if (this.viewportTitleTimer <= 0 || !this.viewportTitle) {
       return;
     }
 
-    const fade = Math.min(1, this.arrivalMessageTimer / 0.55, (SITE_ARRIVAL_MESSAGE_SECONDS - this.arrivalMessageTimer) / 0.45);
+    const duration = this.viewportTitle.kind === "dock" ? DOCK_MESSAGE_SECONDS : VIEWPORT_TITLE_SECONDS;
+    const fade = Math.min(1, this.viewportTitleTimer / 0.55, (duration - this.viewportTitleTimer) / 0.5);
     const centerX = this.canvas.width / 2;
-    const centerY = this.canvas.height * 0.32;
+    const centerY = this.canvas.height * 0.28;
+    const width = this.viewportTitle.kind === "dock" ? 420 : 560;
+    const height = this.viewportTitle.kind === "dock" ? 70 : 92;
+    const titleSize = this.viewportTitle.kind === "dock" ? 20 : 30;
 
     this.context.save();
     this.context.globalAlpha = Math.max(0, fade);
-    this.context.fillStyle = "rgba(7, 8, 12, 0.48)";
-    this.context.fillRect(centerX - 190, centerY - 30, 380, 62);
-    this.context.strokeStyle = "rgba(245, 247, 251, 0.52)";
-    this.context.strokeRect(centerX - 190.5, centerY - 30.5, 381, 63);
+    this.context.fillStyle = "rgba(7, 8, 12, 0.62)";
+    this.context.fillRect(centerX - width / 2, centerY - height / 2, width, height);
+    this.context.strokeStyle = "rgba(245, 247, 251, 0.64)";
+    this.context.strokeRect(centerX - width / 2 + 0.5, centerY - height / 2 + 0.5, width - 1, height - 1);
     this.context.fillStyle = "#ffffff";
-    this.context.font = "20px Inter, ui-sans-serif, system-ui, sans-serif";
+    this.context.font = `${titleSize}px Inter, ui-sans-serif, system-ui, sans-serif`;
     this.context.textAlign = "center";
-    this.context.fillText(this.arrivalMessage, centerX, centerY - 4);
+    this.context.fillText(this.viewportTitle.title, centerX, centerY - 8);
     this.context.fillStyle = "#9ee8ff";
-    this.context.font = "12px Inter, ui-sans-serif, system-ui, sans-serif";
-    this.context.fillText("docking tether connected", centerX, centerY + 18);
+    this.context.font = "13px Inter, ui-sans-serif, system-ui, sans-serif";
+    this.context.fillText(this.viewportTitle.subtitle, centerX, centerY + 24);
     this.context.restore();
   }
 
@@ -952,4 +981,12 @@ function circlesOverlap(firstPosition, firstRadius, secondPosition, secondRadius
   const radius = firstRadius + secondRadius;
 
   return distanceX * distanceX + distanceY * distanceY <= radius * radius;
+}
+
+function getSiteSubtitle(site) {
+  if (site.capabilities.includes("repair")) {
+    return "repair beacon acquired";
+  }
+
+  return `${site.type} signal acquired`;
 }

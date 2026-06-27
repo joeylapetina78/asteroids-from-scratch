@@ -129,6 +129,7 @@ body {
 .scanner-panel,
 .miner-panel,
 .collector-panel,
+.docking-panel,
 .hub-panel,
 .world-panel {
   display: grid;
@@ -203,7 +204,8 @@ body {
   opacity: 0.45;
 }
 
-.hub-readout {
+.hub-readout,
+.docking-readout {
   display: grid;
   gap: 4px;
   text-align: left;

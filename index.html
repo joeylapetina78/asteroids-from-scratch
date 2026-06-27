@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=world-zones" />
+    <link rel="stylesheet" href="./src/styles.css?v=docking-services" />
   </head>
   <body>
     <main class="game-shell">
@@ -120,18 +120,31 @@
               </div>
             </div>
 
+            <div class="component-panel docking-panel" data-panel-id="docking" aria-label="Docking component">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Docking</strong>
+                  <span id="docking-status">no target</span>
+                </div>
+              </div>
+              <div class="system-readout docking-readout" aria-live="polite">
+                <span>Target: <strong id="docking-target">None</strong></span>
+                <span id="docking-detail">No dock target</span>
+              </div>
+              <button id="dock-toggle" class="dock-button" type="button" disabled>Dock</button>
+            </div>
+
             <div class="component-panel hub-panel" data-panel-id="hub" aria-label="Hub services" hidden>
               <div class="component-panel-title">
                 <div>
                   <strong id="hub-name">Hub</strong>
-                  <span id="hub-status">approach signal</span>
+                  <span id="hub-status">service window</span>
                 </div>
               </div>
               <div class="system-readout hub-readout" aria-live="polite">
-                <span id="hub-detail">Press E to dock</span>
+                <span id="hub-detail">Dock to access services</span>
                 <span>Hull: <strong id="hub-hull">100%</strong></span>
               </div>
-              <button id="hub-dock" class="dock-button" type="button">Dock</button>
               <button id="hub-repair" class="repair-button" type="button" disabled>Repair</button>
             </div>
 
@@ -173,6 +186,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=hub-foundation"></script>
+    <script type="module" src="./src/main.js?v=docking-services"></script>
   </body>
 </html>
