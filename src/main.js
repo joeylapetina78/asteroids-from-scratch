@@ -1,8 +1,9 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=hidden-hub";
+import { Game } from "./game.js?v=panel-layout";
 import { Processor } from "./systems/processor.js?v=hunter-tuning";
 import { createGameState } from "./state/gameState.js?v=impact-effects";
 
+const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v1";
 const PROCESS_OUTPUT_AMOUNT = 50;
 const CRYSTAL_VALUE_MULTIPLIER = 5;
 const ammoCount = document.querySelector("#ammo-count");
@@ -47,6 +48,7 @@ const state = createGameState();
 const processor = new Processor(processorCanvas, processUnit);
 const cargoHold = new Processor(cargoCanvas, () => {}, { isClickable: false });
 const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type), updateWorldDebugDisplay, updateHubDisplay);
+let bringPanelToFront = () => {};
 
 function updateShipPowerDisplay() {
   const engine = state.components.engine;
@@ -144,6 +146,7 @@ function updateDockingDisplay(siteState) {
 
 function updateHubServiceDisplay(siteState) {
   const site = siteState.dockedSite?.type === "hub" ? siteState.dockedSite : null;
+  const wasHidden = hubPanel.hidden;
 
   hubPanel.hidden = !site;
   hubPanel.setAttribute("aria-hidden", String(!site));
@@ -155,6 +158,10 @@ function updateHubServiceDisplay(siteState) {
     hubHull.textContent = `${Math.ceil(siteState.hullIntegrity)}%`;
     hubRepairButton.disabled = true;
     return;
+  }
+
+  if (wasHidden) {
+    bringPanelToFront(hubPanel);
   }
 
   const hullPercent = Math.ceil(siteState.hullIntegrity);
@@ -274,17 +281,26 @@ function renderProcessorOutputs() {
 
 function makePanelsDraggable() {
   const gridSize = 20;
-  let topPanelZIndex = 10;
+  const savedLayout = loadPanelLayout();
+  let topPanelZIndex = getSavedTopZIndex(savedLayout);
 
   document.querySelectorAll(".component-panel").forEach((panel) => {
     const handle = panel.querySelector(".component-panel-title");
+    const panelId = panel.dataset.panelId;
 
     if (!handle) {
       return;
     }
 
-    const offset = { x: 0, y: 0 };
+    const savedPanel = panelId ? savedLayout.panels?.[panelId] : null;
+    const offset = { x: savedPanel?.x ?? 0, y: savedPanel?.y ?? 0 };
     let drag = null;
+
+    panel.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
+
+    if (savedPanel?.z) {
+      panel.style.zIndex = String(savedPanel.z);
+    }
 
     handle.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) {
@@ -298,8 +314,7 @@ function makePanelsDraggable() {
         originX: offset.x,
         originY: offset.y,
       };
-      topPanelZIndex += 1;
-      panel.style.zIndex = String(topPanelZIndex);
+      setPanelTop(panel);
       panel.classList.add("is-dragging");
       handle.setPointerCapture(event.pointerId);
     });
@@ -312,6 +327,7 @@ function makePanelsDraggable() {
       offset.x = Math.round((drag.originX + event.clientX - drag.startX) / gridSize) * gridSize;
       offset.y = Math.round((drag.originY + event.clientY - drag.startY) / gridSize) * gridSize;
       panel.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
+      savePanelLayout(panel, offset);
     });
 
     handle.addEventListener("pointerup", endDrag);
@@ -326,4 +342,50 @@ function makePanelsDraggable() {
       drag = null;
     }
   });
+
+  bringPanelToFront = setPanelTop;
+
+  function setPanelTop(panel) {
+    topPanelZIndex += 1;
+    panel.style.zIndex = String(topPanelZIndex);
+    savePanelLayout(panel);
+  }
+}
+
+function loadPanelLayout() {
+  try {
+    return JSON.parse(window.localStorage.getItem(PANEL_LAYOUT_STORAGE_KEY)) ?? { panels: {} };
+  } catch {
+    return { panels: {} };
+  }
+}
+
+function getSavedTopZIndex(layout) {
+  const savedZIndexes = Object.values(layout.panels ?? {})
+    .map((panel) => panel.z)
+    .filter((zIndex) => Number.isFinite(zIndex));
+
+  return Math.max(10, ...savedZIndexes);
+}
+
+function savePanelLayout(panel, offset = null) {
+  const panelId = panel.dataset.panelId;
+
+  if (!panelId) {
+    return;
+  }
+
+  const layout = loadPanelLayout();
+  const previousPanel = layout.panels?.[panelId] ?? {};
+
+  layout.panels = {
+    ...layout.panels,
+    [panelId]: {
+      x: offset?.x ?? previousPanel.x ?? 0,
+      y: offset?.y ?? previousPanel.y ?? 0,
+      z: Number(panel.style.zIndex) || previousPanel.z || 1,
+    },
+  };
+
+  window.localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(layout));
 }
