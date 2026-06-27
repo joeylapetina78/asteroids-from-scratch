@@ -120,6 +120,21 @@
               </div>
             </div>
 
+            <div class="component-panel hub-panel" data-panel-id="hub" aria-label="Hub services" hidden>
+              <div class="component-panel-title">
+                <div>
+                  <strong id="hub-name">Hub</strong>
+                  <span id="hub-status">approach signal</span>
+                </div>
+              </div>
+              <div class="system-readout hub-readout" aria-live="polite">
+                <span id="hub-detail">Press E to dock</span>
+                <span>Hull: <strong id="hub-hull">100%</strong></span>
+              </div>
+              <button id="hub-dock" class="dock-button" type="button">Dock</button>
+              <button id="hub-repair" class="repair-button" type="button" disabled>Repair</button>
+            </div>
+
             <div class="component-panel world-panel" data-panel-id="world" aria-label="World debug component">
               <div class="component-panel-title">
                 <div>
@@ -158,6 +173,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=life-zones"></script>
+    <script type="module" src="./src/main.js?v=hub-foundation"></script>
   </body>
 </html>

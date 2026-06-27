@@ -1,5 +1,5 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=life-zones";
+import { Game } from "./game.js?v=hub-foundation";
 import { Processor } from "./systems/processor.js?v=hunter-tuning";
 import { createGameState } from "./state/gameState.js?v=impact-effects";
 
@@ -12,6 +12,13 @@ const collectorRangeCount = document.querySelector("#collector-range-count");
 const collectorStrengthControls = document.querySelectorAll("input[name='collector-strength']");
 const fuelCount = document.querySelector("#fuel-count");
 const hullCount = document.querySelector("#hull-count");
+const hubDetail = document.querySelector("#hub-detail");
+const hubDockButton = document.querySelector("#hub-dock");
+const hubHull = document.querySelector("#hub-hull");
+const hubName = document.querySelector("#hub-name");
+const hubPanel = document.querySelector("[data-panel-id='hub']");
+const hubRepairButton = document.querySelector("#hub-repair");
+const hubStatus = document.querySelector("#hub-status");
 const minerArmed = document.querySelector("#miner-armed");
 const powerButton = document.querySelector("#ship-power");
 const processorCanvas = document.querySelector("#processor");
@@ -36,7 +43,7 @@ const worldDebugFields = {
 const state = createGameState();
 const processor = new Processor(processorCanvas, processUnit);
 const cargoHold = new Processor(cargoCanvas, () => {}, { isClickable: false });
-const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type), updateWorldDebugDisplay);
+const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type), updateWorldDebugDisplay, updateHubDisplay);
 
 function updateShipPowerDisplay() {
   const engine = state.components.engine;
@@ -73,6 +80,14 @@ scanButton.addEventListener("click", () => {
   game.scanForCrystals();
 });
 
+hubDockButton.addEventListener("click", () => {
+  game.toggleDock();
+});
+
+hubRepairButton.addEventListener("click", () => {
+  game.repairAtDock();
+});
+
 renderProcessorOutputs();
 updateShipPowerDisplay();
 updateHudDisplay();
@@ -96,6 +111,26 @@ function updateHudDisplay() {
     control.checked = Number(control.value) === state.components.collector.rangeSetting;
   });
   updateWarningPanels();
+}
+
+function updateHubDisplay(siteState) {
+  const site = siteState.dockedSite ?? siteState.nearbySite;
+
+  hubPanel.hidden = !site;
+
+  if (!site) {
+    return;
+  }
+
+  const isDocked = siteState.dockedSite?.id === site.id;
+  const hullPercent = Math.ceil(siteState.hullIntegrity);
+
+  hubName.textContent = site.name;
+  hubStatus.textContent = isDocked ? "tether connected" : "in dock range";
+  hubDetail.textContent = isDocked ? "Service window open" : "Press E to dock";
+  hubHull.textContent = `${hullPercent}%`;
+  hubDockButton.textContent = isDocked ? "Undock" : "Dock";
+  hubRepairButton.disabled = !isDocked || !siteState.canRepair || hullPercent >= 100;
 }
 
 function updateWorldDebugDisplay(debug) {

@@ -129,6 +129,7 @@ body {
 .scanner-panel,
 .miner-panel,
 .collector-panel,
+.hub-panel,
 .world-panel {
   display: grid;
   gap: 8px;
@@ -152,7 +153,9 @@ body {
 }
 
 .power-button,
-.scan-button {
+.scan-button,
+.dock-button,
+.repair-button {
   border: 1px solid #4b5566;
   border-radius: 6px;
   padding: 8px 12px;
@@ -163,7 +166,9 @@ body {
 }
 
 .power-button:hover,
-.scan-button:hover {
+.scan-button:hover,
+.dock-button:hover,
+.repair-button:hover {
   border-color: #7f8aa3;
   background: #222733;
 }
@@ -181,6 +186,27 @@ body {
 
 .scan-button:active {
   background: #123044;
+}
+
+.dock-button {
+  border-color: #426b7d;
+  color: #d8f5ff;
+}
+
+.repair-button {
+  border-color: #49765b;
+  color: #dfffea;
+}
+
+.repair-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.hub-readout {
+  display: grid;
+  gap: 4px;
+  text-align: left;
 }
 
 .system-readout {

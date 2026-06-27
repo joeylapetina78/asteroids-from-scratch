@@ -10,6 +10,7 @@ import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/renderin
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=multi-resource-scanner";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=hub-foundation";
 import { createGameState } from "./state/gameState.js?v=collector-panel";
 
 const FIRE_COOLDOWN_SECONDS = 0.18;
@@ -25,20 +26,30 @@ const PARTICLE_DRAG = 0.94;
 const LIFE_SIMULATION_MARGIN = 900;
 const HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS = 0.38;
 const MAX_HUNTER_ENVIRONMENT_HITS_PER_FRAME = 6;
+const SITE_ARRIVAL_MESSAGE_SECONDS = 2.2;
 
 export class Game {
-  constructor(canvas, state = createGameState(), onHudChange = () => {}, onResourceCollected = () => {}, onDebugChange = () => {}) {
+  constructor(
+    canvas,
+    state = createGameState(),
+    onHudChange = () => {},
+    onResourceCollected = () => {},
+    onDebugChange = () => {},
+    onSiteChange = () => {},
+  ) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
     this.state = state;
     this.onHudChange = onHudChange;
     this.onResourceCollected = onResourceCollected;
     this.onDebugChange = onDebugChange;
+    this.onSiteChange = onSiteChange;
     this.input = createInput();
     this.camera = createCamera(canvas);
     this.scanner = createScanner(canvas);
     this.ship = new Ship(0, 0, state.components.engine);
     this.resourceField = createResourceField();
+    this.worldSites = getWorldSites();
     this.asteroids = createAsteroidField(canvas, this.resourceField);
     this.lifeforms = createLifeField(this.asteroids);
     this.bullets = [];
@@ -51,6 +62,10 @@ export class Game {
     this.shipDestroyed = false;
     this.activeLifeformCount = 0;
     this.activeHunterCount = 0;
+    this.nearbySite = null;
+    this.dockedSite = null;
+    this.arrivalMessage = null;
+    this.arrivalMessageTimer = 0;
     this.lastFrameTime = 0;
   }
 
@@ -101,9 +116,11 @@ export class Game {
 
     this.fireCooldown = Math.max(0, this.fireCooldown - deltaSeconds);
     this.shipHitCooldown = Math.max(0, this.shipHitCooldown - deltaSeconds);
+    this.arrivalMessageTimer = Math.max(0, this.arrivalMessageTimer - deltaSeconds);
     const previousFuel = this.state.components.engine.fuel;
     const previousScanergy = this.state.components.scanner.scanergy;
     this.ship.update(deltaSeconds, this.input);
+    this.updateWorldSiteInteraction();
     if (this.state.components.engine.fuel !== previousFuel) {
       this.onHudChange(this.state);
     }
@@ -143,7 +160,67 @@ export class Game {
       this.onHudChange(this.state);
     }
     this.updateDebugReadout();
+    this.updateSiteReadout();
     this.input.finishFrame();
+  }
+
+  updateWorldSiteInteraction() {
+    const nearby = getNearbyWorldSite(this.ship.position, this.worldSites);
+    this.nearbySite = nearby?.site ?? null;
+
+    if (this.dockedSite && !isInSiteRange(this.ship.position, this.dockedSite)) {
+      this.dockedSite = null;
+    }
+
+    if (this.input.wasPressed("KeyE") && this.nearbySite) {
+      this.setDockedSite(this.dockedSite ? null : this.nearbySite);
+    }
+  }
+
+  setDockedSite(site) {
+    this.dockedSite = site;
+
+    if (site) {
+      this.arrivalMessage = site.name;
+      this.arrivalMessageTimer = SITE_ARRIVAL_MESSAGE_SECONDS;
+    }
+
+    this.updateSiteReadout();
+  }
+
+  toggleDock() {
+    if (!this.nearbySite && !this.dockedSite) {
+      return;
+    }
+
+    this.setDockedSite(this.dockedSite ? null : this.nearbySite);
+  }
+
+  repairAtDock() {
+    const site = this.dockedSite;
+
+    if (!site?.capabilities.includes("repair")) {
+      return;
+    }
+
+    this.state.components.hull.integrity = this.state.components.hull.maxIntegrity;
+    this.shipDestroyed = false;
+    this.onHudChange(this.state);
+    this.setDockedSite(site);
+  }
+
+  updateSiteReadout() {
+    const nearest = getNearestWorldSite(this.ship.position, this.worldSites);
+
+    this.onSiteChange({
+      nearbySite: this.nearbySite,
+      dockedSite: this.dockedSite,
+      nearestSite: nearest?.site ?? null,
+      nearestSiteDistance: nearest?.distance ?? 0,
+      canRepair: Boolean((this.dockedSite ?? this.nearbySite)?.capabilities.includes("repair")),
+      hullIntegrity: this.state.components.hull.integrity,
+      hullMaxIntegrity: this.state.components.hull.maxIntegrity,
+    });
   }
 
   updateDebugReadout() {
@@ -157,6 +234,7 @@ export class Game {
       hunterCount: this.lifeforms.filter((lifeform) => lifeform.type === "hunter").length,
       activeHunterCount: this.activeHunterCount,
       pickupCount: this.pickups.length,
+      nearestSite: getNearestWorldSite(this.ship.position, this.worldSites)?.site ?? null,
     });
   }
 
@@ -685,6 +763,7 @@ export class Game {
   draw() {
     clearScreen(this.context, this.canvas);
     drawGrid(this.context, this.canvas, this.camera);
+    this.drawWorldSites();
     this.asteroids.forEach((asteroid) => {
       if (isVisible(asteroid, this.canvas, this.camera)) {
         asteroid.draw(this.context, this.camera);
@@ -706,6 +785,83 @@ export class Game {
     drawVector(this.context, this.ship.position, this.ship.velocity, this.camera);
     this.scanner.draw(this.context, this.camera, this.ship);
     this.ship.draw(this.context, this.camera);
+    this.drawSiteArrivalMessage();
+  }
+
+  drawWorldSites() {
+    this.worldSites.forEach((site) => {
+      const screenX = site.position.x - this.camera.x;
+      const screenY = site.position.y - this.camera.y;
+      const isNearby = this.nearbySite?.id === site.id;
+      const isDocked = this.dockedSite?.id === site.id;
+
+      if (
+        screenX < -site.interactionRadius ||
+        screenX > this.canvas.width + site.interactionRadius ||
+        screenY < -site.interactionRadius ||
+        screenY > this.canvas.height + site.interactionRadius
+      ) {
+        return;
+      }
+
+      this.context.save();
+      this.context.translate(screenX, screenY);
+      this.context.strokeStyle = isDocked ? "#ffffff" : isNearby ? "#9ee8ff" : "#73d2ff";
+      this.context.fillStyle = isDocked ? "rgba(255, 255, 255, 0.14)" : "rgba(115, 210, 255, 0.08)";
+      this.context.lineWidth = isNearby ? 3 : 2;
+      this.context.beginPath();
+      this.context.arc(0, 0, site.radius, 0, Math.PI * 2);
+      this.context.fill();
+      this.context.stroke();
+      this.context.rotate(Math.PI / 4);
+      this.context.strokeRect(-site.radius * 0.52, -site.radius * 0.52, site.radius * 1.04, site.radius * 1.04);
+      this.context.restore();
+
+      this.context.save();
+      this.context.strokeStyle = isNearby ? "rgba(158, 232, 255, 0.34)" : "rgba(115, 210, 255, 0.13)";
+      this.context.lineWidth = 1;
+      this.context.beginPath();
+      this.context.arc(screenX, screenY, site.interactionRadius, 0, Math.PI * 2);
+      this.context.stroke();
+
+      if (isNearby) {
+        const shipX = this.ship.position.x - this.camera.x;
+        const shipY = this.ship.position.y - this.camera.y;
+        this.context.strokeStyle = isDocked ? "rgba(255, 255, 255, 0.78)" : "rgba(158, 232, 255, 0.46)";
+        this.context.setLineDash([8, 8]);
+        this.context.beginPath();
+        this.context.moveTo(shipX, shipY);
+        this.context.lineTo(screenX, screenY);
+        this.context.stroke();
+      }
+
+      this.context.restore();
+    });
+  }
+
+  drawSiteArrivalMessage() {
+    if (this.arrivalMessageTimer <= 0 || !this.arrivalMessage) {
+      return;
+    }
+
+    const fade = Math.min(1, this.arrivalMessageTimer / 0.55, (SITE_ARRIVAL_MESSAGE_SECONDS - this.arrivalMessageTimer) / 0.45);
+    const centerX = this.canvas.width / 2;
+    const centerY = this.canvas.height * 0.32;
+
+    this.context.save();
+    this.context.globalAlpha = Math.max(0, fade);
+    this.context.fillStyle = "rgba(7, 8, 12, 0.48)";
+    this.context.fillRect(centerX - 190, centerY - 30, 380, 62);
+    this.context.strokeStyle = "rgba(245, 247, 251, 0.52)";
+    this.context.strokeRect(centerX - 190.5, centerY - 30.5, 381, 63);
+    this.context.fillStyle = "#ffffff";
+    this.context.font = "20px Inter, ui-sans-serif, system-ui, sans-serif";
+    this.context.textAlign = "center";
+    this.context.fillText(this.arrivalMessage, centerX, centerY - 4);
+    this.context.fillStyle = "#9ee8ff";
+    this.context.font = "12px Inter, ui-sans-serif, system-ui, sans-serif";
+    this.context.fillText("docking tether connected", centerX, centerY + 18);
+    this.context.restore();
   }
 
   drawParticles() {
