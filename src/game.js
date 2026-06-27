@@ -1,6 +1,6 @@
 import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
 import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fuel-crystals";
-import { createResourcePickupsFromAsteroid } from "./entities/ResourcePickup.js?v=hunter-tuning";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=ambusher-drops";
 import { Ship } from "./entities/Ship.js?v=components";
 import { createAsteroidField } from "./systems/asteroidField.js?v=fuel-crystals";
 import { createCamera } from "./systems/camera.js";
@@ -256,6 +256,7 @@ export class Game {
       hitHunter.damage(100);
       hitHunters.add(hitHunter);
       this.createHunterBurst(hitHunter, bullet.velocity);
+      this.createHunterDrops(hitHunter, bullet.velocity);
       this.respawnHunter();
     });
 
@@ -286,6 +287,7 @@ export class Game {
       this.createHunterImpactSparks(rammingHunter);
     } else {
       this.createHunterBurst(rammingHunter, this.ship.velocity);
+      this.createHunterDrops(rammingHunter, this.ship.velocity);
       this.respawnHunter();
     }
   }
@@ -395,6 +397,28 @@ export class Game {
         life: 0.28 + Math.random() * 0.38,
         maxLife: 0.66,
       });
+    }
+  }
+
+  createHunterDrops(hunter, impactVelocity) {
+    const count = 2 + Math.floor(Math.random() * 3);
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 55 + Math.random() * 125;
+      const type = Math.random() < 0.18 ? "crystal" : "fuel";
+
+      this.pickups.push(
+        new ResourcePickup({
+          x: hunter.position.x + Math.cos(angle) * 10,
+          y: hunter.position.y + Math.sin(angle) * 10,
+          type,
+          velocity: {
+            x: hunter.velocity.x * 0.2 + Math.cos(angle) * speed + impactVelocity.x * 0.012,
+            y: hunter.velocity.y * 0.2 + Math.sin(angle) * speed + impactVelocity.y * 0.012,
+          },
+        }),
+      );
     }
   }
 
