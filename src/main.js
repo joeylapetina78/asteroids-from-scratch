@@ -1,9 +1,10 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=hunter-tuning";
+import { Game } from "./game.js?v=window-resource-values";
 import { Processor } from "./systems/processor.js?v=hunter-tuning";
 import { createGameState } from "./state/gameState.js?v=impact-effects";
 
 const PROCESS_OUTPUT_AMOUNT = 50;
+const CRYSTAL_VALUE_MULTIPLIER = 5;
 const ammoCount = document.querySelector("#ammo-count");
 const cargoCanvas = document.querySelector("#cargo");
 const canvas = document.querySelector("#game");
@@ -112,19 +113,24 @@ function getCollectorStrengthLabel() {
 
 function processUnit(type) {
   const output = getSelectedProcessorOutput();
+  const amount = getUnitProcessValue(type);
   state.components.processor.output = output;
 
   if (output === "fuel") {
-    state.components.engine.fuel += PROCESS_OUTPUT_AMOUNT;
+    state.components.engine.fuel += amount;
   } else if (output === "ammo") {
-    state.components.miner.ammo += PROCESS_OUTPUT_AMOUNT;
+    state.components.miner.ammo += amount;
   } else if (output === "scanergy") {
-    state.components.scanner.scanergy += PROCESS_OUTPUT_AMOUNT;
+    state.components.scanner.scanergy += amount;
   } else if (output === "cargo") {
     cargoHold.addUnit(type);
   }
 
   updateHudDisplay();
+}
+
+function getUnitProcessValue(type) {
+  return type === "crystal" ? PROCESS_OUTPUT_AMOUNT * CRYSTAL_VALUE_MULTIPLIER : PROCESS_OUTPUT_AMOUNT;
 }
 
 function getSelectedProcessorOutput() {
@@ -169,6 +175,7 @@ function renderProcessorOutputs() {
 
 function makePanelsDraggable() {
   const gridSize = 20;
+  let topPanelZIndex = 10;
 
   document.querySelectorAll(".component-panel").forEach((panel) => {
     const handle = panel.querySelector(".component-panel-title");
@@ -192,6 +199,8 @@ function makePanelsDraggable() {
         originX: offset.x,
         originY: offset.y,
       };
+      topPanelZIndex += 1;
+      panel.style.zIndex = String(topPanelZIndex);
       panel.classList.add("is-dragging");
       handle.setPointerCapture(event.pointerId);
     });
