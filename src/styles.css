@@ -156,13 +156,29 @@ body {
   gap: 8px;
 }
 
+.engine-panel {
+  flex: 0 0 230px;
+}
+
+.scanner-panel,
+.miner-panel,
+.docking-panel,
+.hub-panel {
+  flex: 0 0 170px;
+}
+
 .collector-panel {
-  min-width: 210px;
+  flex: 0 0 230px;
 }
 
 .hull-panel {
   display: grid;
+  flex: 0 0 150px;
   gap: 8px;
+}
+
+.world-panel {
+  flex: 0 0 240px;
 }
 
 .viewport-panel {
@@ -463,6 +479,18 @@ body {
   .hud {
     align-items: start;
     flex-direction: column;
+  }
+
+  .engine-panel,
+  .scanner-panel,
+  .miner-panel,
+  .collector-panel,
+  .docking-panel,
+  .hub-panel,
+  .hull-panel,
+  .world-panel {
+    width: 100%;
+    flex-basis: auto;
   }
 
   .controls {
