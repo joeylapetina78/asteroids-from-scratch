@@ -1,4 +1,4 @@
-import { NpcShip } from "../entities/NpcShip.js?v=careful-mode";
+import { NpcShip } from "../entities/NpcShip.js?v=soft-cargo-train";
 
 // For now, routes are authored from existing world sites. Later this can become
 // the same data layer that powers trade lanes, missions, patrols, and piracy.

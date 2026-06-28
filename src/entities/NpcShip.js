@@ -12,6 +12,10 @@ const STUCK_SECONDS = 0.55;
 const CAREFUL_TRIGGER_SECONDS = 1.05;
 const CAREFUL_MODE_SECONDS = 4.2;
 const CAREFUL_SPEED_MULTIPLIER = 0.48;
+const CARGO_CAR_SPACING = 34;
+const CARGO_CAR_FOLLOW_STRENGTH = 13;
+const CARGO_CAR_DAMPING = 0.82;
+const HUB_TETHER_PADDING = 42;
 
 export class NpcShip {
   constructor({ id, name, route, x, y, seed = 1, laneOffset = 0 }) {
@@ -35,6 +39,7 @@ export class NpcShip {
     this.isAlive = true;
     this.pulse = seed * 0.37;
     this.cargoCars = 2 + (seed % 3);
+    this.cargoSegments = createCargoSegments(this.position, initialDirection, this.cargoCars, seed);
     this.drawRadius = 260 + this.cargoCars * 85;
     this.stuckTimer = 0;
     this.avoidanceSide = laneOffset < 0 ? -1 : 1;
@@ -43,6 +48,7 @@ export class NpcShip {
     this.blockedTimer = 0;
     this.lastWaypointDistance = distance(this.position, firstWaypoint);
     this.pendingEvents = [];
+    this.activeHub = null;
   }
 
   update(deltaSeconds, world) {
@@ -66,6 +72,8 @@ export class NpcShip {
     this.applySteer(separateShips(this, world.npcShips), this.turnSettleTimer > 0 ? 1.05 : 1.3);
     this.updateStuckEscape(deltaSeconds, world.npcShips, world.asteroids);
     this.integrate(deltaSeconds);
+    this.updateCargoSegments(deltaSeconds);
+    this.updateHubService(world.sites);
     this.turnSettleTimer = Math.max(0, this.turnSettleTimer - deltaSeconds);
     this.carefulModeTimer = Math.max(0, this.carefulModeTimer - deltaSeconds);
     this.lastWaypointDistance = distance(this.position, this.getWaypoint());
@@ -212,6 +220,38 @@ export class NpcShip {
     this.heading = lerpAngle(this.heading, Math.atan2(this.velocity.y, this.velocity.x), Math.min(1, deltaSeconds * 5.8));
   }
 
+  updateCargoSegments(deltaSeconds) {
+    let anchor = this.position;
+
+    this.cargoSegments.forEach((segment) => {
+      const offsetX = segment.position.x - anchor.x;
+      const offsetY = segment.position.y - anchor.y;
+      const currentDistance = Math.hypot(offsetX, offsetY) || 1;
+      const targetX = anchor.x + (offsetX / currentDistance) * CARGO_CAR_SPACING;
+      const targetY = anchor.y + (offsetY / currentDistance) * CARGO_CAR_SPACING;
+
+      segment.velocity.x += (targetX - segment.position.x) * CARGO_CAR_FOLLOW_STRENGTH * deltaSeconds;
+      segment.velocity.y += (targetY - segment.position.y) * CARGO_CAR_FOLLOW_STRENGTH * deltaSeconds;
+      segment.velocity.x *= CARGO_CAR_DAMPING;
+      segment.velocity.y *= CARGO_CAR_DAMPING;
+      segment.position.x += segment.velocity.x * deltaSeconds * 60;
+      segment.position.y += segment.velocity.y * deltaSeconds * 60;
+      segment.heading = lerpAngle(segment.heading, Math.atan2(anchor.y - segment.position.y, anchor.x - segment.position.x), Math.min(1, deltaSeconds * 7));
+      anchor = segment.position;
+    });
+  }
+
+  updateHubService(sites = []) {
+    this.activeHub =
+      sites.find((site) => {
+        if (site.type !== "hub") {
+          return false;
+        }
+
+        return distance(this.position, site.position) <= site.interactionRadius + HUB_TETHER_PADDING;
+      }) ?? null;
+  }
+
   draw(context, camera) {
     if (!this.isAlive) {
       return;
@@ -236,24 +276,89 @@ export class NpcShip {
     context.fill();
     context.stroke();
 
-    for (let index = 0; index < this.cargoCars; index += 1) {
-      const carX = -34 - index * 30;
-      const sway = Math.sin(this.pulse * 2.3 + index + this.seed) * 2;
+    context.restore();
 
-      context.strokeStyle = "rgba(255, 230, 166, 0.46)";
+    this.drawCargoTrain(context, camera);
+    this.drawHubTethers(context, camera);
+  }
+
+  drawCargoTrain(context, camera) {
+    let anchor = this.position;
+
+    this.cargoSegments.forEach((segment, index) => {
+      const screenX = segment.position.x - camera.x;
+      const screenY = segment.position.y - camera.y;
+      const anchorX = anchor.x - camera.x;
+      const anchorY = anchor.y - camera.y;
+      const sway = Math.sin(this.pulse * 2.3 + index + this.seed) * 1.5;
+
+      context.save();
+      context.strokeStyle = "rgba(255, 230, 166, 0.42)";
+      context.lineWidth = 1.5;
       context.beginPath();
-      context.moveTo(carX + 14, 0);
-      context.lineTo(carX + 22, sway);
+      context.moveTo(anchorX, anchorY);
+      context.lineTo(screenX, screenY);
       context.stroke();
 
+      context.translate(screenX, screenY);
+      context.rotate(segment.heading);
       context.strokeStyle = "#ffd36b";
-      context.fillStyle = "rgba(255, 211, 107, 0.13)";
-      context.strokeRect(carX - 10, -10 + sway, 22, 20);
-      context.fillRect(carX - 10, -10 + sway, 22, 20);
+      context.fillStyle = segment.loaded ? "rgba(255, 211, 107, 0.18)" : "rgba(255, 230, 166, 0.08)";
+      context.strokeRect(-11, -10 + sway, 22, 20);
+      context.fillRect(-11, -10 + sway, 22, 20);
+      context.restore();
+
+      anchor = segment.position;
+    });
+  }
+
+  drawHubTethers(context, camera) {
+    if (!this.activeHub) {
+      return;
     }
 
-    context.restore();
+    const hubX = this.activeHub.position.x - camera.x;
+    const hubY = this.activeHub.position.y - camera.y;
+
+    this.cargoSegments.forEach((segment, index) => {
+      const segmentX = segment.position.x - camera.x;
+      const segmentY = segment.position.y - camera.y;
+      const flow = (this.pulse * 1.4 + index * 0.21) % 1;
+      const lightX = segmentX + (hubX - segmentX) * flow;
+      const lightY = segmentY + (hubY - segmentY) * flow;
+
+      context.save();
+      context.strokeStyle = "rgba(158, 232, 255, 0.24)";
+      context.lineWidth = 1;
+      context.setLineDash([4, 7]);
+      context.beginPath();
+      context.moveTo(segmentX, segmentY);
+      context.lineTo(hubX, hubY);
+      context.stroke();
+      context.setLineDash([]);
+      context.fillStyle = index % 2 === 0 ? "#9ee8ff" : "#ffd36b";
+      context.beginPath();
+      context.arc(lightX, lightY, 2.3, 0, Math.PI * 2);
+      context.fill();
+      context.restore();
+    });
   }
+}
+
+function createCargoSegments(position, direction, count, seed) {
+  return Array.from({ length: count }, (_, index) => {
+    const distanceBehindCab = CARGO_CAR_SPACING * (index + 1);
+
+    return {
+      position: {
+        x: position.x - direction.x * distanceBehindCab,
+        y: position.y - direction.y * distanceBehindCab,
+      },
+      velocity: { x: 0, y: 0 },
+      heading: Math.atan2(direction.y, direction.x),
+      loaded: (seed + index) % 2 === 0,
+    };
+  });
 }
 
 function arrive(ship, target) {

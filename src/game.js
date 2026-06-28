@@ -6,13 +6,13 @@ import { createAsteroidField } from "./systems/asteroidField.js?v=zone-aware";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=docking-services";
 import { createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=zone-aware";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=careful-mode";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=soft-cargo-train";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=draw-radius";
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=site-scanner";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=docking-services";
-import { createGameState } from "./state/gameState.js?v=tractor-field";
+import { createGameState } from "./state/gameState.js?v=story-events";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -40,6 +40,9 @@ const REPAIR_CREDITS_PER_HULL = 2;
 const DAMAGE_FLASH_DECAY_PER_SECOND = 2.9;
 const MAX_DAMAGE_FLASH_ALPHA = 0.42;
 const MAX_IMPACT_SHAKE_PIXELS = 28;
+const STORY_MOVEMENT_DISTANCE = 36;
+const STORY_PROXIMITY_RADIUS = 92;
+const STORY_PROXIMITY_COOLDOWN_SECONDS = 3.5;
 
 export class Game {
   constructor(
@@ -84,6 +87,10 @@ export class Game {
     this.viewportTitleTimer = 0;
     this.discoveredSiteIds = new Set();
     this.currentZoneId = null;
+    this.lastShipMovementEventPosition = { ...this.ship.position };
+    this.visibleStorySiteIds = new Set();
+    this.visibleStoryNpcIds = new Set();
+    this.proximityCooldowns = new Map();
     this.lastFrameTime = 0;
     this.damageFlashAlpha = 0;
     this.cameraShake = {
@@ -121,6 +128,16 @@ export class Game {
     }
 
     scanner.scanergy -= SCANERGY_PER_SCAN;
+    this.state.ledger.recordEvent(
+      "scanner.used",
+      {
+        scanergySpent: SCANERGY_PER_SCAN,
+        scanergyRemaining: scanner.scanergy,
+        x: Math.round(this.ship.position.x),
+        y: Math.round(this.ship.position.y),
+      },
+      { visible: false },
+    );
     this.onHudChange(this.state);
     this.scanner.scan(this.ship, this.asteroids, this.worldSites);
   }
@@ -149,6 +166,7 @@ export class Game {
     // Order matters: ship/world state is advanced first, then collisions and UI
     // readouts are derived from the updated world.
     this.ship.update(deltaSeconds, this.input);
+    this.updateMovementEvent();
     this.updateWorldSiteInteraction();
     this.updateZoneTitle();
     if (this.state.components.engine.fuel !== previousFuel) {
@@ -194,6 +212,7 @@ export class Game {
     this.collectPickups();
     this.scanner.update(deltaSeconds);
     this.camera.follow(this.ship, deltaSeconds);
+    this.updateStoryEventSensors(activeAsteroids, activeLifeforms, deltaSeconds);
     if (this.state.components.scanner.scanergy !== previousScanergy) {
       this.onHudChange(this.state);
     }
@@ -227,6 +246,157 @@ export class Game {
     if (this.input.wasPressed("KeyE") && this.nearbySite) {
       this.setDockedSite(this.dockedSite ? null : this.nearbySite);
     }
+  }
+
+  updateMovementEvent() {
+    const distanceMoved = Math.hypot(
+      this.ship.position.x - this.lastShipMovementEventPosition.x,
+      this.ship.position.y - this.lastShipMovementEventPosition.y,
+    );
+
+    if (distanceMoved < STORY_MOVEMENT_DISTANCE) {
+      return;
+    }
+
+    this.lastShipMovementEventPosition = { ...this.ship.position };
+    this.state.ledger.recordEvent(
+      "ship.moved",
+      {
+        x: Math.round(this.ship.position.x),
+        y: Math.round(this.ship.position.y),
+        distance: Math.round(distanceMoved),
+        speed: Math.round(Math.hypot(this.ship.velocity.x, this.ship.velocity.y)),
+      },
+      { visible: false },
+    );
+  }
+
+  updateStoryEventSensors(activeAsteroids, activeLifeforms, deltaSeconds) {
+    this.tickProximityCooldowns(deltaSeconds);
+    this.updateViewportStoryEvents();
+    this.updateProximityStoryEvents(activeAsteroids, activeLifeforms);
+  }
+
+  tickProximityCooldowns(deltaSeconds) {
+    this.proximityCooldowns.forEach((cooldown, key) => {
+      const nextCooldown = cooldown - deltaSeconds;
+
+      if (nextCooldown <= 0) {
+        this.proximityCooldowns.delete(key);
+      } else {
+        this.proximityCooldowns.set(key, nextCooldown);
+      }
+    });
+  }
+
+  updateViewportStoryEvents() {
+    this.worldSites.forEach((site) => {
+      if (this.visibleStorySiteIds.has(site.id) || !isInViewport(site, this.canvas, this.camera, site.radius)) {
+        return;
+      }
+
+      this.visibleStorySiteIds.add(site.id);
+      this.state.ledger.recordEvent(
+        "site.enteredViewport",
+        {
+          siteId: site.id,
+          siteName: site.name,
+          siteType: site.type,
+          x: Math.round(site.position.x),
+          y: Math.round(site.position.y),
+        },
+        { visible: false },
+      );
+    });
+
+    this.npcShips.forEach((ship) => {
+      if (this.visibleStoryNpcIds.has(ship.id) || !isInViewport(ship, this.canvas, this.camera, ship.drawRadius ?? ship.radius)) {
+        return;
+      }
+
+      this.visibleStoryNpcIds.add(ship.id);
+      this.state.ledger.recordEvent(
+        "npc.enteredViewport",
+        {
+          npcId: ship.id,
+          npcName: ship.name,
+          npcType: "route-hauler",
+          x: Math.round(ship.position.x),
+          y: Math.round(ship.position.y),
+        },
+        { visible: false },
+      );
+    });
+  }
+
+  updateProximityStoryEvents(activeAsteroids, activeLifeforms) {
+    const candidates = [
+      ...activeAsteroids.map((asteroid) => ({
+        id: `asteroid:${getEntityStoryId(asteroid)}`,
+        targetType: "asteroid",
+        targetName: getAsteroidResourceType(asteroid),
+        position: asteroid.position,
+        radius: asteroid.radius,
+      })),
+      ...this.npcShips.map((ship) => ({
+        id: `npc:${ship.id}`,
+        targetType: "npc",
+        targetName: ship.name,
+        position: ship.position,
+        radius: ship.radius,
+      })),
+      ...activeLifeforms
+        .filter((lifeform) => lifeform.type === "hunter")
+        .map((lifeform) => ({
+          id: `lifeform:${getEntityStoryId(lifeform)}`,
+          targetType: "hunter",
+          targetName: "hunter",
+          position: lifeform.position,
+          radius: lifeform.radius,
+        })),
+    ];
+
+    candidates.forEach((candidate) => {
+      const distanceToSurface =
+        Math.hypot(this.ship.position.x - candidate.position.x, this.ship.position.y - candidate.position.y) -
+        SHIP_COLLISION_RADIUS -
+        candidate.radius;
+
+      if (distanceToSurface > STORY_PROXIMITY_RADIUS || this.proximityCooldowns.has(candidate.id)) {
+        return;
+      }
+
+      this.proximityCooldowns.set(candidate.id, STORY_PROXIMITY_COOLDOWN_SECONDS);
+      this.state.ledger.recordEvent(
+        "ship.nearObject",
+        {
+          targetId: candidate.id,
+          targetType: candidate.targetType,
+          targetName: candidate.targetName,
+          distance: Math.round(Math.max(0, distanceToSurface)),
+          x: Math.round(this.ship.position.x),
+          y: Math.round(this.ship.position.y),
+        },
+        { visible: false },
+      );
+    });
+  }
+
+  recordShipCollision(targetType, target, damageAmount) {
+    this.state.ledger.recordEvent(
+      "ship.collision",
+      {
+        targetId: getEntityStoryId(target),
+        targetType,
+        targetName: target.name ?? target.type ?? getAsteroidResourceType(target),
+        damage: damageAmount,
+        speed: Math.round(Math.hypot(this.ship.velocity.x, this.ship.velocity.y)),
+        hullAfter: Math.max(0, this.state.components.hull.integrity - damageAmount),
+        x: Math.round(this.ship.position.x),
+        y: Math.round(this.ship.position.y),
+      },
+      { visible: false },
+    );
   }
 
   setDockedSite(site) {
@@ -511,6 +681,7 @@ export class Game {
         const impactDamage = this.getImpactDamage(shipHitAsteroid);
 
         this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
+        this.recordShipCollision("asteroid", shipHitAsteroid, impactDamage);
         this.damageHull(impactDamage);
         this.triggerImpactFeedback(impactDamage);
         this.createShipSparks(shipHitAsteroid);
@@ -576,6 +747,7 @@ export class Game {
     const hullDamage = impactDamage * 0.5;
 
     this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
+    this.recordShipCollision("hunter", rammingHunter, hullDamage);
     this.damageHull(hullDamage);
     this.triggerImpactFeedback(hullDamage);
     this.createShipSparks(rammingHunter);
@@ -653,6 +825,7 @@ export class Game {
       ship.update(deltaSeconds, {
         asteroids: activeAsteroids,
         npcShips: activeNpcShips,
+        sites: this.worldSites,
       });
       ship.consumeEvents().forEach((event) => {
         this.state.ledger.recordEvent(event.type, event.payload, { visible: false });
@@ -829,9 +1002,29 @@ export class Game {
     // Pickups come only from the final break. Bigger resource rocks become
     // smaller rocks first, so shooting still has the classic Asteroids cadence.
     if (asteroid.tier <= 1) {
-      this.pickups.push(
-        ...createResourcePickupsFromAsteroid(asteroid, this.impactSeed + 50000, impactVelocity),
-      );
+      const minedPickups = createResourcePickupsFromAsteroid(asteroid, this.impactSeed + 50000, impactVelocity);
+
+      if (minedPickups.length > 0) {
+        const unitsByType = minedPickups.reduce((counts, pickup) => {
+          counts[pickup.type] = (counts[pickup.type] ?? 0) + 1;
+          return counts;
+        }, {});
+
+        this.state.ledger.recordEvent(
+          "resource.mined",
+          {
+            sourceType: "asteroid",
+            resourceType,
+            totalUnits: minedPickups.length,
+            units: unitsByType,
+            x: Math.round(asteroid.position.x),
+            y: Math.round(asteroid.position.y),
+          },
+          { visible: false },
+        );
+      }
+
+      this.pickups.push(...minedPickups);
       if (asteroid.color === WHITE_ASTEROID_COLOR) {
         this.createStoneBurst(asteroid, impactVelocity);
       }
@@ -1185,6 +1378,9 @@ export class Game {
         "resource.collected",
         {
           resourceType: pickup.type,
+          amount: 1,
+          x: Math.round(pickup.position.x),
+          y: Math.round(pickup.position.y),
         },
         { visible: false },
       );
@@ -1445,6 +1641,23 @@ function circlesOverlap(firstPosition, firstRadius, secondPosition, secondRadius
   const radius = firstRadius + secondRadius;
 
   return distanceX * distanceX + distanceY * distanceY <= radius * radius;
+}
+
+function isInViewport(entity, canvas, camera, radius = entity.radius ?? 0) {
+  const screenX = entity.position.x - camera.x;
+  const screenY = entity.position.y - camera.y;
+
+  return screenX >= -radius && screenX <= canvas.width + radius && screenY >= -radius && screenY <= canvas.height + radius;
+}
+
+function getEntityStoryId(entity) {
+  if (entity.id) {
+    return entity.id;
+  }
+
+  const origin = entity.origin ?? entity.position;
+
+  return `${Math.round(origin.x)}:${Math.round(origin.y)}:${Math.round(entity.radius ?? 0)}`;
 }
 
 function getSiteSubtitle(site) {

@@ -92,6 +92,9 @@ export function createEventLedger(options = {}) {
     if (event.type === "site.docked") {
       incrementStat("site.docked.total");
       incrementStat(`site.docked.${event.payload.siteId}`);
+    } else if (event.type === "site.enteredViewport") {
+      incrementStat("site.enteredViewport.total");
+      incrementStat(`site.enteredViewport.${event.payload.siteId}`);
     } else if (event.type === "zone.entered") {
       incrementStat("zone.entered.total");
       incrementStat(`zone.entered.${event.payload.zoneId}`);
@@ -115,6 +118,21 @@ export function createEventLedger(options = {}) {
       incrementStat("weapon.fired.total");
       incrementStat(`weapon.fired.${event.payload.weaponType ?? "unknown"}`);
       incrementStat("ammo.spent", event.payload.ammoSpent ?? 0);
+    } else if (event.type === "scanner.used") {
+      incrementStat("scanner.used.total");
+      incrementStat("scanergy.spent.scans", event.payload.scanergySpent ?? 0);
+    } else if (event.type === "ship.moved") {
+      incrementStat("ship.moved.total");
+      incrementStat("ship.distance.logged", event.payload.distance ?? 0);
+      setStatMax("ship.speed.max", event.payload.speed ?? 0);
+    } else if (event.type === "ship.nearObject") {
+      incrementStat("ship.nearObject.total");
+      incrementStat(`ship.nearObject.${event.payload.targetType ?? "unknown"}`);
+    } else if (event.type === "ship.collision") {
+      incrementStat("ship.collision.total");
+      incrementStat(`ship.collision.${event.payload.targetType ?? "unknown"}`);
+      incrementStat("ship.collision.damage.total", event.payload.damage ?? 0);
+      setStatMax("ship.collision.damage.max", event.payload.damage ?? 0);
     } else if (event.type === "asteroid.destroyed") {
       incrementStat("asteroid.destroyed.total");
       incrementStat(`asteroid.destroyed.${event.payload.resourceType ?? "unknown"}`);
@@ -124,9 +142,16 @@ export function createEventLedger(options = {}) {
         incrementStat("asteroid.finalBreak.total");
         incrementStat(`asteroid.finalBreak.${event.payload.resourceType ?? "unknown"}`);
       }
+    } else if (event.type === "resource.mined") {
+      incrementStat("resource.mined.total");
+      incrementStat("resource.mined.units.total", event.payload.totalUnits ?? 0);
+
+      Object.entries(event.payload.units ?? {}).forEach(([type, count]) => {
+        incrementStat(`resource.mined.${type}`, count);
+      });
     } else if (event.type === "resource.collected") {
       incrementStat("resource.collected.total");
-      incrementStat(`resource.collected.${event.payload.resourceType}`);
+      incrementStat(`resource.collected.${event.payload.resourceType}`, event.payload.amount ?? 1);
     } else if (event.type === "resource.processed") {
       incrementStat("resource.processed.total");
       incrementStat(`resource.processed.input.${event.payload.resourceType}`);
@@ -143,10 +168,19 @@ export function createEventLedger(options = {}) {
       incrementStat("npc.destroyed.total");
       incrementStat(`npc.destroyed.${event.payload.npcType ?? "unknown"}`);
       incrementStat(`npc.destroyed.cause.${event.payload.cause ?? "unknown"}`);
+    } else if (event.type === "npc.enteredViewport") {
+      incrementStat("npc.enteredViewport.total");
+      incrementStat(`npc.enteredViewport.${event.payload.npcType ?? "unknown"}`);
     } else if (event.type === "npc.carefulMode") {
       incrementStat("npc.carefulMode.total");
       incrementStat(`npc.carefulMode.${event.payload.npcType ?? "unknown"}`);
       incrementStat(`npc.carefulMode.reason.${event.payload.reason ?? "unknown"}`);
+    } else if (event.type === "component.unlocked" || event.type === "component.shown") {
+      incrementStat(`${event.type}.total`);
+      incrementStat(`${event.type}.${event.payload.componentId ?? "unknown"}`);
+    } else if (event.type === "mission.accepted" || event.type === "mission.completed") {
+      incrementStat(`${event.type}.total`);
+      incrementStat(`${event.type}.${event.payload.missionId ?? "unknown"}`);
     }
   }
 
@@ -175,6 +209,10 @@ function getDefaultMessage(type, payload) {
     return `Docked at ${payload.siteName ?? payload.siteId}`;
   }
 
+  if (type === "site.enteredViewport") {
+    return `${payload.siteName ?? payload.siteId} entered view`;
+  }
+
   if (type === "ship.repaired") {
     return `Repaired hull for ${payload.creditsSpent ?? 0} credits`;
   }
@@ -185,6 +223,26 @@ function getDefaultMessage(type, payload) {
 
   if (type === "zone.entered") {
     return `Entered ${payload.zoneName ?? payload.zoneId}`;
+  }
+
+  if (type === "scanner.used") {
+    return "Scanner used";
+  }
+
+  if (type === "ship.moved") {
+    return "Ship moved";
+  }
+
+  if (type === "ship.nearObject") {
+    return `Near ${payload.targetName ?? payload.targetType ?? "object"}`;
+  }
+
+  if (type === "ship.collision") {
+    return `Collision with ${payload.targetName ?? payload.targetType ?? "object"}`;
+  }
+
+  if (type === "resource.mined") {
+    return `Mined ${payload.totalUnits ?? 0} resources`;
   }
 
   if (type === "resource.processed") {
@@ -199,8 +257,28 @@ function getDefaultMessage(type, payload) {
     return `Destroyed ${payload.npcName ?? payload.npcType ?? "NPC ship"}`;
   }
 
+  if (type === "npc.enteredViewport") {
+    return `${payload.npcName ?? "NPC ship"} entered view`;
+  }
+
   if (type === "npc.carefulMode") {
     return `${payload.npcName ?? "NPC ship"} switched to careful mode`;
+  }
+
+  if (type === "component.unlocked") {
+    return `${payload.componentName ?? payload.componentId ?? "Component"} unlocked`;
+  }
+
+  if (type === "component.shown") {
+    return `${payload.componentName ?? payload.componentId ?? "Component"} shown`;
+  }
+
+  if (type === "mission.accepted") {
+    return `Accepted ${payload.missionName ?? payload.missionId ?? "mission"}`;
+  }
+
+  if (type === "mission.completed") {
+    return `Completed ${payload.missionName ?? payload.missionId ?? "mission"}`;
   }
 
   return type;

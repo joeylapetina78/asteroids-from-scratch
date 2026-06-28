@@ -1,7 +1,7 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=tractor-field";
+import { Game } from "./game.js?v=story-events";
 import { Processor } from "./systems/processor.js?v=credits-cargo";
-import { createGameState } from "./state/gameState.js?v=tractor-field";
+import { createGameState } from "./state/gameState.js?v=story-events";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
