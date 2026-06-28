@@ -82,6 +82,11 @@ body {
   display: none;
 }
 
+.component-panel.is-panel-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .component-panel.is-dragging {
   border-color: #7f8aa3;
   box-shadow: 0 10px 28px rgb(0 0 0 / 0.35);

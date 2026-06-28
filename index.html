@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=tractor-field" />
+    <link rel="stylesheet" href="./src/styles.css?v=stable-hidden-panels" />
   </head>
   <body>
     <main class="game-shell">
@@ -130,7 +130,7 @@
               <button id="dock-toggle" class="dock-button" type="button" disabled>Dock</button>
             </div>
 
-            <div class="component-panel hub-panel" data-panel-id="hub" aria-label="Hub services" hidden>
+            <div class="component-panel hub-panel is-panel-hidden" data-panel-id="hub" aria-label="Hub services" aria-hidden="true">
               <div class="component-panel-title">
                 <div>
                   <strong id="hub-name">Hub</strong>
@@ -196,6 +196,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=tractor-field-pointer"></script>
+    <script type="module" src="./src/main.js?v=stable-hidden-panels"></script>
   </body>
 </html>

@@ -194,9 +194,9 @@ function updateDockingDisplay(siteState) {
 
 function updateHubServiceDisplay(siteState) {
   const site = siteState.dockedSite?.type === "hub" ? siteState.dockedSite : null;
-  const wasHidden = hubPanel.hidden;
+  const wasHidden = isPanelHidden(hubPanel);
 
-  hubPanel.hidden = !site;
+  setPanelHidden(hubPanel, !site);
   hubPanel.setAttribute("aria-hidden", String(!site));
 
   if (!site) {
@@ -291,6 +291,14 @@ function setPanelAlert(panelId, level) {
   panel.classList.toggle("is-low-resource", level === "critical");
 }
 
+function setPanelHidden(panel, isHidden) {
+  panel.classList.toggle("is-panel-hidden", isHidden);
+}
+
+function isPanelHidden(panel) {
+  return panel.classList.contains("is-panel-hidden");
+}
+
 function setTractorFieldActive(isActive) {
   if (state.components.collector.isActive === isActive) {
     return;
@@ -328,7 +336,7 @@ function processUnit(type) {
 }
 
 function sellCargoHold() {
-  if (hubPanel.hidden || hubSellCargoButton.disabled) {
+  if (isPanelHidden(hubPanel) || hubSellCargoButton.disabled) {
     return;
   }
 
