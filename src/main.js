@@ -107,6 +107,7 @@ tractorFieldButton.addEventListener("pointerdown", (event) => {
     return;
   }
 
+  event.preventDefault();
   tractorFieldButton.setPointerCapture(event.pointerId);
   setTractorFieldActive(true);
 });
@@ -117,22 +118,12 @@ tractorFieldButton.addEventListener("pointerup", (event) => {
   }
 
   setTractorFieldActive(false);
+  tractorFieldButton.blur();
 });
 
+tractorFieldButton.addEventListener("click", (event) => event.preventDefault());
 tractorFieldButton.addEventListener("pointercancel", () => setTractorFieldActive(false));
 tractorFieldButton.addEventListener("lostpointercapture", () => setTractorFieldActive(false));
-tractorFieldButton.addEventListener("keydown", (event) => {
-  if (event.code === "Space" || event.code === "Enter") {
-    event.preventDefault();
-    setTractorFieldActive(true);
-  }
-});
-tractorFieldButton.addEventListener("keyup", (event) => {
-  if (event.code === "Space" || event.code === "Enter") {
-    event.preventDefault();
-    setTractorFieldActive(false);
-  }
-});
 
 scanButton.addEventListener("click", () => {
   game.scanForCrystals();
