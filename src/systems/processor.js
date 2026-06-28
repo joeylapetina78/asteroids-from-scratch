@@ -8,6 +8,9 @@ const TYPE_COLORS = {
   crystal: "#73d2ff",
 };
 
+// Processor is a small square-unit physics canvas. It is used for both the
+// clickable processor and the non-clickable cargo hold, with behavior selected
+// by the constructor options.
 export class Processor {
   constructor(canvas, onUnitProcessed = () => {}, options = {}) {
     this.canvas = canvas;
@@ -146,6 +149,8 @@ export class Processor {
   }
 
   resolveUnitCollisions() {
+    // This is intentionally a simple axis-aligned square solver. It gives us
+    // readable "pile of units" behavior without introducing a physics engine.
     for (let firstIndex = 0; firstIndex < this.units.length; firstIndex += 1) {
       for (let secondIndex = firstIndex + 1; secondIndex < this.units.length; secondIndex += 1) {
         this.resolveUnitPair(this.units[firstIndex], this.units[secondIndex]);

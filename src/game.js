@@ -1,18 +1,22 @@
 import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fuel-crystals";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=ambusher-drops";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=burst-fix-2";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=burst-fix-2";
 import { Ship } from "./entities/Ship.js?v=components";
 import { createAsteroidField } from "./systems/asteroidField.js?v=zone-aware";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=docking-services";
 import { createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=zone-aware";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=careful-mode";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=draw-radius";
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=site-scanner";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=docking-services";
-import { createGameState } from "./state/gameState.js?v=credits-cargo";
+import { createGameState } from "./state/gameState.js?v=careful-mode";
 
+// Game is the main simulation coordinator for the viewport canvas. It owns world
+// objects, advances gameplay rules, then reports display-ready state back to
+// main.js so the page panels can stay dumb and component-like.
 const FIRE_COOLDOWN_SECONDS = 0.18;
 const AMMO_PER_SHOT = 1;
 const SCANERGY_PER_SCAN = 100;
@@ -24,11 +28,19 @@ const COLLECTOR_PULL_FORCE = 1650;
 const COLLECTOR_MAX_SCANERGY_PER_SECOND = 50;
 const PARTICLE_DRAG = 0.94;
 const LIFE_SIMULATION_MARGIN = 900;
+const NPC_SIMULATION_MARGIN = 1300;
 const HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS = 0.38;
 const MAX_HUNTER_ENVIRONMENT_HITS_PER_FRAME = 6;
+const NPC_ENVIRONMENT_HIT_COOLDOWN_SECONDS = 0.55;
+const HUB_DEFENSE_COOLDOWN_SECONDS = 0.18;
+const HUB_DEFENSE_RADIUS_PADDING = 170;
+const MAX_HUB_DEFENSE_HITS_PER_FRAME = 2;
 const VIEWPORT_TITLE_SECONDS = 5.6;
 const DOCK_MESSAGE_SECONDS = 2.8;
 const REPAIR_CREDITS_PER_HULL = 2;
+const DAMAGE_FLASH_DECAY_PER_SECOND = 2.9;
+const MAX_DAMAGE_FLASH_ALPHA = 0.42;
+const MAX_IMPACT_SHAKE_PIXELS = 28;
 
 export class Game {
   constructor(
@@ -54,8 +66,10 @@ export class Game {
     this.worldSites = getWorldSites();
     this.asteroids = createAsteroidField(canvas, this.resourceField);
     this.lifeforms = createLifeField(this.asteroids);
+    this.npcShips = createNpcRouteShips(this.worldSites);
     this.bullets = [];
     this.particles = [];
+    this.siteDefenseBeams = [];
     this.pickups = [];
     this.fireCooldown = 0;
     this.shipHitCooldown = 0;
@@ -66,11 +80,19 @@ export class Game {
     this.activeHunterCount = 0;
     this.nearbySite = null;
     this.dockedSite = null;
+    this.hubDefenseCooldown = 0;
     this.viewportTitle = null;
     this.viewportTitleTimer = 0;
     this.discoveredSiteIds = new Set();
     this.currentZoneId = null;
     this.lastFrameTime = 0;
+    this.damageFlashAlpha = 0;
+    this.cameraShake = {
+      time: 0,
+      duration: 0,
+      magnitude: 0,
+      seed: 0,
+    };
   }
 
   start() {
@@ -121,8 +143,11 @@ export class Game {
     this.fireCooldown = Math.max(0, this.fireCooldown - deltaSeconds);
     this.shipHitCooldown = Math.max(0, this.shipHitCooldown - deltaSeconds);
     this.viewportTitleTimer = Math.max(0, this.viewportTitleTimer - deltaSeconds);
+    this.updateImpactFeedback(deltaSeconds);
     const previousFuel = this.state.components.engine.fuel;
     const previousScanergy = this.state.components.scanner.scanergy;
+    // Order matters: ship/world state is advanced first, then collisions and UI
+    // readouts are derived from the updated world.
     this.ship.update(deltaSeconds, this.input);
     this.updateWorldSiteInteraction();
     this.updateZoneTitle();
@@ -134,6 +159,10 @@ export class Game {
     this.updateAsteroidHits();
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
     this.asteroids.forEach((asteroid) => asteroid.update(deltaSeconds));
+    this.updateHubDefenses(deltaSeconds);
+    // Lifeforms are preserved off-screen, but only nearby ones are simulated.
+    // That keeps the field feeling persistent without paying every steering
+    // cost for every distant creature each frame.
     const activeLifeforms = this.lifeforms.filter((lifeform) =>
       isNearSimulationArea(lifeform, this.canvas, this.camera, this.ship, LIFE_SIMULATION_MARGIN),
     );
@@ -153,10 +182,14 @@ export class Game {
     this.activeHunterCount = activeLifeforms.filter((lifeform) => lifeform.type === "hunter").length;
     this.updateHunterEnvironmentalHits(activeLifeforms, activeAsteroids, deltaSeconds);
     this.updateHunterHits();
+    this.updateNpcShips(activeAsteroids, deltaSeconds);
+    this.updateNpcBulletHits();
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
     this.lifeforms = this.lifeforms.filter((lifeform) => lifeform.isAlive);
+    this.npcShips = this.npcShips.filter((ship) => ship.isAlive);
     this.pickups.forEach((pickup) => pickup.update(deltaSeconds));
     this.updateParticles(deltaSeconds);
+    this.updateSiteDefenseBeams(deltaSeconds);
     this.updateCollector(deltaSeconds);
     this.collectPickups();
     this.scanner.update(deltaSeconds);
@@ -170,6 +203,8 @@ export class Game {
   }
 
   updateWorldSiteInteraction() {
+    // Sites are authored world objects. The Docking panel is always available,
+    // but the Hub service panel only appears while the ship is docked at a hub.
     const nearby = getNearbyWorldSite(this.ship.position, this.worldSites);
     const previousNearbySiteId = this.nearbySite?.id ?? null;
     this.nearbySite = nearby?.site ?? null;
@@ -195,9 +230,18 @@ export class Game {
   }
 
   setDockedSite(site) {
+    const previousDockedSiteId = this.dockedSite?.id ?? null;
     this.dockedSite = site;
 
     if (site) {
+      if (previousDockedSiteId !== site.id) {
+        this.state.ledger.recordEvent("site.docked", {
+          siteId: site.id,
+          siteName: site.name,
+          siteType: site.type,
+        });
+      }
+
       this.showViewportTitle(
         site.name,
         "docking tether connected",
@@ -218,7 +262,14 @@ export class Game {
     }
 
     this.currentZoneId = zoneProfile.strongestZoneId;
-    this.showViewportTitle(zoneProfile.strongestZoneName, "region entered", "zone", VIEWPORT_TITLE_SECONDS, "left");
+    this.state.ledger.recordEvent("zone.entered", {
+      zoneId: zoneProfile.strongestZoneId,
+      zoneName: zoneProfile.strongestZoneName,
+      influence: zoneProfile.influence,
+      danger: zoneProfile.danger,
+      tags: zoneProfile.tags,
+    });
+    this.showViewportTitle(zoneProfile.strongestZoneName, "zone entered", "zone", VIEWPORT_TITLE_SECONDS, "left");
   }
 
   showViewportTitle(title, subtitle, kind = "event", duration = VIEWPORT_TITLE_SECONDS, side = "left") {
@@ -242,13 +293,22 @@ export class Game {
     }
 
     const repairCost = this.getRepairCost();
+    const hullBeforeRepair = this.state.components.hull.integrity;
 
-    if (repairCost > this.state.components.account.credits) {
+    if (repairCost <= 0 || repairCost > this.state.components.account.credits) {
       return;
     }
 
     this.state.components.account.credits -= repairCost;
     this.state.components.hull.integrity = this.state.components.hull.maxIntegrity;
+    this.state.ledger.recordEvent("ship.repaired", {
+      siteId: site.id,
+      siteName: site.name,
+      creditsSpent: repairCost,
+      hullBefore: hullBeforeRepair,
+      hullAfter: this.state.components.hull.integrity,
+      hullRestored: this.state.components.hull.integrity - hullBeforeRepair,
+    });
     this.shipDestroyed = false;
     this.onHudChange(this.state);
     this.setDockedSite(site);
@@ -291,7 +351,9 @@ export class Game {
       activeLifeformCount: this.activeLifeformCount,
       hunterCount: this.lifeforms.filter((lifeform) => lifeform.type === "hunter").length,
       activeHunterCount: this.activeHunterCount,
+      npcShipCount: this.npcShips.length,
       pickupCount: this.pickups.length,
+      currentSite: this.dockedSite ?? this.nearbySite,
       nearestSite: getNearestWorldSite(this.ship.position, this.worldSites)?.site ?? null,
     });
   }
@@ -321,7 +383,7 @@ export class Game {
       hunter.damage(this.getHunterEnvironmentDamage(hunter, hitAsteroid));
       hunter.environmentHitCooldown = HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS;
       this.createHunterImpactSparks(hunter);
-      this.destroyHunterIfNeeded(hunter);
+      this.destroyHunterIfNeeded(hunter, "asteroid-collision");
       impactCount += 1;
     }
 
@@ -350,8 +412,8 @@ export class Game {
         firstHunter.environmentHitCooldown = HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS * 0.65;
         secondHunter.environmentHitCooldown = HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS * 0.65;
         this.createHunterImpactSparks(firstHunter);
-        this.destroyHunterIfNeeded(firstHunter);
-        this.destroyHunterIfNeeded(secondHunter);
+        this.destroyHunterIfNeeded(firstHunter, "hunter-collision");
+        this.destroyHunterIfNeeded(secondHunter, "hunter-collision");
         impactCount += 1;
         break;
       }
@@ -368,6 +430,14 @@ export class Game {
     }
 
     miner.ammo -= AMMO_PER_SHOT;
+    this.state.ledger.recordEvent(
+      "weapon.fired",
+      {
+        weaponType: "miner",
+        ammoSpent: AMMO_PER_SHOT,
+      },
+      { visible: false },
+    );
     this.onHudChange(this.state);
     this.bullets.push(new Bullet(this.ship));
     this.fireCooldown = FIRE_COOLDOWN_SECONDS;
@@ -438,8 +508,11 @@ export class Game {
       );
 
       if (shipHitAsteroid) {
+        const impactDamage = this.getImpactDamage(shipHitAsteroid);
+
         this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
-        this.damageHull(this.getImpactDamage(shipHitAsteroid));
+        this.damageHull(impactDamage);
+        this.triggerImpactFeedback(impactDamage);
         this.createShipSparks(shipHitAsteroid);
         hitAsteroids.add(shipHitAsteroid);
         newAsteroids.push(...this.breakAsteroid(shipHitAsteroid, this.ship.velocity));
@@ -477,6 +550,7 @@ export class Game {
       bullet.destroy();
       hitHunter.damage(100);
       hitHunters.add(hitHunter);
+      this.recordEnemyDestroyed("hunter", "weapon");
       this.createHunterBurst(hitHunter, bullet.velocity);
       this.createHunterDrops(hitHunter, bullet.velocity);
       this.respawnHunter();
@@ -499,15 +573,18 @@ export class Game {
     }
 
     const impactDamage = this.getImpactDamage(rammingHunter);
+    const hullDamage = impactDamage * 0.5;
 
     this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
-    this.damageHull(impactDamage * 0.5);
+    this.damageHull(hullDamage);
+    this.triggerImpactFeedback(hullDamage);
     this.createShipSparks(rammingHunter);
     rammingHunter.damage(impactDamage * 0.85);
 
     if (rammingHunter.isAlive) {
       this.createHunterImpactSparks(rammingHunter);
     } else {
+      this.recordEnemyDestroyed("hunter", "ramming-ship");
       this.createHunterBurst(rammingHunter, this.ship.velocity);
       this.createHunterDrops(rammingHunter, this.ship.velocity);
       this.respawnHunter();
@@ -523,14 +600,142 @@ export class Game {
     }
   }
 
-  destroyHunterIfNeeded(hunter) {
+  updateHubDefenses(deltaSeconds) {
+    this.hubDefenseCooldown = Math.max(0, this.hubDefenseCooldown - deltaSeconds);
+
+    if (this.hubDefenseCooldown > 0) {
+      return;
+    }
+
+    const hitAsteroids = new Set();
+
+    this.worldSites
+      .filter((site) => site.type === "hub")
+      .forEach((site) => {
+        if (hitAsteroids.size >= MAX_HUB_DEFENSE_HITS_PER_FRAME) {
+          return;
+        }
+
+        const clearanceRadius = site.interactionRadius + HUB_DEFENSE_RADIUS_PADDING;
+        const target = this.asteroids
+          .filter((asteroid) => !hitAsteroids.has(asteroid))
+          .map((asteroid) => ({
+            asteroid,
+            distance: Math.hypot(asteroid.position.x - site.position.x, asteroid.position.y - site.position.y),
+          }))
+          .filter(({ asteroid, distance }) => distance - asteroid.radius <= clearanceRadius)
+          .sort((first, second) => first.distance - second.distance)[0]?.asteroid;
+
+        if (!target) {
+          return;
+        }
+
+        hitAsteroids.add(target);
+        this.createHubDefenseBeam(site, target);
+        this.createHubDefenseBurst(site, target);
+      });
+
+    if (hitAsteroids.size === 0) {
+      return;
+    }
+
+    this.asteroids = this.asteroids.filter((asteroid) => !hitAsteroids.has(asteroid));
+    this.hubDefenseCooldown = HUB_DEFENSE_COOLDOWN_SECONDS;
+  }
+
+  updateNpcShips(activeAsteroids, deltaSeconds) {
+    const activeNpcShips = this.npcShips.filter((ship) =>
+      isNearSimulationArea(ship, this.canvas, this.camera, this.ship, NPC_SIMULATION_MARGIN),
+    );
+
+    activeNpcShips.forEach((ship) => {
+      ship.environmentHitCooldown = Math.max(0, (ship.environmentHitCooldown ?? 0) - deltaSeconds);
+      ship.update(deltaSeconds, {
+        asteroids: activeAsteroids,
+        npcShips: activeNpcShips,
+      });
+      ship.consumeEvents().forEach((event) => {
+        this.state.ledger.recordEvent(event.type, event.payload, { visible: false });
+      });
+
+      if (ship.environmentHitCooldown > 0) {
+        return;
+      }
+
+      const hitAsteroid = activeAsteroids.find((asteroid) =>
+        circlesOverlap(ship.position, ship.radius, asteroid.position, asteroid.radius),
+      );
+
+      if (!hitAsteroid) {
+        return;
+      }
+
+      this.bumpShipFromBody(ship, hitAsteroid, 0.55);
+      ship.damage(this.getNpcEnvironmentDamage(ship, hitAsteroid));
+      ship.environmentHitCooldown = NPC_ENVIRONMENT_HIT_COOLDOWN_SECONDS;
+      this.createNpcImpactSparks(ship);
+
+      if (!ship.isAlive) {
+        this.recordNpcDestroyed(ship, "asteroid-collision");
+        this.createNpcBurst(ship, ship.velocity);
+      }
+    });
+  }
+
+  updateNpcBulletHits() {
+    this.bullets.forEach((bullet) => {
+      if (!bullet.isAlive) {
+        return;
+      }
+
+      const hitShip = this.npcShips.find((ship) =>
+        ship.isAlive && circlesOverlap(bullet.position, bullet.radius, ship.position, ship.radius),
+      );
+
+      if (!hitShip) {
+        return;
+      }
+
+      bullet.destroy();
+      hitShip.damage(34);
+      this.createNpcImpactSparks(hitShip);
+
+      if (!hitShip.isAlive) {
+        this.recordNpcDestroyed(hitShip, "weapon");
+        this.createNpcBurst(hitShip, bullet.velocity);
+      }
+    });
+  }
+
+  destroyHunterIfNeeded(hunter, cause = "environment") {
     if (hunter.isAlive) {
       return;
     }
 
+    this.recordEnemyDestroyed("hunter", cause);
     this.createHunterBurst(hunter, hunter.velocity);
     this.createHunterDrops(hunter, hunter.velocity);
     this.respawnHunter();
+  }
+
+  recordEnemyDestroyed(enemyType, cause) {
+    this.state.ledger.recordEvent("enemy.destroyed", {
+      enemyType,
+      cause,
+    });
+  }
+
+  recordNpcDestroyed(ship, cause) {
+    this.state.ledger.recordEvent(
+      "npc.destroyed",
+      {
+        npcId: ship.id,
+        npcName: ship.name,
+        npcType: "route-hauler",
+        cause,
+      },
+      { visible: isVisible(ship, this.canvas, this.camera) },
+    );
   }
 
   damageHull(amount) {
@@ -567,9 +772,61 @@ export class Game {
     return Math.min(100, Math.max(6, damage));
   }
 
+  triggerImpactFeedback(damageAmount) {
+    const impact = Math.min(1, Math.max(0, damageAmount / 70));
+
+    this.cameraShake.duration = 0.16 + impact * 0.3;
+    this.cameraShake.time = this.cameraShake.duration;
+    this.cameraShake.magnitude = Math.max(this.cameraShake.magnitude, 4 + impact * MAX_IMPACT_SHAKE_PIXELS);
+    this.cameraShake.seed += 1;
+    this.damageFlashAlpha = Math.min(MAX_DAMAGE_FLASH_ALPHA, this.damageFlashAlpha + 0.08 + impact * 0.34);
+  }
+
+  updateImpactFeedback(deltaSeconds) {
+    this.damageFlashAlpha = Math.max(0, this.damageFlashAlpha - DAMAGE_FLASH_DECAY_PER_SECOND * deltaSeconds);
+    this.cameraShake.time = Math.max(0, this.cameraShake.time - deltaSeconds);
+
+    if (this.cameraShake.time === 0) {
+      this.cameraShake.magnitude = 0;
+    }
+  }
+
+  getShakenCamera() {
+    if (this.cameraShake.time <= 0 || this.cameraShake.duration <= 0) {
+      return this.camera;
+    }
+
+    const remaining = this.cameraShake.time / this.cameraShake.duration;
+    const strength = this.cameraShake.magnitude * remaining * remaining;
+    const pulse = this.lastFrameTime * 0.001;
+    const seed = this.cameraShake.seed;
+    const offsetX = Math.sin(pulse * 72 + seed * 13.1) * strength + Math.sin(pulse * 129 + seed * 4.7) * strength * 0.28;
+    const offsetY = Math.cos(pulse * 68 + seed * 9.3) * strength + Math.sin(pulse * 117 + seed * 7.9) * strength * 0.28;
+
+    return {
+      ...this.camera,
+      x: this.camera.x + offsetX,
+      y: this.camera.y + offsetY,
+    };
+  }
+
   breakAsteroid(asteroid, impactVelocity) {
     this.impactSeed += 1;
+    const resourceType = getAsteroidResourceType(asteroid);
 
+    this.state.ledger.recordEvent(
+      "asteroid.destroyed",
+      {
+        resourceType,
+        tier: asteroid.tier,
+        finalBreak: asteroid.tier <= 1,
+        radius: asteroid.radius,
+      },
+      { visible: false },
+    );
+
+    // Pickups come only from the final break. Bigger resource rocks become
+    // smaller rocks first, so shooting still has the classic Asteroids cadence.
     if (asteroid.tier <= 1) {
       this.pickups.push(
         ...createResourcePickupsFromAsteroid(asteroid, this.impactSeed + 50000, impactVelocity),
@@ -603,6 +860,41 @@ export class Game {
         size: 2 + Math.random() * 3,
         life: 0.45 + Math.random() * 0.35,
         maxLife: 0.8,
+      });
+    }
+  }
+
+  createHubDefenseBeam(site, asteroid) {
+    this.siteDefenseBeams.push({
+      start: { x: site.position.x, y: site.position.y },
+      end: { x: asteroid.position.x, y: asteroid.position.y },
+      life: 0.18,
+      maxLife: 0.18,
+    });
+  }
+
+  createHubDefenseBurst(site, asteroid) {
+    const count = 12 + Math.floor(asteroid.radius / 5);
+    const beamAngle = Math.atan2(asteroid.position.y - site.position.y, asteroid.position.x - site.position.x);
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = beamAngle + Math.PI + (Math.random() - 0.5) * Math.PI * 1.4;
+      const speed = 75 + Math.random() * 170;
+
+      this.particles.push({
+        type: index % 3 === 0 ? "spark" : "square",
+        position: {
+          x: asteroid.position.x + (Math.random() - 0.5) * asteroid.radius,
+          y: asteroid.position.y + (Math.random() - 0.5) * asteroid.radius,
+        },
+        velocity: {
+          x: asteroid.velocity.x * 0.25 + Math.cos(angle) * speed,
+          y: asteroid.velocity.y * 0.25 + Math.sin(angle) * speed,
+        },
+        color: index % 4 === 0 ? "#ffffff" : "#9ee8ff",
+        size: 1.5 + Math.random() * 3.2,
+        life: 0.28 + Math.random() * 0.28,
+        maxLife: 0.56,
       });
     }
   }
@@ -695,6 +987,24 @@ export class Game {
     hunter.velocity.y += normalY * (70 + overlap * 3);
   }
 
+  bumpShipFromBody(ship, body, strength = 1) {
+    const distanceX = ship.position.x - body.position.x;
+    const distanceY = ship.position.y - body.position.y;
+    const distance = Math.hypot(distanceX, distanceY) || 1;
+    const overlap = ship.radius + body.radius - distance;
+
+    if (overlap <= 0) {
+      return;
+    }
+
+    const normalX = distanceX / distance;
+    const normalY = distanceY / distance;
+    ship.position.x += normalX * overlap * strength;
+    ship.position.y += normalY * overlap * strength;
+    ship.velocity.x += normalX * (42 + overlap * 1.8);
+    ship.velocity.y += normalY * (42 + overlap * 1.8);
+  }
+
   separateHunters(firstHunter, secondHunter) {
     const distanceX = firstHunter.position.x - secondHunter.position.x;
     const distanceY = firstHunter.position.y - secondHunter.position.y;
@@ -733,6 +1043,60 @@ export class Game {
     const relativeSpeed = Math.hypot(relativeVelocityX, relativeVelocityY);
 
     return Math.min(12, Math.max(2, relativeSpeed * 0.025));
+  }
+
+  getNpcEnvironmentDamage(ship, body) {
+    const relativeVelocityX = ship.velocity.x - body.velocity.x;
+    const relativeVelocityY = ship.velocity.y - body.velocity.y;
+    const relativeSpeed = Math.hypot(relativeVelocityX, relativeVelocityY);
+
+    return Math.min(28, Math.max(4, relativeSpeed * 0.04 + body.radius * 0.055));
+  }
+
+  createNpcImpactSparks(ship) {
+    for (let index = 0; index < 10; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 40 + Math.random() * 115;
+
+      this.particles.push({
+        type: "spark",
+        position: {
+          x: ship.position.x,
+          y: ship.position.y,
+        },
+        velocity: {
+          x: ship.velocity.x * 0.2 + Math.cos(angle) * speed,
+          y: ship.velocity.y * 0.2 + Math.sin(angle) * speed,
+        },
+        color: Math.random() > 0.3 ? "#ffd36b" : "#ffffff",
+        size: 1 + Math.random() * 2,
+        life: 0.22 + Math.random() * 0.25,
+        maxLife: 0.47,
+      });
+    }
+  }
+
+  createNpcBurst(ship, impactVelocity) {
+    for (let index = 0; index < 28; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 70 + Math.random() * 210;
+
+      this.particles.push({
+        type: index % 2 === 0 ? "spark" : "square",
+        position: {
+          x: ship.position.x + Math.cos(angle) * ship.radius * 0.25,
+          y: ship.position.y + Math.sin(angle) * ship.radius * 0.25,
+        },
+        velocity: {
+          x: ship.velocity.x * 0.35 + Math.cos(angle) * speed + impactVelocity.x * 0.02,
+          y: ship.velocity.y * 0.35 + Math.sin(angle) * speed + impactVelocity.y * 0.02,
+        },
+        color: index % 4 === 0 ? "#ffffff" : "#ffd36b",
+        size: 1.5 + Math.random() * 3,
+        life: 0.35 + Math.random() * 0.45,
+        maxLife: 0.8,
+      });
+    }
   }
 
   createShipSparks(impactBody) {
@@ -799,6 +1163,14 @@ export class Game {
     this.particles = this.particles.filter((particle) => particle.life > 0);
   }
 
+  updateSiteDefenseBeams(deltaSeconds) {
+    this.siteDefenseBeams.forEach((beam) => {
+      beam.life -= deltaSeconds;
+    });
+
+    this.siteDefenseBeams = this.siteDefenseBeams.filter((beam) => beam.life > 0);
+  }
+
   collectPickups() {
     const collectedPickups = new Set();
 
@@ -808,6 +1180,13 @@ export class Game {
       }
 
       collectedPickups.add(pickup);
+      this.state.ledger.recordEvent(
+        "resource.collected",
+        {
+          resourceType: pickup.type,
+        },
+        { visible: false },
+      );
       this.onResourceCollected(pickup.type);
     });
 
@@ -819,37 +1198,46 @@ export class Game {
   }
 
   draw() {
+    const drawCamera = this.getShakenCamera();
+
     clearScreen(this.context, this.canvas);
-    drawGrid(this.context, this.canvas, this.camera);
-    this.drawWorldSites();
+    drawGrid(this.context, this.canvas, drawCamera);
+    this.drawWorldSites(drawCamera);
+    this.drawSiteDefenseBeams(drawCamera);
     this.asteroids.forEach((asteroid) => {
-      if (isVisible(asteroid, this.canvas, this.camera)) {
-        asteroid.draw(this.context, this.camera);
+      if (isVisible(asteroid, this.canvas, drawCamera)) {
+        asteroid.draw(this.context, drawCamera);
       }
     });
     this.lifeforms.forEach((lifeform) => {
-      if (isVisible(lifeform, this.canvas, this.camera)) {
-        lifeform.draw(this.context, this.camera);
+      if (isVisible(lifeform, this.canvas, drawCamera)) {
+        lifeform.draw(this.context, drawCamera);
+      }
+    });
+    this.npcShips.forEach((ship) => {
+      if (isVisible(ship, this.canvas, drawCamera)) {
+        ship.draw(this.context, drawCamera);
       }
     });
     this.pickups.forEach((pickup) => {
-      if (isVisible(pickup, this.canvas, this.camera)) {
-        pickup.draw(this.context, this.camera);
+      if (isVisible(pickup, this.canvas, drawCamera)) {
+        pickup.draw(this.context, drawCamera);
       }
     });
-    this.drawParticles();
-    this.drawCollectorField();
-    this.bullets.forEach((bullet) => bullet.draw(this.context, this.camera));
-    drawVector(this.context, this.ship.position, this.ship.velocity, this.camera);
-    this.scanner.draw(this.context, this.camera, this.ship);
-    this.ship.draw(this.context, this.camera);
+    this.drawParticles(drawCamera);
+    this.drawCollectorField(drawCamera);
+    this.bullets.forEach((bullet) => bullet.draw(this.context, drawCamera));
+    drawVector(this.context, this.ship.position, this.ship.velocity, drawCamera);
+    this.scanner.draw(this.context, drawCamera, this.ship);
+    this.ship.draw(this.context, drawCamera);
+    this.drawDamageFlash();
     this.drawViewportTitle();
   }
 
-  drawWorldSites() {
+  drawWorldSites(camera = this.camera) {
     this.worldSites.forEach((site) => {
-      const screenX = site.position.x - this.camera.x;
-      const screenY = site.position.y - this.camera.y;
+      const screenX = site.position.x - camera.x;
+      const screenY = site.position.y - camera.y;
       const isNearby = this.nearbySite?.id === site.id;
       const isDocked = this.dockedSite?.id === site.id;
 
@@ -883,8 +1271,8 @@ export class Game {
       this.context.stroke();
 
       if (isNearby) {
-        const shipX = this.ship.position.x - this.camera.x;
-        const shipY = this.ship.position.y - this.camera.y;
+        const shipX = this.ship.position.x - camera.x;
+        const shipY = this.ship.position.y - camera.y;
         this.context.strokeStyle = isDocked ? "rgba(255, 255, 255, 0.78)" : "rgba(158, 232, 255, 0.46)";
         this.context.setLineDash([8, 8]);
         this.context.beginPath();
@@ -893,6 +1281,32 @@ export class Game {
         this.context.stroke();
       }
 
+      this.context.restore();
+    });
+  }
+
+  drawSiteDefenseBeams(camera = this.camera) {
+    this.siteDefenseBeams.forEach((beam) => {
+      const alpha = Math.max(0, beam.life / beam.maxLife);
+      const startX = beam.start.x - camera.x;
+      const startY = beam.start.y - camera.y;
+      const endX = beam.end.x - camera.x;
+      const endY = beam.end.y - camera.y;
+
+      this.context.save();
+      this.context.globalAlpha = alpha;
+      this.context.strokeStyle = "#9ee8ff";
+      this.context.lineWidth = 3;
+      this.context.beginPath();
+      this.context.moveTo(startX, startY);
+      this.context.lineTo(endX, endY);
+      this.context.stroke();
+      this.context.strokeStyle = "rgba(255, 255, 255, 0.85)";
+      this.context.lineWidth = 1;
+      this.context.beginPath();
+      this.context.moveTo(startX, startY);
+      this.context.lineTo(endX, endY);
+      this.context.stroke();
       this.context.restore();
     });
   }
@@ -929,11 +1343,27 @@ export class Game {
     this.context.restore();
   }
 
-  drawParticles() {
+  drawDamageFlash() {
+    if (this.damageFlashAlpha <= 0) {
+      return;
+    }
+
+    const alpha = Math.min(MAX_DAMAGE_FLASH_ALPHA, this.damageFlashAlpha);
+
+    this.context.save();
+    this.context.fillStyle = `rgba(255, 34, 58, ${alpha})`;
+    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.context.strokeStyle = `rgba(255, 92, 108, ${Math.min(0.85, alpha * 1.8)})`;
+    this.context.lineWidth = 8;
+    this.context.strokeRect(4, 4, this.canvas.width - 8, this.canvas.height - 8);
+    this.context.restore();
+  }
+
+  drawParticles(camera = this.camera) {
     this.particles.forEach((particle) => {
       const alpha = Math.max(0, particle.life / particle.maxLife);
-      const screenX = particle.position.x - this.camera.x;
-      const screenY = particle.position.y - this.camera.y;
+      const screenX = particle.position.x - camera.x;
+      const screenY = particle.position.y - camera.y;
 
       this.context.save();
       this.context.globalAlpha = alpha;
@@ -950,13 +1380,13 @@ export class Game {
     });
   }
 
-  drawCollectorField() {
+  drawCollectorField(camera = this.camera) {
     if (!this.isCollectorActive()) {
       return;
     }
 
-    const screenX = this.ship.position.x - this.camera.x;
-    const screenY = this.ship.position.y - this.camera.y;
+    const screenX = this.ship.position.x - camera.x;
+    const screenY = this.ship.position.y - camera.y;
 
     this.context.save();
     this.context.strokeStyle = "rgba(115, 210, 255, 0.42)";
@@ -993,6 +1423,8 @@ export class Game {
 }
 
 function isNearSimulationArea(entity, canvas, camera, ship, margin) {
+  // The simulation bubble follows both the camera and the ship. This catches
+  // fast movement where the ship might outrun the camera's spring for a moment.
   const radius = entity.radius ?? 0;
   const screenX = entity.position.x - camera.x;
   const screenY = entity.position.y - camera.y;
@@ -1029,4 +1461,23 @@ function getSiteSubtitle(site) {
 
 function getTitleSideForPosition(shipPosition, targetPosition) {
   return targetPosition.x >= shipPosition.x ? "left" : "right";
+}
+
+function getAsteroidResourceType(asteroid) {
+  if (asteroid.color === WHITE_ASTEROID_COLOR) {
+    return "common";
+  }
+
+  const dominantResource = Object.entries(asteroid.resources)
+    .filter(([resource]) => resource !== "stone")
+    .reduce((best, [resource, amount]) => (amount > best.amount ? { resource, amount } : best), {
+      resource: null,
+      amount: 0,
+    }).resource;
+
+  if (!dominantResource) {
+    return "unknown";
+  }
+
+  return dominantResource === "iron" ? "fuel" : "crystal";
 }

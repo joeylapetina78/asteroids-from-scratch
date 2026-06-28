@@ -1,5 +1,10 @@
+import { createEventLedger } from "../systems/eventLedger.js?v=careful-mode";
+
+// Starting game/component state. This is the current lightweight substitute for
+// future accounts, saves, installed modules, and player profiles.
 export function createGameState() {
   return {
+    ledger: createEventLedger(),
     components: {
       account: {
         credits: 0,

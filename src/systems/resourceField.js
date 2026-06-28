@@ -1,6 +1,9 @@
 import { createValueNoise } from "./valueNoise.js";
 import { getZoneProfile } from "./worldZones.js?v=world-zones";
 
+// The resource field is the invisible geology layer. It combines deterministic
+// noise with the zone profile at a coordinate, then asteroidField turns those
+// profiles into actual rocks.
 const RESOURCE_COLORS = {
   stone: [170, 185, 210],
   iron: [255, 116, 82],
@@ -15,6 +18,8 @@ export function createResourceField(seed = 1337) {
   return {
     getProfile(x, y) {
       const zoneProfile = getZoneProfile(x, y);
+      // Zones multiply/bias the old noise system; they do not replace it. That
+      // is why zones have personality while still producing lumpy natural fields.
       const densityNoise = Math.pow(layeredNoise(noise, x + 1000, y - 1000, 1800, 0.18, 1), 1.15);
       const density = clamp(densityNoise * zoneProfile.asteroidDensityMultiplier, 0, 1.35);
       const iron = Math.pow(layeredNoise(noise, x + 9000, y + 1200, 2600, 0, 1), 1.6) * 1.5 * zoneProfile.redOreBias;

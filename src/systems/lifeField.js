@@ -2,6 +2,8 @@ import { Lifeform } from "../entities/Lifeform.js?v=hunter-tuning";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
 import { getZoneProfile } from "./worldZones.js?v=world-zones";
 
+// Life is seeded near asteroid anchors. Zone profiles weight those anchors so
+// hunters belong to dangerous regions and ambient forms prefer livelier fields.
 const HUNTER_PACK_ATTEMPTS = 6;
 const HUNTER_MAX_STARTING_COUNT = 12;
 const THREADLING_FLOCKS = 8;
@@ -33,6 +35,8 @@ export function createLifeField(asteroids) {
 }
 
 export function createHunterRespawn(ship, asteroids, seed) {
+  // Respawns also use zone-weighted anchors so killing a hunter does not turn
+  // every part of space into a permanent hunter factory.
   const anchors = asteroids
     .filter((asteroid) => Math.hypot(asteroid.position.x - ship.position.x, asteroid.position.y - ship.position.y) > 1100)
     .map((asteroid) => ({ asteroid, weight: getHunterAnchorWeight(asteroid) }))

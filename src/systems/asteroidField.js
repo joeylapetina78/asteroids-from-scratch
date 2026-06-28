@@ -1,6 +1,9 @@
 import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fuel-crystals";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
 
+// Startup asteroid generation. This is deliberately not streaming yet: it makes
+// a fixed field around the origin, using resourceField profiles to decide how
+// many rocks and what kind of resource color each area should have.
 export function createAsteroidField(canvas, resourceField) {
   const asteroids = [];
   const cellSize = canvas.width;

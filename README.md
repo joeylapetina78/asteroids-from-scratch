@@ -1,6 +1,8 @@
 # Asteroids From Scratch
 
-A small browser-based Asteroids project built one understandable slice at a time.
+A small browser-based Asteroids project built one understandable slice at a time. It started as ship flight on a canvas and is now becoming an open-space mining/RPG sandbox where page widgets represent ship components.
+
+For the fuller system map, see [docs/project-map.md](docs/project-map.md).
 
 ## Run It
 
@@ -40,6 +42,8 @@ Asteroids are generated from an invisible resource field. Dense regions contain 
 
 The field also contains autonomous life forms: hunters, threadling flocks, grazers, and skitters. They use steering behaviors to seek, flee, wander, flock, orbit around rocks, and avoid collisions. Red hunters can be shot, ram the ship, and lose their ship lock when the engine is powered down. Life forms outside the padded camera/ship area are preserved but not simulated every frame.
 
+The world now has a first pass at non-player ship traffic. Small cargo haulers follow routes between hub sites, avoid rocks, can be damaged by asteroid impacts, and can be shot. They are a foundation for later traders, escorts, piracy, reputation, and defend/attack choices.
+
 The field also contains many common white stone asteroids. Bullets and ship impacts break asteroids into smaller chunks before the smallest pieces disappear. Final white stones burst into small white debris squares when destroyed.
 
 Destroying the smallest resource rocks ejects red fuel squares or blue crystal squares. Flying over those squares sends larger units into the processor canvas instead of immediately turning them into fuel or crystal value. Thrust spends fuel.
@@ -50,4 +54,6 @@ The smaller processor canvas sits to the left on wide screens. It receives colle
 
 The cargo hold has its own pipe and physics space. Units sent there are stored instead of processed, which gives future quests a place to check for delivered goods. The hull panel tracks ship integrity. Rock impacts throw ship sparks and reduce integrity based on impact speed and asteroid size.
 
-Next likely milestone: save component panel positions, or add install/locked states so new systems can appear through progression.
+The game also has an in-memory event ledger for meaningful career/world events. It records docking, zone entry, shooting, asteroid destruction, resource collection, resource processing, cargo sales, repairs, enemy kills, and NPC ship destruction. The World panel shows a small verification readout with recent visible events and compact stats.
+
+Current likely milestone: keep shaping the hub/economy loop, then decide whether processor outputs should become a picklist/multiselect system.

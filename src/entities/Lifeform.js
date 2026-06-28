@@ -5,6 +5,9 @@ const LIFE_COLORS = {
   skitter: "#d9b3ff",
 };
 
+// A single Lifeform class covers the current autonomous agents. The type chooses
+// both drawing style and steering recipe: hunters seek, threadlings flock,
+// grazers orbit rocks, and skitters dart around danger.
 export class Lifeform {
   constructor({ type, x, y, velocity, seed }) {
     this.type = type;
@@ -41,6 +44,8 @@ export class Lifeform {
   updateHunter(deltaSeconds, world) {
     const distanceToShip = distance(this.position, world.ship.position);
 
+    // Powering the ship down removes the hunter lock. They still wander, which
+    // keeps them alive in the world without always knowing where the player is.
     if (world.shipPowered && distanceToShip < 1500) {
       this.applySteer(seek(this, world.ship.position, this.maxSpeed), 3.1);
       this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 110), 78), 0.65);

@@ -1,8 +1,10 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=credits-cargo";
+import { Game } from "./game.js?v=careful-mode";
 import { Processor } from "./systems/processor.js?v=credits-cargo";
-import { createGameState } from "./state/gameState.js?v=credits-cargo";
+import { createGameState } from "./state/gameState.js?v=careful-mode";
 
+// main.js is the browser/page coordinator. It creates the game systems, wires
+// DOM controls to component state, and keeps the visible panels in sync.
 const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v1";
 const PROCESS_OUTPUT_AMOUNT = 50;
 const CRYSTAL_VALUE_MULTIPLIER = 5;
@@ -10,6 +12,8 @@ const CARGO_UNIT_VALUES = {
   fuel: 15,
   crystal: 75,
 };
+const STARTER_REGION_NAME = "First Reach";
+const DEEP_SPACE_REGION_NAME = "The Black";
 const ammoCount = document.querySelector("#ammo-count");
 const cargoCanvas = document.querySelector("#cargo");
 const canvas = document.querySelector("#game");
@@ -38,6 +42,7 @@ const processorOutputPanel = document.querySelector(".processor-outputs");
 const scanButton = document.querySelector("#ship-scan");
 const scanergyCount = document.querySelector("#scanergy-count");
 const shipStatus = document.querySelector("#ship-status");
+const viewportRegion = document.querySelector("#viewport-region");
 const worldDebugFields = {
   position: document.querySelector("#debug-position"),
   zone: document.querySelector("#debug-zone"),
@@ -51,12 +56,21 @@ const worldDebugFields = {
   lifeforms: document.querySelector("#debug-lifeforms"),
   activeLifeforms: document.querySelector("#debug-active-lifeforms"),
   pickups: document.querySelector("#debug-pickups"),
+  eventCount: document.querySelector("#debug-event-count"),
+  shotsFired: document.querySelector("#debug-shots-fired"),
+  rocksDestroyed: document.querySelector("#debug-rocks-destroyed"),
+  resourcesCollected: document.querySelector("#debug-resources-collected"),
+  kills: document.querySelector("#debug-kills"),
+  salesCredits: document.querySelector("#debug-sales-credits"),
+  repairCredits: document.querySelector("#debug-repair-credits"),
+  eventLog: document.querySelector("#event-log"),
 };
 const state = createGameState();
 const processor = new Processor(processorCanvas, processUnit);
 const cargoHold = new Processor(cargoCanvas, () => {}, { isClickable: false });
 const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type), updateWorldDebugDisplay, updateHubDisplay);
 let bringPanelToFront = () => {};
+let renderedLedgerVersion = -1;
 
 function updateShipPowerDisplay() {
   const engine = state.components.engine;
@@ -198,6 +212,7 @@ function updateWorldDebugDisplay(debug) {
 
   worldDebugFields.position.textContent = `${Math.round(debug.worldX)}, ${Math.round(debug.worldY)}`;
   worldDebugFields.zone.textContent = `${zone.strongestZoneName} (${zone.strongestZoneId})`;
+  viewportRegion.textContent = getViewportLocationLabel(debug);
   worldDebugFields.influence.textContent = `${Math.round(zone.influence * 100)}%`;
   worldDebugFields.danger.textContent = `${Math.round(zone.danger * 100)}%`;
   worldDebugFields.density.textContent = `${zone.asteroidDensityMultiplier.toFixed(2)}x`;
@@ -208,6 +223,23 @@ function updateWorldDebugDisplay(debug) {
   worldDebugFields.lifeforms.textContent = String(debug.lifeformCount);
   worldDebugFields.activeLifeforms.textContent = String(debug.activeLifeformCount);
   worldDebugFields.pickups.textContent = String(debug.pickupCount);
+  updateEventLedgerDisplay();
+}
+
+function getViewportLocationLabel(debug) {
+  const zone = debug.zoneProfile;
+  const isInsideStarterRegion = zone.influence > 0;
+  const parts = [isInsideStarterRegion ? STARTER_REGION_NAME : DEEP_SPACE_REGION_NAME];
+
+  if (zone.influence >= 0.55 && zone.strongestZoneId !== "open-space") {
+    parts.push(`< ${zone.strongestZoneName}`);
+  }
+
+  if (debug.currentSite) {
+    parts.push(`-- ${debug.currentSite.name}`);
+  }
+
+  return parts.join(" ");
 }
 
 function updateWarningPanels() {
@@ -238,9 +270,17 @@ function getCollectorStrengthLabel() {
 }
 
 function processUnit(type) {
+  // Processor clicks do not care where a unit came from. The selected output
+  // determines whether the same physical unit becomes fuel, ammo, scanergy, or
+  // stored cargo.
   const output = getSelectedProcessorOutput();
   const amount = getUnitProcessValue(type);
   state.components.processor.output = output;
+  state.ledger.recordEvent("resource.processed", {
+    resourceType: type,
+    output,
+    amount: output === "cargo" ? 1 : amount,
+  });
 
   if (output === "fuel") {
     state.components.engine.fuel += amount;
@@ -262,6 +302,8 @@ function sellCargoHold() {
   }
 
   const cargoValue = getCargoHoldValue();
+  const cargoCounts = cargoHold.getUnitCounts();
+  const totalUnits = Object.values(cargoCounts).reduce((sum, count) => sum + count, 0);
 
   if (cargoValue <= 0) {
     return;
@@ -269,8 +311,35 @@ function sellCargoHold() {
 
   cargoHold.drainUnits();
   state.components.account.credits += cargoValue;
+  state.ledger.recordEvent("cargo.sold", {
+    creditsEarned: cargoValue,
+    units: cargoCounts,
+    totalUnits,
+  });
   updateHudDisplay();
   game.refreshSiteReadout();
+}
+
+function updateEventLedgerDisplay() {
+  if (renderedLedgerVersion === state.ledger.version) {
+    return;
+  }
+
+  renderedLedgerVersion = state.ledger.version;
+  worldDebugFields.eventCount.textContent = String(state.ledger.eventCount);
+  worldDebugFields.shotsFired.textContent = String(state.ledger.getStat("weapon.fired.total"));
+  worldDebugFields.rocksDestroyed.textContent = String(state.ledger.getStat("asteroid.destroyed.total"));
+  worldDebugFields.resourcesCollected.textContent = String(state.ledger.getStat("resource.collected.total"));
+  worldDebugFields.kills.textContent = String(state.ledger.getStat("enemy.destroyed.total") + state.ledger.getStat("npc.destroyed.total"));
+  worldDebugFields.salesCredits.textContent = String(state.ledger.getStat("credits.earned.sales"));
+  worldDebugFields.repairCredits.textContent = String(state.ledger.getStat("credits.spent.repairs"));
+  worldDebugFields.eventLog.replaceChildren(
+    ...state.ledger.getRecentEventGroups(5).reverse().map((eventGroup) => {
+      const item = document.createElement("li");
+      item.textContent = eventGroup.message;
+      return item;
+    }),
+  );
 }
 
 function getCargoHoldValue() {
@@ -327,6 +396,9 @@ function renderProcessorOutputs() {
 }
 
 function makePanelsDraggable() {
+  // Component panels are intentionally ordinary HTML. Their position and z-order
+  // are saved locally so the ship console can slowly become the player's own
+  // layout before full accounts/profiles exist.
   const gridSize = 20;
   const savedLayout = loadPanelLayout();
   let topPanelZIndex = getSavedTopZIndex(savedLayout);

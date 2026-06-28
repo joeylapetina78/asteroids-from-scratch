@@ -1,4 +1,4 @@
-import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=resource-pickups";
+import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=burst-fix-2";
 import { createRandom, randomRange } from "../systems/random.js";
 
 const PICKUP_SIZE = 7;
@@ -55,10 +55,11 @@ export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity
   const random = createRandom(seed);
   const pickupCount = 2 + Math.floor(random() * 3);
   const pickups = [];
+  const baseAngle = random() * Math.PI * 2;
 
   for (let index = 0; index < pickupCount; index += 1) {
-    const angle = random() * Math.PI * 2;
-    const speed = randomRange(random, 62, 145);
+    const angle = baseAngle + (Math.PI * 2 * index) / pickupCount + randomRange(random, -0.55, 0.55);
+    const speed = randomRange(random, 78, 170);
 
     pickups.push(
       new ResourcePickup({
@@ -66,8 +67,8 @@ export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity
         y: asteroid.position.y + Math.sin(angle) * randomRange(random, 4, 12),
         type: pickupType,
         velocity: {
-          x: asteroid.velocity.x * 0.22 + Math.cos(angle) * speed + impactVelocity.x * 0.006,
-          y: asteroid.velocity.y * 0.22 + Math.sin(angle) * speed + impactVelocity.y * 0.006,
+          x: asteroid.velocity.x * 0.12 + Math.cos(angle) * speed + impactVelocity.x * 0.0015,
+          y: asteroid.velocity.y * 0.12 + Math.sin(angle) * speed + impactVelocity.y * 0.0015,
         },
       }),
     );

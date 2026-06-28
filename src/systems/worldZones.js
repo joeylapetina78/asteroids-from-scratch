@@ -9,6 +9,9 @@ const PROFILE_FIELDS = [
   "danger",
 ];
 
+// Zones are authored regions of influence, not rooms or grid cells. The rest of
+// the world systems ask for a blended profile at a coordinate and use it as a
+// bias layer over their existing noise/randomness.
 const DEFAULT_PROFILE = {
   id: "open-space",
   name: "Open Space",
@@ -119,6 +122,8 @@ export const WORLD_ZONES = [
 ];
 
 export function getZoneProfile(x, y) {
+  // Each nearby zone contributes smoothly. If no zone is nearby, open-space
+  // defaults fill the profile so callers never need a special "no zone" branch.
   const zoneInfluences = WORLD_ZONES.map((zone) => ({
     zone,
     influence: getZoneInfluence(zone, x, y),

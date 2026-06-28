@@ -1,3 +1,5 @@
+// Rules that let the ship interface emerge from installed components. The
+// processor asks this file what outputs exist instead of hardcoding them in UI.
 export function getProcessorOutputs(components) {
   const outputs = [];
 

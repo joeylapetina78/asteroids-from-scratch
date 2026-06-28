@@ -45,7 +45,7 @@ export function drawVector(context, position, velocity, camera) {
 }
 
 export function isVisible(entity, canvas, camera) {
-  const margin = entity.radius ?? 0;
+  const margin = entity.drawRadius ?? entity.radius ?? 0;
   const screenX = entity.position.x - camera.x;
   const screenY = entity.position.y - camera.y;
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=hidden-hub" />
+    <link rel="stylesheet" href="./src/styles.css?v=stable-event-log" />
   </head>
   <body>
     <main class="game-shell">
@@ -172,6 +172,17 @@
                 <span>Life <strong id="debug-lifeforms">0</strong></span>
                 <span>Active Life <strong id="debug-active-lifeforms">0</strong></span>
                 <span>Pickups <strong id="debug-pickups">0</strong></span>
+                <span>Events <strong id="debug-event-count">0</strong></span>
+                <span>Shots <strong id="debug-shots-fired">0</strong></span>
+                <span>Rocks Logged <strong id="debug-rocks-destroyed">0</strong></span>
+                <span>Resources <strong id="debug-resources-collected">0</strong></span>
+                <span>Kills <strong id="debug-kills">0</strong></span>
+                <span>Sales <strong id="debug-sales-credits">0</strong></span>
+                <span>Repairs <strong id="debug-repair-credits">0</strong></span>
+                <div class="event-log-block">
+                  <strong>Recent Events</strong>
+                  <ol id="event-log" class="event-log"></ol>
+                </div>
               </div>
             </div>
           </section>
@@ -180,7 +191,7 @@
             <div class="component-panel-title">
               <div>
                 <strong>Viewport</strong>
-                <span>local space view</span>
+                <span id="viewport-region">First Reach &lt; Starter Drift</span>
               </div>
             </div>
             <canvas id="game" width="960" height="540" aria-label="Asteroids game canvas"></canvas>
@@ -190,6 +201,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=credits-cargo"></script>
+    <script type="module" src="./src/main.js?v=careful-mode"></script>
   </body>
 </html>

@@ -260,6 +260,44 @@ body {
   white-space: nowrap;
 }
 
+.event-log-block {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+  border-top: 1px solid #252a35;
+  padding-top: 6px;
+}
+
+.event-log-block > strong {
+  max-width: none;
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.event-log {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: flex-end;
+  margin: 0;
+  min-height: 93px;
+  padding-left: 16px;
+  color: #b8c1d4;
+}
+
+.event-log:empty::before {
+  content: "No events yet";
+  margin-left: -16px;
+  color: #7f8aa3;
+}
+
+.event-log li {
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 #game,
 #processor,
 #cargo {
