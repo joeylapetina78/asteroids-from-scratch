@@ -1,12 +1,13 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=journey-chapter-one-2";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=journey-chapter-one";
+import { Game } from "./game.js?v=journey-polish-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=journey-polish-v1";
 import { Processor } from "./systems/processor.js?v=credits-cargo";
-import { createGameState } from "./state/gameState.js?v=journey-chapter-one";
+import { createGameState } from "./state/gameState.js?v=journey-polish-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
-const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v1";
+const OLD_PANEL_LAYOUT_STORAGE_KEYS = ["asteroids.panelLayout.v1", "asteroids.panelLayout.v2"];
+const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v3";
 const PROCESS_OUTPUT_AMOUNT = 50;
 const CRYSTAL_VALUE_MULTIPLIER = 5;
 const CARGO_UNIT_VALUES = {
@@ -15,6 +16,20 @@ const CARGO_UNIT_VALUES = {
 };
 const STARTER_REGION_NAME = "First Reach";
 const DEEP_SPACE_REGION_NAME = "The Black";
+const DEFAULT_PANEL_LAYOUT = {
+  viewport: { x: 0, y: 0, z: 20 },
+  journey: { x: 980, y: 20, z: 80 },
+  engine: { x: -300, y: 20, z: 70 },
+  scanner: { x: 980, y: 300, z: 90 },
+  docking: { x: -300, y: 340, z: 100 },
+  miner: { x: 980, y: 500, z: 60 },
+  collector: { x: 980, y: 680, z: 50 },
+  hull: { x: -300, y: 580, z: 50 },
+  world: { x: 980, y: 20, z: 40 },
+  hub: { x: -300, y: 340, z: 110 },
+  processor: { x: 0, y: 0, z: 1 },
+  cargo: { x: 0, y: 0, z: 1 },
+};
 const ammoCount = document.querySelector("#ammo-count");
 const cargoCanvas = document.querySelector("#cargo");
 const canvas = document.querySelector("#game");
@@ -35,6 +50,7 @@ const hubRepairCost = document.querySelector("#hub-repair-cost");
 const hubSellCargoButton = document.querySelector("#hub-sell-cargo");
 const hubStatus = document.querySelector("#hub-status");
 const journeyAcceptButton = document.querySelector("#journey-accept");
+const journeyChapter = document.querySelector("#journey-chapter");
 const journeyLog = document.querySelector("#journey-log");
 const journeyMissionObjective = document.querySelector("#journey-mission-objective");
 const journeyMissionTitle = document.querySelector("#journey-mission-title");
@@ -78,10 +94,14 @@ const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUn
 const journeyDirector = createJourneyDirector({
   state,
   game,
-  onChange: renderJourney,
+  onChange: () => {
+    renderJourney();
+    updateHudDisplay();
+  },
   showComponent: setComponentAvailable,
 });
 let bringPanelToFront = () => {};
+let positionPanelById = () => {};
 let renderedLedgerVersion = -1;
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
@@ -142,7 +162,7 @@ scanButton.addEventListener("click", () => {
 });
 
 journeyAcceptButton.addEventListener("click", () => {
-  journeyDirector.acceptMission();
+  journeyDirector.pressJourneyButton();
   updateHudDisplay();
 });
 
@@ -161,6 +181,8 @@ hubSellCargoButton.addEventListener("click", () => {
 
 renderProcessorOutputs();
 game.placeShipNearSite("scrap-porch");
+clearOldPanelLayouts();
+makePanelsDraggable();
 journeyDirector.start();
 updateShipPowerDisplay();
 updateHudDisplay();
@@ -168,7 +190,6 @@ updateHudDisplay();
 game.start();
 processor.start();
 cargoHold.start();
-makePanelsDraggable();
 
 function updateHudDisplay() {
   renderProcessorOutputs();
@@ -323,17 +344,26 @@ function setComponentAvailable(componentId, isAvailable = true) {
   const panel = document.querySelector(`[data-panel-id="${componentId}"]`);
 
   if (panel) {
+    const wasLocked = panel.classList.contains("is-component-locked");
     panel.classList.toggle("is-component-locked", !isAvailable);
+
+    if (isAvailable && wasLocked) {
+      positionPanelById(componentId);
+      bringPanelToFront(panel);
+      playPanelReveal(panel);
+    }
   }
 }
 
 function renderJourney(journey = state.journey) {
-  journeyStatus.textContent = journey.mission?.status ?? "chapter one";
+  journeyChapter.textContent = journey.chapterName ?? "Chapter 1";
+  journeyStatus.textContent = journey.episodeName ?? "The Interview";
   journeyMissionTitle.textContent = journey.mission?.title ?? "Journey";
   journeyMissionObjective.textContent = journey.mission?.objective ?? "Awaiting instructions.";
-  journeyAcceptButton.hidden = journey.mission?.status !== "offered";
+  journeyAcceptButton.hidden = !journey.pendingAcknowledgement && journey.mission?.status !== "offered";
+  journeyAcceptButton.textContent = journey.pendingAcknowledgement?.label ?? "Accept Job";
   journeyLog.replaceChildren(
-    ...journey.messages.map((message) => {
+    ...journey.messages.slice(-1).map((message) => {
       const line = document.createElement("div");
       const speaker = document.createElement("strong");
       const text = document.createElement("span");
@@ -345,6 +375,23 @@ function renderJourney(journey = state.journey) {
       return line;
     }),
   );
+  playJourneyUpdate();
+}
+
+function playPanelReveal(panel) {
+  panel.classList.remove("is-component-revealed");
+  void panel.offsetWidth;
+  panel.classList.add("is-component-revealed");
+}
+
+function playJourneyUpdate() {
+  const animatedNodes = [journeyLog, journeyMissionTitle, journeyMissionObjective, journeyAcceptButton];
+
+  animatedNodes.forEach((node) => {
+    node.classList.remove("is-journey-updated");
+    void node.offsetWidth;
+    node.classList.add("is-journey-updated");
+  });
 }
 
 function setTractorFieldActive(isActive) {
@@ -487,7 +534,9 @@ function makePanelsDraggable() {
   // are saved locally so the ship console can slowly become the player's own
   // layout before full accounts/profiles exist.
   const gridSize = 20;
+  const viewportPadding = 12;
   const savedLayout = loadPanelLayout();
+  const offsetsByPanelId = new Map();
   let topPanelZIndex = getSavedTopZIndex(savedLayout);
 
   document.querySelectorAll(".component-panel").forEach((panel) => {
@@ -498,15 +547,15 @@ function makePanelsDraggable() {
       return;
     }
 
+    const defaultPanel = DEFAULT_PANEL_LAYOUT[panelId] ?? { x: 0, y: 0, z: 1 };
     const savedPanel = panelId ? savedLayout.panels?.[panelId] : null;
-    const offset = { x: savedPanel?.x ?? 0, y: savedPanel?.y ?? 0 };
+    const offset = { x: savedPanel?.x ?? defaultPanel.x, y: savedPanel?.y ?? defaultPanel.y };
     let drag = null;
 
-    panel.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
-
-    if (savedPanel?.z) {
-      panel.style.zIndex = String(savedPanel.z);
-    }
+    panel.style.zIndex = String(savedPanel?.z > 1 ? savedPanel.z : defaultPanel.z);
+    offsetsByPanelId.set(panelId, offset);
+    applyPanelOffset(panel, offset, { clamp: isPanelMeasurable(panel) });
+    savePanelLayout(panel, offset);
 
     handle.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) {
@@ -532,7 +581,7 @@ function makePanelsDraggable() {
 
       offset.x = Math.round((drag.originX + event.clientX - drag.startX) / gridSize) * gridSize;
       offset.y = Math.round((drag.originY + event.clientY - drag.startY) / gridSize) * gridSize;
-      panel.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
+      applyPanelOffset(panel, offset);
       savePanelLayout(panel, offset);
     });
 
@@ -550,12 +599,60 @@ function makePanelsDraggable() {
   });
 
   bringPanelToFront = setPanelTop;
+  positionPanelById = (panelId) => {
+    const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
+    const offset = offsetsByPanelId.get(panelId);
+
+    if (!panel || !offset) {
+      return;
+    }
+
+    applyPanelOffset(panel, offset);
+    savePanelLayout(panel, offset);
+  };
 
   function setPanelTop(panel) {
     topPanelZIndex += 1;
     panel.style.zIndex = String(topPanelZIndex);
     savePanelLayout(panel);
   }
+
+  function applyPanelOffset(panel, offset, { clamp = true } = {}) {
+    panel.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
+    if (clamp) {
+      clampPanelOffset(panel, offset);
+    }
+    panel.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
+  }
+
+  function clampPanelOffset(panel, offset) {
+    const rect = panel.getBoundingClientRect();
+    let adjustX = 0;
+    let adjustY = 0;
+
+    if (rect.left < viewportPadding) {
+      adjustX = viewportPadding - rect.left;
+    } else if (rect.right > window.innerWidth - viewportPadding) {
+      adjustX = window.innerWidth - viewportPadding - rect.right;
+    }
+
+    if (rect.top < viewportPadding) {
+      adjustY = viewportPadding - rect.top;
+    } else if (rect.bottom > window.innerHeight - viewportPadding) {
+      adjustY = window.innerHeight - viewportPadding - rect.bottom;
+    }
+
+    offset.x = Math.round((offset.x + adjustX) / gridSize) * gridSize;
+    offset.y = Math.round((offset.y + adjustY) / gridSize) * gridSize;
+  }
+}
+
+function isPanelMeasurable(panel) {
+  return getComputedStyle(panel).display !== "none";
+}
+
+function clearOldPanelLayouts() {
+  OLD_PANEL_LAYOUT_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
 }
 
 function loadPanelLayout() {
@@ -570,8 +667,11 @@ function getSavedTopZIndex(layout) {
   const savedZIndexes = Object.values(layout.panels ?? {})
     .map((panel) => panel.z)
     .filter((zIndex) => Number.isFinite(zIndex));
+  const defaultZIndexes = Object.values(DEFAULT_PANEL_LAYOUT)
+    .map((panel) => panel.z)
+    .filter((zIndex) => Number.isFinite(zIndex));
 
-  return Math.max(10, ...savedZIndexes);
+  return Math.max(10, ...defaultZIndexes, ...savedZIndexes);
 }
 
 function savePanelLayout(panel, offset = null) {

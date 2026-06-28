@@ -131,6 +131,12 @@ export function createEventLedger(options = {}) {
       incrementStat("ship.moved.total");
       incrementStat("ship.distance.logged", event.payload.distance ?? 0);
       setStatMax("ship.speed.max", event.payload.speed ?? 0);
+    } else if (event.type === "ship.thrusted") {
+      incrementStat("ship.thrusted.total");
+      setStatMax("ship.thrusted.speed.max", event.payload.speed ?? 0);
+    } else if (event.type === "site.nearby") {
+      incrementStat("site.nearby.total");
+      incrementStat(`site.nearby.${event.payload.siteId ?? "unknown"}`);
     } else if (event.type === "ship.nearObject") {
       incrementStat("ship.nearObject.total");
       incrementStat(`ship.nearObject.${event.payload.targetType ?? "unknown"}`);
@@ -238,6 +244,14 @@ function getDefaultMessage(type, payload) {
 
   if (type === "ship.moved") {
     return "Ship moved";
+  }
+
+  if (type === "ship.thrusted") {
+    return "Ship thrust engaged";
+  }
+
+  if (type === "site.nearby") {
+    return `Near ${payload.siteName ?? payload.siteId}`;
   }
 
   if (type === "ship.nearObject") {

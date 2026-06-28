@@ -43,15 +43,60 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
       },
       { visible: false },
     );
-    unlockComponent("engine", "Engine");
     say(
       "Rook",
       "Look, here's your engine component right here. It tells you the controls for your ship. Use 'em, let's get going. We're on the clock.",
+      { action: "show-engine", label: "Okay" },
     );
     onChange(journey);
   }
 
+  function acknowledge() {
+    const acknowledgement = journey.pendingAcknowledgement;
+
+    if (!acknowledgement) {
+      return;
+    }
+
+    journey.pendingAcknowledgement = null;
+
+    if (acknowledgement.action === "show-engine") {
+      unlockComponent("engine", "Engine");
+      setMission({
+        ...journey.mission,
+        objective: "Power the ship and reach Yard Exchange.",
+      });
+    } else if (acknowledgement.action === "show-scanner") {
+      state.components.scanner.maxScanergy = 400;
+      state.components.scanner.scanergy = Math.max(state.components.scanner.scanergy, 400);
+      unlockComponent("scanner", "Scanner");
+    } else if (acknowledgement.action === "show-docking") {
+      unlockComponent("docking", "Docking");
+      setMission({
+        ...journey.mission,
+        objective: "Dock at Yard Exchange.",
+      });
+    }
+
+    onChange(journey);
+  }
+
+  function pressJourneyButton() {
+    if (journey.pendingAcknowledgement) {
+      acknowledge();
+      return;
+    }
+
+    if (journey.mission?.status === "offered") {
+      acceptMission();
+    }
+  }
+
   function update() {
+    if (journey.pendingAcknowledgement) {
+      return;
+    }
+
     const events = state.ledger.getEventsAfterId(lastEventId, { includeHidden: true });
 
     events.forEach((event) => {
@@ -65,20 +110,19 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
       return;
     }
 
-    if (event.type === "ship.moved" && !journey.flags.firstMovement) {
+    if (event.type === "ship.thrusted" && !journey.flags.firstThrust) {
+      journey.flags.firstThrust = true;
       journey.flags.firstMovement = true;
-      unlockComponent("scanner", "Scanner");
-      state.components.scanner.maxScanergy = 400;
-      state.components.scanner.scanergy = Math.max(state.components.scanner.scanergy, 400);
       say(
         "Rook",
         "Great, and we're off. Fantastic. Here's your scanner. We only have enough for a few scans, so make them count. Look for hub circles and follow the haulers if you get turned around.",
+        { action: "show-scanner", label: "Okay" },
       );
       onChange(journey);
       return;
     }
 
-    if (event.type === "npc.enteredViewport" && !journey.flags.firstHaulerSeen) {
+    if (event.type === "npc.enteredViewport" && journey.flags.firstThrust && !journey.flags.firstHaulerSeen) {
       journey.flags.firstHaulerSeen = true;
       say("Rook", "Look, these haulers are working our route. They can get you where we're going if you get lost.");
       onChange(journey);
@@ -92,14 +136,16 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
       return;
     }
 
-    if (event.type === "site.enteredViewport" && event.payload.siteId === "yard-exchange" && !journey.flags.yardExchangeSeen) {
+    if (
+      (event.type === "site.enteredViewport" || event.type === "site.nearby") &&
+      event.payload.siteId === "yard-exchange" &&
+      !journey.flags.yardExchangeSeen
+    ) {
       journey.flags.yardExchangeSeen = true;
-      unlockComponent("docking", "Docking");
-      setMission({
-        ...journey.mission,
-        objective: "Dock at Yard Exchange.",
+      say("Rook", "There it is. Go ahead and dock with it when we're close enough. Here's your docking lock.", {
+        action: "show-docking",
+        label: "Okay",
       });
-      say("Rook", "There it is. Go ahead and dock with it when we're close enough. Here's your docking lock.");
       onChange(journey);
       return;
     }
@@ -167,7 +213,7 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
     journey.mission = mission;
   }
 
-  function say(speaker, text) {
+  function say(speaker, text, acknowledgement = null) {
     journey.messages.push({
       id: journey.nextMessageId,
       speaker,
@@ -175,13 +221,16 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
       time: Date.now(),
     });
     journey.nextMessageId += 1;
-    journey.messages = journey.messages.slice(-6);
+    journey.messages = journey.messages.slice(-1);
+    journey.pendingAcknowledgement = acknowledgement;
   }
 
   return {
     start,
     update,
     acceptMission,
+    acknowledge,
+    pressJourneyButton,
   };
 }
 

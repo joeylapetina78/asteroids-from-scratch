@@ -12,7 +12,7 @@ import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=site-scanner";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=docking-services";
-import { createGameState } from "./state/gameState.js?v=journey-chapter-one";
+import { createGameState } from "./state/gameState.js?v=journey-polish-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -87,8 +87,10 @@ export class Game {
     this.viewportTitleTimer = 0;
     this.discoveredSiteIds = new Set();
     this.currentZoneId = null;
+    this.hasRecordedPlayerThrust = false;
     this.lastShipMovementEventPosition = { ...this.ship.position };
     this.visibleStorySiteIds = new Set();
+    this.nearbyStorySiteIds = new Set();
     this.visibleStoryNpcIds = new Set();
     this.proximityCooldowns = new Map();
     this.lastFrameTime = 0;
@@ -188,6 +190,7 @@ export class Game {
     // Order matters: ship/world state is advanced first, then collisions and UI
     // readouts are derived from the updated world.
     this.ship.update(deltaSeconds, this.input);
+    this.updatePlayerThrustEvent();
     this.updateMovementEvent();
     this.updateWorldSiteInteraction();
     this.updateZoneTitle();
@@ -265,6 +268,21 @@ export class Game {
       );
     }
 
+    if (this.nearbySite && !this.nearbyStorySiteIds.has(this.nearbySite.id)) {
+      this.nearbyStorySiteIds.add(this.nearbySite.id);
+      this.state.ledger.recordEvent(
+        "site.nearby",
+        {
+          siteId: this.nearbySite.id,
+          siteName: this.nearbySite.name,
+          siteType: this.nearbySite.type,
+          x: Math.round(this.nearbySite.position.x),
+          y: Math.round(this.nearbySite.position.y),
+        },
+        { visible: false },
+      );
+    }
+
     if (this.input.wasPressed("KeyE") && this.nearbySite && this.state.components.docking.installed) {
       this.setDockedSite(this.dockedSite ? null : this.nearbySite);
     }
@@ -287,6 +305,23 @@ export class Game {
         x: Math.round(this.ship.position.x),
         y: Math.round(this.ship.position.y),
         distance: Math.round(distanceMoved),
+        speed: Math.round(Math.hypot(this.ship.velocity.x, this.ship.velocity.y)),
+      },
+      { visible: false },
+    );
+  }
+
+  updatePlayerThrustEvent() {
+    if (this.hasRecordedPlayerThrust || !this.ship.isThrusting) {
+      return;
+    }
+
+    this.hasRecordedPlayerThrust = true;
+    this.state.ledger.recordEvent(
+      "ship.thrusted",
+      {
+        x: Math.round(this.ship.position.x),
+        y: Math.round(this.ship.position.y),
         speed: Math.round(Math.hypot(this.ship.velocity.x, this.ship.velocity.y)),
       },
       { visible: false },

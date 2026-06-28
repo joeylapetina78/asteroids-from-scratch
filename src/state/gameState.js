@@ -7,9 +7,12 @@ export function createGameState() {
     ledger: createEventLedger(),
     journey: {
       chapterId: "chapter-1",
+      chapterName: "Chapter 1",
+      episodeName: "The Interview",
       messages: [],
       mission: null,
       flags: {},
+      pendingAcknowledgement: null,
       nextMessageId: 1,
     },
     components: {
@@ -32,7 +35,7 @@ export function createGameState() {
       scanner: {
         installed: false,
         scanergy: 0,
-        maxScanergy: 200,
+        maxScanergy: 400,
       },
       processor: {
         installed: false,
