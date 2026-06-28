@@ -1,38 +1,48 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=story-events";
+import { createEventLedger } from "../systems/eventLedger.js?v=journey-chapter-one";
 
 // Starting game/component state. This is the current lightweight substitute for
 // future accounts, saves, installed modules, and player profiles.
 export function createGameState() {
   return {
     ledger: createEventLedger(),
+    journey: {
+      chapterId: "chapter-1",
+      messages: [],
+      mission: null,
+      flags: {},
+      nextMessageId: 1,
+    },
     components: {
       account: {
         credits: 0,
       },
       engine: {
-        installed: true,
+        installed: false,
         powered: false,
         thrustMode: "forward",
         fuel: 200,
         maxFuel: 200,
       },
       miner: {
-        installed: true,
+        installed: false,
         armed: false,
         ammo: 100,
         maxAmmo: 200,
       },
       scanner: {
-        installed: true,
+        installed: false,
         scanergy: 0,
         maxScanergy: 200,
       },
       processor: {
-        installed: true,
+        installed: false,
         output: "fuel",
       },
       cargoHold: {
-        installed: true,
+        installed: false,
+      },
+      docking: {
+        installed: false,
       },
       hull: {
         installed: true,
@@ -40,7 +50,7 @@ export function createGameState() {
         maxIntegrity: 100,
       },
       collector: {
-        installed: true,
+        installed: false,
         isActive: false,
       },
     },

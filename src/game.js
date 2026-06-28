@@ -12,7 +12,7 @@ import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=site-scanner";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=docking-services";
-import { createGameState } from "./state/gameState.js?v=story-events";
+import { createGameState } from "./state/gameState.js?v=journey-chapter-one";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -40,7 +40,7 @@ const REPAIR_CREDITS_PER_HULL = 2;
 const DAMAGE_FLASH_DECAY_PER_SECOND = 2.9;
 const MAX_DAMAGE_FLASH_ALPHA = 0.42;
 const MAX_IMPACT_SHAKE_PIXELS = 28;
-const STORY_MOVEMENT_DISTANCE = 36;
+const STORY_MOVEMENT_DISTANCE = 16;
 const STORY_PROXIMITY_RADIUS = 92;
 const STORY_PROXIMITY_COOLDOWN_SECONDS = 3.5;
 
@@ -105,8 +105,30 @@ export class Game {
     requestAnimationFrame((time) => this.frame(time));
   }
 
+  placeShipNearSite(siteId, offset = { x: 210, y: -90 }) {
+    const site = this.worldSites.find((worldSite) => worldSite.id === siteId);
+
+    if (!site) {
+      return;
+    }
+
+    const yardExchange = this.worldSites.find((worldSite) => worldSite.id === "yard-exchange");
+    this.ship.position.x = site.position.x + offset.x;
+    this.ship.position.y = site.position.y + offset.y;
+    this.ship.velocity.x = 26;
+    this.ship.velocity.y = -14;
+    this.ship.angle = yardExchange
+      ? Math.atan2(yardExchange.position.y - this.ship.position.y, yardExchange.position.x - this.ship.position.x)
+      : -Math.PI / 2;
+    this.camera.centerX = this.ship.position.x;
+    this.camera.centerY = this.ship.position.y;
+    this.camera.x = this.camera.centerX - this.canvas.width / 2;
+    this.camera.y = this.camera.centerY - this.canvas.height / 2;
+    this.lastShipMovementEventPosition = { ...this.ship.position };
+  }
+
   setShipPowered(isPowered) {
-    if (this.shipDestroyed) {
+    if (this.shipDestroyed || !this.state.components.engine.installed) {
       return;
     }
 
@@ -243,7 +265,7 @@ export class Game {
       );
     }
 
-    if (this.input.wasPressed("KeyE") && this.nearbySite) {
+    if (this.input.wasPressed("KeyE") && this.nearbySite && this.state.components.docking.installed) {
       this.setDockedSite(this.dockedSite ? null : this.nearbySite);
     }
   }
@@ -448,7 +470,7 @@ export class Game {
   }
 
   toggleDock() {
-    if (!this.nearbySite && !this.dockedSite) {
+    if (!this.state.components.docking.installed || (!this.nearbySite && !this.dockedSite)) {
       return;
     }
 

@@ -88,6 +88,12 @@ export function createEventLedger(options = {}) {
     return groups;
   }
 
+  function getEventsAfterId(eventId = 0, options = {}) {
+    const includeHidden = options.includeHidden ?? false;
+
+    return events.filter((event) => event.id > eventId && (includeHidden || event.visible));
+  }
+
   function applyEventStats(event) {
     if (event.type === "site.docked") {
       incrementStat("site.docked.total");
@@ -192,6 +198,7 @@ export function createEventLedger(options = {}) {
     getStatsSnapshot,
     getRecentEvents,
     getRecentEventGroups,
+    getEventsAfterId,
     get historyLimit() {
       return historyLimit;
     },

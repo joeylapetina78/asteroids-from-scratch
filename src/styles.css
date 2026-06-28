@@ -82,6 +82,10 @@ body {
   display: none;
 }
 
+.component-panel.is-component-locked {
+  display: none;
+}
+
 .component-panel.is-panel-hidden {
   visibility: hidden;
   pointer-events: none;
@@ -151,9 +155,14 @@ body {
 .collector-panel,
 .docking-panel,
 .hub-panel,
-.world-panel {
+.world-panel,
+.journey-panel {
   display: grid;
   gap: 8px;
+}
+
+.journey-panel {
+  flex: 0 0 300px;
 }
 
 .engine-panel {
@@ -194,7 +203,8 @@ body {
 .dock-button,
 .sell-button,
 .repair-button,
-.tractor-button {
+.tractor-button,
+.journey-button {
   border: 1px solid #4b5566;
   border-radius: 6px;
   padding: 8px 12px;
@@ -209,7 +219,8 @@ body {
 .dock-button:hover,
 .sell-button:hover,
 .repair-button:hover,
-.tractor-button:hover {
+.tractor-button:hover,
+.journey-button:hover {
   border-color: #7f8aa3;
   background: #222733;
 }
@@ -249,6 +260,11 @@ body {
   border-color: #9ee8ff;
   background: #123044;
   box-shadow: 0 0 24px rgba(115, 210, 255, 0.22);
+}
+
+.journey-button {
+  border-color: #786b42;
+  color: #fff0bd;
 }
 
 .sell-button {
@@ -342,6 +358,40 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.journey-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: flex-end;
+  min-height: 122px;
+  color: #d9deea;
+  font-size: 0.78rem;
+}
+
+.journey-line {
+  border-left: 2px solid rgba(255, 211, 107, 0.48);
+  padding-left: 8px;
+}
+
+.journey-line strong {
+  display: block;
+  color: #ffd36b;
+  font-size: 0.72rem;
+}
+
+.journey-mission {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid #252a35;
+  padding-top: 8px;
+  color: #d9deea;
+  font-size: 0.82rem;
+}
+
+.journey-mission strong {
+  color: #ffffff;
 }
 
 #game,
@@ -488,7 +538,8 @@ body {
   .docking-panel,
   .hub-panel,
   .hull-panel,
-  .world-panel {
+  .world-panel,
+  .journey-panel {
     width: 100%;
     flex-basis: auto;
   }

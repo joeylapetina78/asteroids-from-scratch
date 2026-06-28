@@ -1,7 +1,8 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=story-events";
+import { Game } from "./game.js?v=journey-chapter-one-2";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=journey-chapter-one";
 import { Processor } from "./systems/processor.js?v=credits-cargo";
-import { createGameState } from "./state/gameState.js?v=story-events";
+import { createGameState } from "./state/gameState.js?v=journey-chapter-one";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -33,6 +34,11 @@ const hubRepairButton = document.querySelector("#hub-repair");
 const hubRepairCost = document.querySelector("#hub-repair-cost");
 const hubSellCargoButton = document.querySelector("#hub-sell-cargo");
 const hubStatus = document.querySelector("#hub-status");
+const journeyAcceptButton = document.querySelector("#journey-accept");
+const journeyLog = document.querySelector("#journey-log");
+const journeyMissionObjective = document.querySelector("#journey-mission-objective");
+const journeyMissionTitle = document.querySelector("#journey-mission-title");
+const journeyStatus = document.querySelector("#journey-status");
 const minerArmed = document.querySelector("#miner-armed");
 const powerButton = document.querySelector("#ship-power");
 const processorCanvas = document.querySelector("#processor");
@@ -69,6 +75,12 @@ const state = createGameState();
 const processor = new Processor(processorCanvas, processUnit);
 const cargoHold = new Processor(cargoCanvas, () => {}, { isClickable: false });
 const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type), updateWorldDebugDisplay, updateHubDisplay);
+const journeyDirector = createJourneyDirector({
+  state,
+  game,
+  onChange: renderJourney,
+  showComponent: setComponentAvailable,
+});
 let bringPanelToFront = () => {};
 let renderedLedgerVersion = -1;
 const COMPONENT_WARNING_RULES = [
@@ -83,7 +95,7 @@ function updateShipPowerDisplay() {
 
   powerButton.textContent = engine.powered ? "Power Down" : "Power Ship";
   powerButton.setAttribute("aria-pressed", String(engine.powered));
-  powerButton.disabled = state.components.hull.integrity <= 0;
+  powerButton.disabled = !engine.installed || state.components.hull.integrity <= 0;
   shipStatus.textContent = state.components.hull.integrity <= 0 ? "ship destroyed" : engine.powered ? "ship online" : "ship offline";
 }
 
@@ -129,6 +141,11 @@ scanButton.addEventListener("click", () => {
   game.scanForCrystals();
 });
 
+journeyAcceptButton.addEventListener("click", () => {
+  journeyDirector.acceptMission();
+  updateHudDisplay();
+});
+
 dockToggleButton.addEventListener("click", () => {
   game.toggleDock();
 });
@@ -143,6 +160,8 @@ hubSellCargoButton.addEventListener("click", () => {
 });
 
 renderProcessorOutputs();
+game.placeShipNearSite("scrap-porch");
+journeyDirector.start();
 updateShipPowerDisplay();
 updateHudDisplay();
 
@@ -174,7 +193,7 @@ function updateHubDisplay(siteState) {
 function updateDockingDisplay(siteState) {
   const site = siteState.dockedSite ?? siteState.nearbySite;
 
-  if (!site) {
+  if (!state.components.docking.installed || !site) {
     dockingStatus.textContent = "no target";
     dockingTarget.textContent = "None";
     dockingDetail.textContent = "No dock target";
@@ -228,6 +247,7 @@ function updateHubServiceDisplay(siteState) {
 }
 
 function updateWorldDebugDisplay(debug) {
+  journeyDirector.update();
   const zone = debug.zoneProfile;
 
   worldDebugFields.position.textContent = `${Math.round(debug.worldX)}, ${Math.round(debug.worldY)}`;
@@ -297,6 +317,34 @@ function setPanelHidden(panel, isHidden) {
 
 function isPanelHidden(panel) {
   return panel.classList.contains("is-panel-hidden");
+}
+
+function setComponentAvailable(componentId, isAvailable = true) {
+  const panel = document.querySelector(`[data-panel-id="${componentId}"]`);
+
+  if (panel) {
+    panel.classList.toggle("is-component-locked", !isAvailable);
+  }
+}
+
+function renderJourney(journey = state.journey) {
+  journeyStatus.textContent = journey.mission?.status ?? "chapter one";
+  journeyMissionTitle.textContent = journey.mission?.title ?? "Journey";
+  journeyMissionObjective.textContent = journey.mission?.objective ?? "Awaiting instructions.";
+  journeyAcceptButton.hidden = journey.mission?.status !== "offered";
+  journeyLog.replaceChildren(
+    ...journey.messages.map((message) => {
+      const line = document.createElement("div");
+      const speaker = document.createElement("strong");
+      const text = document.createElement("span");
+
+      line.className = "journey-line";
+      speaker.textContent = message.speaker;
+      text.textContent = message.text;
+      line.append(speaker, text);
+      return line;
+    }),
+  );
 }
 
 function setTractorFieldActive(isActive) {
