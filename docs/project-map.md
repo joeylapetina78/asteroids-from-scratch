@@ -130,17 +130,23 @@ Current opening flow:
 1. Prologue starts with only the Journey panel visible.
 2. The Galaxy invites the player to play.
 3. Rook starts Chapter 1, `Starting Out`, and mission `The Interview`.
-4. Rook activates the Viewport.
-5. Rook explains panel dragging and activates the Engine.
-6. First real player thrust triggers the Scanner prompt.
-7. Yard Exchange entering view or becoming nearby triggers the Docking prompt.
-8. Docking at Yard Exchange completes the mission.
+4. Rook activates the Hull and points out ship integrity.
+5. Rook asks the player to drag both the Journey and Hull panels.
+6. Rook activates the Viewport.
+7. Rook activates the Scanner and asks the player to scan once.
+8. Rook activates the Engine.
+9. Powering the engine advances the mission to movement.
+10. First real player thrust confirms the ship is underway.
+11. Yard Exchange entering view or becoming nearby triggers the Docking prompt.
+12. Docking at Yard Exchange completes the mission.
 
 Mission event handling keeps listening while an NPC line is waiting for `Okay`. That lets stronger world facts interrupt tutorial beats: if the player reaches Yard Exchange before acknowledging the Scanner lesson, the mission can skip ahead to the Docking prompt instead of blocking progress.
 
 Journey is intentionally not a normal debug log. It shows the current story beat, clears acknowledged text, and reserves space so the panel does not jump between messages.
 
 Each mission step also has `helpText`. This is the plain explanation layer for players who skipped or forgot the NPC line. The Journey panel exposes it separately from the NPC story text.
+
+Mission rules can require multiple flags via `requiresFlags`. The first use is panel-drag training: the DOM drag system records hidden `component.dragged` events, the mission sets separate flags for Journey and Hull, and then advances when both flags are true.
 
 ### Game Loop
 
@@ -216,7 +222,7 @@ Lifeforms are created once at startup. The game preserves all lifeforms but only
 
 [src/systems/scanner.js](../src/systems/scanner.js) creates a forward cone scan. It can be given a target list so starter/tutorial scanners can look only for sites, while later scanner upgrades can include resources or other target classes. Resource asteroids are found in front of the ship; world sites use a broader scan range and can be filtered to the current mission target.
 
-Scanning costs scanergy in `Game.scanForCrystals`.
+Scanning costs scanergy in `Game.scanForCrystals`. Scanner use no longer requires the engine to be powered, which lets the tutorial teach navigation before handing over propulsion.
 
 ### Processor And Cargo Hold
 
@@ -266,7 +272,7 @@ Component state lives under `state.components`.
 | `collector` | Tractor Field hold button | Pulls loose resource pickups toward the ship while spending scanergy. |
 | `processor` | Processor canvas and output choices | Turns clicked resource units into fuel, ammo, scanergy, or cargo storage. |
 | `cargoHold` | Cargo canvas | Stores units for selling and future mission delivery. |
-| `hull` | Integrity readout | Takes collision damage. At 0%, ship is destroyed and controls are disabled. |
+| `hull` | Integrity readout, VIN plate | Takes collision damage. At 0%, ship is destroyed and controls are disabled. The starter VIN is state-backed so future docking, scanning, permits, and identity tricks have a real hook. |
 | `docking` | Target, credits, dock button | Shows nearest/nearby site state and toggles docking. |
 | `hub` | Hidden service panel | Appears only while docked at a hub. Sells cargo and repairs hull. |
 | `world` | Debug component | Shows world position, zone, danger, bias values, and object counts. |

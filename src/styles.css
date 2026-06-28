@@ -221,6 +221,29 @@ body {
   gap: 8px;
 }
 
+.vin-plate {
+  align-self: stretch;
+  border: 1px solid rgba(205, 225, 255, 0.28);
+  border-radius: 6px;
+  color: #dfe8f8;
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 1rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.vin-plate span {
+  color: #9aa6b6;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vin-plate strong {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9rem;
+}
+
 .world-panel {
   width: 240px;
 }
@@ -420,6 +443,11 @@ body {
   display: block;
   color: #ffd36b;
   font-size: 0.72rem;
+}
+
+.journey-line-text {
+  display: block;
+  min-height: 1.15em;
 }
 
 .is-journey-updated {

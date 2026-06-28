@@ -68,6 +68,8 @@ export function createGameState() {
         installed: true,
         integrity: 100,
         maxIntegrity: 100,
+        vin: "YRDSKF-01-7A3",
+        vinPlateAttached: true,
       },
       collector: {
         installed: false,

@@ -12,7 +12,7 @@ import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=mission-targets";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=docking-services";
-import { createGameState } from "./state/gameState.js?v=starter-skiff-v1";
+import { createGameState } from "./state/gameState.js?v=hull-vin-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -134,7 +134,19 @@ export class Game {
       return;
     }
 
+    const wasPowered = this.state.components.engine.powered;
     this.state.components.engine.powered = isPowered;
+
+    if (isPowered && !wasPowered) {
+      this.state.ledger.recordEvent(
+        "engine.powered",
+        {
+          x: Math.round(this.ship.position.x),
+          y: Math.round(this.ship.position.y),
+        },
+        { visible: false },
+      );
+    }
 
     if (!isPowered) {
       this.input.clearGameKeys();
@@ -147,7 +159,7 @@ export class Game {
   scanForCrystals() {
     const scanner = this.state.components.scanner;
 
-    if (this.shipDestroyed || !this.state.components.engine.powered || !scanner.installed || scanner.scanergy < SCANERGY_PER_SCAN) {
+    if (this.shipDestroyed || !scanner.installed || scanner.scanergy < SCANERGY_PER_SCAN) {
       return;
     }
 

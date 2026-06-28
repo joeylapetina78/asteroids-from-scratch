@@ -18,48 +18,211 @@ export const chapterOneInterviewMission = {
   },
   title: "The Interview",
   successCriteria: "Dock at Yard Exchange.",
-  startStepId: "show-viewport",
+  startStepId: "show-hull",
   steps: [
     {
-      id: "show-viewport",
-      objective: "Get your bearings.",
-      helpText: "Press Okay to bring up the viewport. The viewport is the big space view where the ship, rocks, and hubs appear.",
-      onEnter: [
-        {
-          type: "say",
-          speaker: "Rook",
-          text:
-            "All right, rookie. First I'll bring up your viewport. It is your local space view, not just a window. Try to keep the expensive parts of the ship inside it.",
-          acknowledgement: { label: "Okay" },
-        },
-      ],
-      onAcknowledge: [{ type: "showComponent", componentId: "viewport", componentName: "Viewport" }, { type: "goToStep", stepId: "show-engine" }],
-    },
-    {
-      id: "show-engine",
+      id: "show-hull",
       objective: "Get your bearings.",
       helpText:
-        "Press Okay to activate the engine panel. Power the ship means click Power Ship on that panel. You can drag panels by their titles.",
+        "This is the Hull panel. Hull integrity is ship health. If it reaches 0%, the ship is wrecked.",
       onEnter: [
+        { type: "showComponent", componentId: "hull", componentName: "Hull" },
         {
           type: "say",
           speaker: "Rook",
           text:
-            "Okay, consider this your assessment test, training, and interview all in one. Get this hunk of junk to the Yard Exchange in one piece and that'll be good enough. You can move panels by dragging their titles. Now I'll activate your engine component.",
+            "All right, rookie. Here are our ship controls and displays. You can see the hull of this ship's at 100%. You better keep it that way, ya hear? Consider this your assessment test, training, and interview all in one.",
           acknowledgement: { label: "Okay" },
         },
       ],
       onAcknowledge: [
         { type: "clearMessage" },
+        { type: "goToStep", stepId: "drag-panels" },
+      ],
+    },
+    {
+      id: "drag-panels",
+      objective: "Move the Journey and Hull panels.",
+      helpText:
+        "Drag panels by their titles. Move the Journey panel and the Hull panel anywhere comfortable in the display area.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "People have preferences, who am I to stand in the way of them. Go ahead and drag this panel and the Hull panel around the display area. Get a feel for how it works.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "component.dragged",
+          requiresFlags: ["journeyPanelMoved", "hullPanelMoved"],
+          nextStepId: "show-viewport",
+        },
+      ],
+      considerations: [
+        {
+          id: "journey-panel-moved",
+          eventType: "component.dragged",
+          payloadEquals: { componentId: "journey" },
+          setFlag: "journeyPanelMoved",
+          once: true,
+          actions: [
+            {
+              type: "say",
+              speaker: "Rook",
+              text: "There you go. Even my voice box moves. Now give the Hull panel a try too.",
+            },
+          ],
+        },
+        {
+          id: "hull-panel-moved",
+          eventType: "component.dragged",
+          payloadEquals: { componentId: "hull" },
+          setFlag: "hullPanelMoved",
+          once: true,
+          actions: [
+            {
+              type: "say",
+              speaker: "Rook",
+              text: "Good, that's the Hull panel. Move the Journey panel too, then we'll get to the flying part.",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "show-viewport",
+      objective: "Get your bearings.",
+      helpText: "Press Add Viewport to bring up the big space view where the ship, rocks, and hubs appear.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Good good. Now let's bring in your viewport so you can get a feel for things. Ready?",
+          acknowledgement: { label: "Add Viewport" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
+        { type: "goToStep", stepId: "show-scanner" },
+      ],
+    },
+    {
+      id: "show-scanner",
+      objective: "Get your bearings.",
+      helpText:
+        "Press Add Scanner to install the starter scanner. This scanner only points toward the mission hub.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "We are that unpowered ship in the center of the viewport. That's Scrap Porch in the lower right. Your goal is to deliver this ship to the other hub in this zone, the Yard Exchange. Here is your scanner so you can find your way.",
+          acknowledgement: { label: "Add Scanner" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "setComponentValue", componentId: "scanner", key: "maxScanergy", value: 400 },
+        { type: "setComponentValue", componentId: "scanner", key: "targets", value: ["sites"] },
+        { type: "raiseComponentValue", componentId: "scanner", key: "scanergy", value: 400 },
+        { type: "showComponent", componentId: "scanner", componentName: "Scanner" },
+        { type: "goToStep", stepId: "try-scanner" },
+      ],
+    },
+    {
+      id: "try-scanner",
+      objective: "Use the scanner once.",
+      helpText:
+        "Press Scan once. The pale marker points toward Yard Exchange. The scanner has limited scanergy, so do not burn it all at once.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Go ahead and hit it once to see which way we're headed. You can see it only has so much power. If you run out and still haven't made it to the hub, follow some space truckers.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "site.enteredViewport",
+          payloadEquals: { siteId: "yard-exchange" },
+          nextStepId: "show-docking",
+        },
+        {
+          eventType: "site.nearby",
+          payloadEquals: { siteId: "yard-exchange" },
+          nextStepId: "show-docking",
+        },
+        {
+          eventType: "scanner.used",
+          nextStepId: "show-engine",
+        },
+      ],
+    },
+    {
+      id: "show-engine",
+      objective: "Get the engine online.",
+      helpText:
+        "Press Add Engine to bring up the Engine panel. Power Ship turns the ship on. W thrusts, A/D rotate, and S brakes.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text: "Good. Let me get you the Engine panel so you can get going.",
+          acknowledgement: { label: "Add Engine" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
         { type: "showComponent", componentId: "engine", componentName: "Engine" },
-        { type: "goToStep", stepId: "first-thrust" },
+        { type: "goToStep", stepId: "power-on" },
+      ],
+    },
+    {
+      id: "power-on",
+      objective: "Power the ship.",
+      helpText:
+        "Use the Engine panel and click Power Ship. The controls are shown on that same panel.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text: "All right, power this baby on and let's get going. Time is money. Controls are on the engine panel.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "site.enteredViewport",
+          payloadEquals: { siteId: "yard-exchange" },
+          nextStepId: "show-docking",
+        },
+        {
+          eventType: "site.nearby",
+          payloadEquals: { siteId: "yard-exchange" },
+          nextStepId: "show-docking",
+        },
+        {
+          eventType: "engine.powered",
+          nextStepId: "first-thrust",
+        },
       ],
     },
     {
       id: "first-thrust",
-      objective: "Power the ship and reach Yard Exchange.",
+      objective: "Head for Yard Exchange.",
       helpText:
-        "Find the Engine panel and click Power Ship. Then press W to thrust, A/D to rotate, and S to brake. Yard Exchange is a hub: a large circle in the space view.",
+        "Press W to thrust, A/D to rotate, and S to brake. Yard Exchange is the hub your scanner pointed toward.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text: "Good, good. Head out when you're ready.",
+        },
+      ],
       transitions: [
         {
           eventType: "site.enteredViewport",
@@ -74,7 +237,7 @@ export const chapterOneInterviewMission = {
         {
           eventType: "ship.thrusted",
           setFlag: "firstThrust",
-          nextStepId: "show-scanner",
+          nextStepId: "find-yard-exchange",
         },
       ],
       considerations: [
@@ -109,45 +272,17 @@ export const chapterOneInterviewMission = {
       ],
     },
     {
-      id: "show-scanner",
-      objective: "Power the ship and reach Yard Exchange.",
-      helpText:
-        "Press Okay to activate the scanner. For this job it only looks for Yard Exchange. Press Scan and follow the pale hub marker.",
-      onEnter: [
-        {
-          type: "say",
-          speaker: "Rook",
-          text:
-            "Great, and we're off. Fantastic. Now I'll turn on the scanner. This loaner only looks for our destination, Yard Exchange. Press Scan and follow the pale hub marker if you get turned around.",
-          acknowledgement: { label: "Okay" },
-        },
-      ],
-      onAcknowledge: [
-        { type: "clearMessage" },
-        { type: "setComponentValue", componentId: "scanner", key: "maxScanergy", value: 400 },
-        { type: "setComponentValue", componentId: "scanner", key: "targets", value: ["sites"] },
-        { type: "raiseComponentValue", componentId: "scanner", key: "scanergy", value: 400 },
-        { type: "showComponent", componentId: "scanner", componentName: "Scanner" },
-        { type: "goToStep", stepId: "find-yard-exchange" },
-      ],
-      transitions: [
-        {
-          eventType: "site.enteredViewport",
-          payloadEquals: { siteId: "yard-exchange" },
-          nextStepId: "show-docking",
-        },
-        {
-          eventType: "site.nearby",
-          payloadEquals: { siteId: "yard-exchange" },
-          nextStepId: "show-docking",
-        },
-      ],
-    },
-    {
       id: "find-yard-exchange",
       objective: "Find Yard Exchange.",
       helpText:
         "Fly toward Yard Exchange. Scan if you need help. The scanner marker points to the hub, which looks like a large circle or ring.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text: "Great, and we're off. Fantastic. Yard Exchange, here we come.",
+        },
+      ],
       transitions: [
         {
           eventType: "site.enteredViewport",

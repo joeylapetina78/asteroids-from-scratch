@@ -1,8 +1,8 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=scanner-mission-targets";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=scanner-mission-targets";
+import { Game } from "./game.js?v=rook-tutorial-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=rook-tutorial-v1";
 import { Processor } from "./systems/processor.js?v=credits-cargo";
-import { createGameState } from "./state/gameState.js?v=starter-skiff-v1";
+import { createGameState } from "./state/gameState.js?v=hull-vin-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -22,6 +22,7 @@ const CARGO_UNIT_VALUES = {
 };
 const STARTER_REGION_NAME = "First Reach";
 const DEEP_SPACE_REGION_NAME = "The Black";
+const JOURNEY_WORD_DELAY_MS = 34;
 const DEFAULT_PANEL_LAYOUT = {
   viewport: { x: 0, y: 0, z: 20 },
   journey: { x: 980, y: 20, z: JOURNEY_PANEL_Z_INDEX },
@@ -42,6 +43,7 @@ const canvas = document.querySelector("#game");
 const creditCount = document.querySelector("#credit-count");
 const fuelCount = document.querySelector("#fuel-count");
 const hullCount = document.querySelector("#hull-count");
+const hullVin = document.querySelector("#hull-vin");
 const dockToggleButton = document.querySelector("#dock-toggle");
 const dockingDetail = document.querySelector("#docking-detail");
 const dockingStatus = document.querySelector("#docking-status");
@@ -110,6 +112,7 @@ const journeyDirector = createJourneyDirector({
 let bringPanelToFront = () => {};
 let positionPanelById = () => {};
 let renderedLedgerVersion = -1;
+let journeyTypeTimers = [];
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
   { panelId: "miner", cautionAt: 50, criticalAt: 20, getValue: () => state.components.miner.ammo },
@@ -209,6 +212,7 @@ function updateHudDisplay() {
   tractorFieldStatus.textContent = state.components.collector.isActive ? "Pulling" : "Idle";
   tractorFieldButton.setAttribute("aria-pressed", String(state.components.collector.isActive));
   hullCount.textContent = `${Math.ceil(state.components.hull.integrity)}%`;
+  hullVin.textContent = state.components.hull.vinPlateAttached ? state.components.hull.vin : "UNVERIFIED";
   minerArmed.checked = state.components.miner.armed;
   updateWarningPanels();
 }
@@ -370,6 +374,7 @@ function renderJourney(journey = state.journey) {
   journeyHelpText.textContent = journey.mission?.helpText ?? "Read the current objective and follow the next prompt.";
   journeyAcceptButton.hidden = !journey.pendingAcknowledgement && journey.mission?.status !== "offered";
   journeyAcceptButton.textContent = journey.pendingAcknowledgement?.label ?? journey.mission?.actionLabel ?? "Accept Job";
+  clearJourneyTypeTimers();
   journeyLog.replaceChildren(
     ...journey.messages.slice(-1).map((message) => {
       const line = document.createElement("div");
@@ -378,7 +383,8 @@ function renderJourney(journey = state.journey) {
 
       line.className = "journey-line";
       speaker.textContent = message.speaker;
-      text.textContent = message.text;
+      text.className = "journey-line-text";
+      typeJourneyText(text, message.text);
       line.append(speaker, text);
       return line;
     }),
@@ -400,6 +406,31 @@ function playJourneyUpdate() {
     void node.offsetWidth;
     node.classList.add("is-journey-updated");
   });
+}
+
+function typeJourneyText(element, fullText) {
+  clearJourneyTypeTimers();
+
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    element.textContent = fullText;
+    return;
+  }
+
+  const words = fullText.split(" ");
+  element.textContent = "";
+
+  words.forEach((word, index) => {
+    const timer = window.setTimeout(() => {
+      element.textContent += `${index === 0 ? "" : " "}${word}`;
+    }, index * JOURNEY_WORD_DELAY_MS);
+
+    journeyTypeTimers.push(timer);
+  });
+}
+
+function clearJourneyTypeTimers() {
+  journeyTypeTimers.forEach((timer) => window.clearTimeout(timer));
+  journeyTypeTimers = [];
 }
 
 function setTractorFieldActive(isActive) {
@@ -602,6 +633,7 @@ function makePanelsDraggable() {
       }
 
       panel.classList.remove("is-dragging");
+      recordPanelDrag(panelId, drag, offset);
       drag = null;
     }
   });
@@ -659,6 +691,22 @@ function makePanelsDraggable() {
     offset.x = Math.round((offset.x + adjustX) / gridSize) * gridSize;
     offset.y = Math.round((offset.y + adjustY) / gridSize) * gridSize;
   }
+}
+
+function recordPanelDrag(panelId, drag, offset) {
+  if (!panelId || (drag.originX === offset.x && drag.originY === offset.y)) {
+    return;
+  }
+
+  state.ledger.recordEvent(
+    "component.dragged",
+    {
+      componentId: panelId,
+      x: offset.x,
+      y: offset.y,
+    },
+    { visible: false },
+  );
 }
 
 function isPanelMeasurable(panel) {

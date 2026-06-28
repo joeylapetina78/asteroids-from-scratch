@@ -76,13 +76,12 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     if (consideration) {
       applyRuleMarkers(consideration);
       runActions(consideration.actions ?? []);
-      return true;
     }
 
     const transition = (step.transitions ?? []).find((candidate) => matchesEventRule(candidate, event));
 
     if (!transition) {
-      return false;
+      return Boolean(consideration);
     }
 
     applyRuleMarkers(transition);
@@ -152,6 +151,10 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     }
 
     if (rule.requiresFlag && !state.journey.flags[rule.requiresFlag]) {
+      return false;
+    }
+
+    if (rule.requiresFlags?.some((flag) => !state.journey.flags[flag])) {
       return false;
     }
 
