@@ -15,9 +15,15 @@ export function createScanner(canvas) {
     markerAge: SCAN_MARKER_SECONDS,
     targets: [],
 
-    scan(ship, asteroids, sites = []) {
+    scan(ship, asteroids, sites = [], options = {}) {
       this.pulseAge = 0;
-      this.targets = [...findResourceAsteroids(ship, asteroids), ...findWorldSites(ship, sites)]
+      const scanTargets = options.targets ?? ["resources", "sites"];
+      const resourceTargets = scanTargets.includes("resources") ? findResourceAsteroids(ship, asteroids) : [];
+      const siteTargets = scanTargets.includes("sites")
+        ? findWorldSites(ship, sites, { targetSiteId: options.targetSiteId })
+        : [];
+
+      this.targets = [...resourceTargets, ...siteTargets]
         .sort((first, second) => first.distance - second.distance);
       this.markerAge = this.targets.length > 0 ? 0 : SCAN_MARKER_SECONDS;
     },
@@ -61,8 +67,9 @@ function findResourceAsteroids(ship, asteroids) {
     .sort((first, second) => first.distance - second.distance);
 }
 
-function findWorldSites(ship, sites) {
+function findWorldSites(ship, sites, { targetSiteId = null } = {}) {
   return sites
+    .filter((site) => !targetSiteId || site.id === targetSiteId)
     .map((site) => {
       const offsetX = site.position.x - ship.position.x;
       const offsetY = site.position.y - ship.position.y;

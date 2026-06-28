@@ -52,6 +52,7 @@ export function createGameState() {
         installed: false,
         scanergy: 0,
         maxScanergy: 400,
+        targets: ["resources", "sites"],
       },
       processor: {
         installed: false,

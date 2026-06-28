@@ -451,6 +451,24 @@ body {
   color: #ffffff;
 }
 
+.journey-help {
+  border-top: 1px solid #1f2530;
+  padding-top: 5px;
+  color: #aeb8cc;
+}
+
+.journey-help summary {
+  cursor: pointer;
+  color: #c9d7f2;
+  font-size: 0.76rem;
+}
+
+.journey-help span {
+  margin-top: 4px;
+  color: #b8c1d4;
+  line-height: 1.35;
+}
+
 #game,
 #processor,
 #cargo {

@@ -9,7 +9,7 @@ import { createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=z
 import { createNpcRouteShips } from "./systems/npcRoutes.js?v=soft-cargo-train";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=draw-radius";
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
-import { createScanner } from "./systems/scanner.js?v=site-scanner";
+import { createScanner } from "./systems/scanner.js?v=mission-targets";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=docking-services";
 import { createGameState } from "./state/gameState.js?v=starter-skiff-v1";
@@ -163,7 +163,10 @@ export class Game {
       { visible: false },
     );
     this.onHudChange(this.state);
-    this.scanner.scan(this.ship, this.asteroids, this.worldSites);
+    this.scanner.scan(this.ship, this.asteroids, this.worldSites, {
+      targets: scanner.targets,
+      targetSiteId: this.state.journey.mission?.targetSiteId,
+    });
   }
 
   frame(time) {

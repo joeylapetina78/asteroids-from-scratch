@@ -1,6 +1,6 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=starter-skiff-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=starter-skiff-v1";
+import { Game } from "./game.js?v=scanner-mission-targets";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=scanner-mission-targets";
 import { Processor } from "./systems/processor.js?v=credits-cargo";
 import { createGameState } from "./state/gameState.js?v=starter-skiff-v1";
 
@@ -57,6 +57,7 @@ const hubSellCargoButton = document.querySelector("#hub-sell-cargo");
 const hubStatus = document.querySelector("#hub-status");
 const journeyAcceptButton = document.querySelector("#journey-accept");
 const journeyChapter = document.querySelector("#journey-chapter");
+const journeyHelpText = document.querySelector("#journey-help-text");
 const journeyLog = document.querySelector("#journey-log");
 const journeyMissionObjective = document.querySelector("#journey-mission-objective");
 const journeyMissionTitle = document.querySelector("#journey-mission-title");
@@ -366,6 +367,7 @@ function renderJourney(journey = state.journey) {
   journeyStatus.textContent = journey.episodeName ?? "The Interview";
   journeyMissionTitle.textContent = journey.mission?.title ?? "Journey";
   journeyMissionObjective.textContent = journey.mission?.objective ?? "Awaiting instructions.";
+  journeyHelpText.textContent = journey.mission?.helpText ?? "Read the current objective and follow the next prompt.";
   journeyAcceptButton.hidden = !journey.pendingAcknowledgement && journey.mission?.status !== "offered";
   journeyAcceptButton.textContent = journey.pendingAcknowledgement?.label ?? journey.mission?.actionLabel ?? "Accept Job";
   journeyLog.replaceChildren(

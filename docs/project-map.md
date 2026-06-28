@@ -38,6 +38,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/styles.css](../src/styles.css) | Component panel layout, viewport sizing, warning flashes, hidden hub behavior, and control styling. |
 | [src/state/gameState.js](../src/state/gameState.js) | Starting story, ship, component, and account state. This is the current single source for installed systems, ship frame, engine tuning, and initial fuel/ammo/scan/hull values. |
 | [src/components/componentRules.js](../src/components/componentRules.js) | Derives available processor outputs from installed components. |
+| [src/content/missions/chapterOneInterview.js](../src/content/missions/chapterOneInterview.js) | Authored data for the current Chapter 1 mission. Holds steps, objectives, help text, event transitions, considerations, and actions. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. |
 
 ## Entity Dictionary
@@ -118,7 +119,11 @@ NPC ships are the first non-player ship actors. They use steering behavior like 
 
 ### Journey Director
 
-[src/systems/journeyDirector.js](../src/systems/journeyDirector.js) is the current story/chapter coordinator. It watches hidden events from the ledger and reveals components in sequence.
+[src/systems/journeyDirector.js](../src/systems/journeyDirector.js) is the current top-level story/chapter coordinator. It owns the active mission runner, watches hidden events from the ledger, and keeps the Journey panel in sync.
+
+[src/systems/missionRunner.js](../src/systems/missionRunner.js) executes authored mission data. It knows how to enter steps, respond to acknowledgments, evaluate event transitions, run consideration responses, set mission flags, and run mission actions.
+
+[src/content/missions/chapterOneInterview.js](../src/content/missions/chapterOneInterview.js) is the first mission content file. It is JavaScript data rather than JSON for now, because the shape is still being discovered and small event predicates/markers are easier to evolve here. The structure is intentionally close to JSON so a future editor or content pipeline can grow out of it.
 
 Current opening flow:
 
@@ -131,7 +136,11 @@ Current opening flow:
 7. Yard Exchange entering view or becoming nearby triggers the Docking prompt.
 8. Docking at Yard Exchange completes the mission.
 
+Mission event handling keeps listening while an NPC line is waiting for `Okay`. That lets stronger world facts interrupt tutorial beats: if the player reaches Yard Exchange before acknowledging the Scanner lesson, the mission can skip ahead to the Docking prompt instead of blocking progress.
+
 Journey is intentionally not a normal debug log. It shows the current story beat, clears acknowledged text, and reserves space so the panel does not jump between messages.
+
+Each mission step also has `helpText`. This is the plain explanation layer for players who skipped or forgot the NPC line. The Journey panel exposes it separately from the NPC story text.
 
 ### Game Loop
 
@@ -205,7 +214,7 @@ Lifeforms are created once at startup. The game preserves all lifeforms but only
 
 ### Scanner
 
-[src/systems/scanner.js](../src/systems/scanner.js) creates a forward cone scan. It finds resource asteroids in front of the ship and world sites within a broader scan range, then draws edge markers in the viewport.
+[src/systems/scanner.js](../src/systems/scanner.js) creates a forward cone scan. It can be given a target list so starter/tutorial scanners can look only for sites, while later scanner upgrades can include resources or other target classes. Resource asteroids are found in front of the ship; world sites use a broader scan range and can be filtered to the current mission target.
 
 Scanning costs scanergy in `Game.scanForCrystals`.
 
