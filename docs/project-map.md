@@ -36,7 +36,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/main.js](../src/main.js) | Browser-side coordinator. Reads DOM nodes, creates state, creates `Game`, creates processor canvases, updates HUD, handles panel dragging and saved layout. |
 | [src/game.js](../src/game.js) | Main simulation and render loop. Owns active world objects and high-level gameplay rules. |
 | [src/styles.css](../src/styles.css) | Component panel layout, viewport sizing, warning flashes, hidden hub behavior, and control styling. |
-| [src/state/gameState.js](../src/state/gameState.js) | Starting component/account state. This is the current single source for installed systems and initial fuel/ammo/scan/hull values. |
+| [src/state/gameState.js](../src/state/gameState.js) | Starting story, ship, component, and account state. This is the current single source for installed systems, ship frame, engine tuning, and initial fuel/ammo/scan/hull values. |
 | [src/components/componentRules.js](../src/components/componentRules.js) | Derives available processor outputs from installed components. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. |
 
@@ -46,7 +46,16 @@ The ship position is world-space. The viewport camera follows the ship and conve
 
 Defined in [src/entities/Ship.js](../src/entities/Ship.js).
 
-The ship has `position`, `velocity`, `angle`, and a reference to the engine component state. Power comes from `state.components.engine.powered`. When powered down, control is disabled but the ship still drifts through space.
+The ship has `position`, `velocity`, `angle`, a reference to the engine component state, and a reference to `state.ship` for the current frame/shape. Power comes from `state.components.engine.powered`. When powered down, control is disabled but the ship still drifts through space.
+
+The starter frame is `yard-skiff`, a deliberately clunky shape for Chapter 1. The old sleek triangle shape still exists as `dart` for later faster ships. The engine owns movement tuning and thrust visuals:
+
+- `thrustPower`
+- `maxSpeed`
+- `rotationSpeed`
+- `fuelBurnRate`
+- `reverseThrustMultiplier`
+- `thrustVisual`
 
 Controls:
 
@@ -107,6 +116,23 @@ NPC ships are the first non-player ship actors. They use steering behavior like 
 
 ## System Dictionary
 
+### Journey Director
+
+[src/systems/journeyDirector.js](../src/systems/journeyDirector.js) is the current story/chapter coordinator. It watches hidden events from the ledger and reveals components in sequence.
+
+Current opening flow:
+
+1. Prologue starts with only the Journey panel visible.
+2. The Galaxy invites the player to play.
+3. Rook starts Chapter 1, `Starting Out`, and mission `The Interview`.
+4. Rook activates the Viewport.
+5. Rook explains panel dragging and activates the Engine.
+6. First real player thrust triggers the Scanner prompt.
+7. Yard Exchange entering view or becoming nearby triggers the Docking prompt.
+8. Docking at Yard Exchange completes the mission.
+
+Journey is intentionally not a normal debug log. It shows the current story beat, clears acknowledged text, and reserves space so the panel does not jump between messages.
+
 ### Game Loop
 
 [src/game.js](../src/game.js) is the main coordinator.
@@ -120,8 +146,8 @@ Each animation frame:
 5. Update asteroids.
 6. Select nearby lifeforms and asteroids for active simulation.
 7. Update active lifeforms, hunter collisions, and hunter/player collisions.
-8. Update pickups, particles, collector pull field, pickup collection, scanner, camera, debug data, and site readout.
-9. Draw grid, sites, asteroids, lifeforms, pickups, particles, collector field, bullets, vector, scanner, ship, and title cards.
+8. Update pickups, particles, tractor pull field, pickup collection, scanner, camera, story sensors, debug data, and site readout.
+9. Draw grid, sites, asteroids, lifeforms, pickups, particles, tractor field, bullets, vector, scanner, ship, and title cards.
 
 ### Camera
 
@@ -198,7 +224,7 @@ Collected pickups become larger square units falling from a pipe. The processor 
 
 ### Event Ledger
 
-[src/systems/eventLedger.js](../src/systems/eventLedger.js) is the central memory spine for meaningful events and compact stats. Systems report events such as `site.docked`, `zone.entered`, `ship.repaired`, `cargo.sold`, `weapon.fired`, `asteroid.destroyed`, `resource.collected`, `resource.processed`, `enemy.destroyed`, and `npc.destroyed`. The ledger stores capped in-memory event history and derives stat keys like `site.docked.yard-exchange`, `zone.entered.red-teeth`, `resource.collected.crystal`, `credits.earned.sales`, and `credits.spent.repairs`.
+[src/systems/eventLedger.js](../src/systems/eventLedger.js) is the central memory spine for meaningful events and compact stats. Systems report events such as `site.docked`, `site.nearby`, `zone.entered`, `ship.thrusted`, `ship.repaired`, `cargo.sold`, `weapon.fired`, `asteroid.destroyed`, `resource.collected`, `resource.processed`, `enemy.destroyed`, and `npc.destroyed`. The ledger stores capped in-memory event history and derives stat keys like `site.docked.yard-exchange`, `zone.entered.red-teeth`, `resource.collected.crystal`, `credits.earned.sales`, and `credits.spent.repairs`.
 
 This is intentionally separate from contracts and achievements. Future systems can listen to new events or compare stat snapshots without each gameplay system knowing about every possible contract, achievement, reputation rule, or ship record.
 
@@ -225,10 +251,10 @@ Component state lives under `state.components`.
 | Component | Current UI | Gameplay State |
 | --- | --- | --- |
 | `account` | Credits in Docking panel | Stores credits earned from selling cargo. |
-| `engine` | Power button, fuel, thrust mode, movement hints | Controls ship power, fuel, forward/reverse thrust, and movement permission. |
+| `engine` | Power button, fuel, thrust mode, movement hints | Controls ship power, fuel, forward/reverse thrust, top speed, turn speed, fuel burn, thrust strength, thrust visual, and movement permission. |
 | `miner` | Arm switch, ammo, fire hint | Controls shooting. Space fires only when armed, powered, and supplied with ammo. |
 | `scanner` | Scan button, scanergy percent | Controls scan ability and powers the collector pull field. |
-| `collector` | Off/Small/Med/Large radio control | Pulls loose resource pickups toward the ship while spending scanergy. |
+| `collector` | Tractor Field hold button | Pulls loose resource pickups toward the ship while spending scanergy. |
 | `processor` | Processor canvas and output choices | Turns clicked resource units into fuel, ammo, scanergy, or cargo storage. |
 | `cargoHold` | Cargo canvas | Stores units for selling and future mission delivery. |
 | `hull` | Integrity readout | Takes collision damage. At 0%, ship is destroyed and controls are disabled. |
@@ -275,9 +301,11 @@ The current world is authored procedurally at startup:
 
 There is no dynamic streaming yet. That is intentional for now.
 
-## UI Flow
+## Story, UI, And Layout Flow
 
-The HTML panels are treated as ship components. `main.js`:
+The HTML panels are treated as ship components. The Journey panel is the story/radio layer and is always above other panels. Newly revealed components are brought above older components but remain below Journey.
+
+`main.js`:
 
 - updates text readouts
 - enables/disables buttons
@@ -286,11 +314,12 @@ The HTML panels are treated as ship components. `main.js`:
 - hides/reveals hub service panel
 - saves panel positions and z-order in `localStorage`
 - shows a tiny event-ledger verification readout in the World panel
+- keeps the Journey message space stable even when the current message has been acknowledged
 
 Saved layout key:
 
 ```text
-asteroids.panelLayout.v1
+asteroids.panelLayout.v5
 ```
 
 ## Current Boundaries And Good Next Refactors

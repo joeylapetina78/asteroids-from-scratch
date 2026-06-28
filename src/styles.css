@@ -41,7 +41,7 @@ body {
   inset: 0;
   color: #d9deea;
   pointer-events: none;
-  z-index: 10;
+  z-index: 1000;
 }
 
 .hud > .component-panel {
@@ -197,6 +197,7 @@ body {
 
 .journey-panel {
   width: 300px;
+  z-index: 100000 !important;
 }
 
 .engine-panel {
@@ -399,9 +400,15 @@ body {
   flex-direction: column;
   gap: 6px;
   justify-content: flex-end;
-  min-height: 0;
+  min-height: 98px;
   color: #d9deea;
   font-size: 0.78rem;
+}
+
+.journey-log:empty::before {
+  content: "...";
+  color: #5d6678;
+  letter-spacing: 0.16em;
 }
 
 .journey-line {
@@ -455,6 +462,22 @@ body {
 
 #game {
   aspect-ratio: 16 / 9;
+}
+
+.viewport-panel.is-component-revealed #game {
+  animation: viewport-arrival 1100ms ease-out;
+}
+
+@keyframes viewport-arrival {
+  0% {
+    opacity: 0;
+    transform: scale(1.045);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .processor-panel {

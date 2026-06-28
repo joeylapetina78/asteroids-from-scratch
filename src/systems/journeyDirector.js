@@ -9,16 +9,17 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
 
     if (journey.messages.length === 0) {
       say(
-        "Rook",
-        "Okay, consider this your assessment test, training, and interview all in one. Get this hunk of junk to the Yard Exchange in one piece and that'll be good enough.",
+        "The Galaxy",
+        "Welcome to Asteroids RPG. The adventure is waiting. Let's go?",
       );
     }
 
     setMission({
       id: CHAPTER_ONE_MISSION_ID,
-      title: "Assessment Run",
+      title: "Do you want to play?",
       status: "offered",
-      objective: "Accept the job.",
+      objective: "Yes you do.",
+      actionLabel: "Play Asteroids RPG",
       successCriteria: "Dock at Yard Exchange.",
     });
     onChange(journey);
@@ -29,10 +30,15 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
       return;
     }
 
+    journey.chapterId = "chapter-1";
+    journey.chapterName = "Chapter 1";
+    journey.episodeName = "Starting Out";
     setMission({
       ...journey.mission,
+      title: "The Interview",
       status: "active",
-      objective: "Power the ship and reach Yard Exchange.",
+      objective: "Get your bearings.",
+      actionLabel: null,
       acceptedAt: Date.now(),
     });
     state.ledger.recordEvent(
@@ -43,11 +49,11 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
       },
       { visible: false },
     );
-    say(
-      "Rook",
-      "Look, here's your engine component right here. It tells you the controls for your ship. Use 'em, let's get going. We're on the clock.",
-      { action: "show-engine", label: "Okay" },
-    );
+      say(
+        "Rook",
+        "All right, rookie. First I'll bring up your viewport. It is your local space view, not just a window. Try to keep the expensive parts of the ship inside it.",
+        { action: "show-viewport", label: "Okay" },
+      );
     onChange(journey);
   }
 
@@ -60,17 +66,35 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
 
     journey.pendingAcknowledgement = null;
 
-    if (acknowledgement.action === "show-engine") {
+    if (acknowledgement.action === "show-viewport") {
+      showComponent("viewport");
+      state.ledger.recordEvent(
+        "component.shown",
+        {
+          componentId: "viewport",
+          componentName: "Viewport",
+        },
+        { visible: false },
+      );
+      say(
+        "Rook",
+        "Okay, consider this your assessment test, training, and interview all in one. Get this hunk of junk to the Yard Exchange in one piece and that'll be good enough. You can move panels by dragging their titles. Now I'll activate your engine component.",
+        { action: "show-engine", label: "Okay" },
+      );
+    } else if (acknowledgement.action === "show-engine") {
+      clearMessage();
       unlockComponent("engine", "Engine");
       setMission({
         ...journey.mission,
         objective: "Power the ship and reach Yard Exchange.",
       });
     } else if (acknowledgement.action === "show-scanner") {
+      clearMessage();
       state.components.scanner.maxScanergy = 400;
       state.components.scanner.scanergy = Math.max(state.components.scanner.scanergy, 400);
       unlockComponent("scanner", "Scanner");
     } else if (acknowledgement.action === "show-docking") {
+      clearMessage();
       unlockComponent("docking", "Docking");
       setMission({
         ...journey.mission,
@@ -115,7 +139,7 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
       journey.flags.firstMovement = true;
       say(
         "Rook",
-        "Great, and we're off. Fantastic. Here's your scanner. We only have enough for a few scans, so make them count. Look for hub circles and follow the haulers if you get turned around.",
+        "Great, and we're off. Fantastic. Now I'll turn on the scanner. We only have enough for a few scans, so make them count. Look for hub circles and follow the haulers if you get turned around.",
         { action: "show-scanner", label: "Okay" },
       );
       onChange(journey);
@@ -142,7 +166,7 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
       !journey.flags.yardExchangeSeen
     ) {
       journey.flags.yardExchangeSeen = true;
-      say("Rook", "There it is. Go ahead and dock with it when we're close enough. Here's your docking lock.", {
+      say("Rook", "There it is. When we're close enough, I'll bring your docking lock online.", {
         action: "show-docking",
         label: "Okay",
       });
@@ -204,7 +228,7 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
   }
 
   function showOnlyInitialComponents() {
-    ["engine", "scanner", "miner", "collector", "hull", "docking", "hub", "world", "processor", "cargo"].forEach((componentId) => {
+    ["viewport", "engine", "scanner", "miner", "collector", "hull", "docking", "hub", "world", "processor", "cargo"].forEach((componentId) => {
       showComponent(componentId, false);
     });
   }
@@ -223,6 +247,10 @@ export function createJourneyDirector({ state, game, onChange = () => {}, showCo
     journey.nextMessageId += 1;
     journey.messages = journey.messages.slice(-1);
     journey.pendingAcknowledgement = acknowledgement;
+  }
+
+  function clearMessage() {
+    journey.messages = [];
   }
 
   return {

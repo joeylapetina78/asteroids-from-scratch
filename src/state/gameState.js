@@ -6,14 +6,19 @@ export function createGameState() {
   return {
     ledger: createEventLedger(),
     journey: {
-      chapterId: "chapter-1",
-      chapterName: "Chapter 1",
-      episodeName: "The Interview",
+      chapterId: "prologue",
+      chapterName: "Prologue",
+      episodeName: "Do you want to play?",
       messages: [],
       mission: null,
       flags: {},
       pendingAcknowledgement: null,
       nextMessageId: 1,
+    },
+    ship: {
+      frameId: "yard-skiff",
+      name: "Yard Skiff",
+      shape: "yard-skiff",
     },
     components: {
       account: {
@@ -25,6 +30,17 @@ export function createGameState() {
         thrustMode: "forward",
         fuel: 200,
         maxFuel: 200,
+        thrustPower: 95,
+        reverseThrustMultiplier: 0.2,
+        rotationSpeed: 2.6,
+        maxSpeed: 105,
+        fuelBurnRate: 6,
+        thrustVisual: {
+          style: "ragged-flame",
+          color: "#ffb85c",
+          length: 15,
+          width: 5,
+        },
       },
       miner: {
         installed: false,

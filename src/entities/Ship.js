@@ -1,16 +1,41 @@
-const ROTATION_SPEED = 4.5;
-const THRUST_POWER = 280;
-const REVERSE_THRUST_MULTIPLIER = 0.2;
-const FUEL_BURN_RATE = 9;
+const DEFAULT_ROTATION_SPEED = 2.6;
+const DEFAULT_THRUST_POWER = 95;
+const DEFAULT_REVERSE_THRUST_MULTIPLIER = 0.2;
+const DEFAULT_FUEL_BURN_RATE = 6;
+const DEFAULT_MAX_SPEED = 105;
 const BRAKE_DRAG = 0.92;
 const SPACE_DRAG = 0.995;
+const SHIP_FRAMES = {
+  "yard-skiff": {
+    points: [
+      { x: 18, y: -3 },
+      { x: 8, y: -11 },
+      { x: -13, y: -13 },
+      { x: -20, y: -4 },
+      { x: -15, y: 9 },
+      { x: 4, y: 13 },
+      { x: 19, y: 5 },
+    ],
+    cockpit: { x: 3, y: 0, radius: 4 },
+  },
+  dart: {
+    points: [
+      { x: 22, y: 0 },
+      { x: -14, y: -12 },
+      { x: -8, y: 0 },
+      { x: -14, y: 12 },
+    ],
+    cockpit: null,
+  },
+};
 
 export class Ship {
-  constructor(x, y, engine) {
+  constructor(x, y, engine, shipFrame = {}) {
     this.position = { x, y };
     this.velocity = { x: 0, y: 0 };
     this.angle = -Math.PI / 2;
     this.engine = engine;
+    this.shipFrame = shipFrame;
     this.isThrusting = false;
   }
 
@@ -19,21 +44,22 @@ export class Ship {
       this.stopThrusting();
     } else {
       if (input.isDown("KeyA")) {
-        this.angle -= ROTATION_SPEED * deltaSeconds;
+        this.angle -= this.getRotationSpeed() * deltaSeconds;
       }
 
       if (input.isDown("KeyD")) {
-        this.angle += ROTATION_SPEED * deltaSeconds;
+        this.angle += this.getRotationSpeed() * deltaSeconds;
       }
 
       this.isThrusting = input.isDown("KeyW") && this.engine.fuel > 0;
       if (this.isThrusting) {
         const thrustDirection = this.engine.thrustMode === "reverse" ? -1 : 1;
-        const thrustPower = THRUST_POWER * (this.engine.thrustMode === "reverse" ? REVERSE_THRUST_MULTIPLIER : 1);
+        const thrustPower = this.getThrustPower() * (this.engine.thrustMode === "reverse" ? this.getReverseThrustMultiplier() : 1);
 
-        this.engine.fuel = Math.max(0, this.engine.fuel - FUEL_BURN_RATE * deltaSeconds);
+        this.engine.fuel = Math.max(0, this.engine.fuel - this.getFuelBurnRate() * deltaSeconds);
         this.velocity.x += Math.cos(this.angle) * thrustPower * thrustDirection * deltaSeconds;
         this.velocity.y += Math.sin(this.angle) * thrustPower * thrustDirection * deltaSeconds;
+        this.limitSpeed();
       }
 
       if (input.isDown("KeyS")) {
@@ -53,6 +79,39 @@ export class Ship {
     this.isThrusting = false;
   }
 
+  getRotationSpeed() {
+    return this.engine.rotationSpeed ?? DEFAULT_ROTATION_SPEED;
+  }
+
+  getThrustPower() {
+    return this.engine.thrustPower ?? DEFAULT_THRUST_POWER;
+  }
+
+  getReverseThrustMultiplier() {
+    return this.engine.reverseThrustMultiplier ?? DEFAULT_REVERSE_THRUST_MULTIPLIER;
+  }
+
+  getFuelBurnRate() {
+    return this.engine.fuelBurnRate ?? DEFAULT_FUEL_BURN_RATE;
+  }
+
+  getMaxSpeed() {
+    return this.engine.maxSpeed ?? DEFAULT_MAX_SPEED;
+  }
+
+  limitSpeed() {
+    const speed = Math.hypot(this.velocity.x, this.velocity.y);
+    const maxSpeed = this.getMaxSpeed();
+
+    if (speed <= maxSpeed) {
+      return;
+    }
+
+    const scale = maxSpeed / speed;
+    this.velocity.x *= scale;
+    this.velocity.y *= scale;
+  }
+
   draw(context, camera) {
     const screenX = this.position.x - camera.x;
     const screenY = this.position.y - camera.y;
@@ -65,30 +124,72 @@ export class Ship {
     context.strokeStyle = this.engine.powered ? "#f5f7fb" : "#555b66";
     context.fillStyle = this.engine.powered ? "#f5f7fb" : "#20242b";
 
+    this.drawFrame(context);
+
+    if (this.isThrusting) {
+      this.drawThrust(context);
+    }
+
+    context.restore();
+  }
+
+  drawFrame(context) {
+    const frame = SHIP_FRAMES[this.shipFrame.shape] ?? SHIP_FRAMES["yard-skiff"];
+
     context.beginPath();
-    context.moveTo(22, 0);
-    context.lineTo(-14, -12);
-    context.lineTo(-8, 0);
-    context.lineTo(-14, 12);
+    frame.points.forEach((point, index) => {
+      if (index === 0) {
+        context.moveTo(point.x, point.y);
+      } else {
+        context.lineTo(point.x, point.y);
+      }
+    });
     context.closePath();
     context.fill();
     context.stroke();
 
-    if (this.isThrusting) {
-      context.strokeStyle = "#ffcc66";
-      context.beginPath();
-      if (this.engine.thrustMode === "reverse") {
-        context.moveTo(16, -4);
-        context.lineTo(28 + Math.random() * 6, 0);
-        context.lineTo(16, 4);
-      } else {
-        context.moveTo(-12, -6);
-        context.lineTo(-26 - Math.random() * 10, 0);
-        context.lineTo(-12, 6);
-      }
-      context.stroke();
+    if (!frame.cockpit) {
+      return;
     }
 
+    context.save();
+    context.globalAlpha = this.engine.powered ? 0.85 : 0.35;
+    context.strokeStyle = this.engine.powered ? "#cfeaff" : "#6e7480";
+    context.beginPath();
+    context.arc(frame.cockpit.x, frame.cockpit.y, frame.cockpit.radius, 0, Math.PI * 2);
+    context.stroke();
     context.restore();
+  }
+
+  drawThrust(context) {
+    const visual = this.engine.thrustVisual ?? {};
+    const color = visual.color ?? "#ffb85c";
+    const length = visual.length ?? 15;
+    const width = visual.width ?? 5;
+    const direction = this.engine.thrustMode === "reverse" ? 1 : -1;
+    const originX = direction > 0 ? 18 : -17;
+    const tipX = originX + direction * (length + Math.random() * length * 0.55);
+
+    context.strokeStyle = color;
+    context.beginPath();
+
+    if (visual.style === "bubble-string") {
+      for (let index = 0; index < 4; index += 1) {
+        const bubbleX = originX + direction * (index * 5 + Math.random() * 2);
+        const bubbleRadius = Math.max(1.5, width - index * 0.7);
+        context.moveTo(bubbleX + bubbleRadius, 0);
+        context.arc(bubbleX, Math.sin(index) * 1.5, bubbleRadius, 0, Math.PI * 2);
+      }
+    } else if (direction > 0) {
+      context.moveTo(originX, -width);
+      context.lineTo(tipX, 0);
+      context.lineTo(originX, width);
+    } else {
+      context.moveTo(originX, -width);
+      context.lineTo(tipX, 0);
+      context.lineTo(originX, width);
+    }
+
+    context.stroke();
   }
 }

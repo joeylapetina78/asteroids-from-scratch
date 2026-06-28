@@ -1,7 +1,7 @@
 import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
 import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=burst-fix-2";
 import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=burst-fix-2";
-import { Ship } from "./entities/Ship.js?v=components";
+import { Ship } from "./entities/Ship.js?v=starter-skiff-v1";
 import { createAsteroidField } from "./systems/asteroidField.js?v=zone-aware";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=docking-services";
@@ -12,7 +12,7 @@ import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=site-scanner";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=docking-services";
-import { createGameState } from "./state/gameState.js?v=journey-polish-v1";
+import { createGameState } from "./state/gameState.js?v=starter-skiff-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -63,7 +63,7 @@ export class Game {
     this.input = createInput();
     this.camera = createCamera(canvas);
     this.scanner = createScanner(canvas);
-    this.ship = new Ship(0, 0, state.components.engine);
+    this.ship = new Ship(0, 0, state.components.engine, state.ship);
     this.resourceField = createResourceField();
     this.worldSites = getWorldSites();
     this.asteroids = createAsteroidField(canvas, this.resourceField);

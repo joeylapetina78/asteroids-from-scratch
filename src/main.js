@@ -1,13 +1,19 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=journey-polish-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=journey-polish-v1";
+import { Game } from "./game.js?v=starter-skiff-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=starter-skiff-v1";
 import { Processor } from "./systems/processor.js?v=credits-cargo";
-import { createGameState } from "./state/gameState.js?v=journey-polish-v1";
+import { createGameState } from "./state/gameState.js?v=starter-skiff-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
-const OLD_PANEL_LAYOUT_STORAGE_KEYS = ["asteroids.panelLayout.v1", "asteroids.panelLayout.v2"];
-const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v3";
+const OLD_PANEL_LAYOUT_STORAGE_KEYS = [
+  "asteroids.panelLayout.v1",
+  "asteroids.panelLayout.v2",
+  "asteroids.panelLayout.v3",
+  "asteroids.panelLayout.v4",
+];
+const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v5";
+const JOURNEY_PANEL_Z_INDEX = 100000;
 const PROCESS_OUTPUT_AMOUNT = 50;
 const CRYSTAL_VALUE_MULTIPLIER = 5;
 const CARGO_UNIT_VALUES = {
@@ -18,7 +24,7 @@ const STARTER_REGION_NAME = "First Reach";
 const DEEP_SPACE_REGION_NAME = "The Black";
 const DEFAULT_PANEL_LAYOUT = {
   viewport: { x: 0, y: 0, z: 20 },
-  journey: { x: 980, y: 20, z: 80 },
+  journey: { x: 980, y: 20, z: JOURNEY_PANEL_Z_INDEX },
   engine: { x: -300, y: 20, z: 70 },
   scanner: { x: 980, y: 300, z: 90 },
   docking: { x: -300, y: 340, z: 100 },
@@ -361,7 +367,7 @@ function renderJourney(journey = state.journey) {
   journeyMissionTitle.textContent = journey.mission?.title ?? "Journey";
   journeyMissionObjective.textContent = journey.mission?.objective ?? "Awaiting instructions.";
   journeyAcceptButton.hidden = !journey.pendingAcknowledgement && journey.mission?.status !== "offered";
-  journeyAcceptButton.textContent = journey.pendingAcknowledgement?.label ?? "Accept Job";
+  journeyAcceptButton.textContent = journey.pendingAcknowledgement?.label ?? journey.mission?.actionLabel ?? "Accept Job";
   journeyLog.replaceChildren(
     ...journey.messages.slice(-1).map((message) => {
       const line = document.createElement("div");
@@ -552,7 +558,7 @@ function makePanelsDraggable() {
     const offset = { x: savedPanel?.x ?? defaultPanel.x, y: savedPanel?.y ?? defaultPanel.y };
     let drag = null;
 
-    panel.style.zIndex = String(savedPanel?.z > 1 ? savedPanel.z : defaultPanel.z);
+    panel.style.zIndex = String(getInitialPanelZ(panelId, savedPanel, defaultPanel));
     offsetsByPanelId.set(panelId, offset);
     applyPanelOffset(panel, offset, { clamp: isPanelMeasurable(panel) });
     savePanelLayout(panel, offset);
@@ -612,6 +618,12 @@ function makePanelsDraggable() {
   };
 
   function setPanelTop(panel) {
+    if (panel.dataset.panelId === "journey") {
+      panel.style.zIndex = String(JOURNEY_PANEL_Z_INDEX);
+      savePanelLayout(panel);
+      return;
+    }
+
     topPanelZIndex += 1;
     panel.style.zIndex = String(topPanelZIndex);
     savePanelLayout(panel);
@@ -664,14 +676,30 @@ function loadPanelLayout() {
 }
 
 function getSavedTopZIndex(layout) {
-  const savedZIndexes = Object.values(layout.panels ?? {})
-    .map((panel) => panel.z)
-    .filter((zIndex) => Number.isFinite(zIndex));
-  const defaultZIndexes = Object.values(DEFAULT_PANEL_LAYOUT)
-    .map((panel) => panel.z)
-    .filter((zIndex) => Number.isFinite(zIndex));
+  const savedZIndexes = Object.entries(layout.panels ?? {})
+    .filter(([panelId]) => panelId !== "journey")
+    .map(([, panel]) => panel.z)
+    .filter((zIndex) => Number.isFinite(zIndex) && zIndex < JOURNEY_PANEL_Z_INDEX);
+  const defaultZIndexes = Object.entries(DEFAULT_PANEL_LAYOUT)
+    .filter(([panelId]) => panelId !== "journey")
+    .map(([, panel]) => panel.z)
+    .filter((zIndex) => Number.isFinite(zIndex) && zIndex < JOURNEY_PANEL_Z_INDEX);
 
   return Math.max(10, ...defaultZIndexes, ...savedZIndexes);
+}
+
+function getInitialPanelZ(panelId, savedPanel, defaultPanel) {
+  if (panelId === "journey") {
+    return JOURNEY_PANEL_Z_INDEX;
+  }
+
+  const savedZ = savedPanel?.z;
+
+  if (Number.isFinite(savedZ) && savedZ > 1 && savedZ < JOURNEY_PANEL_Z_INDEX) {
+    return savedZ;
+  }
+
+  return defaultPanel.z;
 }
 
 function savePanelLayout(panel, offset = null) {
@@ -683,13 +711,14 @@ function savePanelLayout(panel, offset = null) {
 
   const layout = loadPanelLayout();
   const previousPanel = layout.panels?.[panelId] ?? {};
+  const zIndex = panelId === "journey" ? JOURNEY_PANEL_Z_INDEX : Number(panel.style.zIndex) || previousPanel.z || 1;
 
   layout.panels = {
     ...layout.panels,
     [panelId]: {
       x: offset?.x ?? previousPanel.x ?? 0,
       y: offset?.y ?? previousPanel.y ?? 0,
-      z: Number(panel.style.zIndex) || previousPanel.z || 1,
+      z: zIndex,
     },
   };
 

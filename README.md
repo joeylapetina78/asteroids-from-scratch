@@ -25,16 +25,18 @@ Then open `http://127.0.0.1:8123/`.
 - Thrust mode: chooses forward thrust or low-power reverse thrust
 - Scan button: sends a forward resource scan from the ship nose
 - Miner armed switch: enables or disables shooting
-- Collector strength: Off, Small, Med, or Large pull field that spends scanergy
+- Tractor Field button: hold to pull nearby loose resources while spending scanergy
 - Processor output: chooses where crushed units go
 - Processor click: crushes a collected unit into the selected output
 - Panel title drag: moves component panels on a small snap grid
 
 ## Current Slice
 
-The ship is modeled as a set of installed components: engine, miner, scanner, collector, cargo hold, hull, and processor. The page controls are the ship interface for those components.
+The current opening is a small story prologue. The Journey component appears first, introduces the game, then Rook reveals the viewport and ship systems one beat at a time. Journey stays above the other panels, while newly granted panels appear above older panels so the player can notice and rearrange them.
 
-The engine has a power button, fuel, and a thrust-direction toggle. When powered off, the ship is dark, cannot be controlled, and cannot fire, but it still drifts. When powered on, the ship turns white and can rotate, thrust, coast, brake, and fire.
+The ship is modeled as a ship frame plus installed components: engine, miner, scanner, collector, cargo hold, hull, and processor. The page controls are the ship interface for those components.
+
+The starter ship is a slow Yard Skiff frame. The engine has a power button, fuel, thrust-direction toggle, top speed, thrust power, rotation speed, fuel burn, and thrust visual settings. When powered off, the ship is dark, cannot be controlled, and cannot fire, but it still drifts. When powered on, the ship turns white and can rotate, thrust, coast, brake, and fire.
 
 The ship moves through world space while a springy camera follows it, so the grid scrolls underneath the player with a little lag and catch-up.
 
@@ -48,7 +50,7 @@ The field also contains many common white stone asteroids. Bullets and ship impa
 
 Destroying the smallest resource rocks ejects red fuel squares or blue crystal squares. Flying over those squares sends larger units into the processor canvas instead of immediately turning them into fuel or crystal value. Thrust spends fuel.
 
-The scan button sends out a forward cone pulse. If it detects resource asteroids ahead, it shows small edge markers: red for fuel rocks and blue for crystal rocks. The collector uses scanergy continuously to create a stronger pull field around the ship, drawing loose resource squares inward at one of four strengths.
+The scan button sends out a forward cone pulse. If it detects resource asteroids ahead, it shows small edge markers: red for fuel rocks and blue for crystal rocks. The tractor field uses scanergy continuously while held, drawing loose resource squares inward.
 
 The smaller processor canvas sits to the left on wide screens. It receives collected units from a pipe at the top. Units fall, stack, collide, and can be clicked to crush them into the selected output. Available processor outputs are driven by installed components, so fuel comes from the engine, ammo comes from the miner, scanergy comes from the scanner, and cargo sends the unit into the cargo hold.
 
@@ -56,4 +58,4 @@ The cargo hold has its own pipe and physics space. Units sent there are stored i
 
 The game also has an in-memory event ledger for meaningful career/world events. It records docking, zone entry, shooting, asteroid destruction, resource collection, resource processing, cargo sales, repairs, enemy kills, and NPC ship destruction. The World panel shows a small verification readout with recent visible events and compact stats.
 
-Current likely milestone: keep shaping the hub/economy loop, then decide whether processor outputs should become a picklist/multiselect system.
+Current likely milestone: keep shaping Chapter 1's guided introduction, then connect that story structure to missions, starter economy, and the first ship upgrade.
