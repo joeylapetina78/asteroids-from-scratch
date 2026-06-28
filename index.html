@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=stable-event-log" />
+    <link rel="stylesheet" href="./src/styles.css?v=tractor-field" />
   </head>
   <body>
     <main class="game-shell">
@@ -92,20 +92,15 @@
               </div>
             </div>
 
-            <div class="component-panel collector-panel" data-panel-id="collector" aria-label="Resource collector component">
+            <div class="component-panel collector-panel" data-panel-id="collector" aria-label="Tractor field component">
               <div class="component-panel-title">
                 <div>
-                  <strong>Collector</strong>
-                  <span>resource pull field</span>
+                  <strong>Tractor Field</strong>
+                  <span>hold to pull resources</span>
                 </div>
               </div>
-              <div class="collector-control" role="group" aria-label="Collector strength">
-                <label><input type="radio" name="collector-strength" value="0" checked /> Off</label>
-                <label><input type="radio" name="collector-strength" value="0.25" /> Small</label>
-                <label><input type="radio" name="collector-strength" value="0.6" /> Med</label>
-                <label><input type="radio" name="collector-strength" value="1" /> Large</label>
-              </div>
-              <span>Pull: <strong id="collector-range-count">Off</strong></span>
+              <button id="tractor-field-button" class="tractor-button" type="button">Hold Field</button>
+              <span>Field: <strong id="tractor-field-status">Idle</strong></span>
             </div>
 
             <div class="component-panel hull-panel" data-panel-id="hull" aria-label="Hull component">
@@ -201,6 +196,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=careful-mode"></script>
+    <script type="module" src="./src/main.js?v=tractor-field"></script>
   </body>
 </html>

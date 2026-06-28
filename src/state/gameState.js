@@ -41,7 +41,7 @@ export function createGameState() {
       },
       collector: {
         installed: true,
-        rangeSetting: 0,
+        isActive: false,
       },
     },
   };

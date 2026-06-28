@@ -1,7 +1,7 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { Game } from "./game.js?v=careful-mode";
+import { Game } from "./game.js?v=tractor-field";
 import { Processor } from "./systems/processor.js?v=credits-cargo";
-import { createGameState } from "./state/gameState.js?v=careful-mode";
+import { createGameState } from "./state/gameState.js?v=tractor-field";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -17,8 +17,6 @@ const DEEP_SPACE_REGION_NAME = "The Black";
 const ammoCount = document.querySelector("#ammo-count");
 const cargoCanvas = document.querySelector("#cargo");
 const canvas = document.querySelector("#game");
-const collectorRangeCount = document.querySelector("#collector-range-count");
-const collectorStrengthControls = document.querySelectorAll("input[name='collector-strength']");
 const creditCount = document.querySelector("#credit-count");
 const fuelCount = document.querySelector("#fuel-count");
 const hullCount = document.querySelector("#hull-count");
@@ -42,6 +40,8 @@ const processorOutputPanel = document.querySelector(".processor-outputs");
 const scanButton = document.querySelector("#ship-scan");
 const scanergyCount = document.querySelector("#scanergy-count");
 const shipStatus = document.querySelector("#ship-status");
+const tractorFieldButton = document.querySelector("#tractor-field-button");
+const tractorFieldStatus = document.querySelector("#tractor-field-status");
 const viewportRegion = document.querySelector("#viewport-region");
 const worldDebugFields = {
   position: document.querySelector("#debug-position"),
@@ -71,6 +71,12 @@ const cargoHold = new Processor(cargoCanvas, () => {}, { isClickable: false });
 const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type), updateWorldDebugDisplay, updateHubDisplay);
 let bringPanelToFront = () => {};
 let renderedLedgerVersion = -1;
+const COMPONENT_WARNING_RULES = [
+  { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
+  { panelId: "miner", cautionAt: 50, criticalAt: 20, getValue: () => state.components.miner.ammo },
+  { panelId: "scanner", cautionAt: 100, criticalAt: 25, getValue: () => state.components.scanner.scanergy },
+  { panelId: "hull", cautionAt: 55, criticalAt: 30, getValue: () => state.components.hull.integrity },
+];
 
 function updateShipPowerDisplay() {
   const engine = state.components.engine;
@@ -96,11 +102,36 @@ minerArmed.addEventListener("change", () => {
   state.components.miner.armed = minerArmed.checked;
 });
 
-collectorStrengthControls.forEach((control) => {
-  control.addEventListener("change", () => {
-    state.components.collector.rangeSetting = Number(control.value);
-    updateHudDisplay();
-  });
+tractorFieldButton.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0) {
+    return;
+  }
+
+  tractorFieldButton.setPointerCapture(event.pointerId);
+  setTractorFieldActive(true);
+});
+
+tractorFieldButton.addEventListener("pointerup", (event) => {
+  if (tractorFieldButton.hasPointerCapture(event.pointerId)) {
+    tractorFieldButton.releasePointerCapture(event.pointerId);
+  }
+
+  setTractorFieldActive(false);
+});
+
+tractorFieldButton.addEventListener("pointercancel", () => setTractorFieldActive(false));
+tractorFieldButton.addEventListener("lostpointercapture", () => setTractorFieldActive(false));
+tractorFieldButton.addEventListener("keydown", (event) => {
+  if (event.code === "Space" || event.code === "Enter") {
+    event.preventDefault();
+    setTractorFieldActive(true);
+  }
+});
+tractorFieldButton.addEventListener("keyup", (event) => {
+  if (event.code === "Space" || event.code === "Enter") {
+    event.preventDefault();
+    setTractorFieldActive(false);
+  }
 });
 
 scanButton.addEventListener("click", () => {
@@ -137,12 +168,10 @@ function updateHudDisplay() {
   fuelCount.textContent = String(Math.floor(state.components.engine.fuel));
   ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
   scanergyCount.textContent = `${Math.floor(state.components.scanner.scanergy)}%`;
-  collectorRangeCount.textContent = getCollectorStrengthLabel();
+  tractorFieldStatus.textContent = state.components.collector.isActive ? "Pulling" : "Idle";
+  tractorFieldButton.setAttribute("aria-pressed", String(state.components.collector.isActive));
   hullCount.textContent = `${Math.ceil(state.components.hull.integrity)}%`;
   minerArmed.checked = state.components.miner.armed;
-  collectorStrengthControls.forEach((control) => {
-    control.checked = Number(control.value) === state.components.collector.rangeSetting;
-  });
   updateWarningPanels();
 }
 
@@ -243,30 +272,41 @@ function getViewportLocationLabel(debug) {
 }
 
 function updateWarningPanels() {
-  setPanelWarning("engine", state.components.engine.fuel <= 35);
-  setPanelWarning("miner", state.components.miner.ammo <= 20);
-  setPanelWarning("scanner", state.components.scanner.scanergy <= 25);
-  setPanelWarning("hull", state.components.hull.integrity <= 30);
+  COMPONENT_WARNING_RULES.forEach((rule) => {
+    setPanelAlert(rule.panelId, getPanelAlertLevel(rule.getValue(), rule));
+  });
 }
 
-function setPanelWarning(panelId, isWarning) {
-  document.querySelector(`[data-panel-id="${panelId}"]`)?.classList.toggle("is-low-resource", isWarning);
+function getPanelAlertLevel(value, rule) {
+  if (value <= rule.criticalAt) {
+    return "critical";
+  }
+
+  if (value <= rule.cautionAt) {
+    return "caution";
+  }
+
+  return "none";
 }
 
-function getCollectorStrengthLabel() {
-  if (state.components.collector.rangeSetting >= 1) {
-    return "Large";
+function setPanelAlert(panelId, level) {
+  const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
+
+  if (!panel) {
+    return;
   }
 
-  if (state.components.collector.rangeSetting >= 0.6) {
-    return "Med";
+  panel.classList.toggle("is-caution-resource", level === "caution");
+  panel.classList.toggle("is-low-resource", level === "critical");
+}
+
+function setTractorFieldActive(isActive) {
+  if (state.components.collector.isActive === isActive) {
+    return;
   }
 
-  if (state.components.collector.rangeSetting > 0) {
-    return "Small";
-  }
-
-  return "Off";
+  state.components.collector.isActive = isActive;
+  updateHudDisplay();
 }
 
 function processUnit(type) {

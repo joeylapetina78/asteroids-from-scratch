@@ -88,20 +88,31 @@ body {
   z-index: 5;
 }
 
+.component-panel.is-caution-resource,
+.component-panel.is-low-resource {
+  animation: resource-alert-pulse 1.6s ease-in-out infinite;
+}
+
+.component-panel.is-caution-resource {
+  border-color: rgba(255, 211, 107, 0.74);
+  box-shadow: 0 0 18px rgba(255, 199, 66, 0.16);
+  --resource-alert-background: #151307;
+}
+
 .component-panel.is-low-resource {
   border-color: rgba(255, 93, 108, 0.72);
   box-shadow: 0 0 18px rgba(255, 42, 68, 0.2);
-  animation: low-resource-pulse 1.6s ease-in-out infinite;
+  --resource-alert-background: #160b10;
 }
 
-@keyframes low-resource-pulse {
+@keyframes resource-alert-pulse {
   0%,
   100% {
     background: #0c0e13;
   }
 
   50% {
-    background: #160b10;
+    background: var(--resource-alert-background);
   }
 }
 
@@ -161,7 +172,8 @@ body {
 .scan-button,
 .dock-button,
 .sell-button,
-.repair-button {
+.repair-button,
+.tractor-button {
   border: 1px solid #4b5566;
   border-radius: 6px;
   padding: 8px 12px;
@@ -175,7 +187,8 @@ body {
 .scan-button:hover,
 .dock-button:hover,
 .sell-button:hover,
-.repair-button:hover {
+.repair-button:hover,
+.tractor-button:hover {
   border-color: #7f8aa3;
   background: #222733;
 }
@@ -203,6 +216,18 @@ body {
 .repair-button {
   border-color: #49765b;
   color: #dfffea;
+}
+
+.tractor-button {
+  min-height: 54px;
+  border-color: #315a72;
+  color: #c9f1ff;
+}
+
+.tractor-button[aria-pressed="true"] {
+  border-color: #9ee8ff;
+  background: #123044;
+  box-shadow: 0 0 24px rgba(115, 210, 255, 0.22);
 }
 
 .sell-button {
@@ -376,15 +401,11 @@ body {
   font-size: 0.85rem;
 }
 
-.arm-toggle,
-.collector-control {
-  display: grid;
-  gap: 6px;
-}
-
 .arm-toggle {
+  display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
+  gap: 6px;
   min-height: 32px;
   border: 1px solid #333846;
   border-radius: 6px;
@@ -392,25 +413,6 @@ body {
   background: #07080c;
   cursor: pointer;
   font-size: 0.9rem;
-}
-
-.collector-control {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-}
-
-.collector-control label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-height: 32px;
-  border: 1px solid #333846;
-  border-radius: 6px;
-  background: #07080c;
-  cursor: pointer;
-  font-size: 0.8rem;
 }
 
 .component-hints {

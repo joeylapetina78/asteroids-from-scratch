@@ -12,7 +12,7 @@ import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=site-scanner";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=docking-services";
-import { createGameState } from "./state/gameState.js?v=careful-mode";
+import { createGameState } from "./state/gameState.js?v=tractor-field";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -23,7 +23,6 @@ const SCANERGY_PER_SCAN = 100;
 const SHIP_COLLISION_RADIUS = 18;
 const SHIP_HIT_COOLDOWN_SECONDS = 0.35;
 const PICKUP_COLLECT_RADIUS = 24;
-const COLLECTOR_MIN_RADIUS = 54;
 const COLLECTOR_PULL_FORCE = 1650;
 const COLLECTOR_MAX_SCANERGY_PER_SECOND = 50;
 const PARTICLE_DRAG = 0.94;
@@ -109,6 +108,7 @@ export class Game {
     if (!isPowered) {
       this.input.clearGameKeys();
       this.fireCooldown = 0;
+      this.state.components.collector.isActive = false;
       this.ship.stopThrusting();
     }
   }
@@ -447,7 +447,7 @@ export class Game {
     const collector = this.state.components.collector;
     const scanner = this.state.components.scanner;
 
-    if (this.shipDestroyed || !this.state.components.engine.powered || !collector.installed || collector.rangeSetting <= 0 || scanner.scanergy <= 0) {
+    if (this.shipDestroyed || !this.state.components.engine.powered || !collector.installed || !collector.isActive || scanner.scanergy <= 0) {
       return;
     }
 
@@ -471,7 +471,7 @@ export class Game {
       }
 
       const distance = Math.sqrt(distanceSquared);
-      const pullStrength = Math.max(0.35, 1 - distance / radius) * (0.8 + collector.rangeSetting * 0.5);
+      const pullStrength = Math.max(0.45, 1 - distance / radius) * 1.35;
 
       pickup.velocity.x += (distanceX / distance) * COLLECTOR_PULL_FORCE * pullStrength * deltaSeconds;
       pickup.velocity.y += (distanceY / distance) * COLLECTOR_PULL_FORCE * pullStrength * deltaSeconds;
@@ -757,6 +757,7 @@ export class Game {
   destroyShip() {
     this.shipDestroyed = true;
     this.state.components.engine.powered = false;
+    this.state.components.collector.isActive = false;
     this.input.clearGameKeys();
     this.ship.stopThrusting();
     this.createShipDestructionBurst();
@@ -1403,22 +1404,17 @@ export class Game {
     return (
       this.state.components.engine.powered &&
       this.state.components.collector.installed &&
-      this.state.components.collector.rangeSetting > 0 &&
+      this.state.components.collector.isActive &&
       this.state.components.scanner.scanergy > 0
     );
   }
 
   getCollectorRadius() {
-    const maxRadius = Math.min(this.canvas.width, this.canvas.height) * 0.48;
-    const rangeCurve = Math.pow(this.state.components.collector.rangeSetting, 0.72);
-
-    return COLLECTOR_MIN_RADIUS + (maxRadius - COLLECTOR_MIN_RADIUS) * rangeCurve;
+    return Math.min(this.canvas.width, this.canvas.height) * 0.48;
   }
 
   getCollectorScanergyCost() {
-    const rangeSetting = this.state.components.collector.rangeSetting;
-
-    return 2 + COLLECTOR_MAX_SCANERGY_PER_SECOND * rangeSetting * rangeSetting;
+    return COLLECTOR_MAX_SCANERGY_PER_SECOND;
   }
 }
 
