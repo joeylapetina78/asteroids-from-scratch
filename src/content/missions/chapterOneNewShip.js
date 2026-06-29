@@ -1,5 +1,6 @@
 export const chapterOneNewShipMission = {
   id: "chapter-1-new-ship",
+  autoAcceptOnStart: true,
   prologue: {
     chapterId: "chapter-1",
     chapterName: "Chapter 1",

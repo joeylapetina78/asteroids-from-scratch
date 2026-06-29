@@ -1,5 +1,5 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=hub-drive-through-v1";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=hub-drive-through-v1";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=mission-autostart-v1";
 import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=story-hub-gates-v1";
 import { createMissionRunner } from "./missionRunner.js?v=ledger-reactivity-v1";
 
@@ -135,6 +135,10 @@ export function createJourneyDirector({
 
     activeMission = createMission(missionDefinition);
     activeMission.startOffer();
+
+    if (missionDefinition.autoAcceptOnStart) {
+      activeMission.accept();
+    }
   }
 
   function unlockComponent(componentId, componentName) {
