@@ -18,6 +18,8 @@ export const chapterOneInterviewMission = {
   },
   title: "The Interview",
   successCriteria: "Dock at Yard Exchange.",
+  nextMissionId: "chapter-1-new-ship",
+  nextMissionLabel: "Meet Barvis",
   startStepId: "show-hull",
   steps: [
     {
@@ -120,8 +122,8 @@ export const chapterOneInterviewMission = {
           type: "say",
           speaker: "Rook",
           text:
-            "Before we fly, here's the actual contract. Deliver this registered ship to Yard Exchange and the account gets paid 500 credits. Simple terms, clean paper.",
-          acknowledgement: { label: "Show Contract" },
+            "Before we fly, agree to the contract for this job. It just says when you deliver this ship to Yard Exchange, I'll pay you 500 credits. Simple terms, clean paper, real promise.",
+          acknowledgement: { label: "Read Contract" },
         },
       ],
       onAcknowledge: [
@@ -361,7 +363,7 @@ export const chapterOneInterviewMission = {
           type: "say",
           speaker: "Rook",
           text: "There it is. When we're close enough, I'll bring your docking lock online.",
-          acknowledgement: { label: "Okay" },
+          acknowledgement: { label: "Add Docking Panel" },
         },
       ],
       onAcknowledge: [

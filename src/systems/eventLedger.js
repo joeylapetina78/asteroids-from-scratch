@@ -197,6 +197,20 @@ export function createEventLedger(options = {}) {
       if (event.type === "contract.paid") {
         incrementStat("credits.earned.contracts", event.payload.creditsPaid ?? 0);
       }
+    } else if (event.type === "loan.disbursed") {
+      incrementStat("loan.disbursed.total");
+      incrementStat(`loan.disbursed.${event.payload.contractId ?? "unknown"}`);
+      incrementStat("credits.borrowed.total", event.payload.principal ?? 0);
+      setStatMax("credits.borrowed.largest", event.payload.principal ?? 0);
+      setStatMax("credits.held.max", event.payload.accountCredits ?? 0);
+    } else if (event.type === "rook.bonusAwarded") {
+      incrementStat("rook.bonusAwarded.total");
+      incrementStat("credits.earned.bonuses", event.payload.creditsPaid ?? 0);
+      setStatMax("credits.held.max", event.payload.accountCredits ?? 0);
+    } else if (event.type === "ship.purchased") {
+      incrementStat("ship.purchased.total");
+      incrementStat(`ship.purchased.${event.payload.offerId ?? "unknown"}`);
+      incrementStat("credits.spent.ships", event.payload.price ?? 0);
     } else if (event.type === "mission.accepted" || event.type === "mission.completed") {
       incrementStat(`${event.type}.total`);
       incrementStat(`${event.type}.${event.payload.missionId ?? "unknown"}`);
@@ -323,6 +337,22 @@ function getDefaultMessage(type, payload) {
 
   if (type === "contract.paid") {
     return `Contract paid ${payload.creditsPaid ?? 0} credits`;
+  }
+
+  if (type === "loan.disbursed") {
+    return `Loan funded ${payload.principal ?? 0} credits`;
+  }
+
+  if (type === "rook.bonusAwarded") {
+    return `Rook bonus ${payload.creditsPaid ?? 0} credits`;
+  }
+
+  if (type === "ship.purchased") {
+    return `Purchased ${payload.shipName ?? payload.offerId ?? "ship"}`;
+  }
+
+  if (type === "merchant.cannotAfford") {
+    return `Cannot afford ${payload.shipName ?? payload.offerId ?? "ship"}`;
   }
 
   return type;

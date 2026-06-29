@@ -1,4 +1,4 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=contract-v1";
+import { createEventLedger } from "../systems/eventLedger.js?v=ship-market-v1";
 
 // Starting game/component state. This is the current lightweight substitute for
 // future accounts, saves, installed modules, and player profiles.
@@ -18,6 +18,13 @@ export function createGameState() {
     contracts: {
       currentContractId: null,
       records: {},
+    },
+    debt: {
+      totalBorrowed: 0,
+      totalPaid: 0,
+      activePrincipal: 0,
+      activeBalance: 0,
+      highestDebt: 0,
     },
     ship: {
       frameId: "yard-skiff",
@@ -80,6 +87,9 @@ export function createGameState() {
         isActive: false,
       },
       contract: {
+        installed: false,
+      },
+      merchant: {
         installed: false,
       },
     },

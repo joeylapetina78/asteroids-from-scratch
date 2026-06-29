@@ -1,24 +1,15 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=contract-v1";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=ship-market-v1";
 import { createMissionRunner } from "./missionRunner.js?v=contract-v1";
+
+const MISSION_DEFINITIONS = new Map(
+  [chapterOneInterviewMission, chapterOneNewShipMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
+);
 
 export function createJourneyDirector({ state, onChange = () => {}, offerContract = () => {}, showComponent = () => {} }) {
   const journey = state.journey;
   let lastEventId = 0;
-  const activeMission = createMissionRunner({
-    missionDefinition: chapterOneInterviewMission,
-    state,
-    actions: {
-      clearMessage,
-      completeMission,
-      offerContract: (contractId) => {
-        unlockComponent("contract", "Contract");
-        offerContract(contractId);
-      },
-      recordEvent: (...args) => state.ledger.recordEvent(...args),
-      say,
-      showComponent: unlockComponent,
-    },
-  });
+  let activeMission = createMission(chapterOneInterviewMission);
 
   function start() {
     showOnlyInitialComponents();
@@ -36,8 +27,14 @@ export function createJourneyDirector({ state, onChange = () => {}, offerContrac
   }
 
   function acknowledge() {
+    const acknowledgement = journey.pendingAcknowledgement;
+
     if (!activeMission.acknowledge()) {
       return;
+    }
+
+    if (acknowledgement?.action === "startMission") {
+      startMission(acknowledgement.missionId);
     }
 
     onChange(journey);
@@ -74,12 +71,25 @@ export function createJourneyDirector({ state, onChange = () => {}, offerContrac
     const elapsedSeconds = Math.round((Date.now() - journey.mission.acceptedAt) / 1000);
     const hull = Math.round(state.components.hull.integrity);
     const grade = getMissionGrade(hull, elapsedSeconds);
+    const bonusCredits = grade.bonusCredits ?? 0;
+    const completion = missionDefinition.completion;
+
+    if (!completion && bonusCredits > 0) {
+      state.components.account.credits += bonusCredits;
+      state.ledger.recordEvent("rook.bonusAwarded", {
+        missionId: missionDefinition.id,
+        missionName: missionDefinition.title,
+        creditsPaid: bonusCredits,
+        reason: grade.id,
+        accountCredits: state.components.account.credits,
+      });
+    }
 
     journey.mission = {
       ...journey.mission,
       status: "completed",
-      objective: "Assessment complete.",
-      helpText: "Mission complete. You made it to Yard Exchange.",
+      objective: completion?.objective ?? "Assessment complete.",
+      helpText: completion?.helpText ?? "Mission complete. You made it to Yard Exchange.",
       completedAt: Date.now(),
       elapsedSeconds,
       grade: grade.id,
@@ -92,10 +102,36 @@ export function createJourneyDirector({ state, onChange = () => {}, offerContrac
         grade: grade.id,
         hull,
         elapsedSeconds,
+        bonusCredits,
       },
       { visible: true },
     );
+    if (completion) {
+      say(completion.speaker ?? "Journey", completion.line);
+      return;
+    }
+
+    if (missionDefinition.nextMissionId) {
+      say("Rook", `${grade.line} ${grade.followup}`, {
+        label: missionDefinition.nextMissionLabel ?? "Continue",
+        action: "startMission",
+        missionId: missionDefinition.nextMissionId,
+      });
+      return;
+    }
+
     say("Rook", grade.line);
+  }
+
+  function startMission(missionId) {
+    const missionDefinition = MISSION_DEFINITIONS.get(missionId);
+
+    if (!missionDefinition) {
+      throw new Error(`Unknown mission: ${missionId}`);
+    }
+
+    activeMission = createMission(missionDefinition);
+    activeMission.startOffer();
   }
 
   function unlockComponent(componentId, componentName) {
@@ -115,7 +151,7 @@ export function createJourneyDirector({ state, onChange = () => {}, offerContrac
   }
 
   function showOnlyInitialComponents() {
-    ["viewport", "engine", "scanner", "miner", "collector", "hull", "docking", "hub", "world", "processor", "cargo", "contract"].forEach((componentId) => {
+    ["viewport", "engine", "scanner", "miner", "collector", "hull", "docking", "hub", "world", "processor", "cargo", "contract", "merchant"].forEach((componentId) => {
       showComponent(componentId, false);
     });
   }
@@ -136,6 +172,24 @@ export function createJourneyDirector({ state, onChange = () => {}, offerContrac
     journey.messages = [];
   }
 
+  function createMission(missionDefinition) {
+    return createMissionRunner({
+      missionDefinition,
+      state,
+      actions: {
+        clearMessage,
+        completeMission,
+        offerContract: (contractId) => {
+          unlockComponent("contract", "Contract");
+          offerContract(contractId);
+        },
+        recordEvent: (...args) => state.ledger.recordEvent(...args),
+        say,
+        showComponent: unlockComponent,
+      },
+    });
+  }
+
   return {
     start,
     update,
@@ -149,22 +203,42 @@ function getMissionGrade(hull, elapsedSeconds) {
   if (hull >= 90 && elapsedSeconds <= 120) {
     return {
       id: "good",
+      bonusCredits: 750,
       line:
-        "Okay, we did it. I can see you have what it takes. Here's a little investment from me for a job well done. Don't need to pay this back, you earned it.",
+        "Okay, we did it. Clean hull, good time, and the contract paid out. I can see you have what it takes.",
+      followup:
+        "I have a good feeling about you, so I'm throwing in a 750 credit surprise bonus. Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
     };
   }
 
-  if (hull > 50 && elapsedSeconds <= 300) {
+  if (hull >= 90) {
     return {
-      id: "okay",
+      id: "careful",
+      bonusCredits: 500,
       line:
-        "We got here, but we're pretty banged up. This is gonna cost me money. But you did the job, so here's a little bit to get you started.",
+        "Okay, we did it. Contract paid out, and the hull's still clean. Took us a minute, but careful beats expensive.",
+      followup:
+        "I'm throwing in a 500 credit surprise bonus for keeping the ship tidy. Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
+    };
+  }
+
+  if (hull > 50) {
+    return {
+      id: "scuffed",
+      bonusCredits: 250,
+      line:
+        "We got here and the contract paid out. We picked up some dents along the way, so next time let's keep the expensive parts farther from the rocks.",
+      followup:
+        "It's not worth much any more. You break it, you buy it. Right! I'm throwing in 250 credits against the price. Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
     };
   }
 
   return {
-    id: "bad",
+    id: "rough",
+    bonusCredits: 0,
     line:
-      "I don't think I'm gonna make any money on this job. I shouldn't hire you, but I need work done and you're what I got.",
+      "We made it, and the contract still paid out because those were the terms. But this hull had a rough ride, rookie. Let's not make that a habit.",
+    followup:
+      "It's not worth much any more. You break it, you buy it. Right! Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
   };
 }

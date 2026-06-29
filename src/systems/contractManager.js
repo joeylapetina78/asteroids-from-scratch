@@ -1,4 +1,4 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=contract-v1";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=ship-market-v1";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -45,6 +45,9 @@ export function createContractManager({ state, onChange = () => {} }) {
 
     contract.status = "active";
     contract.acceptedAt = Date.now();
+    if (contract.type === "loan" && !contract.disbursedAt) {
+      disburseLoan(contract);
+    }
     state.ledger.recordEvent(
       "contract.accepted",
       {
@@ -72,7 +75,7 @@ export function createContractManager({ state, onChange = () => {} }) {
 
   function fulfillMatchingDeliveryContracts(event) {
     Object.values(state.contracts.records)
-      .filter((contract) => contract.status === "active")
+      .filter((contract) => contract.type === "delivery" && contract.status === "active")
       .forEach((contract) => {
         const matchesSite = contract.terms.destinationSiteId === event.payload.siteId;
         const matchesVin = contract.terms.deliverShipVin === getAttachedShipVin();
@@ -83,6 +86,27 @@ export function createContractManager({ state, onChange = () => {} }) {
 
         payContract(contract);
       });
+  }
+
+  function disburseLoan(contract) {
+    const principal = contract.terms.principal ?? contract.reward.credits ?? 0;
+    const maxInterest = contract.terms.maxInterest ?? 0;
+
+    contract.disbursedAt = Date.now();
+    contract.balance = principal;
+    contract.maxBalance = principal + maxInterest;
+    state.components.account.credits += principal;
+    state.debt.totalBorrowed += principal;
+    state.debt.activePrincipal += principal;
+    state.debt.activeBalance += principal;
+    state.debt.highestDebt = Math.max(state.debt.highestDebt, state.debt.activeBalance);
+    state.ledger.recordEvent("loan.disbursed", {
+      contractId: contract.id,
+      contractTitle: contract.title,
+      principal,
+      maxInterest,
+      accountCredits: state.components.account.credits,
+    });
   }
 
   function payContract(contract) {

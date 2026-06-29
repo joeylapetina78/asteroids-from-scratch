@@ -190,6 +190,7 @@ body {
 .docking-panel,
 .hub-panel,
 .contract-panel,
+.merchant-panel,
 .world-panel,
 .journey-panel {
   display: grid;
@@ -215,6 +216,10 @@ body {
 
 .contract-panel {
   width: 240px;
+}
+
+.merchant-panel {
+  width: min(820px, calc(100vw - 72px));
 }
 
 .collector-panel {
@@ -393,6 +398,88 @@ body {
   padding-left: 16px;
   color: #aeb8cc;
   font-size: 0.76rem;
+}
+
+.merchant-intro {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #242a35;
+  border-radius: 6px;
+  padding: 8px;
+  background: #090b10;
+  color: #b8c1d4;
+}
+
+.ship-offers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.ship-offer {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #333846;
+  border-radius: 6px;
+  padding: 10px;
+  background: #07080c;
+}
+
+.ship-offer.is-special-offer {
+  border-color: rgba(255, 211, 107, 0.72);
+  box-shadow: 0 0 24px rgba(255, 211, 107, 0.14);
+}
+
+.ship-offer h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 0.98rem;
+}
+
+.ship-offer p {
+  margin: 0;
+  color: #c3ccdc;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.ship-offer-meta,
+.ship-offer-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ship-offer-meta span,
+.ship-offer-tags span {
+  border: 1px solid #28303d;
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #0c0e13;
+  color: #b8c1d4;
+  font-size: 0.72rem;
+}
+
+.ship-offer-price {
+  color: #fff0bd;
+  font-weight: 800;
+}
+
+.ship-offer-button {
+  border: 1px solid #786b42;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #191c22;
+  color: #fff0bd;
+  cursor: pointer;
+  font: inherit;
+}
+
+.ship-offer-button:hover {
+  border-color: #a89455;
+  background: #222733;
 }
 
 .hub-readout,
@@ -716,6 +803,7 @@ body {
   .docking-panel,
   .hub-panel,
   .contract-panel,
+  .merchant-panel,
   .hull-panel,
   .world-panel,
   .journey-panel {

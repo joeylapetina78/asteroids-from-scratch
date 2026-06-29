@@ -1,9 +1,10 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
+import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v1";
 import { Game } from "./game.js?v=rook-tutorial-v1";
-import { createContractManager } from "./systems/contractManager.js?v=contract-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=contract-v1";
+import { createContractManager } from "./systems/contractManager.js?v=ship-market-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=ship-market-v1";
 import { Processor } from "./systems/processor.js?v=credits-cargo";
-import { createGameState } from "./state/gameState.js?v=contract-v1";
+import { createGameState } from "./state/gameState.js?v=ship-market-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -31,6 +32,7 @@ const DEFAULT_PANEL_LAYOUT = {
   scanner: { x: 980, y: 300, z: 90 },
   docking: { x: -300, y: 340, z: 100 },
   contract: { x: -300, y: 340, z: 95 },
+  merchant: { x: 70, y: 120, z: 120 },
   miner: { x: 980, y: 500, z: 60 },
   collector: { x: 980, y: 680, z: 50 },
   hull: { x: -300, y: 580, z: 50 },
@@ -75,12 +77,14 @@ const journeyLog = document.querySelector("#journey-log");
 const journeyMissionObjective = document.querySelector("#journey-mission-objective");
 const journeyMissionTitle = document.querySelector("#journey-mission-title");
 const journeyStatus = document.querySelector("#journey-status");
+const merchantCredits = document.querySelector("#merchant-credits");
 const minerArmed = document.querySelector("#miner-armed");
 const powerButton = document.querySelector("#ship-power");
 const processorCanvas = document.querySelector("#processor");
 const processorOutputPanel = document.querySelector(".processor-outputs");
 const scanButton = document.querySelector("#ship-scan");
 const scanergyCount = document.querySelector("#scanergy-count");
+const shipOffersPanel = document.querySelector("#ship-offers");
 const shipStatus = document.querySelector("#ship-status");
 const tractorFieldButton = document.querySelector("#tractor-field-button");
 const tractorFieldStatus = document.querySelector("#tractor-field-status");
@@ -228,6 +232,7 @@ cargoHold.start();
 
 function updateHudDisplay() {
   renderProcessorOutputs();
+  renderShipOffers();
   updateShipPowerDisplay();
 
   creditCount.textContent = String(Math.floor(state.components.account.credits));
@@ -239,6 +244,7 @@ function updateHudDisplay() {
   hullCount.textContent = `${Math.ceil(state.components.hull.integrity)}%`;
   hullVin.textContent = state.components.hull.vinPlateAttached ? state.components.hull.vin : "UNVERIFIED";
   minerArmed.checked = state.components.miner.armed;
+  merchantCredits.textContent = `${Math.floor(state.components.account.credits)} cr`;
   updateWarningPanels();
 }
 
@@ -343,9 +349,9 @@ function renderContract(contract = contractManager.getCurrentContract()) {
   contractStatus.textContent = getContractStatusLabel(contract.status);
   contractIssuer.textContent = `Issuer: ${contract.issuer}`;
   contractSummary.textContent = contract.summary;
-  contractVin.textContent = contract.terms.deliverShipVin;
-  contractDestination.textContent = contract.terms.destinationName;
-  contractReward.textContent = `${contract.reward.credits ?? 0} cr`;
+  contractVin.textContent = contract.type === "loan" ? `${contract.terms.principal.toLocaleString()} cr` : contract.terms.deliverShipVin;
+  contractDestination.textContent = contract.type === "loan" ? contract.terms.dueLabel : contract.terms.destinationName;
+  contractReward.textContent = contract.type === "loan" ? `${contract.terms.interestRate * 100}% / cap ${contract.terms.maxInterest} cr` : `${contract.reward.credits ?? 0} cr`;
   contractAcceptButton.disabled = contract.status !== "offered";
   contractAcceptButton.textContent = contract.status === "offered" ? "Accept Contract" : getContractButtonLabel(contract.status);
   contractClauses.replaceChildren(
@@ -391,14 +397,14 @@ function getViewportLocationLabel(debug) {
   const parts = [isInsideStarterRegion ? STARTER_REGION_NAME : DEEP_SPACE_REGION_NAME];
 
   if (zone.influence >= 0.55 && zone.strongestZoneId !== "open-space") {
-    parts.push(`< ${zone.strongestZoneName}`);
+    parts.push(zone.strongestZoneName);
   }
 
   if (debug.currentSite) {
-    parts.push(`-- ${debug.currentSite.name}`);
+    parts.push(debug.currentSite.name);
   }
 
-  return parts.join(" ");
+  return parts.join(" > ");
 }
 
 function updateWarningPanels() {
@@ -778,6 +784,106 @@ function makePanelsDraggable() {
     offset.x = Math.round((offset.x + adjustX) / gridSize) * gridSize;
     offset.y = Math.round((offset.y + adjustY) / gridSize) * gridSize;
   }
+}
+
+function renderShipOffers() {
+  const currentCredits = Math.floor(state.components.account.credits);
+  const renderedKey = shipOffersPanel.dataset.renderedKey;
+  const nextKey = `${currentCredits}:${state.components.merchant.purchasedOfferId ?? "none"}`;
+
+  if (renderedKey === nextKey) {
+    return;
+  }
+
+  shipOffersPanel.dataset.renderedKey = nextKey;
+  shipOffersPanel.replaceChildren(
+    ...shipOffers.map((offer) => {
+      const card = document.createElement("article");
+      const title = document.createElement("h3");
+      const price = document.createElement("strong");
+      const description = document.createElement("p");
+      const meta = document.createElement("div");
+      const tags = document.createElement("div");
+      const button = document.createElement("button");
+      const canAfford = currentCredits >= offer.price;
+      const isPurchased = state.components.merchant.purchasedOfferId === offer.id;
+
+      card.className = `ship-offer${offer.special ? " is-special-offer" : ""}`;
+      title.textContent = offer.title;
+      price.className = "ship-offer-price";
+      price.textContent = `${offer.price.toLocaleString()} cr`;
+      description.textContent = offer.description;
+      meta.className = "ship-offer-meta";
+      [offer.brand, offer.model, `${offer.hull}% hull`, offer.engine].forEach((item) => {
+        const chip = document.createElement("span");
+        chip.textContent = item;
+        meta.append(chip);
+      });
+      tags.className = "ship-offer-tags";
+      offer.includedComponents.forEach((componentName) => {
+        const chip = document.createElement("span");
+        chip.textContent = componentName;
+        tags.append(chip);
+      });
+      button.className = "ship-offer-button";
+      button.type = "button";
+      button.textContent = isPurchased ? "Purchased" : canAfford ? "Buy Ship" : offer.special ? "I don't have enough" : "Out of Reach";
+      button.disabled = isPurchased;
+      button.addEventListener("click", () => handleShipOfferClick(offer));
+      card.append(title, price, description, meta, tags, button);
+      return card;
+    }),
+  );
+}
+
+function handleShipOfferClick(offer) {
+  if (state.components.merchant.purchasedOfferId) {
+    return;
+  }
+
+  if (state.components.account.credits < offer.price) {
+    state.ledger.recordEvent(
+      "merchant.cannotAfford",
+      {
+        offerId: offer.id,
+        shipName: offer.title,
+        price: offer.price,
+        credits: Math.floor(state.components.account.credits),
+      },
+      { visible: false },
+    );
+    return;
+  }
+
+  buyShipOffer(offer);
+}
+
+function buyShipOffer(offer) {
+  state.components.account.credits -= offer.price;
+  state.components.merchant.purchasedOfferId = offer.id;
+  state.ship.frameId = "yard-skiff-miner";
+  state.ship.name = offer.title;
+  state.ship.shape = "yard-skiff";
+  state.components.hull.vin = "YRDSKF-M-2B7";
+  state.components.hull.integrity = state.components.hull.maxIntegrity;
+  state.components.engine.fuelBurnRate = 4.5;
+  state.components.engine.maxFuel = 260;
+  state.components.engine.fuel = Math.max(state.components.engine.fuel, 220);
+  state.components.miner.installed = true;
+  state.components.miner.ammo = Math.max(state.components.miner.ammo, 150);
+  state.components.processor.installed = true;
+  state.components.cargoHold.installed = true;
+  setComponentAvailable("miner", true);
+  setComponentAvailable("processor", true);
+  setComponentAvailable("cargo", true);
+  state.ledger.recordEvent("ship.purchased", {
+    offerId: offer.id,
+    shipName: offer.title,
+    price: offer.price,
+    creditsRemaining: Math.floor(state.components.account.credits),
+    includedComponents: offer.includedComponents,
+  });
+  updateHudDisplay();
 }
 
 function recordPanelDrag(panelId, drag, offset) {
