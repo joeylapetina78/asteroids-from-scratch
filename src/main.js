@@ -436,8 +436,10 @@ function updateDockingDisplay(siteState) {
 function updateHubServiceDisplay(siteState) {
   const site = siteState.dockedSite?.type === "hub" ? siteState.dockedSite : null;
   const wasHidden = isPanelHidden(hubPanel);
+  const wasLocked = hubPanel.classList.contains("is-component-locked");
 
   setPanelHidden(hubPanel, !site);
+  hubPanel.classList.toggle("is-component-locked", !site);
   hubPanel.setAttribute("aria-hidden", String(!site));
 
   if (!site) {
@@ -454,8 +456,10 @@ function updateHubServiceDisplay(siteState) {
     return;
   }
 
-  if (wasHidden) {
+  if (wasHidden || wasLocked) {
+    positionPanelById("hub");
     bringPanelToFront(hubPanel);
+    playPanelReveal(hubPanel);
   }
 
   const hullPercent = Math.ceil(siteState.hullIntegrity);
