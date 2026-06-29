@@ -1,3 +1,5 @@
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=npc-registry-v1";
+
 const MASTER_VOLUME = 0.42;
 const CHATTER_INTERVAL_SECONDS = 0.055;
 const THRUST_TICK_SECONDS = 0.12;
@@ -225,21 +227,5 @@ export function createGameAudio() {
 }
 
 function getSpeakerBaseFrequency(speaker) {
-  if (speaker === "The Galaxy") {
-    return 620;
-  }
-
-  if (speaker === "Barvis") {
-    return 540;
-  }
-
-  if (speaker === "Mr. Mako") {
-    return 420;
-  }
-
-  if (speaker?.includes("Dispatch")) {
-    return 700;
-  }
-
-  return 470;
+  return getNpcVoiceFrequency(speaker, 470);
 }

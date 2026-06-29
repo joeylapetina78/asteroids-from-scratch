@@ -1,9 +1,11 @@
+import { getNpcName } from "../npcs.js?v=npc-registry-v1";
+
 export const hubServiceDefinitions = {
   "yard-exchange": [
     {
       id: "rook-industries",
       npcId: "rook",
-      npcName: "Rook",
+      npcName: getNpcName("rook"),
       organization: "Rook Industries",
       serviceType: "contracts",
       label: "Rook Industries",
@@ -14,7 +16,7 @@ export const hubServiceDefinitions = {
     {
       id: "yard-shipyard",
       npcId: "barvis",
-      npcName: "Barvis",
+      npcName: getNpcName("barvis"),
       organization: "Yard Exchange Shipyard",
       serviceType: "shipyard",
       label: "Shipyard",
@@ -24,7 +26,7 @@ export const hubServiceDefinitions = {
     {
       id: "yard-finance",
       npcId: "mako",
-      npcName: "Mr. Mako",
+      npcName: getNpcName("mako"),
       organization: "Yard Exchange Finance",
       serviceType: "finance",
       label: "Finance",
@@ -35,7 +37,7 @@ export const hubServiceDefinitions = {
     {
       id: "yard-supply",
       npcId: "finley",
-      npcName: "Finley",
+      npcName: getNpcName("finley"),
       organization: "Yard Exchange Supply",
       serviceType: "supply",
       label: "Supply",
@@ -47,7 +49,7 @@ export const hubServiceDefinitions = {
     {
       id: "scrap-porch-supply",
       npcId: "porch-dispatch",
-      npcName: "Scrap Porch Dispatch",
+      npcName: getNpcName("porch-dispatch"),
       organization: "Scrap Porch",
       serviceType: "supply",
       label: "Dispatch Supply",
