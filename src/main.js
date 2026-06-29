@@ -1,8 +1,9 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
 import { Game } from "./game.js?v=rook-tutorial-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=rook-tutorial-v1";
+import { createContractManager } from "./systems/contractManager.js?v=contract-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=contract-v1";
 import { Processor } from "./systems/processor.js?v=credits-cargo";
-import { createGameState } from "./state/gameState.js?v=hull-vin-v1";
+import { createGameState } from "./state/gameState.js?v=contract-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -29,6 +30,7 @@ const DEFAULT_PANEL_LAYOUT = {
   engine: { x: -300, y: 20, z: 70 },
   scanner: { x: 980, y: 300, z: 90 },
   docking: { x: -300, y: 340, z: 100 },
+  contract: { x: -300, y: 340, z: 95 },
   miner: { x: 980, y: 500, z: 60 },
   collector: { x: 980, y: 680, z: 50 },
   hull: { x: -300, y: 580, z: 50 },
@@ -41,6 +43,15 @@ const ammoCount = document.querySelector("#ammo-count");
 const cargoCanvas = document.querySelector("#cargo");
 const canvas = document.querySelector("#game");
 const creditCount = document.querySelector("#credit-count");
+const contractAcceptButton = document.querySelector("#contract-accept");
+const contractClauses = document.querySelector("#contract-clauses");
+const contractDestination = document.querySelector("#contract-destination");
+const contractIssuer = document.querySelector("#contract-issuer");
+const contractReward = document.querySelector("#contract-reward");
+const contractStatus = document.querySelector("#contract-status");
+const contractSummary = document.querySelector("#contract-summary");
+const contractTitle = document.querySelector("#contract-title");
+const contractVin = document.querySelector("#contract-vin");
 const fuelCount = document.querySelector("#fuel-count");
 const hullCount = document.querySelector("#hull-count");
 const hullVin = document.querySelector("#hull-vin");
@@ -100,9 +111,17 @@ const state = createGameState();
 const processor = new Processor(processorCanvas, processUnit);
 const cargoHold = new Processor(cargoCanvas, () => {}, { isClickable: false });
 const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type), updateWorldDebugDisplay, updateHubDisplay);
+const contractManager = createContractManager({
+  state,
+  onChange: () => {
+    renderContract();
+    updateHudDisplay();
+  },
+});
 const journeyDirector = createJourneyDirector({
   state,
   game,
+  offerContract: (contractId) => contractManager.offerContract(contractId),
   onChange: () => {
     renderJourney();
     updateHudDisplay();
@@ -180,6 +199,11 @@ dockToggleButton.addEventListener("click", () => {
   game.toggleDock();
 });
 
+contractAcceptButton.addEventListener("click", () => {
+  contractManager.acceptContract();
+  updateHudDisplay();
+});
+
 hubRepairButton.addEventListener("click", () => {
   game.repairAtDock();
   updateHudDisplay();
@@ -194,6 +218,7 @@ game.placeShipNearSite("scrap-porch");
 clearOldPanelLayouts();
 makePanelsDraggable();
 journeyDirector.start();
+renderContract();
 updateShipPowerDisplay();
 updateHudDisplay();
 
@@ -279,6 +304,7 @@ function updateHubServiceDisplay(siteState) {
 }
 
 function updateWorldDebugDisplay(debug) {
+  contractManager.update();
   journeyDirector.update();
   const zone = debug.zoneProfile;
 
@@ -296,6 +322,67 @@ function updateWorldDebugDisplay(debug) {
   worldDebugFields.activeLifeforms.textContent = String(debug.activeLifeformCount);
   worldDebugFields.pickups.textContent = String(debug.pickupCount);
   updateEventLedgerDisplay();
+}
+
+function renderContract(contract = contractManager.getCurrentContract()) {
+  if (!contract) {
+    contractTitle.textContent = "Contract";
+    contractStatus.textContent = "no offer";
+    contractIssuer.textContent = "Issuer: --";
+    contractSummary.textContent = "No active contract.";
+    contractVin.textContent = "--";
+    contractDestination.textContent = "--";
+    contractReward.textContent = "0 cr";
+    contractAcceptButton.disabled = true;
+    contractAcceptButton.textContent = "Accept Contract";
+    contractClauses.replaceChildren();
+    return;
+  }
+
+  contractTitle.textContent = contract.title;
+  contractStatus.textContent = getContractStatusLabel(contract.status);
+  contractIssuer.textContent = `Issuer: ${contract.issuer}`;
+  contractSummary.textContent = contract.summary;
+  contractVin.textContent = contract.terms.deliverShipVin;
+  contractDestination.textContent = contract.terms.destinationName;
+  contractReward.textContent = `${contract.reward.credits ?? 0} cr`;
+  contractAcceptButton.disabled = contract.status !== "offered";
+  contractAcceptButton.textContent = contract.status === "offered" ? "Accept Contract" : getContractButtonLabel(contract.status);
+  contractClauses.replaceChildren(
+    ...(contract.clauses ?? []).map((clause) => {
+      const item = document.createElement("li");
+      item.textContent = clause;
+      return item;
+    }),
+  );
+}
+
+function getContractStatusLabel(status) {
+  if (status === "offered") {
+    return "offer pending";
+  }
+
+  if (status === "active") {
+    return "active";
+  }
+
+  if (status === "paid") {
+    return "paid";
+  }
+
+  return status ?? "unknown";
+}
+
+function getContractButtonLabel(status) {
+  if (status === "active") {
+    return "Accepted";
+  }
+
+  if (status === "paid") {
+    return "Paid";
+  }
+
+  return "Closed";
 }
 
 function getViewportLocationLabel(debug) {

@@ -12,11 +12,14 @@ The opening sequence is:
 4. Rook activates the Hull and points out ship integrity.
 5. Rook asks the player to drag both the Journey and Hull panels.
 6. Rook activates the Viewport.
-7. Rook activates the Scanner and asks for one scan.
-8. Rook activates the Engine.
-9. Powering the engine advances the mission to movement.
-10. The first real thrust event confirms the ship is underway.
-11. Yard Exchange entering view or becoming nearby unlocks the Docking prompt.
+7. Rook offers a delivery contract.
+8. Accepting the contract advances the mission.
+9. Rook activates the Scanner and asks for one scan.
+10. Rook activates the Engine.
+11. Powering the engine advances the mission to movement.
+12. The first real thrust event confirms the ship is underway.
+13. Yard Exchange entering view or becoming nearby unlocks the Docking prompt.
+14. Docking at Yard Exchange pays the contract and completes the mission.
 
 The Hull now also displays a starter VIN plate. For now this is a state-backed readout on the Hull component, but it is meant to become a real gameplay identity hook for docking, scans, permits, and later suspicious ship-paperwork tricks.
 
@@ -40,3 +43,5 @@ After the first pass, the hardcoded Journey logic was split into a top-level Jou
 This is not pure JSON yet. It is JavaScript data shaped like future JSON, which gives the project room to discover the mission format before building an editor or content pipeline.
 
 Mission rules can now require multiple flags. The first use is panel-drag training: hidden `component.dragged` events set separate flags for Journey and Hull, and the mission advances only after both have moved.
+
+Contracts are now a separate layer from missions. Rook's first job offers the `Assessment Delivery` contract, which pays 500 credits when the attached VIN docks at Yard Exchange. The mission does not directly award the money; it waits for the contract system to record `contract.paid`. That keeps story pacing separate from enforceable terms, which is the same foundation future loans, deadlines, damage penalties, and hub job boards can use.

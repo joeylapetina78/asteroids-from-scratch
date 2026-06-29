@@ -133,12 +133,14 @@ Current opening flow:
 4. Rook activates the Hull and points out ship integrity.
 5. Rook asks the player to drag both the Journey and Hull panels.
 6. Rook activates the Viewport.
-7. Rook activates the Scanner and asks the player to scan once.
-8. Rook activates the Engine.
-9. Powering the engine advances the mission to movement.
-10. First real player thrust confirms the ship is underway.
-11. Yard Exchange entering view or becoming nearby triggers the Docking prompt.
-12. Docking at Yard Exchange completes the mission.
+7. Rook offers the assessment delivery contract.
+8. Accepting the contract advances the mission.
+9. Rook activates the Scanner and asks the player to scan once.
+10. Rook activates the Engine.
+11. Powering the engine advances the mission to movement.
+12. First real player thrust confirms the ship is underway.
+13. Yard Exchange entering view or becoming nearby triggers the Docking prompt.
+14. Docking at Yard Exchange fulfills and pays the contract, which completes the mission.
 
 Mission event handling keeps listening while an NPC line is waiting for `Okay`. That lets stronger world facts interrupt tutorial beats: if the player reaches Yard Exchange before acknowledging the Scanner lesson, the mission can skip ahead to the Docking prompt instead of blocking progress.
 
@@ -147,6 +149,23 @@ Journey is intentionally not a normal debug log. It shows the current story beat
 Each mission step also has `helpText`. This is the plain explanation layer for players who skipped or forgot the NPC line. The Journey panel exposes it separately from the NPC story text.
 
 Mission rules can require multiple flags via `requiresFlags`. The first use is panel-drag training: the DOM drag system records hidden `component.dragged` events, the mission sets separate flags for Journey and Hull, and then advances when both flags are true.
+
+### Contracts
+
+[src/systems/contractManager.js](../src/systems/contractManager.js) is the first contract system. It listens to ledger events and updates contract records without making the Journey Director personally enforce every economic/legal term.
+
+[src/content/contracts/chapterOneContracts.js](../src/content/contracts/chapterOneContracts.js) defines the first contract, `rook-yard-exchange-delivery`. It requires the attached hull VIN `YRDSKF-01-7A3` to dock at Yard Exchange and pays 500 credits.
+
+Current contract flow:
+
+1. The mission action `offerContract` reveals the Contract component and records a hidden `contract.offered` event.
+2. The Contract panel's accept button records `contract.accepted`.
+3. The mission listens for `contract.accepted` before continuing to the scanner lesson.
+4. When `site.docked` is recorded, the contract manager checks active delivery contracts against the docked site and the attached hull VIN.
+5. A matching contract becomes `paid`, adds credits to the account, and records `contract.fulfilled` and `contract.paid`.
+6. The mission listens for `contract.paid` to complete the interview.
+
+This is intentionally small, but it sets up the later shape for loan contracts, delivery contracts, penalties, deadlines, damage modifiers, and hub contract boards.
 
 ### Game Loop
 
@@ -239,7 +258,7 @@ Collected pickups become larger square units falling from a pipe. The processor 
 
 ### Event Ledger
 
-[src/systems/eventLedger.js](../src/systems/eventLedger.js) is the central memory spine for meaningful events and compact stats. Systems report events such as `site.docked`, `site.nearby`, `zone.entered`, `ship.thrusted`, `ship.repaired`, `cargo.sold`, `weapon.fired`, `asteroid.destroyed`, `resource.collected`, `resource.processed`, `enemy.destroyed`, and `npc.destroyed`. The ledger stores capped in-memory event history and derives stat keys like `site.docked.yard-exchange`, `zone.entered.red-teeth`, `resource.collected.crystal`, `credits.earned.sales`, and `credits.spent.repairs`.
+[src/systems/eventLedger.js](../src/systems/eventLedger.js) is the central memory spine for meaningful events and compact stats. Systems report events such as `site.docked`, `site.nearby`, `zone.entered`, `ship.thrusted`, `ship.repaired`, `cargo.sold`, `contract.accepted`, `contract.paid`, `weapon.fired`, `asteroid.destroyed`, `resource.collected`, `resource.processed`, `enemy.destroyed`, and `npc.destroyed`. The ledger stores capped in-memory event history and derives stat keys like `site.docked.yard-exchange`, `zone.entered.red-teeth`, `resource.collected.crystal`, `credits.earned.sales`, `credits.earned.contracts`, and `credits.spent.repairs`.
 
 This is intentionally separate from contracts and achievements. Future systems can listen to new events or compare stat snapshots without each gameplay system knowing about every possible contract, achievement, reputation rule, or ship record.
 
@@ -274,6 +293,7 @@ Component state lives under `state.components`.
 | `cargoHold` | Cargo canvas | Stores units for selling and future mission delivery. |
 | `hull` | Integrity readout, VIN plate | Takes collision damage. At 0%, ship is destroyed and controls are disabled. The starter VIN is state-backed so future docking, scanning, permits, and identity tricks have a real hook. |
 | `docking` | Target, credits, dock button | Shows nearest/nearby site state and toggles docking. |
+| `contract` | Contract terms and accept button | Shows the current offered/active/paid contract. The first contract checks VIN plus destination and pays account credits. |
 | `hub` | Hidden service panel | Appears only while docked at a hub. Sells cargo and repairs hull. |
 | `world` | Debug component | Shows world position, zone, danger, bias values, and object counts. |
 

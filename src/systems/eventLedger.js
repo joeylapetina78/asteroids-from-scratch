@@ -190,6 +190,13 @@ export function createEventLedger(options = {}) {
     } else if (event.type === "component.unlocked" || event.type === "component.shown") {
       incrementStat(`${event.type}.total`);
       incrementStat(`${event.type}.${event.payload.componentId ?? "unknown"}`);
+    } else if (event.type === "contract.offered" || event.type === "contract.accepted" || event.type === "contract.fulfilled" || event.type === "contract.paid") {
+      incrementStat(`${event.type}.total`);
+      incrementStat(`${event.type}.${event.payload.contractId ?? "unknown"}`);
+
+      if (event.type === "contract.paid") {
+        incrementStat("credits.earned.contracts", event.payload.creditsPaid ?? 0);
+      }
     } else if (event.type === "mission.accepted" || event.type === "mission.completed") {
       incrementStat(`${event.type}.total`);
       incrementStat(`${event.type}.${event.payload.missionId ?? "unknown"}`);
@@ -300,6 +307,22 @@ function getDefaultMessage(type, payload) {
 
   if (type === "mission.completed") {
     return `Completed ${payload.missionName ?? payload.missionId ?? "mission"}`;
+  }
+
+  if (type === "contract.offered") {
+    return `Contract offered: ${payload.contractTitle ?? payload.contractId}`;
+  }
+
+  if (type === "contract.accepted") {
+    return `Accepted contract: ${payload.contractTitle ?? payload.contractId}`;
+  }
+
+  if (type === "contract.fulfilled") {
+    return `Fulfilled contract: ${payload.contractTitle ?? payload.contractId}`;
+  }
+
+  if (type === "contract.paid") {
+    return `Contract paid ${payload.creditsPaid ?? 0} credits`;
   }
 
   return type;

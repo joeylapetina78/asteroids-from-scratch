@@ -1,4 +1,4 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=journey-chapter-one";
+import { createEventLedger } from "../systems/eventLedger.js?v=contract-v1";
 
 // Starting game/component state. This is the current lightweight substitute for
 // future accounts, saves, installed modules, and player profiles.
@@ -14,6 +14,10 @@ export function createGameState() {
       flags: {},
       pendingAcknowledgement: null,
       nextMessageId: 1,
+    },
+    contracts: {
+      currentContractId: null,
+      records: {},
     },
     ship: {
       frameId: "yard-skiff",
@@ -74,6 +78,9 @@ export function createGameState() {
       collector: {
         installed: false,
         isActive: false,
+      },
+      contract: {
+        installed: false,
       },
     },
   };

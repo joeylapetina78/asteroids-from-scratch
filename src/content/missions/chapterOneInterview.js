@@ -107,7 +107,33 @@ export const chapterOneInterviewMission = {
       onAcknowledge: [
         { type: "clearMessage" },
         { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
-        { type: "goToStep", stepId: "show-scanner" },
+        { type: "goToStep", stepId: "offer-contract" },
+      ],
+    },
+    {
+      id: "offer-contract",
+      objective: "Review Rook's delivery contract.",
+      helpText:
+        "Use the Contract panel to accept the delivery terms. The job pays when this VIN docks at Yard Exchange.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Before we fly, here's the actual contract. Deliver this registered ship to Yard Exchange and the account gets paid 500 credits. Simple terms, clean paper.",
+          acknowledgement: { label: "Show Contract" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "offerContract", contractId: "rook-yard-exchange-delivery" },
+      ],
+      transitions: [
+        {
+          eventType: "contract.accepted",
+          payloadEquals: { contractId: "rook-yard-exchange-delivery" },
+          nextStepId: "show-scanner",
+        },
       ],
     },
     {
@@ -350,8 +376,8 @@ export const chapterOneInterviewMission = {
       helpText: "Move close to Yard Exchange, then use the Docking panel or press E to dock.",
       transitions: [
         {
-          eventType: "site.docked",
-          payloadEquals: { siteId: "yard-exchange" },
+          eventType: "contract.paid",
+          payloadEquals: { contractId: "rook-yard-exchange-delivery" },
           actions: [{ type: "completeMission" }],
         },
       ],

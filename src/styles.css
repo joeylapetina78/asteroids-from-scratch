@@ -189,6 +189,7 @@ body {
 .collector-panel,
 .docking-panel,
 .hub-panel,
+.contract-panel,
 .world-panel,
 .journey-panel {
   display: grid;
@@ -207,8 +208,13 @@ body {
 .scanner-panel,
 .miner-panel,
 .docking-panel,
-.hub-panel {
+.hub-panel,
+.contract-panel {
   width: 180px;
+}
+
+.contract-panel {
+  width: 240px;
 }
 
 .collector-panel {
@@ -262,6 +268,7 @@ body {
 .sell-button,
 .repair-button,
 .tractor-button,
+.contract-button,
 .journey-button {
   border: 1px solid #4b5566;
   border-radius: 6px;
@@ -278,6 +285,7 @@ body {
 .sell-button:hover,
 .repair-button:hover,
 .tractor-button:hover,
+.contract-button:hover,
 .journey-button:hover {
   border-color: #7f8aa3;
   background: #222733;
@@ -325,15 +333,66 @@ body {
   color: #fff0bd;
 }
 
+.contract-button {
+  border-color: #786b42;
+  color: #fff0bd;
+}
+
 .sell-button {
   border-color: #786b42;
   color: #fff0bd;
 }
 
 .sell-button:disabled,
-.repair-button:disabled {
+.repair-button:disabled,
+.contract-button:disabled {
   cursor: default;
   opacity: 0.45;
+}
+
+.contract-readout {
+  display: grid;
+  gap: 8px;
+  color: #d9deea;
+  font-size: 0.82rem;
+}
+
+.contract-readout p {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.contract-readout dl {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.contract-readout dl div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.contract-readout dt {
+  color: #9aa4b8;
+}
+
+.contract-readout dd {
+  margin: 0;
+  color: #ffffff;
+  font-weight: 700;
+  text-align: right;
+}
+
+.contract-clauses {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 16px;
+  color: #aeb8cc;
+  font-size: 0.76rem;
 }
 
 .hub-readout,
@@ -656,6 +715,7 @@ body {
   .collector-panel,
   .docking-panel,
   .hub-panel,
+  .contract-panel,
   .hull-panel,
   .world-panel,
   .journey-panel {

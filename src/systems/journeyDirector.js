@@ -1,7 +1,7 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js";
-import { createMissionRunner } from "./missionRunner.js";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=contract-v1";
+import { createMissionRunner } from "./missionRunner.js?v=contract-v1";
 
-export function createJourneyDirector({ state, onChange = () => {}, showComponent = () => {} }) {
+export function createJourneyDirector({ state, onChange = () => {}, offerContract = () => {}, showComponent = () => {} }) {
   const journey = state.journey;
   let lastEventId = 0;
   const activeMission = createMissionRunner({
@@ -10,6 +10,10 @@ export function createJourneyDirector({ state, onChange = () => {}, showComponen
     actions: {
       clearMessage,
       completeMission,
+      offerContract: (contractId) => {
+        unlockComponent("contract", "Contract");
+        offerContract(contractId);
+      },
       recordEvent: (...args) => state.ledger.recordEvent(...args),
       say,
       showComponent: unlockComponent,
@@ -111,7 +115,7 @@ export function createJourneyDirector({ state, onChange = () => {}, showComponen
   }
 
   function showOnlyInitialComponents() {
-    ["viewport", "engine", "scanner", "miner", "collector", "hull", "docking", "hub", "world", "processor", "cargo"].forEach((componentId) => {
+    ["viewport", "engine", "scanner", "miner", "collector", "hull", "docking", "hub", "world", "processor", "cargo", "contract"].forEach((componentId) => {
       showComponent(componentId, false);
     });
   }

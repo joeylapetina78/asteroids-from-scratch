@@ -124,6 +124,8 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
         actions.clearMessage();
       } else if (action.type === "showComponent") {
         actions.showComponent(action.componentId, action.componentName);
+      } else if (action.type === "offerContract") {
+        actions.offerContract(action.contractId);
       } else if (action.type === "setComponentValue") {
         state.components[action.componentId][action.key] = action.value;
       } else if (action.type === "raiseComponentValue") {
