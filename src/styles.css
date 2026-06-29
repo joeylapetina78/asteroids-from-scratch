@@ -456,6 +456,48 @@ body {
   background: linear-gradient(90deg, #ff7452, #ffd36b);
 }
 
+.component-meter {
+  display: grid;
+  gap: 6px;
+}
+
+.component-meter-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #d8deec;
+}
+
+.component-meter-label strong {
+  color: #ffffff;
+  font-size: 1.35rem;
+}
+
+.component-meter-track {
+  overflow: hidden;
+  height: 9px;
+  border: 1px solid #252b36;
+  border-radius: 999px;
+  background: #11141c;
+}
+
+.component-meter-track span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 140ms ease-out;
+}
+
+.meter-fuel .component-meter-track span {
+  background: linear-gradient(90deg, #ff7452, #ffd36b);
+}
+
+.meter-hull .component-meter-track span {
+  background: linear-gradient(90deg, #ff5d6c, #ffd36b 52%, #9ee8ff);
+}
+
 .cargo-panel.is-deposit-target {
   border-color: rgba(255, 211, 107, 0.82);
   box-shadow: 0 0 24px rgba(255, 211, 107, 0.18);

@@ -42,6 +42,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/content/missions/chapterOneNewShip.js](../src/content/missions/chapterOneNewShip.js) | Authored data for buying the first player-owned starter mining ship. |
 | [src/content/missions/chapterOneRedWork.js](../src/content/missions/chapterOneRedWork.js) | Authored data for Rook's first repeatable red-resource mining job. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. |
+| [src/systems/saveManager.js](../src/systems/saveManager.js) | Lightweight browser-local profile save/load for playtesting. |
 
 ## Entity Dictionary
 
@@ -283,6 +284,21 @@ Scanning costs scanergy in `Game.scanForCrystals`. Scanner use no longer require
 
 Collected pickups normally become larger square units falling from a pipe. If the processor is not installed yet but the cargo hold is installed, pickups route straight into cargo storage. The processor resolves basic gravity, walls, floor bounce, friction, unit collision, and click sparks once that system is available.
 
+When docked and depositing contract cargo, clicked cargo units are consumed from the hold and clean square cargo packets travel down the docking tether to the hub in the viewport. This is intentionally similar to the hauler loading/unloading visual, because later NPC cargo should use the same idea for real goods rather than fake decorative lights.
+
+### Save Manager
+
+[src/systems/saveManager.js](../src/systems/saveManager.js) is the first browser-local save foundation. It stores a lightweight profile in `localStorage`:
+
+- component state
+- account/debt/contracts
+- ship frame/name
+- current Journey mission pointer
+- cargo hold units
+- current ship position and camera position
+
+This is a playtest save, not an account system. It may be reset by future game updates. Use `?resetSave=1` to clear the local save in a browser, and `?devStart=red-work` to start fresh in the first mining work test setup.
+
 ### World Sites
 
 [src/systems/worldSites.js](../src/systems/worldSites.js) defines authored places in world space. Current sites are repair hubs. The game detects nearby sites, lets the player dock, shows viewport title cards, and reveals the hub service component only while docked.
@@ -406,7 +422,7 @@ Pressure points:
 - [src/main.js](../src/main.js) is doing many browser jobs: DOM binding, HUD, economy UI, processor outputs, layout persistence.
 - Resource classification exists in both scanner/pickup logic and may eventually deserve a shared helper.
 - Cache-busted import query strings must be kept aligned when changing modules.
-- The event ledger is still in-memory only; future save/profile work should decide how much history and which stats persist.
+- The event ledger is still in-memory only; save/profile work now preserves the current player state, but future account saves should decide how much event history and which stats persist.
 
 Small future cleanup candidates:
 

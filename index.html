@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=contract-pay-v1" />
+    <link rel="stylesheet" href="./src/styles.css?v=profile-save-v1" />
   </head>
   <body>
     <main class="game-shell">
@@ -69,7 +69,15 @@
                 <label><input type="radio" name="thrust-mode" value="forward" checked /> Forward</label>
                 <label><input type="radio" name="thrust-mode" value="reverse" /> Reverse</label>
               </div>
-              <span>Fuel: <strong id="fuel-count">200</strong></span>
+              <div class="component-meter meter-fuel" aria-label="Fuel level">
+                <div class="component-meter-label">
+                  <span>Fuel</span>
+                  <strong id="fuel-count">200</strong>
+                </div>
+                <div class="component-meter-track" aria-hidden="true">
+                  <span id="fuel-fill"></span>
+                </div>
+              </div>
               <div class="component-hints">
                 <span>A/D rotate</span>
                 <span>W thrust</span>
@@ -107,7 +115,7 @@
                 <span>Charges: <strong id="ammo-count">100</strong></span>
               </div>
               <div class="component-hints">
-                <span>Space blast</span>
+                <span>Space bar: fire charge</span>
               </div>
             </div>
 
@@ -129,8 +137,16 @@
                   <span>ship damage</span>
                 </div>
               </div>
-              <div class="system-readout" aria-live="polite">
-                <span>Integrity: <strong id="hull-count">100%</strong></span>
+              <div class="system-readout hull-readout" aria-live="polite">
+                <div class="component-meter meter-hull" aria-label="Hull integrity">
+                  <div class="component-meter-label">
+                    <span>Integrity</span>
+                    <strong id="hull-count">100%</strong>
+                  </div>
+                  <div class="component-meter-track" aria-hidden="true">
+                    <span id="hull-fill"></span>
+                  </div>
+                </div>
               </div>
               <div class="vin-plate" id="hull-vin-plate" aria-label="Ship VIN plate">
                 <span>VIN</span>
@@ -272,6 +288,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=contract-pay-v1"></script>
+    <script type="module" src="./src/main.js?v=profile-save-v1"></script>
   </body>
 </html>

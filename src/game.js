@@ -132,6 +132,41 @@ export class Game {
     this.lastShipMovementEventPosition = { ...this.ship.position };
   }
 
+  getSaveSnapshot() {
+    return {
+      ship: {
+        position: { ...this.ship.position },
+        velocity: { ...this.ship.velocity },
+        angle: this.ship.angle,
+      },
+      camera: {
+        x: this.camera.x,
+        y: this.camera.y,
+        centerX: this.camera.centerX,
+        centerY: this.camera.centerY,
+      },
+      dockedSiteId: this.dockedSite?.id ?? null,
+    };
+  }
+
+  loadSaveSnapshot(snapshot) {
+    if (!snapshot?.ship?.position) {
+      return;
+    }
+
+    this.ship.position.x = snapshot.ship.position.x;
+    this.ship.position.y = snapshot.ship.position.y;
+    this.ship.velocity.x = snapshot.ship.velocity?.x ?? 0;
+    this.ship.velocity.y = snapshot.ship.velocity?.y ?? 0;
+    this.ship.angle = snapshot.ship.angle ?? this.ship.angle;
+    this.camera.centerX = snapshot.camera?.centerX ?? this.ship.position.x;
+    this.camera.centerY = snapshot.camera?.centerY ?? this.ship.position.y;
+    this.camera.x = snapshot.camera?.x ?? this.camera.centerX - this.canvas.width / 2;
+    this.camera.y = snapshot.camera?.y ?? this.camera.centerY - this.canvas.height / 2;
+    this.lastShipMovementEventPosition = { ...this.ship.position };
+    this.dockedSite = this.worldSites.find((site) => site.id === snapshot.dockedSiteId) ?? null;
+  }
+
   setShipPowered(isPowered) {
     if (this.shipDestroyed || !this.state.components.engine.installed) {
       return;
@@ -629,24 +664,25 @@ export class Game {
     const normalX = distanceX / distance;
     const normalY = distanceY / distance;
 
-    for (let index = 0; index < 4; index += 1) {
-      const progress = index * 0.08;
-      const sideJitter = (index - 1.5) * 3;
+    for (let index = 0; index < 5; index += 1) {
+      const progress = index * 0.045;
+      const sideJitter = (index - 2) * 2.6;
 
       this.particles.push({
-        type: "square",
+        type: "cargo-packet",
         position: {
           x: this.ship.position.x + distanceX * progress - normalY * sideJitter,
           y: this.ship.position.y + distanceY * progress + normalX * sideJitter,
         },
         velocity: {
-          x: normalX * (190 + index * 18),
-          y: normalY * (190 + index * 18),
+          x: normalX * (230 + index * 14),
+          y: normalY * (230 + index * 14),
         },
         color,
-        size: 3,
-        life: 0.62 + index * 0.04,
-        maxLife: 0.78,
+        size: 5,
+        drag: 0.99,
+        life: Math.max(0.35, distance / 235) + index * 0.025,
+        maxLife: Math.max(0.35, distance / 235) + index * 0.025,
       });
     }
   }
@@ -1547,8 +1583,9 @@ export class Game {
   updateParticles(deltaSeconds) {
     this.particles.forEach((particle) => {
       particle.life -= deltaSeconds;
-      particle.velocity.x *= PARTICLE_DRAG;
-      particle.velocity.y *= PARTICLE_DRAG;
+      const drag = particle.drag ?? PARTICLE_DRAG;
+      particle.velocity.x *= drag;
+      particle.velocity.y *= drag;
       particle.position.x += particle.velocity.x * deltaSeconds;
       particle.position.y += particle.velocity.y * deltaSeconds;
     });
@@ -1768,6 +1805,11 @@ export class Game {
 
       if (particle.type === "spark") {
         this.context.fillRect(-particle.size * 1.5, -particle.size / 2, particle.size * 3, particle.size);
+      } else if (particle.type === "cargo-packet") {
+        this.context.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
+        this.context.strokeStyle = "rgba(255, 255, 255, 0.82)";
+        this.context.lineWidth = 1;
+        this.context.strokeRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
       } else {
         this.context.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
       }

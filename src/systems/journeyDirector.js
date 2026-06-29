@@ -1,6 +1,6 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=ship-market-v2";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=ship-market-v2";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=red-work-v1";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=profile-save-v1";
 import { createMissionRunner } from "./missionRunner.js?v=contract-v1";
 
 const MISSION_DEFINITIONS = new Map(
@@ -14,6 +14,13 @@ export function createJourneyDirector({ state, onChange = () => {}, offerContrac
 
   function start() {
     showOnlyInitialComponents();
+
+    if (journey.mission?.id && MISSION_DEFINITIONS.has(journey.mission.id)) {
+      activeMission = createMission(MISSION_DEFINITIONS.get(journey.mission.id));
+      onChange(journey);
+      return;
+    }
+
     activeMission.startOffer();
     onChange(journey);
   }
@@ -193,6 +200,7 @@ export function createJourneyDirector({ state, onChange = () => {}, offerContrac
 
   return {
     start,
+    startMission,
     update,
     acceptMission,
     acknowledge,

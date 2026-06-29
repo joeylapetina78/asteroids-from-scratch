@@ -20,7 +20,7 @@ Then open `http://127.0.0.1:8123/`.
 - D: rotate right
 - W: thrust
 - S: brake
-- Space: fire
+- Space: fire charge
 - Power Ship button: toggles ship systems on and off
 - Thrust mode: chooses forward thrust or low-power reverse thrust
 - Scan button: sends a forward resource scan from the ship nose
@@ -57,5 +57,9 @@ The smaller processor canvas sits to the left on wide screens. It receives colle
 The cargo hold has its own pipe and physics space. Units sent there are stored instead of processed, which gives future quests a place to check for delivered goods. The hull panel tracks ship integrity. Rock impacts throw ship sparks and reduce integrity based on impact speed and asteroid size.
 
 The game also has an in-memory event ledger for meaningful career/world events. It records docking, zone entry, shooting, asteroid destruction, resource collection, resource processing, cargo sales, repairs, enemy kills, and NPC ship destruction. The World panel shows a small verification readout with recent visible events and compact stats.
+
+Profiles now save locally in the browser with `localStorage`. The first pass preserves component state, contracts, debt, cargo units, ship identity, and the current ship position. It is intentionally a lightweight playtest save and may be reset by future game updates. Use `?resetSave=1` to clear the local save.
+
+For development testing, `?devStart=red-work` starts fresh near Yard Exchange with the starter mining setup so later contract work can be tested without replaying the full intro.
 
 Current likely milestone: keep shaping Chapter 1's guided introduction, then connect that story structure to missions, starter economy, and the first ship upgrade.

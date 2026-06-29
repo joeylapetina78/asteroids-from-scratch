@@ -81,6 +81,34 @@ export class Processor {
     return removedUnits;
   }
 
+  getSaveSnapshot() {
+    return {
+      units: this.units.map((unit) => ({
+        type: unit.type,
+        x: unit.x,
+        y: unit.y,
+        vx: unit.vx,
+        vy: unit.vy,
+      })),
+    };
+  }
+
+  loadSaveSnapshot(snapshot) {
+    if (!snapshot?.units) {
+      return;
+    }
+
+    this.units = snapshot.units.map((unit) => ({
+      type: unit.type,
+      color: TYPE_COLORS[unit.type],
+      x: unit.x,
+      y: unit.y,
+      vx: unit.vx,
+      vy: unit.vy,
+      size: UNIT_SIZE,
+    }));
+  }
+
   frame(time) {
     const deltaSeconds = Math.min((time - this.lastFrameTime) / 1000, 0.05);
     this.lastFrameTime = time;
@@ -228,7 +256,9 @@ export class Processor {
       }
 
       this.units.splice(clickedIndex, 1);
-      this.createCrushSparks(unit);
+      if (shouldProcess?.sparks !== false) {
+        this.createCrushSparks(unit);
+      }
     }
   }
 

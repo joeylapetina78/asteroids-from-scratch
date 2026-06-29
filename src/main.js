@@ -1,9 +1,10 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=contract-pay-v1";
+import { Game } from "./game.js?v=profile-save-v1";
 import { createContractManager } from "./systems/contractManager.js?v=contract-pay-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=red-work-v1";
-import { Processor } from "./systems/processor.js?v=red-work-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=profile-save-v1";
+import { Processor } from "./systems/processor.js?v=profile-save-v1";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=profile-save-v1";
 import { createGameState } from "./state/gameState.js?v=ship-market-v2";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
@@ -64,7 +65,9 @@ const contractTertiaryLabel = document.querySelector("#contract-tertiary-label")
 const contractTitle = document.querySelector("#contract-title");
 const contractVin = document.querySelector("#contract-vin");
 const fuelCount = document.querySelector("#fuel-count");
+const fuelFill = document.querySelector("#fuel-fill");
 const hullCount = document.querySelector("#hull-count");
+const hullFill = document.querySelector("#hull-fill");
 const hullVin = document.querySelector("#hull-vin");
 const dockToggleButton = document.querySelector("#dock-toggle");
 const dockingDetail = document.querySelector("#docking-detail");
@@ -121,6 +124,13 @@ const worldDebugFields = {
   eventLog: document.querySelector("#event-log"),
 };
 const state = createGameState();
+const initialDevStart = getDevStart();
+
+if (shouldResetSave() || initialDevStart) {
+  clearSavedProfile();
+}
+
+const savedProfile = loadSavedProfile(state);
 const processor = new Processor(processorCanvas, processUnit);
 const cargoHold = new Processor(cargoCanvas, depositCargoUnit, { isClickable: true });
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay);
@@ -147,6 +157,7 @@ let renderedLedgerVersion = -1;
 let journeyTypeTimers = [];
 let currentSiteState = null;
 let activeDepositContractId = null;
+let saveTimer = null;
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
   { panelId: "miner", cautionAt: 50, criticalAt: 20, getValue: () => state.components.miner.ammo },
@@ -250,9 +261,12 @@ hubSellCargoButton.addEventListener("click", () => {
 
 renderProcessorOutputs();
 game.placeShipNearSite("scrap-porch");
+restoreSavedWorld({ save: savedProfile, game, cargoHold });
 clearOldPanelLayouts();
 makePanelsDraggable();
 journeyDirector.start();
+applyDevStart(initialDevStart);
+revealInstalledComponents();
 renderContract();
 updateShipPowerDisplay();
 updateHudDisplay();
@@ -260,6 +274,7 @@ updateHudDisplay();
 game.start();
 processor.start();
 cargoHold.start();
+window.addEventListener("beforeunload", () => saveNow());
 
 function updateHudDisplay() {
   renderProcessorOutputs();
@@ -269,15 +284,101 @@ function updateHudDisplay() {
 
   creditCount.textContent = String(Math.floor(state.components.account.credits));
   fuelCount.textContent = String(Math.floor(state.components.engine.fuel));
+  fuelFill.style.width = `${getMeterPercent(state.components.engine.fuel, state.components.engine.maxFuel)}%`;
   ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
   scanergyCount.textContent = `${Math.floor(state.components.scanner.scanergy)}%`;
   tractorFieldStatus.textContent = state.components.collector.isActive ? "Pulling" : "Idle";
   tractorFieldButton.setAttribute("aria-pressed", String(state.components.collector.isActive));
   hullCount.textContent = `${Math.ceil(state.components.hull.integrity)}%`;
+  hullFill.style.width = `${getMeterPercent(state.components.hull.integrity, state.components.hull.maxIntegrity)}%`;
   hullVin.textContent = state.components.hull.vinPlateAttached ? state.components.hull.vin : "UNVERIFIED";
   minerArmed.checked = state.components.miner.armed;
   merchantCredits.textContent = `${Math.floor(state.components.account.credits)} cr`;
   updateWarningPanels();
+  scheduleSave();
+}
+
+function getMeterPercent(value, maxValue) {
+  if (maxValue <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, (value / maxValue) * 100));
+}
+
+function scheduleSave() {
+  if (saveTimer) {
+    return;
+  }
+
+  saveTimer = window.setTimeout(() => {
+    saveTimer = null;
+    saveNow();
+  }, 800);
+}
+
+function saveNow() {
+  saveProfile({ state, game, cargoHold });
+}
+
+function revealInstalledComponents() {
+  if (!savedProfile) {
+    return;
+  }
+
+  Object.entries(state.components).forEach(([componentId, componentState]) => {
+    if (componentState?.installed) {
+      setComponentAvailable(componentId, true);
+    }
+  });
+}
+
+function applyDevStart(devStartId) {
+  if (!devStartId) {
+    return;
+  }
+
+  if (devStartId === "red-work") {
+    setupDevRedWorkStart();
+    journeyDirector.startMission("chapter-1-red-work");
+  }
+}
+
+function setupDevRedWorkStart() {
+  game.placeShipNearSite("yard-exchange", { x: 190, y: -70 });
+  Object.assign(state.components.account, { credits: Math.max(state.components.account.credits, 0) });
+  Object.assign(state.components.engine, {
+    installed: true,
+    powered: false,
+    fuel: state.components.engine.maxFuel,
+  });
+  Object.assign(state.components.hull, {
+    installed: true,
+    integrity: state.components.hull.maxIntegrity,
+  });
+  Object.assign(state.components.scanner, {
+    installed: true,
+    scanergy: Math.max(state.components.scanner.scanergy, 300),
+    targets: ["resources", "sites"],
+  });
+  Object.assign(state.components.miner, {
+    installed: true,
+    armed: false,
+    ammo: Math.max(state.components.miner.ammo, 150),
+  });
+  state.components.cargoHold.installed = true;
+  state.components.docking.installed = true;
+  state.components.contract.installed = true;
+  state.ship.frameId = "yard-skiff-miner";
+  state.ship.name = "Rook Yard Skiff";
+  setComponentAvailable("viewport", true);
+  setComponentAvailable("engine", true);
+  setComponentAvailable("hull", true);
+  setComponentAvailable("scanner", true);
+  setComponentAvailable("miner", true);
+  setComponentAvailable("cargo", true);
+  setComponentAvailable("docking", true);
+  setComponentAvailable("contract", true);
 }
 
 function updateHubDisplay(siteState) {
@@ -765,6 +866,13 @@ function sellCargoHold() {
   }
 
   cargoHold.drainUnits();
+  Object.entries(cargoCounts).forEach(([type, count]) => {
+    const visibleTransfers = Math.min(count, 10);
+
+    for (let index = 0; index < visibleTransfers; index += 1) {
+      window.setTimeout(() => game.createCargoTransferTrail(type), index * 90);
+    }
+  });
   state.components.account.credits += cargoValue;
   state.ledger.recordEvent("cargo.sold", {
     creditsEarned: cargoValue,
