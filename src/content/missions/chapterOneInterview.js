@@ -24,7 +24,7 @@ export const chapterOneInterviewMission = {
       id: "show-hull",
       objective: "Get your bearings.",
       helpText:
-        "This is the Hull panel. Hull integrity is ship health. If it reaches 0%, the ship is wrecked.",
+        "This is the Journey panel. The other panel is the Hull panel. Hull integrity is ship health. If it reaches 0%, the ship is wrecked.",
       onEnter: [
         { type: "showComponent", componentId: "hull", componentName: "Hull" },
         {
@@ -120,7 +120,7 @@ export const chapterOneInterviewMission = {
           type: "say",
           speaker: "Rook",
           text:
-            "We are that unpowered ship in the center of the viewport. That's Scrap Porch in the lower right. Your goal is to deliver this ship to the other hub in this zone, the Yard Exchange. Here is your scanner so you can find your way.",
+            "We're that unpowered ship in the center of the viewport. There's the hub we came from, Scrap Porch, in the lower left corner. Your Job is to deliver this ship to the other hub in this zone, the Yard Exchange. Let me add the scanner so you know which way to go.",
           acknowledgement: { label: "Add Scanner" },
         },
       ],
