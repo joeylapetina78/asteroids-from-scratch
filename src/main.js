@@ -1,9 +1,9 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=hub-services-v1";
-import { createContractManager } from "./systems/contractManager.js?v=contract-card-v1";
+import { Game } from "./game.js?v=hub-contract-windows-v1";
+import { createContractManager } from "./systems/contractManager.js?v=hub-contract-windows-v1";
 import { createGameAudio } from "./systems/audio.js?v=softer-engine-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=hub-services-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=hub-contract-windows-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=contract-complete-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=red-work-considerations-v1";
@@ -540,6 +540,7 @@ function openHubService(serviceId) {
 
   if (service.serviceType === "contracts" || service.serviceType === "finance") {
     setComponentAvailable("contract", true);
+    offerHubServiceContract(dockedSite, service);
     focusPanelById("contract");
     return;
   }
@@ -547,6 +548,39 @@ function openHubService(serviceId) {
   if (service.serviceType === "supply") {
     bringPanelToFront(hubPanel);
   }
+}
+
+function offerHubServiceContract(site, service) {
+  const contractId = getNextHubServiceContractId(service);
+
+  if (!contractId) {
+    return;
+  }
+
+  contractManager.offerContract(contractId, {
+    type: "hub-service",
+    siteId: site.id,
+    siteName: site.name,
+    serviceId: service.id,
+    serviceType: service.serviceType,
+    npcId: service.npcId,
+    npcName: service.npcName,
+    organization: service.organization,
+  });
+}
+
+function getNextHubServiceContractId(service) {
+  const contractIds = service.contractIds ?? [];
+
+  return contractIds.find((contractId) => {
+    const existingContract = state.contracts.records[contractId];
+
+    if (!existingContract) {
+      return true;
+    }
+
+    return existingContract.repeatable && existingContract.status === "paid";
+  });
 }
 
 function getHubServicePrompt(service) {

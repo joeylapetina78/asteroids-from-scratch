@@ -1,4 +1,4 @@
-import { hubServiceDefinitions } from "../content/hubs/yardExchangeServices.js?v=hub-services-v1";
+import { hubServiceDefinitions } from "../content/hubs/yardExchangeServices.js?v=hub-contract-windows-v1";
 
 export function getHubServices(siteId) {
   return hubServiceDefinitions[siteId] ?? [];

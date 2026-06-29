@@ -198,6 +198,7 @@ Current implementation:
 - `Shipyard` opens/focuses the existing Merchant panel.
 - `Finance` and `Rook Industries` focus the Contract panel as a temporary bridge.
 - `Supply` keeps the Hub panel focused and uses the existing repair/sell controls.
+- Contracts offered from hub service windows are temporary until accepted. If the player undocks while a service contract is still only `offered`, that offer closes and must be requested again from the same hub NPC/service.
 
 Avoid:
 

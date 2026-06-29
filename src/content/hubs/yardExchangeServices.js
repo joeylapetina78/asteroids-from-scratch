@@ -8,6 +8,7 @@ export const hubServiceDefinitions = {
       serviceType: "contracts",
       label: "Rook Industries",
       description: "Resource work and starter hauling jobs.",
+      contractIds: ["rook-red-resource-run"],
     },
     {
       id: "yard-shipyard",
@@ -26,6 +27,7 @@ export const hubServiceDefinitions = {
       serviceType: "finance",
       label: "Finance",
       description: "Loans and payments.",
+      contractIds: ["mako-starter-ship-loan"],
     },
     {
       id: "yard-supply",

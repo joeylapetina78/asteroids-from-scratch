@@ -11,7 +11,7 @@ import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/renderin
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=mission-targets";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=hub-services-v1";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=hub-contract-windows-v1";
 import { createGameState } from "./state/gameState.js?v=hull-vin-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
@@ -318,7 +318,7 @@ export class Game {
     this.nearbySite = nearby?.site ?? null;
 
     if (this.dockedSite && !isInSiteRange(this.ship.position, this.dockedSite)) {
-      this.dockedSite = null;
+      this.setDockedSite(null);
     }
 
     if (this.nearbySite && this.nearbySite.id !== previousNearbySiteId && !this.discoveredSiteIds.has(this.nearbySite.id)) {
@@ -521,7 +521,8 @@ export class Game {
   }
 
   setDockedSite(site) {
-    const previousDockedSiteId = this.dockedSite?.id ?? null;
+    const previousDockedSite = this.dockedSite;
+    const previousDockedSiteId = previousDockedSite?.id ?? null;
     this.dockedSite = site;
 
     if (site) {
@@ -544,6 +545,16 @@ export class Game {
         "dock",
         DOCK_MESSAGE_SECONDS,
         getTitleSideForPosition(this.ship.position, site.position),
+      );
+    } else if (previousDockedSite) {
+      this.state.ledger.recordEvent(
+        "site.undocked",
+        {
+          siteId: previousDockedSite.id,
+          siteName: previousDockedSite.name,
+          siteType: previousDockedSite.type,
+        },
+        { visible: false },
       );
     }
 

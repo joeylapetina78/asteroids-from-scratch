@@ -1,19 +1,19 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=contract-complete-v1";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=hub-contract-windows-v1";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
 export function createContractManager({ state, onChange = () => {} }) {
   let lastEventId = 0;
 
-  function offerContract(contractId) {
+  function offerContract(contractId, offerSource = null) {
     const definition = getContractDefinition(contractId);
     const existingContract = state.contracts.records[contractId];
 
     if (existingContract?.status === "active" || existingContract?.status === "fulfilled" || existingContract?.status === "paid") {
       if (existingContract.status === "paid" && definition.repeatable) {
-        state.contracts.records[contractId] = createContractRecord(definition, existingContract.runCount ?? 1);
+        state.contracts.records[contractId] = createContractRecord(definition, existingContract.runCount ?? 1, offerSource);
         state.contracts.currentContractId = contractId;
-        recordContractOffered(contractId, definition);
+        recordContractOffered(contractId, definition, offerSource);
         onChange(getCurrentContract());
         return;
       }
@@ -23,18 +23,19 @@ export function createContractManager({ state, onChange = () => {} }) {
       return;
     }
 
-    state.contracts.records[contractId] = createContractRecord(definition);
+    state.contracts.records[contractId] = createContractRecord(definition, 0, offerSource);
     state.contracts.currentContractId = contractId;
-    recordContractOffered(contractId, definition);
+    recordContractOffered(contractId, definition, offerSource);
     onChange(getCurrentContract());
   }
 
-  function createContractRecord(definition, completedRunCount = 0) {
+  function createContractRecord(definition, completedRunCount = 0, offerSource = null) {
     return {
       ...definition,
       status: "offered",
       runCount: completedRunCount + 1,
       deliveredAmount: 0,
+      offerSource,
       offeredAt: Date.now(),
       acceptedAt: null,
       fulfilledAt: null,
@@ -42,13 +43,14 @@ export function createContractManager({ state, onChange = () => {} }) {
     };
   }
 
-  function recordContractOffered(contractId, definition) {
+  function recordContractOffered(contractId, definition, offerSource = null) {
     state.ledger.recordEvent(
       "contract.offered",
       {
         contractId,
         contractTitle: definition.title,
         issuer: definition.issuer,
+        offerSource,
       },
       { visible: false },
     );
@@ -87,8 +89,42 @@ export function createContractManager({ state, onChange = () => {} }) {
 
       if (event.type === "site.docked") {
         fulfillMatchingDeliveryContracts(event);
+      } else if (event.type === "site.undocked") {
+        closeUnacceptedHubServiceOffers(event.payload.siteId);
       }
     });
+  }
+
+  function closeUnacceptedHubServiceOffers(siteId) {
+    const closingContractIds = Object.values(state.contracts.records)
+      .filter((contract) => contract.status === "offered" && contract.offerSource?.type === "hub-service" && contract.offerSource.siteId === siteId)
+      .map((contract) => contract.id);
+
+    if (closingContractIds.length === 0) {
+      return;
+    }
+
+    closingContractIds.forEach((contractId) => {
+      const contract = state.contracts.records[contractId];
+
+      delete state.contracts.records[contractId];
+      state.ledger.recordEvent(
+        "contract.offerClosed",
+        {
+          contractId,
+          contractTitle: contract.title,
+          siteId,
+          serviceId: contract.offerSource.serviceId,
+        },
+        { visible: false },
+      );
+    });
+
+    if (closingContractIds.includes(state.contracts.currentContractId)) {
+      state.contracts.currentContractId = getOpenContractIds()[0] ?? null;
+    }
+
+    onChange(getCurrentContract());
   }
 
   function fulfillMatchingDeliveryContracts(event) {
@@ -258,6 +294,7 @@ export function createContractManager({ state, onChange = () => {} }) {
 
   return {
     acceptContract,
+    closeUnacceptedHubServiceOffers,
     collectPayment,
     depositResourceUnit,
     getCurrentContract,

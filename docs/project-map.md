@@ -203,6 +203,8 @@ The next architecture track is captured in [hub-services-roadmap.md](hub-service
 
 [src/systems/hubServices.js](../src/systems/hubServices.js) resolves those services by site id. The docked Hub panel now renders service buttons from this data. The first bridge behavior is intentionally small: Shipyard opens the existing Merchant panel, Finance and Rook Industries focus the Contract panel, and Supply keeps the Hub panel focused with the current repair/sell controls.
 
+Hub service contract offers are temporary until accepted. If a player opens a hub NPC service, sees a contract, and undocks without accepting it, the Contract Manager closes that unaccepted service offer when it sees `site.undocked` in the ledger. Accepted, active, fulfilled, paid, and loan records remain with the player.
+
 ### Ship Offers And Merchant
 
 [src/content/ships/shipOffers.js](../src/content/ships/shipOffers.js) defines the first ship offer data. The Merchant panel renders this data into ship cards with brand, model, price, hull, included components, and tradeoffs.
