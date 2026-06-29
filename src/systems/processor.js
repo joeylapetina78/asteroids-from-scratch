@@ -220,9 +220,15 @@ export class Processor {
     );
 
     if (clickedIndex >= 0) {
-      const [unit] = this.units.splice(clickedIndex, 1);
+      const unit = this.units[clickedIndex];
+      const shouldProcess = this.onUnitProcessed(unit.type, unit);
+
+      if (shouldProcess === false) {
+        return;
+      }
+
+      this.units.splice(clickedIndex, 1);
       this.createCrushSparks(unit);
-      this.onUnitProcessed(unit.type);
     }
   }
 

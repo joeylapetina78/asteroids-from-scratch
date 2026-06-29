@@ -1,7 +1,7 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=rook-tutorial-v1";
-import { createContractManager } from "./systems/contractManager.js?v=red-work-v1";
+import { Game } from "./game.js?v=contract-pay-v1";
+import { createContractManager } from "./systems/contractManager.js?v=contract-pay-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=red-work-v1";
 import { Processor } from "./systems/processor.js?v=red-work-v1";
 import { createGameState } from "./state/gameState.js?v=ship-market-v2";
@@ -43,13 +43,19 @@ const DEFAULT_PANEL_LAYOUT = {
 };
 const ammoCount = document.querySelector("#ammo-count");
 const cargoCanvas = document.querySelector("#cargo");
+const cargoPanel = document.querySelector("[data-panel-id='cargo']");
 const canvas = document.querySelector("#game");
 const creditCount = document.querySelector("#credit-count");
 const contractAcceptButton = document.querySelector("#contract-accept");
 const contractClauses = document.querySelector("#contract-clauses");
 const contractDestination = document.querySelector("#contract-destination");
 const contractIssuer = document.querySelector("#contract-issuer");
+const contractNavCount = document.querySelector("#contract-nav-count");
+const contractNextButton = document.querySelector("#contract-next");
 const contractPrimaryLabel = document.querySelector("#contract-primary-label");
+const contractProgress = document.querySelector("#contract-progress");
+const contractProgressCount = document.querySelector("#contract-progress-count");
+const contractProgressFill = document.querySelector("#contract-progress-fill");
 const contractReward = document.querySelector("#contract-reward");
 const contractSecondaryLabel = document.querySelector("#contract-secondary-label");
 const contractStatus = document.querySelector("#contract-status");
@@ -116,12 +122,10 @@ const worldDebugFields = {
 };
 const state = createGameState();
 const processor = new Processor(processorCanvas, processUnit);
-const cargoHold = new Processor(cargoCanvas, () => {}, { isClickable: false });
+const cargoHold = new Processor(cargoCanvas, depositCargoUnit, { isClickable: true });
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay);
 const contractManager = createContractManager({
   state,
-  getCargoCounts: () => cargoHold.getUnitCounts(),
-  removeCargoUnits: (type, count) => cargoHold.removeUnits(type, count),
   onChange: () => {
     renderContract();
     updateHudDisplay();
@@ -141,6 +145,8 @@ let bringPanelToFront = () => {};
 let positionPanelById = () => {};
 let renderedLedgerVersion = -1;
 let journeyTypeTimers = [];
+let currentSiteState = null;
+let activeDepositContractId = null;
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
   { panelId: "miner", cautionAt: 50, criticalAt: 20, getValue: () => state.components.miner.ammo },
@@ -212,11 +218,24 @@ contractAcceptButton.addEventListener("click", () => {
   const contract = contractManager.getCurrentContract();
 
   if (contract?.repeatable && contract.status === "paid") {
+    activeDepositContractId = null;
     contractManager.offerContract(contract.id);
+  } else if (contract?.status === "fulfilled") {
+    activeDepositContractId = null;
+    contractManager.collectPayment(contract.id);
+  } else if (canDepositToContract(contract)) {
+    activeDepositContractId = activeDepositContractId === contract.id ? null : contract.id;
+    renderContract();
   } else {
     contractManager.acceptContract();
   }
 
+  updateHudDisplay();
+});
+
+contractNextButton.addEventListener("click", () => {
+  activeDepositContractId = null;
+  contractManager.showNextContract();
   updateHudDisplay();
 });
 
@@ -246,6 +265,7 @@ function updateHudDisplay() {
   renderProcessorOutputs();
   renderShipOffers();
   updateShipPowerDisplay();
+  updateDepositTargetDisplay();
 
   creditCount.textContent = String(Math.floor(state.components.account.credits));
   fuelCount.textContent = String(Math.floor(state.components.engine.fuel));
@@ -261,6 +281,13 @@ function updateHudDisplay() {
 }
 
 function updateHubDisplay(siteState) {
+  currentSiteState = siteState;
+
+  if (!canDepositToContract(contractManager.getCurrentContract())) {
+    activeDepositContractId = null;
+  }
+
+  renderContract();
   updateDockingDisplay(siteState);
   updateHubServiceDisplay(siteState);
 }
@@ -354,8 +381,10 @@ function renderContract(contract = contractManager.getCurrentContract()) {
     contractDestination.textContent = "--";
     contractTertiaryLabel.textContent = "Reward";
     contractReward.textContent = "0 cr";
+    contractProgress.hidden = true;
     contractAcceptButton.disabled = true;
     contractAcceptButton.textContent = "Accept Contract";
+    renderContractNavigation();
     contractClauses.replaceChildren();
     return;
   }
@@ -365,8 +394,10 @@ function renderContract(contract = contractManager.getCurrentContract()) {
   contractIssuer.textContent = `Issuer: ${contract.issuer}`;
   contractSummary.textContent = contract.summary;
   renderContractTerms(contract);
-  contractAcceptButton.disabled = contract.status !== "offered" && !(contract.repeatable && contract.status === "paid");
+  renderContractProgress(contract);
+  contractAcceptButton.disabled = !isContractButtonEnabled(contract);
   contractAcceptButton.textContent = getContractButtonLabel(contract);
+  renderContractNavigation(contract);
   contractClauses.replaceChildren(
     ...(contract.clauses ?? []).map((clause) => {
       const item = document.createElement("li");
@@ -392,8 +423,8 @@ function renderContractTerms(contract) {
     contractVin.textContent = `${contract.terms.amount} ${contract.terms.resourceName}`;
     contractSecondaryLabel.textContent = "Destination";
     contractDestination.textContent = contract.terms.destinationName;
-    contractTertiaryLabel.textContent = "Rate";
-    contractReward.textContent = `${contract.reward.creditsPerUnit} cr/unit`;
+    contractTertiaryLabel.textContent = "Reward";
+    contractReward.textContent = `${contract.reward.credits ?? 0} cr (${contract.reward.creditsPerUnit} cr/unit)`;
     return;
   }
 
@@ -405,6 +436,21 @@ function renderContractTerms(contract) {
   contractReward.textContent = `${contract.reward.credits ?? 0} cr`;
 }
 
+function renderContractProgress(contract) {
+  if (contract.type !== "resource-delivery") {
+    contractProgress.hidden = true;
+    return;
+  }
+
+  const requiredAmount = contract.terms.amount ?? 0;
+  const deliveredAmount = contract.deliveredAmount ?? 0;
+  const progressPercent = requiredAmount > 0 ? Math.min(100, (deliveredAmount / requiredAmount) * 100) : 0;
+
+  contractProgress.hidden = false;
+  contractProgressCount.textContent = `${deliveredAmount} / ${requiredAmount}`;
+  contractProgressFill.style.width = `${progressPercent}%`;
+}
+
 function getContractStatusLabel(status) {
   if (status === "offered") {
     return "offer pending";
@@ -412,6 +458,10 @@ function getContractStatusLabel(status) {
 
   if (status === "active") {
     return "active";
+  }
+
+  if (status === "fulfilled") {
+    return "ready to pay";
   }
 
   if (status === "paid") {
@@ -430,6 +480,18 @@ function getContractButtonLabel(contract) {
     return "Run Again";
   }
 
+  if (contract.status === "fulfilled") {
+    return "Collect Payment";
+  }
+
+  if (canDepositToContract(contract)) {
+    return activeDepositContractId === contract.id ? "Depositing..." : "Deposit Cargo";
+  }
+
+  if (contract.type === "resource-delivery" && contract.status === "active") {
+    return "Dock to Deposit";
+  }
+
   if (contract.status === "active") {
     return "Accepted";
   }
@@ -439,6 +501,43 @@ function getContractButtonLabel(contract) {
   }
 
   return "Closed";
+}
+
+function isContractButtonEnabled(contract) {
+  return (
+    contract.status === "offered" ||
+    contract.status === "fulfilled" ||
+    (contract.repeatable && contract.status === "paid") ||
+    canDepositToContract(contract)
+  );
+}
+
+function renderContractNavigation(contract = contractManager.getCurrentContract()) {
+  const contractIds = contractManager.getOpenContractIds();
+  const currentIndex = contract ? contractIds.indexOf(contract.id) : -1;
+  const countLabel = contractIds.length === 1 ? "1 contract" : `${contractIds.length} contracts`;
+
+  contractNavCount.textContent = currentIndex >= 0 ? `${currentIndex + 1}/${contractIds.length} ${countLabel}` : countLabel;
+  contractNextButton.disabled = contractIds.length <= 1;
+}
+
+function canDepositToContract(contract) {
+  const dockedSite = currentSiteState?.dockedSite;
+
+  return Boolean(
+    contract?.type === "resource-delivery" &&
+      contract.status === "active" &&
+      dockedSite &&
+      dockedSite.id === contract.terms.destinationSiteId &&
+      (contract.deliveredAmount ?? 0) < (contract.terms.amount ?? 0),
+  );
+}
+
+function updateDepositTargetDisplay() {
+  const contract = contractManager.getCurrentContract();
+  const isActiveDepositTarget = activeDepositContractId && contract?.id === activeDepositContractId && canDepositToContract(contract);
+
+  cargoPanel.classList.toggle("is-deposit-target", Boolean(isActiveDepositTarget));
 }
 
 function getViewportLocationLabel(debug) {
@@ -621,6 +720,35 @@ function receiveCollectedResource(type) {
   if (state.components.cargoHold.installed) {
     cargoHold.addUnit(type);
   }
+}
+
+function depositCargoUnit(type) {
+  const contract = contractManager.getCurrentContract();
+
+  if (!activeDepositContractId || contract?.id !== activeDepositContractId || !canDepositToContract(contract)) {
+    return false;
+  }
+
+  const didDeposit = contractManager.depositResourceUnit({
+    contractId: contract.id,
+    resourceType: type,
+    siteId: currentSiteState?.dockedSite?.id,
+  });
+
+  if (!didDeposit) {
+    return false;
+  }
+
+  game.createCargoTransferTrail(type);
+
+  if (contract.status === "fulfilled" || contract.status === "paid") {
+    activeDepositContractId = null;
+  }
+
+  renderContract();
+  updateHudDisplay();
+  game.refreshSiteReadout();
+  return true;
 }
 
 function sellCargoHold() {

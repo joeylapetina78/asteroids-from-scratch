@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=ship-market-v2" />
+    <link rel="stylesheet" href="./src/styles.css?v=contract-pay-v1" />
   </head>
   <body>
     <main class="game-shell">
@@ -177,9 +177,19 @@
                     <dd id="contract-reward">0 cr</dd>
                   </div>
                 </dl>
+                <div id="contract-progress" class="contract-progress" hidden>
+                  <span>Delivered <strong id="contract-progress-count">0 / 0</strong></span>
+                  <div class="contract-progress-bar" aria-hidden="true">
+                    <span id="contract-progress-fill"></span>
+                  </div>
+                </div>
                 <ul id="contract-clauses" class="contract-clauses"></ul>
               </div>
               <button id="contract-accept" class="contract-button" type="button" disabled>Accept Contract</button>
+              <div class="contract-nav">
+                <span id="contract-nav-count">0 contracts</span>
+                <button id="contract-next" class="contract-nav-button" type="button" disabled>Next &gt;</button>
+              </div>
             </div>
 
             <div class="component-panel merchant-panel" data-panel-id="merchant" aria-label="Ship merchant component">
@@ -262,6 +272,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=ship-market-v2"></script>
+    <script type="module" src="./src/main.js?v=contract-pay-v1"></script>
   </body>
 </html>

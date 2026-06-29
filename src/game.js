@@ -5,7 +5,7 @@ import { Ship } from "./entities/Ship.js?v=starter-skiff-v1";
 import { createAsteroidField } from "./systems/asteroidField.js?v=zone-aware";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=docking-services";
-import { createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=zone-aware";
+import { createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=contract-deposit-v2";
 import { createNpcRouteShips } from "./systems/npcRoutes.js?v=soft-cargo-train";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=draw-radius";
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
@@ -31,9 +31,9 @@ const NPC_SIMULATION_MARGIN = 1300;
 const HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS = 0.38;
 const MAX_HUNTER_ENVIRONMENT_HITS_PER_FRAME = 6;
 const NPC_ENVIRONMENT_HIT_COOLDOWN_SECONDS = 0.55;
-const HUB_DEFENSE_COOLDOWN_SECONDS = 0.18;
+const HUB_DEFENSE_COOLDOWN_SECONDS = 0.16;
 const HUB_DEFENSE_RADIUS_PADDING = 170;
-const MAX_HUB_DEFENSE_HITS_PER_FRAME = 2;
+const MAX_HUB_DEFENSE_HITS_PER_FRAME = 3;
 const VIEWPORT_TITLE_SECONDS = 5.6;
 const DOCK_MESSAGE_SECONDS = 2.8;
 const REPAIR_CREDITS_PER_HULL = 2;
@@ -83,6 +83,9 @@ export class Game {
     this.nearbySite = null;
     this.dockedSite = null;
     this.hubDefenseCooldown = 0;
+    this.unarmedFireAttempts = 0;
+    this.hasRecordedUnarmedFireReminder = false;
+    this.hasRecordedStrandedEvent = false;
     this.viewportTitle = null;
     this.viewportTitleTimer = 0;
     this.discoveredSiteIds = new Set();
@@ -212,6 +215,7 @@ export class Game {
     if (this.state.components.engine.fuel !== previousFuel) {
       this.onHudChange(this.state);
     }
+    this.updateStrandedEvent(previousFuel);
     this.updateShooting();
     this.bullets.forEach((bullet) => bullet.update(deltaSeconds));
     this.updateAsteroidHits();
@@ -484,6 +488,10 @@ export class Game {
         });
       }
 
+      if (site.type === "hub") {
+        this.refuelAtHub(site);
+      }
+
       this.showViewportTitle(
         site.name,
         "docking tether connected",
@@ -494,6 +502,26 @@ export class Game {
     }
 
     this.updateSiteReadout();
+  }
+
+  refuelAtHub(site) {
+    const engine = this.state.components.engine;
+    const fuelBefore = engine.fuel;
+
+    if (!engine.installed || fuelBefore >= engine.maxFuel) {
+      return;
+    }
+
+    engine.fuel = engine.maxFuel;
+    this.hasRecordedStrandedEvent = false;
+    this.state.ledger.recordEvent("ship.refueled", {
+      siteId: site.id,
+      siteName: site.name,
+      fuelBefore: Math.floor(fuelBefore),
+      fuelAfter: Math.floor(engine.fuel),
+      fuelAdded: Math.floor(engine.fuel - fuelBefore),
+    });
+    this.onHudChange(this.state);
   }
 
   updateZoneTitle() {
@@ -565,6 +593,62 @@ export class Game {
 
   refreshSiteReadout() {
     this.updateSiteReadout();
+  }
+
+  updateStrandedEvent(previousFuel) {
+    const currentFuel = this.state.components.engine.fuel;
+
+    if (this.hasRecordedStrandedEvent || previousFuel <= 0 || currentFuel > 0 || !this.state.components.engine.installed) {
+      return;
+    }
+
+    const nearest = getNearestWorldSite(this.ship.position, this.worldSites);
+
+    this.hasRecordedStrandedEvent = true;
+    this.state.ledger.recordEvent("ship.stranded", {
+      fuel: currentFuel,
+      nearestSiteId: nearest?.site?.id ?? null,
+      nearestSiteName: nearest?.site?.name ?? "unknown hub",
+      nearestSiteDistance: Math.round(nearest?.distance ?? 0),
+      x: Math.round(this.ship.position.x),
+      y: Math.round(this.ship.position.y),
+    });
+  }
+
+  createCargoTransferTrail(resourceType = "fuel") {
+    const site = this.dockedSite;
+
+    if (!site) {
+      return;
+    }
+
+    const color = resourceType === "crystal" ? "#73d2ff" : "#ff7452";
+    const distanceX = site.position.x - this.ship.position.x;
+    const distanceY = site.position.y - this.ship.position.y;
+    const distance = Math.hypot(distanceX, distanceY) || 1;
+    const normalX = distanceX / distance;
+    const normalY = distanceY / distance;
+
+    for (let index = 0; index < 4; index += 1) {
+      const progress = index * 0.08;
+      const sideJitter = (index - 1.5) * 3;
+
+      this.particles.push({
+        type: "square",
+        position: {
+          x: this.ship.position.x + distanceX * progress - normalY * sideJitter,
+          y: this.ship.position.y + distanceY * progress + normalX * sideJitter,
+        },
+        velocity: {
+          x: normalX * (190 + index * 18),
+          y: normalY * (190 + index * 18),
+        },
+        color,
+        size: 3,
+        life: 0.62 + index * 0.04,
+        maxLife: 0.78,
+      });
+    }
   }
 
   updateSiteReadout() {
@@ -667,10 +751,34 @@ export class Game {
 
     const miner = this.state.components.miner;
 
+    if (
+      !this.shipDestroyed &&
+      this.state.components.engine.powered &&
+      miner.installed &&
+      !miner.armed &&
+      this.input.wasPressed("Space") &&
+      !this.hasRecordedUnarmedFireReminder
+    ) {
+      this.unarmedFireAttempts += 1;
+
+      if (this.unarmedFireAttempts >= 3) {
+        this.hasRecordedUnarmedFireReminder = true;
+        this.state.ledger.recordEvent(
+          "weapon.unarmedAttempt",
+          {
+            weaponType: "miner",
+            attempts: this.unarmedFireAttempts,
+          },
+          { visible: false },
+        );
+      }
+    }
+
     if (this.shipDestroyed || !this.state.components.engine.powered || !miner.installed || !miner.armed || !wantsToFire || this.fireCooldown > 0 || miner.ammo < AMMO_PER_SHOT) {
       return;
     }
 
+    this.unarmedFireAttempts = 0;
     miner.ammo -= AMMO_PER_SHOT;
     this.state.ledger.recordEvent(
       "weapon.fired",
@@ -852,15 +960,34 @@ export class Game {
     }
 
     const hitAsteroids = new Set();
+    const hitHunters = new Set();
 
     this.worldSites
       .filter((site) => site.type === "hub")
       .forEach((site) => {
-        if (hitAsteroids.size >= MAX_HUB_DEFENSE_HITS_PER_FRAME) {
+        if (hitAsteroids.size + hitHunters.size >= MAX_HUB_DEFENSE_HITS_PER_FRAME) {
           return;
         }
 
         const clearanceRadius = site.interactionRadius + HUB_DEFENSE_RADIUS_PADDING;
+        const hunterTarget = this.lifeforms
+          .filter((lifeform) => lifeform.type === "hunter" && lifeform.isAlive && !hitHunters.has(lifeform))
+          .map((hunter) => ({
+            hunter,
+            distance: Math.hypot(hunter.position.x - site.position.x, hunter.position.y - site.position.y),
+          }))
+          .filter(({ hunter, distance }) => distance - hunter.radius <= clearanceRadius)
+          .sort((first, second) => first.distance - second.distance)[0]?.hunter;
+
+        if (hunterTarget) {
+          hitHunters.add(hunterTarget);
+          this.createHubDefenseBeam(site, hunterTarget);
+          hunterTarget.damage(100);
+          this.createHubDefenseBurst(site, hunterTarget);
+          this.destroyHunterIfNeeded(hunterTarget, "hub-defense");
+          return;
+        }
+
         const target = this.asteroids
           .filter((asteroid) => !hitAsteroids.has(asteroid))
           .map((asteroid) => ({
@@ -879,7 +1006,7 @@ export class Game {
         this.createHubDefenseBurst(site, target);
       });
 
-    if (hitAsteroids.size === 0) {
+    if (hitAsteroids.size + hitHunters.size === 0) {
       return;
     }
 
@@ -1130,18 +1257,18 @@ export class Game {
     }
   }
 
-  createHubDefenseBeam(site, asteroid) {
+  createHubDefenseBeam(site, target) {
     this.siteDefenseBeams.push({
       start: { x: site.position.x, y: site.position.y },
-      end: { x: asteroid.position.x, y: asteroid.position.y },
+      end: { x: target.position.x, y: target.position.y },
       life: 0.18,
       maxLife: 0.18,
     });
   }
 
-  createHubDefenseBurst(site, asteroid) {
-    const count = 12 + Math.floor(asteroid.radius / 5);
-    const beamAngle = Math.atan2(asteroid.position.y - site.position.y, asteroid.position.x - site.position.x);
+  createHubDefenseBurst(site, target) {
+    const count = 12 + Math.floor(target.radius / 5);
+    const beamAngle = Math.atan2(target.position.y - site.position.y, target.position.x - site.position.x);
 
     for (let index = 0; index < count; index += 1) {
       const angle = beamAngle + Math.PI + (Math.random() - 0.5) * Math.PI * 1.4;
@@ -1150,14 +1277,14 @@ export class Game {
       this.particles.push({
         type: index % 3 === 0 ? "spark" : "square",
         position: {
-          x: asteroid.position.x + (Math.random() - 0.5) * asteroid.radius,
-          y: asteroid.position.y + (Math.random() - 0.5) * asteroid.radius,
+          x: target.position.x + (Math.random() - 0.5) * target.radius,
+          y: target.position.y + (Math.random() - 0.5) * target.radius,
         },
         velocity: {
-          x: asteroid.velocity.x * 0.25 + Math.cos(angle) * speed,
-          y: asteroid.velocity.y * 0.25 + Math.sin(angle) * speed,
+          x: target.velocity.x * 0.25 + Math.cos(angle) * speed,
+          y: target.velocity.y * 0.25 + Math.sin(angle) * speed,
         },
-        color: index % 4 === 0 ? "#ffffff" : "#9ee8ff",
+        color: target.type === "hunter" ? (index % 4 === 0 ? "#ffffff" : "#ff8a96") : index % 4 === 0 ? "#ffffff" : "#9ee8ff",
         size: 1.5 + Math.random() * 3.2,
         life: 0.28 + Math.random() * 0.28,
         maxLife: 0.56,

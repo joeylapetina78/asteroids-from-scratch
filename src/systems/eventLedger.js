@@ -112,6 +112,10 @@ export function createEventLedger(options = {}) {
       incrementStat("ship.repaired.total");
       incrementStat("credits.spent.repairs", event.payload.creditsSpent ?? 0);
       incrementStat("ship.hull.repaired", event.payload.hullRestored ?? 0);
+    } else if (event.type === "ship.refueled") {
+      incrementStat("ship.refueled.total");
+      incrementStat("ship.fuel.refueled", event.payload.fuelAdded ?? 0);
+      incrementStat(`ship.refueled.${event.payload.siteId ?? "unknown"}`);
     } else if (event.type === "cargo.sold") {
       incrementStat("cargo.sold.total");
       incrementStat("credits.earned.sales", event.payload.creditsEarned ?? 0);
@@ -134,6 +138,9 @@ export function createEventLedger(options = {}) {
     } else if (event.type === "ship.thrusted") {
       incrementStat("ship.thrusted.total");
       setStatMax("ship.thrusted.speed.max", event.payload.speed ?? 0);
+    } else if (event.type === "ship.stranded") {
+      incrementStat("ship.stranded.total");
+      incrementStat(`ship.stranded.nearest.${event.payload.nearestSiteId ?? "unknown"}`);
     } else if (event.type === "site.nearby") {
       incrementStat("site.nearby.total");
       incrementStat(`site.nearby.${event.payload.siteId ?? "unknown"}`);
@@ -190,9 +197,20 @@ export function createEventLedger(options = {}) {
     } else if (event.type === "component.unlocked" || event.type === "component.shown") {
       incrementStat(`${event.type}.total`);
       incrementStat(`${event.type}.${event.payload.componentId ?? "unknown"}`);
-    } else if (event.type === "contract.offered" || event.type === "contract.accepted" || event.type === "contract.fulfilled" || event.type === "contract.paid") {
+    } else if (
+      event.type === "contract.offered" ||
+      event.type === "contract.accepted" ||
+      event.type === "contract.resourceDeposited" ||
+      event.type === "contract.fulfilled" ||
+      event.type === "contract.paid"
+    ) {
       incrementStat(`${event.type}.total`);
       incrementStat(`${event.type}.${event.payload.contractId ?? "unknown"}`);
+
+      if (event.type === "contract.resourceDeposited") {
+        incrementStat("contract.resourceDeposited.total", event.payload.unitsDeposited ?? 0);
+        incrementStat(`contract.resourceDeposited.${event.payload.resourceType ?? "unknown"}`, event.payload.unitsDeposited ?? 0);
+      }
 
       if (event.type === "contract.fulfilled" && event.payload.resourceType) {
         incrementStat("contract.resourceDelivered.total", event.payload.unitsDelivered ?? 0);
@@ -256,6 +274,10 @@ function getDefaultMessage(type, payload) {
     return `Repaired hull for ${payload.creditsSpent ?? 0} credits`;
   }
 
+  if (type === "ship.refueled") {
+    return `Refueled at ${payload.siteName ?? payload.siteId ?? "hub"}`;
+  }
+
   if (type === "cargo.sold") {
     return `Sold cargo for ${payload.creditsEarned ?? 0} credits`;
   }
@@ -274,6 +296,10 @@ function getDefaultMessage(type, payload) {
 
   if (type === "ship.thrusted") {
     return "Ship thrust engaged";
+  }
+
+  if (type === "ship.stranded") {
+    return `Stranded near ${payload.nearestSiteName ?? payload.nearestSiteId ?? "unknown hub"}`;
   }
 
   if (type === "site.nearby") {
@@ -334,6 +360,10 @@ function getDefaultMessage(type, payload) {
 
   if (type === "contract.accepted") {
     return `Accepted contract: ${payload.contractTitle ?? payload.contractId}`;
+  }
+
+  if (type === "contract.resourceDeposited") {
+    return `Deposited ${payload.resourceName ?? payload.resourceType} ${payload.deliveredAmount ?? 0}/${payload.requiredAmount ?? 0}`;
   }
 
   if (type === "contract.fulfilled") {

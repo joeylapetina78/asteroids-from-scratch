@@ -46,8 +46,8 @@ export class Lifeform {
 
     // Powering the ship down removes the hunter lock. They still wander, which
     // keeps them alive in the world without always knowing where the player is.
-    if (world.shipPowered && distanceToShip < 1500) {
-      this.applySteer(seek(this, world.ship.position, this.maxSpeed), 3.1);
+    if (world.shipPowered && distanceToShip < 1150) {
+      this.applySteer(seek(this, world.ship.position, this.maxSpeed), 2.35);
       this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 110), 78), 0.65);
     } else {
       this.applySteer(this.wander(deltaSeconds), world.shipPowered ? 0.8 : 1.15);
@@ -420,7 +420,7 @@ function getRadius(type) {
 
 function getMaxSpeed(type) {
   if (type === "hunter") {
-    return 225;
+    return 185;
   }
 
   if (type === "threadling") {
@@ -436,7 +436,7 @@ function getMaxSpeed(type) {
 
 function getMaxForce(type) {
   if (type === "hunter") {
-    return 0.36;
+    return 0.28;
   }
 
   if (type === "threadling") {

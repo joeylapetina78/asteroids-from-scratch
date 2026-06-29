@@ -1,11 +1,11 @@
-import { Lifeform } from "../entities/Lifeform.js?v=hunter-tuning";
+import { Lifeform } from "../entities/Lifeform.js?v=contract-deposit-v2";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
 import { getZoneProfile } from "./worldZones.js?v=world-zones";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.
-const HUNTER_PACK_ATTEMPTS = 6;
-const HUNTER_MAX_STARTING_COUNT = 12;
+const HUNTER_PACK_ATTEMPTS = 4;
+const HUNTER_MAX_STARTING_COUNT = 7;
 const THREADLING_FLOCKS = 8;
 const GRAZER_ATTEMPTS = 42;
 const SKITTER_ATTEMPTS = 40;
@@ -193,8 +193,8 @@ function getAmbientAnchorWeight(anchor) {
 }
 
 function getHunterPackSize(zone, random) {
-  const dangerPackBonus = zone.danger > 0.5 && random() < zone.danger ? 1 : 0;
-  const biasPackBonus = zone.hunterBias > 1 && random() < 0.45 ? 1 : 0;
+  const dangerPackBonus = zone.danger > 0.55 && random() < zone.danger * 0.55 ? 1 : 0;
+  const biasPackBonus = zone.hunterBias > 1.1 && random() < 0.22 ? 1 : 0;
 
   return 1 + dangerPackBonus + biasPackBonus;
 }

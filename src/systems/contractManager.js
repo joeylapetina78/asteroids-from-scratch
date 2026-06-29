@@ -2,14 +2,14 @@ import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
-export function createContractManager({ state, onChange = () => {}, getCargoCounts = () => ({}), removeCargoUnits = () => [] }) {
+export function createContractManager({ state, onChange = () => {} }) {
   let lastEventId = 0;
 
   function offerContract(contractId) {
     const definition = getContractDefinition(contractId);
     const existingContract = state.contracts.records[contractId];
 
-    if (existingContract?.status === "active" || existingContract?.status === "paid") {
+    if (existingContract?.status === "active" || existingContract?.status === "fulfilled" || existingContract?.status === "paid") {
       if (existingContract.status === "paid" && definition.repeatable) {
         state.contracts.records[contractId] = createContractRecord(definition, existingContract.runCount ?? 1);
         state.contracts.currentContractId = contractId;
@@ -34,6 +34,7 @@ export function createContractManager({ state, onChange = () => {}, getCargoCoun
       ...definition,
       status: "offered",
       runCount: completedRunCount + 1,
+      deliveredAmount: 0,
       offeredAt: Date.now(),
       acceptedAt: null,
       fulfilledAt: null,
@@ -86,7 +87,6 @@ export function createContractManager({ state, onChange = () => {}, getCargoCoun
 
       if (event.type === "site.docked") {
         fulfillMatchingDeliveryContracts(event);
-        fulfillMatchingResourceContracts(event);
       }
     });
   }
@@ -102,36 +102,65 @@ export function createContractManager({ state, onChange = () => {}, getCargoCoun
           return;
         }
 
-        payContract(contract);
+      fulfillContract(contract);
+      payContract(contract);
       });
   }
 
-  function fulfillMatchingResourceContracts(event) {
-    Object.values(state.contracts.records)
-      .filter((contract) => contract.type === "resource-delivery" && contract.status === "active")
-      .forEach((contract) => {
-        const matchesSite = contract.terms.destinationSiteId === event.payload.siteId;
-        const resourceType = contract.terms.resourceType;
-        const requiredAmount = contract.terms.amount ?? 0;
-        const cargoCounts = getCargoCounts();
+  function depositResourceUnit({ contractId = state.contracts.currentContractId, resourceType, siteId }) {
+    const contract = state.contracts.records[contractId];
 
-        if (!matchesSite || (cargoCounts[resourceType] ?? 0) < requiredAmount) {
-          return;
-        }
+    if (
+      !contract ||
+      contract.type !== "resource-delivery" ||
+      contract.status !== "active" ||
+      contract.terms.resourceType !== resourceType ||
+      contract.terms.destinationSiteId !== siteId
+    ) {
+      return false;
+    }
 
-        const removedUnits = removeCargoUnits(resourceType, requiredAmount);
+    const requiredAmount = contract.terms.amount ?? 0;
 
-        if (removedUnits.length !== requiredAmount) {
-          return;
-        }
+    if ((contract.deliveredAmount ?? 0) >= requiredAmount) {
+      return false;
+    }
 
-        payContract(contract, {
-          destinationSiteId: contract.terms.destinationSiteId,
-          resourceType,
-          resourceName: contract.terms.resourceName,
-          unitsDelivered: requiredAmount,
-        });
+    contract.deliveredAmount = (contract.deliveredAmount ?? 0) + 1;
+    state.ledger.recordEvent("contract.resourceDeposited", {
+      contractId: contract.id,
+      contractTitle: contract.title,
+      resourceType,
+      resourceName: contract.terms.resourceName,
+      unitsDeposited: 1,
+      deliveredAmount: contract.deliveredAmount,
+      requiredAmount,
+      destinationSiteId: contract.terms.destinationSiteId,
+    });
+
+    if (contract.deliveredAmount >= requiredAmount) {
+      fulfillContract(contract, {
+        destinationSiteId: contract.terms.destinationSiteId,
+        resourceType,
+        resourceName: contract.terms.resourceName,
+        unitsDelivered: requiredAmount,
       });
+    } else {
+      onChange(contract);
+    }
+
+    return true;
+  }
+
+  function collectPayment(contractId = state.contracts.currentContractId) {
+    const contract = state.contracts.records[contractId];
+
+    if (!contract || contract.status !== "fulfilled") {
+      return false;
+    }
+
+    payContract(contract);
+    return true;
   }
 
   function disburseLoan(contract) {
@@ -155,13 +184,9 @@ export function createContractManager({ state, onChange = () => {}, getCargoCoun
     });
   }
 
-  function payContract(contract, fulfillment = {}) {
-    const credits = contract.reward.credits ?? 0;
-
-    contract.status = "paid";
+  function fulfillContract(contract, fulfillment = {}) {
+    contract.status = "fulfilled";
     contract.fulfilledAt = Date.now();
-    contract.paidAt = contract.fulfilledAt;
-    state.components.account.credits += credits;
     state.ledger.recordEvent("contract.fulfilled", {
       contractId: contract.id,
       contractTitle: contract.title,
@@ -170,8 +195,16 @@ export function createContractManager({ state, onChange = () => {}, getCargoCoun
       resourceType: fulfillment.resourceType,
       resourceName: fulfillment.resourceName,
       unitsDelivered: fulfillment.unitsDelivered,
-      creditsPaid: credits,
     });
+    onChange(contract);
+  }
+
+  function payContract(contract) {
+    const credits = contract.reward.credits ?? 0;
+
+    contract.status = "paid";
+    contract.paidAt = Date.now();
+    state.components.account.credits += credits;
     state.ledger.recordEvent("contract.paid", {
       contractId: contract.id,
       contractTitle: contract.title,
@@ -190,6 +223,29 @@ export function createContractManager({ state, onChange = () => {}, getCargoCoun
     return state.contracts.records[state.contracts.currentContractId] ?? null;
   }
 
+  function getOpenContractIds() {
+    return Object.values(state.contracts.records)
+      .filter((contract) => contract.status !== "paid" || contract.repeatable || contract.type === "loan")
+      .map((contract) => contract.id);
+  }
+
+  function showNextContract() {
+    const contractIds = getOpenContractIds();
+
+    if (contractIds.length === 0) {
+      state.contracts.currentContractId = null;
+      onChange(null);
+      return null;
+    }
+
+    const currentIndex = contractIds.indexOf(state.contracts.currentContractId);
+    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % contractIds.length : 0;
+
+    state.contracts.currentContractId = contractIds[nextIndex];
+    onChange(getCurrentContract());
+    return getCurrentContract();
+  }
+
   function getContractDefinition(contractId) {
     const definition = CONTRACT_DEFINITIONS.get(contractId);
 
@@ -202,8 +258,12 @@ export function createContractManager({ state, onChange = () => {}, getCargoCoun
 
   return {
     acceptContract,
+    collectPayment,
+    depositResourceUnit,
     getCurrentContract,
+    getOpenContractIds,
     offerContract,
+    showNextContract,
     update,
   };
 }
