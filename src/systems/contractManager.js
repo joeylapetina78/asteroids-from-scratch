@@ -1,8 +1,8 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=ship-market-v2";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=red-work-v1";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
-export function createContractManager({ state, onChange = () => {} }) {
+export function createContractManager({ state, onChange = () => {}, getCargoCounts = () => ({}), removeCargoUnits = () => [] }) {
   let lastEventId = 0;
 
   function offerContract(contractId) {
@@ -10,20 +10,38 @@ export function createContractManager({ state, onChange = () => {} }) {
     const existingContract = state.contracts.records[contractId];
 
     if (existingContract?.status === "active" || existingContract?.status === "paid") {
+      if (existingContract.status === "paid" && definition.repeatable) {
+        state.contracts.records[contractId] = createContractRecord(definition, existingContract.runCount ?? 1);
+        state.contracts.currentContractId = contractId;
+        recordContractOffered(contractId, definition);
+        onChange(getCurrentContract());
+        return;
+      }
+
       state.contracts.currentContractId = contractId;
       onChange(getCurrentContract());
       return;
     }
 
-    state.contracts.records[contractId] = {
+    state.contracts.records[contractId] = createContractRecord(definition);
+    state.contracts.currentContractId = contractId;
+    recordContractOffered(contractId, definition);
+    onChange(getCurrentContract());
+  }
+
+  function createContractRecord(definition, completedRunCount = 0) {
+    return {
       ...definition,
       status: "offered",
+      runCount: completedRunCount + 1,
       offeredAt: Date.now(),
       acceptedAt: null,
       fulfilledAt: null,
       paidAt: null,
     };
-    state.contracts.currentContractId = contractId;
+  }
+
+  function recordContractOffered(contractId, definition) {
     state.ledger.recordEvent(
       "contract.offered",
       {
@@ -33,7 +51,6 @@ export function createContractManager({ state, onChange = () => {} }) {
       },
       { visible: false },
     );
-    onChange(getCurrentContract());
   }
 
   function acceptContract(contractId = state.contracts.currentContractId) {
@@ -69,6 +86,7 @@ export function createContractManager({ state, onChange = () => {} }) {
 
       if (event.type === "site.docked") {
         fulfillMatchingDeliveryContracts(event);
+        fulfillMatchingResourceContracts(event);
       }
     });
   }
@@ -85,6 +103,34 @@ export function createContractManager({ state, onChange = () => {} }) {
         }
 
         payContract(contract);
+      });
+  }
+
+  function fulfillMatchingResourceContracts(event) {
+    Object.values(state.contracts.records)
+      .filter((contract) => contract.type === "resource-delivery" && contract.status === "active")
+      .forEach((contract) => {
+        const matchesSite = contract.terms.destinationSiteId === event.payload.siteId;
+        const resourceType = contract.terms.resourceType;
+        const requiredAmount = contract.terms.amount ?? 0;
+        const cargoCounts = getCargoCounts();
+
+        if (!matchesSite || (cargoCounts[resourceType] ?? 0) < requiredAmount) {
+          return;
+        }
+
+        const removedUnits = removeCargoUnits(resourceType, requiredAmount);
+
+        if (removedUnits.length !== requiredAmount) {
+          return;
+        }
+
+        payContract(contract, {
+          destinationSiteId: contract.terms.destinationSiteId,
+          resourceType,
+          resourceName: contract.terms.resourceName,
+          unitsDelivered: requiredAmount,
+        });
       });
   }
 
@@ -109,7 +155,7 @@ export function createContractManager({ state, onChange = () => {} }) {
     });
   }
 
-  function payContract(contract) {
+  function payContract(contract, fulfillment = {}) {
     const credits = contract.reward.credits ?? 0;
 
     contract.status = "paid";
@@ -119,8 +165,11 @@ export function createContractManager({ state, onChange = () => {} }) {
     state.ledger.recordEvent("contract.fulfilled", {
       contractId: contract.id,
       contractTitle: contract.title,
-      destinationSiteId: contract.terms.destinationSiteId,
-      shipVin: contract.terms.deliverShipVin,
+      destinationSiteId: fulfillment.destinationSiteId ?? contract.terms.destinationSiteId,
+      shipVin: fulfillment.shipVin ?? contract.terms.deliverShipVin,
+      resourceType: fulfillment.resourceType,
+      resourceName: fulfillment.resourceName,
+      unitsDelivered: fulfillment.unitsDelivered,
       creditsPaid: credits,
     });
     state.ledger.recordEvent("contract.paid", {

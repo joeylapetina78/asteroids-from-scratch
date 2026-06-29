@@ -40,4 +40,28 @@ export const chapterOneContracts = [
       "Payment controls will be added to this contract record as financing comes online.",
     ],
   },
+  {
+    id: "rook-red-resource-run",
+    type: "resource-delivery",
+    repeatable: true,
+    title: "Red Resource Run",
+    issuer: "Rook",
+    summary: "Deliver 10 red resources to Yard Exchange.",
+    terms: {
+      resourceType: "fuel",
+      resourceName: "red resources",
+      amount: 10,
+      destinationSiteId: "yard-exchange",
+      destinationName: "Yard Exchange",
+    },
+    reward: {
+      creditsPerUnit: 100,
+      credits: 1000,
+    },
+    clauses: [
+      "Payment releases when 10 red resources are delivered from cargo at Yard Exchange.",
+      "Resources must be in the cargo hold, not loose in space.",
+      "Rook may offer this work again after a completed run.",
+    ],
+  },
 ];

@@ -22,9 +22,14 @@ export const chapterOneNewShipMission = {
   completion: {
     speaker: "Barvis",
     objective: "Starter ship purchased.",
-    helpText: "Your ship now has a miner and cargo hold. Rook can start offering mining work next.",
+    helpText: "Your ship now has a miner and cargo hold. Rook has your first mining work lined up.",
     line:
       "Excellent choice. The papers are clean, the miner is installed, and the cargo hold is yours. I will tell Rook you are ready for work.",
+    acknowledgement: {
+      label: "Call Rook",
+      action: "startMission",
+      missionId: "chapter-1-red-work",
+    },
   },
   startStepId: "show-merchant",
   steps: [

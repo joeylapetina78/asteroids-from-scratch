@@ -1,9 +1,10 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=ship-market-v2";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=ship-market-v2";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=red-work-v1";
 import { createMissionRunner } from "./missionRunner.js?v=contract-v1";
 
 const MISSION_DEFINITIONS = new Map(
-  [chapterOneInterviewMission, chapterOneNewShipMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
+  [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
 );
 
 export function createJourneyDirector({ state, onChange = () => {}, offerContract = () => {}, showComponent = () => {} }) {
@@ -107,7 +108,7 @@ export function createJourneyDirector({ state, onChange = () => {}, offerContrac
       { visible: true },
     );
     if (completion) {
-      say(completion.speaker ?? "Journey", completion.line);
+      say(completion.speaker ?? "Journey", completion.line, completion.acknowledgement);
       return;
     }
 

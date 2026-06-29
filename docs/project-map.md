@@ -38,7 +38,9 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/styles.css](../src/styles.css) | Component panel layout, viewport sizing, warning flashes, hidden hub behavior, and control styling. |
 | [src/state/gameState.js](../src/state/gameState.js) | Starting story, ship, component, and account state. This is the current single source for installed systems, ship frame, engine tuning, and initial fuel/ammo/scan/hull values. |
 | [src/components/componentRules.js](../src/components/componentRules.js) | Derives available processor outputs from installed components. |
-| [src/content/missions/chapterOneInterview.js](../src/content/missions/chapterOneInterview.js) | Authored data for the current Chapter 1 mission. Holds steps, objectives, help text, event transitions, considerations, and actions. |
+| [src/content/missions/chapterOneInterview.js](../src/content/missions/chapterOneInterview.js) | Authored data for the first Chapter 1 mission. Holds steps, objectives, help text, event transitions, considerations, and actions. |
+| [src/content/missions/chapterOneNewShip.js](../src/content/missions/chapterOneNewShip.js) | Authored data for buying the first player-owned starter mining ship. |
+| [src/content/missions/chapterOneRedWork.js](../src/content/missions/chapterOneRedWork.js) | Authored data for Rook's first repeatable red-resource mining job. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. |
 
 ## Entity Dictionary
@@ -123,7 +125,7 @@ NPC ships are the first non-player ship actors. They use steering behavior like 
 
 [src/systems/missionRunner.js](../src/systems/missionRunner.js) executes authored mission data. It knows how to enter steps, respond to acknowledgments, evaluate event transitions, run consideration responses, set mission flags, and run mission actions.
 
-[src/content/missions/chapterOneInterview.js](../src/content/missions/chapterOneInterview.js) is the first mission content file. [src/content/missions/chapterOneNewShip.js](../src/content/missions/chapterOneNewShip.js) is the second mission content file. These are JavaScript data rather than JSON for now, because the shape is still being discovered and small event predicates/markers are easier to evolve here. The structure is intentionally close to JSON so a future editor or content pipeline can grow out of it.
+[src/content/missions/chapterOneInterview.js](../src/content/missions/chapterOneInterview.js) is the first mission content file. [src/content/missions/chapterOneNewShip.js](../src/content/missions/chapterOneNewShip.js) is the second mission content file. [src/content/missions/chapterOneRedWork.js](../src/content/missions/chapterOneRedWork.js) starts the first repeatable work loop. These are JavaScript data rather than JSON for now, because the shape is still being discovered and small event predicates/markers are easier to evolve here. The structure is intentionally close to JSON so a future editor or content pipeline can grow out of it.
 
 Current opening flow:
 
@@ -147,6 +149,9 @@ Current opening flow:
 18. Mako offers a starter ship loan contract.
 19. Accepting the loan funds the account.
 20. Buying the Rook special installs the miner and cargo hold and completes the mission.
+21. Rook returns and offers the first red-resource run.
+22. Accepting the red-resource contract sends the player out to mine 10 red resources.
+23. Docking at Yard Exchange with the required red cargo fulfills and pays the contract.
 
 Mission event handling keeps listening while an NPC line is waiting for `Okay`. That lets stronger world facts interrupt tutorial beats: if the player reaches Yard Exchange before acknowledging the Scanner lesson, the mission can skip ahead to the Docking prompt instead of blocking progress.
 
@@ -164,6 +169,7 @@ Mission rules can require multiple flags via `requiresFlags`. The first use is p
 
 - `rook-yard-exchange-delivery`: delivery contract. Requires the attached hull VIN `YRDSKF-01-7A3` to dock at Yard Exchange and pays 500 credits.
 - `mako-starter-ship-loan`: loan contract. Deposits 20,000 credits, tracks principal/debt state, and leaves repayment controls for a later pass.
+- `rook-red-resource-run`: repeatable resource-delivery contract. Requires 10 red resources from cargo at Yard Exchange and pays 100 credits per unit.
 
 Current contract flow:
 
@@ -174,8 +180,9 @@ Current contract flow:
 5. A matching contract becomes `paid`, adds credits to the account, and records `contract.fulfilled` and `contract.paid`.
 6. The mission listens for `contract.paid` to complete the interview.
 7. Loan contracts disburse funds on acceptance and record `loan.disbursed`.
+8. Resource-delivery contracts check cargo on `site.docked`, remove only the required matching units, then pay the contract.
 
-This is intentionally small, but it sets up the later shape for loan contracts, delivery contracts, penalties, deadlines, damage modifiers, and hub contract boards.
+This is intentionally small, but it sets up the later shape for loan contracts, delivery contracts, repeatable resource work, penalties, deadlines, damage modifiers, and hub contract boards.
 
 ### Ship Offers And Merchant
 
@@ -282,7 +289,7 @@ Collected pickups normally become larger square units falling from a pipe. If th
 
 ### Event Ledger
 
-[src/systems/eventLedger.js](../src/systems/eventLedger.js) is the central memory spine for meaningful events and compact stats. Systems report events such as `site.docked`, `site.nearby`, `zone.entered`, `ship.thrusted`, `ship.repaired`, `cargo.sold`, `contract.accepted`, `contract.paid`, `loan.disbursed`, `rook.bonusAwarded`, `ship.purchased`, `weapon.fired`, `asteroid.destroyed`, `resource.collected`, `resource.processed`, `enemy.destroyed`, and `npc.destroyed`. The ledger stores capped in-memory event history and derives stat keys like `site.docked.yard-exchange`, `zone.entered.red-teeth`, `resource.collected.crystal`, `credits.earned.sales`, `credits.earned.contracts`, `credits.earned.bonuses`, `credits.borrowed.total`, and `credits.spent.repairs`.
+[src/systems/eventLedger.js](../src/systems/eventLedger.js) is the central memory spine for meaningful events and compact stats. Systems report events such as `site.docked`, `site.nearby`, `zone.entered`, `ship.thrusted`, `ship.repaired`, `cargo.sold`, `contract.accepted`, `contract.fulfilled`, `contract.paid`, `loan.disbursed`, `rook.bonusAwarded`, `ship.purchased`, `weapon.fired`, `asteroid.destroyed`, `resource.collected`, `resource.processed`, `enemy.destroyed`, and `npc.destroyed`. The ledger stores capped in-memory event history and derives stat keys like `site.docked.yard-exchange`, `zone.entered.red-teeth`, `resource.collected.crystal`, `contract.resourceDelivered.fuel`, `credits.earned.sales`, `credits.earned.contracts`, `credits.earned.bonuses`, `credits.borrowed.total`, and `credits.spent.repairs`.
 
 This is intentionally separate from contracts and achievements. Future systems can listen to new events or compare stat snapshots without each gameplay system knowing about every possible contract, achievement, reputation rule, or ship record.
 
@@ -317,7 +324,7 @@ Component state lives under `state.components`.
 | `cargoHold` | Cargo canvas | Stores units for selling and future mission delivery. |
 | `hull` | Integrity readout, VIN plate | Takes collision damage. At 0%, ship is destroyed and controls are disabled. The starter VIN is state-backed so future docking, scanning, permits, and identity tricks have a real hook. |
 | `docking` | Target, credits, dock button | Shows nearest/nearby site state and toggles docking. |
-| `contract` | Contract terms and accept button | Shows the current offered/active/paid contract. Delivery contracts check VIN plus destination; loan contracts fund credits and track debt state. |
+| `contract` | Contract terms and accept button | Shows the current offered/active/paid contract. Delivery contracts check VIN plus destination; resource contracts check cargo plus destination; loan contracts fund credits and track debt state. |
 | `merchant` | Shipyard offer cards | Shows ship offers, handles unaffordable offer events, and buys the starter mining ship. |
 | `hub` | Hidden service panel | Appears only while docked at a hub. Sells cargo and repairs hull. |
 | `world` | Debug component | Shows world position, zone, danger, bias values, and object counts. |

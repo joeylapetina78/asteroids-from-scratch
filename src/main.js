@@ -1,9 +1,9 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=rook-tutorial-v1";
-import { createContractManager } from "./systems/contractManager.js?v=ship-market-v2";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=ship-market-v2";
-import { Processor } from "./systems/processor.js?v=credits-cargo";
+import { createContractManager } from "./systems/contractManager.js?v=red-work-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=red-work-v1";
+import { Processor } from "./systems/processor.js?v=red-work-v1";
 import { createGameState } from "./state/gameState.js?v=ship-market-v2";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
@@ -120,6 +120,8 @@ const cargoHold = new Processor(cargoCanvas, () => {}, { isClickable: false });
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay);
 const contractManager = createContractManager({
   state,
+  getCargoCounts: () => cargoHold.getUnitCounts(),
+  removeCargoUnits: (type, count) => cargoHold.removeUnits(type, count),
   onChange: () => {
     renderContract();
     updateHudDisplay();
@@ -207,7 +209,14 @@ dockToggleButton.addEventListener("click", () => {
 });
 
 contractAcceptButton.addEventListener("click", () => {
-  contractManager.acceptContract();
+  const contract = contractManager.getCurrentContract();
+
+  if (contract?.repeatable && contract.status === "paid") {
+    contractManager.offerContract(contract.id);
+  } else {
+    contractManager.acceptContract();
+  }
+
   updateHudDisplay();
 });
 
@@ -356,8 +365,8 @@ function renderContract(contract = contractManager.getCurrentContract()) {
   contractIssuer.textContent = `Issuer: ${contract.issuer}`;
   contractSummary.textContent = contract.summary;
   renderContractTerms(contract);
-  contractAcceptButton.disabled = contract.status !== "offered";
-  contractAcceptButton.textContent = contract.status === "offered" ? "Accept Contract" : getContractButtonLabel(contract.status);
+  contractAcceptButton.disabled = contract.status !== "offered" && !(contract.repeatable && contract.status === "paid");
+  contractAcceptButton.textContent = getContractButtonLabel(contract);
   contractClauses.replaceChildren(
     ...(contract.clauses ?? []).map((clause) => {
       const item = document.createElement("li");
@@ -375,6 +384,16 @@ function renderContractTerms(contract) {
     contractDestination.textContent = contract.terms.dueLabel;
     contractTertiaryLabel.textContent = "Interest";
     contractReward.textContent = `${contract.terms.interestRate * 100}% / cap ${contract.terms.maxInterest} cr`;
+    return;
+  }
+
+  if (contract.type === "resource-delivery") {
+    contractPrimaryLabel.textContent = "Resource";
+    contractVin.textContent = `${contract.terms.amount} ${contract.terms.resourceName}`;
+    contractSecondaryLabel.textContent = "Destination";
+    contractDestination.textContent = contract.terms.destinationName;
+    contractTertiaryLabel.textContent = "Rate";
+    contractReward.textContent = `${contract.reward.creditsPerUnit} cr/unit`;
     return;
   }
 
@@ -402,12 +421,20 @@ function getContractStatusLabel(status) {
   return status ?? "unknown";
 }
 
-function getContractButtonLabel(status) {
-  if (status === "active") {
+function getContractButtonLabel(contract) {
+  if (contract.status === "offered") {
+    return "Accept Contract";
+  }
+
+  if (contract.repeatable && contract.status === "paid") {
+    return "Run Again";
+  }
+
+  if (contract.status === "active") {
     return "Accepted";
   }
 
-  if (status === "paid") {
+  if (contract.status === "paid") {
     return "Paid";
   }
 

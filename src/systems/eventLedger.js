@@ -194,6 +194,11 @@ export function createEventLedger(options = {}) {
       incrementStat(`${event.type}.total`);
       incrementStat(`${event.type}.${event.payload.contractId ?? "unknown"}`);
 
+      if (event.type === "contract.fulfilled" && event.payload.resourceType) {
+        incrementStat("contract.resourceDelivered.total", event.payload.unitsDelivered ?? 0);
+        incrementStat(`contract.resourceDelivered.${event.payload.resourceType}`, event.payload.unitsDelivered ?? 0);
+      }
+
       if (event.type === "contract.paid") {
         incrementStat("credits.earned.contracts", event.payload.creditsPaid ?? 0);
       }
@@ -332,6 +337,10 @@ function getDefaultMessage(type, payload) {
   }
 
   if (type === "contract.fulfilled") {
+    if (payload.resourceType) {
+      return `Delivered ${payload.unitsDelivered ?? 0} ${payload.resourceName ?? payload.resourceType}`;
+    }
+
     return `Fulfilled contract: ${payload.contractTitle ?? payload.contractId}`;
   }
 

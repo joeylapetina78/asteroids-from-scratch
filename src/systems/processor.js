@@ -59,6 +59,28 @@ export class Processor {
     return units;
   }
 
+  removeUnits(type, count) {
+    const removedUnits = [];
+    const keptUnits = [];
+    let remaining = count;
+
+    this.units.forEach((unit) => {
+      if (unit.type === type && remaining > 0) {
+        removedUnits.push(unit);
+        remaining -= 1;
+      } else {
+        keptUnits.push(unit);
+      }
+    });
+
+    if (removedUnits.length !== count) {
+      return [];
+    }
+
+    this.units = keptUnits;
+    return removedUnits;
+  }
+
   frame(time) {
     const deltaSeconds = Math.min((time - this.lastFrameTime) / 1000, 0.05);
     this.lastFrameTime = time;
