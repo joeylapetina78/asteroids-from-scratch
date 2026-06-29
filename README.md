@@ -62,4 +62,6 @@ Profiles now save locally in the browser with `localStorage`. The first pass pre
 
 For development testing, `?devStart=red-work` starts fresh near Yard Exchange with the starter mining setup so later contract work can be tested without replaying the full intro.
 
+Sound is generated with the browser Web Audio API after the player clicks `Play Asteroids RPG`. The first pass uses simple Atari-like tones for UI, Journey chatter, scanner, power, thrust, miner shots, rock breaks, pickups, docking, cargo transfer, hull hits, and contract success.
+
 Current likely milestone: keep shaping Chapter 1's guided introduction, then connect that story structure to missions, starter economy, and the first ship upgrade.

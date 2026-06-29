@@ -1,7 +1,8 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=red-work-considerations-v1";
+import { Game } from "./game.js?v=atari-audio-v1";
 import { createContractManager } from "./systems/contractManager.js?v=red-work-considerations-v1";
+import { createGameAudio } from "./systems/audio.js?v=atari-audio-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=assessment-considerations-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=red-work-considerations-v1";
@@ -131,9 +132,10 @@ if (shouldResetSave() || initialDevStart) {
 }
 
 const savedProfile = loadSavedProfile(state);
+const audio = createGameAudio();
 const processor = new Processor(processorCanvas, processUnit);
 const cargoHold = new Processor(cargoCanvas, depositCargoUnit, { isClickable: true });
-const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay);
+const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio);
 const contractManager = createContractManager({
   state,
   onChange: () => {
@@ -154,6 +156,7 @@ const journeyDirector = createJourneyDirector({
 let bringPanelToFront = () => {};
 let positionPanelById = () => {};
 let renderedLedgerVersion = -1;
+let lastAudioEventId = 0;
 let journeyTypeTimers = [];
 let currentSiteState = null;
 let activeDepositContractId = null;
@@ -175,6 +178,7 @@ function updateShipPowerDisplay() {
 }
 
 powerButton.addEventListener("click", () => {
+  audio.playUiClick();
   game.setShipPowered(!state.components.engine.powered);
   updateShipPowerDisplay();
 });
@@ -186,6 +190,7 @@ document.querySelectorAll("input[name='thrust-mode']").forEach((control) => {
 });
 
 minerArmed.addEventListener("change", () => {
+  audio.playUiClick();
   state.components.miner.armed = minerArmed.checked;
 });
 
@@ -195,6 +200,7 @@ tractorFieldButton.addEventListener("pointerdown", (event) => {
   }
 
   event.preventDefault();
+  audio.playUiClick();
   tractorFieldButton.setPointerCapture(event.pointerId);
   setTractorFieldActive(true);
 });
@@ -213,19 +219,23 @@ tractorFieldButton.addEventListener("pointercancel", () => setTractorFieldActive
 tractorFieldButton.addEventListener("lostpointercapture", () => setTractorFieldActive(false));
 
 scanButton.addEventListener("click", () => {
+  audio.playUiClick();
   game.scanForCrystals();
 });
 
 journeyAcceptButton.addEventListener("click", () => {
+  audio.unlock();
   journeyDirector.pressJourneyButton();
   updateHudDisplay();
 });
 
 dockToggleButton.addEventListener("click", () => {
+  audio.playUiClick();
   game.toggleDock();
 });
 
 contractAcceptButton.addEventListener("click", () => {
+  audio.playUiClick();
   const contract = contractManager.getCurrentContract();
 
   if (contract?.repeatable && contract.status === "paid") {
@@ -245,17 +255,20 @@ contractAcceptButton.addEventListener("click", () => {
 });
 
 contractNextButton.addEventListener("click", () => {
+  audio.playUiClick();
   activeDepositContractId = null;
   contractManager.showNextContract();
   updateHudDisplay();
 });
 
 hubRepairButton.addEventListener("click", () => {
+  audio.playUiClick();
   game.repairAtDock();
   updateHudDisplay();
 });
 
 hubSellCargoButton.addEventListener("click", () => {
+  audio.playUiClick();
   sellCargoHold();
 });
 
@@ -727,6 +740,7 @@ function renderJourney(journey = state.journey) {
       line.className = "journey-line";
       speaker.textContent = message.speaker;
       text.className = "journey-line-text";
+      text.dataset.speaker = message.speaker;
       typeJourneyText(text, message.text);
       line.append(speaker, text);
       return line;
@@ -739,6 +753,7 @@ function playPanelReveal(panel) {
   panel.classList.remove("is-component-revealed");
   void panel.offsetWidth;
   panel.classList.add("is-component-revealed");
+  audio.playPanelReveal();
 }
 
 function playJourneyUpdate() {
@@ -763,9 +778,10 @@ function typeJourneyText(element, fullText) {
   element.textContent = "";
 
   words.forEach((word, index) => {
-    const timer = window.setTimeout(() => {
-      element.textContent += `${index === 0 ? "" : " "}${word}`;
-    }, index * JOURNEY_WORD_DELAY_MS);
+      const timer = window.setTimeout(() => {
+        element.textContent += `${index === 0 ? "" : " "}${word}`;
+        audio.chatter(element.dataset.speaker, index);
+      }, index * JOURNEY_WORD_DELAY_MS);
 
     journeyTypeTimers.push(timer);
   });
@@ -792,6 +808,7 @@ function processUnit(type) {
   const output = getSelectedProcessorOutput();
   const amount = getUnitProcessValue(type);
   state.components.processor.output = output;
+  audio.playCargoTransfer(type);
   state.ledger.recordEvent("resource.processed", {
     resourceType: type,
     output,
@@ -888,6 +905,7 @@ function updateEventLedgerDisplay() {
     return;
   }
 
+  playLedgerAudioEvents();
   renderedLedgerVersion = state.ledger.version;
   worldDebugFields.eventCount.textContent = String(state.ledger.eventCount);
   worldDebugFields.shotsFired.textContent = String(state.ledger.getStat("weapon.fired.total"));
@@ -903,6 +921,20 @@ function updateEventLedgerDisplay() {
       return item;
     }),
   );
+}
+
+function playLedgerAudioEvents() {
+  const events = state.ledger.getEventsAfterId(lastAudioEventId, { includeHidden: true });
+
+  events.forEach((event) => {
+    lastAudioEventId = Math.max(lastAudioEventId, event.id);
+
+    if (event.type === "contract.paid" || event.type === "mission.completed") {
+      audio.playContractPaid();
+    } else if (event.type === "ship.refueled") {
+      audio.playDock();
+    }
+  });
 }
 
 function getCargoHoldValue() {

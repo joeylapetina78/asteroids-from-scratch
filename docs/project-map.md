@@ -42,6 +42,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/content/missions/chapterOneNewShip.js](../src/content/missions/chapterOneNewShip.js) | Authored data for buying the first player-owned starter mining ship. |
 | [src/content/missions/chapterOneRedWork.js](../src/content/missions/chapterOneRedWork.js) | Authored data for Rook's first repeatable red-resource mining job. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. |
+| [src/systems/audio.js](../src/systems/audio.js) | Procedural Atari-style sound effects and Journey chatter using Web Audio. |
 | [src/systems/saveManager.js](../src/systems/saveManager.js) | Lightweight browser-local profile save/load for playtesting. |
 
 ## Entity Dictionary
@@ -274,6 +275,26 @@ Lifeforms are created once at startup. The game preserves all lifeforms but only
 [src/systems/scanner.js](../src/systems/scanner.js) creates a forward cone scan. It can be given a target list so starter/tutorial scanners can look only for sites, while later scanner upgrades can include resources or other target classes. Resource asteroids are found in front of the ship; world sites use a broader scan range and can be filtered to the current mission target.
 
 Scanning costs scanergy in `Game.scanForCrystals`. Scanner use no longer requires the engine to be powered, which lets the tutorial teach navigation before handing over propulsion.
+
+### Audio
+
+[src/systems/audio.js](../src/systems/audio.js) creates the current sound effects with Web Audio oscillators and noise bursts. It unlocks from the first Journey button click so browser autoplay rules are respected.
+
+Current sounds are intentionally simple and arcade-like:
+
+- UI click and component reveal
+- Journey/NPC chatter during typed text
+- engine power and thrust hum/ticks
+- scanner ping
+- miner charge shot
+- rock break
+- pickup collection
+- hull impact
+- docking/refuel tone
+- cargo transfer packet
+- contract/mission success
+
+The system exposes named functions such as `playScanner`, `playMiningShot`, `playRockBreak`, and `chatter`. That keeps game logic from knowing about oscillators, and leaves room for later per-NPC voices or real sound assets.
 
 ### Processor And Cargo Hold
 

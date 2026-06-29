@@ -52,6 +52,7 @@ export class Game {
     onResourceCollected = () => {},
     onDebugChange = () => {},
     onSiteChange = () => {},
+    audio = null,
   ) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
@@ -60,6 +61,7 @@ export class Game {
     this.onResourceCollected = onResourceCollected;
     this.onDebugChange = onDebugChange;
     this.onSiteChange = onSiteChange;
+    this.audio = audio;
     this.input = createInput();
     this.camera = createCamera(canvas);
     this.scanner = createScanner(canvas);
@@ -175,6 +177,7 @@ export class Game {
 
     const wasPowered = this.state.components.engine.powered;
     this.state.components.engine.powered = isPowered;
+    this.audio?.playPower(isPowered);
 
     if (isPowered && !wasPowered) {
       this.state.ledger.recordEvent(
@@ -203,6 +206,7 @@ export class Game {
     }
 
     scanner.scanergy -= SCANERGY_PER_SCAN;
+    this.audio?.playScanner();
     this.state.ledger.recordEvent(
       "scanner.used",
       {
@@ -244,6 +248,10 @@ export class Game {
     // Order matters: ship/world state is advanced first, then collisions and UI
     // readouts are derived from the updated world.
     this.ship.update(deltaSeconds, this.input);
+    this.audio?.updateEngine({
+      powered: this.state.components.engine.powered && !this.shipDestroyed,
+      thrusting: this.ship.isThrusting && !this.shipDestroyed,
+    });
     this.updatePlayerThrustEvent();
     this.updateMovementEvent();
     this.updateWorldSiteInteraction();
@@ -523,6 +531,7 @@ export class Game {
           siteName: site.name,
           siteType: site.type,
         });
+        this.audio?.playDock();
       }
 
       if (site.type === "hub") {
@@ -687,6 +696,7 @@ export class Game {
       return;
     }
 
+    this.audio?.playCargoTransfer(resourceType);
     const color = resourceType === "crystal" ? "#73d2ff" : "#ff7452";
     const distanceX = site.position.x - this.ship.position.x;
     const distanceY = site.position.y - this.ship.position.y;
@@ -856,6 +866,7 @@ export class Game {
     );
     this.onHudChange(this.state);
     this.bullets.push(new Bullet(this.ship));
+    this.audio?.playMiningShot();
     this.fireCooldown = FIRE_COOLDOWN_SECONDS;
   }
 
@@ -1207,6 +1218,7 @@ export class Game {
     }
 
     this.onHudChange(this.state);
+    this.audio?.playHullHit(amount);
   }
 
   destroyShip() {
@@ -1269,6 +1281,7 @@ export class Game {
   breakAsteroid(asteroid, impactVelocity) {
     this.impactSeed += 1;
     const resourceType = getAsteroidResourceType(asteroid);
+    this.audio?.playRockBreak(asteroid.tier);
 
     this.state.ledger.recordEvent(
       "asteroid.destroyed",
@@ -1668,6 +1681,7 @@ export class Game {
         { visible: false },
       );
       this.onResourceCollected(pickup.type);
+      this.audio?.playPickup(pickup.type);
     });
 
     if (collectedPickups.size === 0) {
