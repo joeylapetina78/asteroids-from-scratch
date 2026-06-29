@@ -188,6 +188,8 @@ Current contract flow:
 
 This is intentionally small, but it sets up the later shape for loan contracts, delivery contracts, repeatable resource work, penalties, deadlines, damage modifiers, and hub contract boards.
 
+The next architecture track is captured in [hub-services-roadmap.md](hub-services-roadmap.md). The goal is to make hub NPCs and services real reusable systems, then make missions point the player toward those systems instead of directly faking shops, loans, repairs, and repeatable work.
+
 ### Ship Offers And Merchant
 
 [src/content/ships/shipOffers.js](../src/content/ships/shipOffers.js) defines the first ship offer data. The Merchant panel renders this data into ship cards with brand, model, price, hull, included components, and tradeoffs.
