@@ -14,7 +14,8 @@ export const chapterOneContracts = [
       credits: 500,
     },
     clauses: [
-      "Payment releases when the listed VIN docks at the destination hub.",
+      "Terms are satisfied when the listed VIN docks at the destination hub.",
+      "Payment releases when the completed contract is confirmed.",
       "Damage penalties are waived for this assessment contract.",
     ],
   },
@@ -59,7 +60,8 @@ export const chapterOneContracts = [
       credits: 500,
     },
     clauses: [
-      "Payment releases when 5 red resources are delivered from cargo at Yard Exchange.",
+      "Terms are satisfied when 5 red resources are delivered from cargo at Yard Exchange.",
+      "Payment releases when the completed contract is confirmed.",
       "Resources must be in the cargo hold, not loose in space.",
       "Rook may offer this work again after a completed run.",
     ],

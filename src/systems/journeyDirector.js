@@ -1,4 +1,4 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=assessment-considerations-v1";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=contract-complete-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=ship-market-v2";
 import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=red-work-considerations-v1";
 import { createMissionRunner } from "./missionRunner.js?v=red-work-considerations-v1";
@@ -79,19 +79,7 @@ export function createJourneyDirector({ state, game = null, onChange = () => {},
     const elapsedSeconds = Math.round((Date.now() - journey.mission.acceptedAt) / 1000);
     const hull = Math.round(state.components.hull.integrity);
     const grade = getMissionGrade(hull, elapsedSeconds);
-    const bonusCredits = grade.bonusCredits ?? 0;
     const completion = missionDefinition.completion;
-
-    if (!completion && bonusCredits > 0) {
-      state.components.account.credits += bonusCredits;
-      state.ledger.recordEvent("rook.bonusAwarded", {
-        missionId: missionDefinition.id,
-        missionName: missionDefinition.title,
-        creditsPaid: bonusCredits,
-        reason: grade.id,
-        accountCredits: state.components.account.credits,
-      });
-    }
 
     journey.mission = {
       ...journey.mission,
@@ -110,7 +98,7 @@ export function createJourneyDirector({ state, game = null, onChange = () => {},
         grade: grade.id,
         hull,
         elapsedSeconds,
-        bonusCredits,
+        bonusCredits: 0,
       },
       { visible: true },
     );
@@ -213,33 +201,33 @@ function getMissionGrade(hull, elapsedSeconds) {
   if (hull >= 90 && elapsedSeconds <= 120) {
     return {
       id: "good",
-      bonusCredits: 750,
+      bonusCredits: 0,
       line:
         "Okay, we did it. Clean hull, good time, and the contract paid out.",
       followup:
-        "I have a good feeling about you, so I'm throwing in a 750 credit surprise bonus. Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
+        "I have a good feeling about you. Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
     };
   }
 
   if (hull >= 90) {
     return {
       id: "careful",
-      bonusCredits: 500,
+      bonusCredits: 0,
       line:
         "Okay, we did it. Contract paid out, and the hull's still clean. Took us a minute, but careful beats expensive.",
       followup:
-        "I'm throwing in a 500 credit surprise bonus for keeping the ship tidy. Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
+        "You kept the ship tidy. I like that. Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
     };
   }
 
   if (hull > 50) {
     return {
       id: "scuffed",
-      bonusCredits: 250,
+      bonusCredits: 0,
       line:
         "We got here and the contract paid out. We picked up some dents along the way, so next time let's keep the expensive parts farther from the rocks.",
       followup:
-        "It's not worth much any more. You break it, you buy it. Right! I'm throwing in 250 credits against the price. Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
+        "It's not worth much any more. You break it, you buy it. Right! Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
     };
   }
 

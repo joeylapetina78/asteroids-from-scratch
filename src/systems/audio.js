@@ -8,8 +8,6 @@ export function createGameAudio() {
   let isUnlocked = false;
   let nextChatterAt = 0;
   let nextThrustAt = 0;
-  let engineOscillator = null;
-  let engineGain = null;
 
   function unlock() {
     if (isUnlocked) {
@@ -44,12 +42,12 @@ export function createGameAudio() {
 
   function playPower(isPowered) {
     if (isPowered) {
-      tone({ frequency: 120, endFrequency: 260, duration: 0.18, type: "sawtooth", volume: 0.11 });
-      tone({ frequency: 520, duration: 0.055, delay: 0.14, type: "square", volume: 0.07 });
+      tone({ frequency: 130, endFrequency: 245, duration: 0.2, type: "triangle", volume: 0.085 });
+      tone({ frequency: 480, duration: 0.06, delay: 0.15, type: "sine", volume: 0.045 });
       return;
     }
 
-    tone({ frequency: 260, endFrequency: 90, duration: 0.22, type: "sawtooth", volume: 0.1 });
+    tone({ frequency: 230, endFrequency: 90, duration: 0.24, type: "triangle", volume: 0.075 });
   }
 
   function playScanner() {
@@ -135,18 +133,12 @@ export function createGameAudio() {
       return;
     }
 
-    ensureEngineOscillator();
     const now = context.currentTime;
-    const targetGain = powered ? (thrusting ? 0.042 : 0.015) : 0;
-    const targetFrequency = thrusting ? 82 : 52;
 
-    engineGain.gain.cancelScheduledValues(now);
-    engineGain.gain.setTargetAtTime(targetGain, now, 0.05);
-    engineOscillator.frequency.setTargetAtTime(targetFrequency, now, 0.06);
-
-    if (thrusting && now >= nextThrustAt) {
+    if (powered && thrusting && now >= nextThrustAt) {
       nextThrustAt = now + THRUST_TICK_SECONDS;
-      noiseBurst({ duration: 0.035, volume: 0.03 });
+      noiseBurst({ duration: 0.09, volume: 0.038 });
+      tone({ frequency: 170, endFrequency: 115, duration: 0.018, type: "square", volume: 0.024 });
     }
   }
 
@@ -200,21 +192,6 @@ export function createGameAudio() {
     gain.connect(master);
     source.start(now);
     source.stop(now + duration + 0.02);
-  }
-
-  function ensureEngineOscillator() {
-    if (engineOscillator) {
-      return;
-    }
-
-    engineOscillator = context.createOscillator();
-    engineGain = context.createGain();
-    engineOscillator.type = "sawtooth";
-    engineOscillator.frequency.value = 52;
-    engineGain.gain.value = 0;
-    engineOscillator.connect(engineGain);
-    engineGain.connect(master);
-    engineOscillator.start();
   }
 
   function isReady() {

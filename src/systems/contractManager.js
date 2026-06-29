@@ -1,4 +1,4 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=red-work-considerations-v1";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=contract-complete-v1";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -102,8 +102,7 @@ export function createContractManager({ state, onChange = () => {} }) {
           return;
         }
 
-      fulfillContract(contract);
-      payContract(contract);
+        fulfillContract(contract);
       });
   }
 

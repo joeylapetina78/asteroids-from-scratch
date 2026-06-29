@@ -144,8 +144,9 @@ Current opening flow:
 11. Powering the engine advances the mission to movement.
 12. First real player thrust confirms the ship is underway.
 13. Yard Exchange entering view or becoming nearby triggers the Docking prompt.
-14. Docking at Yard Exchange fulfills and pays the contract, which completes the mission.
-15. Rook evaluates the run, may award a small bonus, and sends the player to Barvis.
+14. Docking at Yard Exchange fulfills the contract.
+15. Completing the fulfilled contract pays the account and completes the mission.
+16. Rook evaluates the run and sends the player to Barvis.
 16. Barvis starts `A New Ship?`, opens the Merchant panel, and shows ship offers.
 17. Clicking the unaffordable Rook special calls in Mr. Mako.
 18. Mako offers a starter ship loan contract.
@@ -179,10 +180,11 @@ Current contract flow:
 2. The Contract panel's accept button records `contract.accepted`.
 3. The mission listens for `contract.accepted` before continuing to the scanner lesson.
 4. When `site.docked` is recorded, the contract manager checks active delivery contracts against the docked site and the attached hull VIN.
-5. A matching contract becomes `paid`, adds credits to the account, and records `contract.fulfilled` and `contract.paid`.
-6. The mission listens for `contract.paid` to complete the interview.
-7. Loan contracts disburse funds on acceptance and record `loan.disbursed`.
-8. Resource-delivery contracts check cargo on `site.docked`, remove only the required matching units, then pay the contract.
+5. A matching contract becomes `fulfilled` and records `contract.fulfilled`.
+6. The Contract panel shows `Complete Contract`; pressing it records `contract.paid` and adds credits to the account.
+7. The mission listens for `contract.paid` to complete the interview.
+8. Loan contracts disburse funds on acceptance and record `loan.disbursed`.
+9. Resource-delivery contracts consume deposited cargo units, become `fulfilled` at the required amount, and pay only when the player completes the contract.
 
 This is intentionally small, but it sets up the later shape for loan contracts, delivery contracts, repeatable resource work, penalties, deadlines, damage modifiers, and hub contract boards.
 
@@ -284,7 +286,7 @@ Current sounds are intentionally simple and arcade-like:
 
 - UI click and component reveal
 - Journey/NPC chatter during typed text
-- engine power and thrust hum/ticks
+- engine power tones and soft thrust noise/ticks
 - scanner ping
 - miner charge shot
 - rock break
@@ -326,7 +328,7 @@ This is a playtest save, not an account system. It may be reset by future game u
 
 ### Event Ledger
 
-[src/systems/eventLedger.js](../src/systems/eventLedger.js) is the central memory spine for meaningful events and compact stats. Systems report events such as `site.docked`, `site.nearby`, `zone.entered`, `ship.thrusted`, `ship.repaired`, `cargo.sold`, `contract.accepted`, `contract.fulfilled`, `contract.paid`, `loan.disbursed`, `rook.bonusAwarded`, `ship.purchased`, `weapon.fired`, `asteroid.destroyed`, `resource.collected`, `resource.processed`, `enemy.destroyed`, and `npc.destroyed`. The ledger stores capped in-memory event history and derives stat keys like `site.docked.yard-exchange`, `zone.entered.red-teeth`, `resource.collected.crystal`, `contract.resourceDelivered.fuel`, `credits.earned.sales`, `credits.earned.contracts`, `credits.earned.bonuses`, `credits.borrowed.total`, and `credits.spent.repairs`.
+[src/systems/eventLedger.js](../src/systems/eventLedger.js) is the central memory spine for meaningful events and compact stats. Systems report events such as `site.docked`, `site.nearby`, `zone.entered`, `ship.thrusted`, `ship.repaired`, `cargo.sold`, `contract.accepted`, `contract.fulfilled`, `contract.paid`, `loan.disbursed`, `ship.purchased`, `weapon.fired`, `asteroid.destroyed`, `resource.collected`, `resource.processed`, `enemy.destroyed`, and `npc.destroyed`. The ledger stores capped in-memory event history and derives stat keys like `site.docked.yard-exchange`, `zone.entered.red-teeth`, `resource.collected.crystal`, `contract.resourceDelivered.fuel`, `credits.earned.sales`, `credits.earned.contracts`, `credits.borrowed.total`, and `credits.spent.repairs`.
 
 This is intentionally separate from contracts and achievements. Future systems can listen to new events or compare stat snapshots without each gameplay system knowing about every possible contract, achievement, reputation rule, or ship record.
 

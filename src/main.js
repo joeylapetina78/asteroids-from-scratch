@@ -1,9 +1,9 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=atari-audio-v1";
-import { createContractManager } from "./systems/contractManager.js?v=red-work-considerations-v1";
-import { createGameAudio } from "./systems/audio.js?v=panel-audio-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=assessment-considerations-v1";
+import { createContractManager } from "./systems/contractManager.js?v=contract-complete-v1";
+import { createGameAudio } from "./systems/audio.js?v=softer-engine-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=contract-complete-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=red-work-considerations-v1";
 import { createGameState } from "./state/gameState.js?v=ship-market-v2";
@@ -587,7 +587,7 @@ function getContractButtonLabel(contract) {
   }
 
   if (contract.status === "fulfilled") {
-    return "Collect Payment";
+    return "Complete Contract";
   }
 
   if (canDepositToContract(contract)) {

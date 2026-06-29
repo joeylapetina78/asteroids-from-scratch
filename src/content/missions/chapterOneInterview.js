@@ -413,6 +413,30 @@ export const chapterOneInterviewMission = {
       ],
       transitions: [
         {
+          eventType: "contract.fulfilled",
+          payloadEquals: { contractId: "rook-yard-exchange-delivery" },
+          nextStepId: "complete-delivery-contract",
+        },
+        {
+          eventType: "contract.paid",
+          payloadEquals: { contractId: "rook-yard-exchange-delivery" },
+          actions: [{ type: "completeMission" }],
+        },
+      ],
+    },
+    {
+      id: "complete-delivery-contract",
+      objective: "Complete the delivery contract.",
+      helpText: "The delivery terms are satisfied. Use the Contract panel and press Complete Contract to receive the 500-credit payout.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text: "Good. The Yard Exchange has the VIN and the contract terms are met. Complete the contract and the pay is yours.",
+        },
+      ],
+      transitions: [
+        {
           eventType: "contract.paid",
           payloadEquals: { contractId: "rook-yard-exchange-delivery" },
           actions: [{ type: "completeMission" }],
