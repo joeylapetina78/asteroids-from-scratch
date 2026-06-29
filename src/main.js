@@ -2,7 +2,7 @@ import { getProcessorOutputs, normalizeProcessorOutput } from "./components/comp
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=red-work-considerations-v1";
 import { createContractManager } from "./systems/contractManager.js?v=red-work-considerations-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=red-work-considerations-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=assessment-considerations-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=red-work-considerations-v1";
 import { createGameState } from "./state/gameState.js?v=ship-market-v2";

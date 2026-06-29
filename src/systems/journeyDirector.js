@@ -1,4 +1,4 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=ship-market-v2";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=assessment-considerations-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=ship-market-v2";
 import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=red-work-considerations-v1";
 import { createMissionRunner } from "./missionRunner.js?v=red-work-considerations-v1";

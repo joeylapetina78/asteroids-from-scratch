@@ -1,3 +1,89 @@
+const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
+  {
+    id: "first-hauler-seen",
+    eventType: "npc.enteredViewport",
+    setFlag: "firstHaulerSeen",
+    once: true,
+    actions: [
+      {
+        type: "say",
+        speaker: "Rook",
+        text: "Look, these haulers are working our route. They can get you where we're going if you get lost.",
+      },
+    ],
+  },
+  {
+    id: "near-hauler",
+    eventType: "ship.nearObject",
+    payloadEquals: { targetType: "npc" },
+    setFlag: "nearHauler",
+    once: true,
+    actions: [
+      {
+        type: "say",
+        speaker: "Rook",
+        text: "Give the haulers room. They're useful if you lose the route, but they are not road cones.",
+      },
+    ],
+  },
+  {
+    id: "near-rock",
+    eventType: "ship.nearObject",
+    payloadEquals: { targetType: "asteroid" },
+    setFlag: "nearRock",
+    once: true,
+    actions: [
+      {
+        type: "say",
+        speaker: "Rook",
+        text: "Careful. Close to rocks is where interviews turn into invoices.",
+      },
+    ],
+  },
+  {
+    id: "hit-rock",
+    eventType: "ship.collision",
+    payloadEquals: { targetType: "asteroid" },
+    setFlag: "hitRock",
+    once: true,
+    actions: [
+      {
+        type: "say",
+        speaker: "Rook",
+        text: "Hey! This ship is still worth something. Try steering around the rocks, not through them.",
+      },
+    ],
+  },
+  {
+    id: "hit-hauler",
+    eventType: "ship.collision",
+    payloadEquals: { targetType: "npc" },
+    setFlag: "hitHauler",
+    once: true,
+    actions: [
+      {
+        type: "say",
+        speaker: "Rook",
+        text: "You hit a working hauler. Let's not make enemies before we even get hired.",
+      },
+    ],
+  },
+  {
+    id: "left-starter-drift",
+    eventType: "zone.entered",
+    payloadEquals: { zoneId: "not:starter-drift" },
+    setFlag: "leftStarterDrift",
+    once: true,
+    actions: [
+      {
+        type: "say",
+        speaker: "Rook",
+        text: "Nope, this is not the way. Turn us around and head back to the Drift. Yard Exchange is back that way.",
+      },
+    ],
+  },
+];
+
 export const chapterOneInterviewMission = {
   id: "chapter-1-yard-exchange",
   targetSiteId: "yard-exchange",
@@ -269,34 +355,7 @@ export const chapterOneInterviewMission = {
         },
       ],
       considerations: [
-        {
-          id: "first-hauler-seen",
-          eventType: "npc.enteredViewport",
-          requiresFlag: "firstThrust",
-          setFlag: "firstHaulerSeen",
-          once: true,
-          actions: [
-            {
-              type: "say",
-              speaker: "Rook",
-              text: "Look, these haulers are working our route. They can get you where we're going if you get lost.",
-            },
-          ],
-        },
-        {
-          id: "left-starter-drift",
-          eventType: "zone.entered",
-          payloadEquals: { zoneId: "not:starter-drift" },
-          setFlag: "leftStarterDrift",
-          once: true,
-          actions: [
-            {
-              type: "say",
-              speaker: "Rook",
-              text: "Nope, this is not the way. Turn us around and head back to the Drift. Yard Exchange is back that way.",
-            },
-          ],
-        },
+        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
       ],
     },
     {
@@ -324,34 +383,7 @@ export const chapterOneInterviewMission = {
         },
       ],
       considerations: [
-        {
-          id: "first-hauler-seen",
-          eventType: "npc.enteredViewport",
-          requiresFlag: "firstThrust",
-          setFlag: "firstHaulerSeen",
-          once: true,
-          actions: [
-            {
-              type: "say",
-              speaker: "Rook",
-              text: "Look, these haulers are working our route. They can get you where we're going if you get lost.",
-            },
-          ],
-        },
-        {
-          id: "left-starter-drift",
-          eventType: "zone.entered",
-          payloadEquals: { zoneId: "not:starter-drift" },
-          setFlag: "leftStarterDrift",
-          once: true,
-          actions: [
-            {
-              type: "say",
-              speaker: "Rook",
-              text: "Nope, this is not the way. Turn us around and head back to the Drift. Yard Exchange is back that way.",
-            },
-          ],
-        },
+        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
       ],
     },
     {
@@ -376,6 +408,9 @@ export const chapterOneInterviewMission = {
       id: "dock-yard-exchange",
       objective: "Dock at Yard Exchange.",
       helpText: "Move close to Yard Exchange, then use the Docking panel or press E to dock.",
+      considerations: [
+        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
+      ],
       transitions: [
         {
           eventType: "contract.paid",
