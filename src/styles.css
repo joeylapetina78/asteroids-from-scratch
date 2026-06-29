@@ -435,6 +435,10 @@ body {
   background: rgba(255, 211, 107, 0.06);
 }
 
+.contract-progress[hidden] {
+  display: none;
+}
+
 .contract-progress span {
   display: flex;
   justify-content: space-between;

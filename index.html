@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=panel-audio-v1" />
+    <link rel="stylesheet" href="./src/styles.css?v=contract-card-v1" />
   </head>
   <body>
     <main class="game-shell">
@@ -194,7 +194,7 @@
                   </div>
                 </dl>
                 <div id="contract-progress" class="contract-progress" hidden>
-                  <span>Delivered <strong id="contract-progress-count">0 / 0</strong></span>
+                  <span><span id="contract-progress-label">Delivered</span> <strong id="contract-progress-count">0 / 0</strong></span>
                   <div class="contract-progress-bar" aria-hidden="true">
                     <span id="contract-progress-fill"></span>
                   </div>
@@ -288,6 +288,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=contract-complete-v1"></script>
+    <script type="module" src="./src/main.js?v=contract-card-v1"></script>
   </body>
 </html>

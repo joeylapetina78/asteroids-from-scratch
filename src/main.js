@@ -1,7 +1,7 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=atari-audio-v1";
-import { createContractManager } from "./systems/contractManager.js?v=contract-complete-v1";
+import { createContractManager } from "./systems/contractManager.js?v=contract-card-v1";
 import { createGameAudio } from "./systems/audio.js?v=softer-engine-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=contract-complete-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
@@ -56,6 +56,7 @@ const contractNavCount = document.querySelector("#contract-nav-count");
 const contractNextButton = document.querySelector("#contract-next");
 const contractPrimaryLabel = document.querySelector("#contract-primary-label");
 const contractProgress = document.querySelector("#contract-progress");
+const contractProgressLabel = document.querySelector("#contract-progress-label");
 const contractProgressCount = document.querySelector("#contract-progress-count");
 const contractProgressFill = document.querySelector("#contract-progress-fill");
 const contractReward = document.querySelector("#contract-reward");
@@ -543,18 +544,34 @@ function renderContractTerms(contract) {
 }
 
 function renderContractProgress(contract) {
-  if (contract.type !== "resource-delivery") {
+  if (contract.type === "loan") {
     contractProgress.hidden = true;
     return;
   }
 
-  const requiredAmount = contract.terms.amount ?? 0;
-  const deliveredAmount = contract.deliveredAmount ?? 0;
-  const progressPercent = requiredAmount > 0 ? Math.min(100, (deliveredAmount / requiredAmount) * 100) : 0;
+  if (contract.type === "delivery") {
+    const isComplete = contract.status === "fulfilled" || contract.status === "paid";
 
-  contractProgress.hidden = false;
-  contractProgressCount.textContent = `${deliveredAmount} / ${requiredAmount}`;
-  contractProgressFill.style.width = `${progressPercent}%`;
+    contractProgress.hidden = false;
+    contractProgressLabel.textContent = "Delivery";
+    contractProgressCount.textContent = isComplete ? "confirmed" : "pending";
+    contractProgressFill.style.width = isComplete ? "100%" : "0%";
+    return;
+  }
+
+  if (contract.type === "resource-delivery") {
+    const requiredAmount = contract.terms.amount ?? 0;
+    const deliveredAmount = contract.deliveredAmount ?? 0;
+    const progressPercent = requiredAmount > 0 ? Math.min(100, (deliveredAmount / requiredAmount) * 100) : 0;
+
+    contractProgress.hidden = false;
+    contractProgressLabel.textContent = "Delivered";
+    contractProgressCount.textContent = `${deliveredAmount} / ${requiredAmount}`;
+    contractProgressFill.style.width = `${progressPercent}%`;
+    return;
+  }
+
+  contractProgress.hidden = true;
 }
 
 function getContractStatusLabel(status) {
@@ -567,7 +584,7 @@ function getContractStatusLabel(status) {
   }
 
   if (status === "fulfilled") {
-    return "ready to pay";
+    return "ready to complete";
   }
 
   if (status === "paid") {

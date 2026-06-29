@@ -186,6 +186,7 @@ export function createContractManager({ state, onChange = () => {} }) {
   function fulfillContract(contract, fulfillment = {}) {
     contract.status = "fulfilled";
     contract.fulfilledAt = Date.now();
+    state.contracts.currentContractId = contract.id;
     state.ledger.recordEvent("contract.fulfilled", {
       contractId: contract.id,
       contractTitle: contract.title,
