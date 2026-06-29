@@ -6,10 +6,10 @@ export const chapterOneNewShipMission = {
     episodeName: "Starting Out",
     speaker: "Rook",
     text:
-      "I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
+      "Shipyard access is open. Select Shipyard in the Yard Exchange service panel and talk to Barvis.",
     title: "A New Ship?",
     objective: "Find Barvis at Yard Exchange Shipyard.",
-    actionLabel: "Look for Barvis",
+    actionLabel: "Thanks, Will Do",
     helpText:
       "You are docked at Yard Exchange. Open the Hub panel and choose Shipyard to talk with Barvis.",
   },
@@ -21,13 +21,13 @@ export const chapterOneNewShipMission = {
   title: "A New Ship?",
   successCriteria: "Purchase a ship with a miner component.",
   completion: {
-    speaker: "Barvis",
-    objective: "Starter ship purchased.",
-    helpText: "Your ship now has a miner and cargo hold. Rook has your first mining work lined up.",
+    speaker: "Rook",
+    objective: "Talk to Rook Industries.",
+    helpText: "Rook Industries is open. Rook has your first mining contract waiting there.",
     line:
-      "Excellent choice. The papers are clean, the miner is installed, and the cargo hold is yours. I will tell Rook you are ready for work.",
+      "There you are. New ship, new debt, new chances. I've got your first mining contract waiting.",
     acknowledgement: {
-      label: "Call Rook",
+      label: "Talk Contract",
       action: "startMission",
       missionId: "chapter-1-red-work",
     },
@@ -61,7 +61,7 @@ export const chapterOneNewShipMission = {
           type: "say",
           speaker: "Barvis",
           text:
-            "Hello hello. Thank you for your prompt delivery of the potato you arrived in. Rook tells me you're starting work with his outfit and that he has a few mining contracts he'd like you to pick up. Here are the ships we can get you in right this moment. Take your time. Rook will have a mining rig installed if you take him up on his offer, at the price listed. We can also tune the engine for better fuel efficiency, no extra charge.",
+            "Hello hello. Rook said you'd be coming. Here are the ships I can get you into right now. The Rook special has a miner installed and is the only one close to your price range.",
         },
       ],
       transitions: [
@@ -70,41 +70,23 @@ export const chapterOneNewShipMission = {
           payloadEquals: { offerId: "rook-yard-skiff-miner" },
           nextStepId: "offer-loan",
         },
-        {
-          eventType: "ship.purchased",
-          payloadEquals: { offerId: "rook-yard-skiff-miner" },
-          actions: [
-            { type: "unlockHubService", siteId: "yard-exchange", serviceId: "rook-industries" },
-            { type: "completeMission" },
-          ],
-        },
       ],
     },
     {
       id: "offer-loan",
-      objective: "Ask Yard Exchange Finance for help.",
+      objective: "Talk to Mr. Mako at Yard Exchange Finance.",
       helpText:
-        "Press Call Mako, then use the Hub panel and choose Finance to review the loan contract.",
+        "Barvis closed the Shipyard window. Choose Finance in the Yard Exchange service panel to speak with Mr. Mako.",
       onEnter: [
+        { type: "hideComponent", componentId: "merchant" },
+        { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-finance" },
         {
           type: "say",
           speaker: "Barvis",
           text:
-            "I completely understand, sir. Of course we would never expect everyone who enters to have cash on hand. That's why we have our financing department. Please, let me call Mr. Mako over.",
-          acknowledgement: { label: "Call Mako" },
+            "Not enough credits. No shame in that, sir. I've opened Finance for you. Select Mr. Mako from the Yard Exchange service panel, then come back to me when the funds are in place.",
         },
       ],
-      onAcknowledge: [
-        { type: "clearMessage" },
-        { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-finance" },
-        { type: "goToStep", stepId: "find-mako" },
-      ],
-    },
-    {
-      id: "find-mako",
-      objective: "Talk to Mr. Mako at Yard Exchange Finance.",
-      helpText:
-        "Open the Hub panel and choose Finance. Mr. Mako's contract appears there, not in Barvis's shipyard window.",
       transitions: [
         {
           eventType: "hub.serviceOpened",
@@ -123,13 +105,35 @@ export const chapterOneNewShipMission = {
           type: "say",
           speaker: "Mr. Mako",
           text:
-            "Yes, hello. Mr. Rook passed along the necessary information, and Yard Exchange Finance has worked up a pre-approval for a loan of 20 thousand credits.",
+            "Yes, hello. Yard Exchange Finance has a pre-approval for a 20,000-credit starter ship loan. Review the contract and accept it if the terms suit your situation.",
         },
       ],
       transitions: [
         {
           eventType: "contract.accepted",
           payloadEquals: { contractId: "mako-starter-ship-loan" },
+          nextStepId: "return-to-barvis",
+        },
+      ],
+    },
+    {
+      id: "return-to-barvis",
+      objective: "Return to Barvis at the Shipyard.",
+      helpText:
+        "The loan is active and the money is in your account. Choose Shipyard in the Yard Exchange service panel and buy the Rook special.",
+      onEnter: [
+        { type: "hideComponent", componentId: "contract" },
+        {
+          type: "say",
+          speaker: "Mr. Mako",
+          text:
+            "Funds are deposited. Please return to Barvis at the Shipyard to complete the purchase.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "hub.serviceOpened",
+          payloadEquals: { siteId: "yard-exchange", serviceId: "yard-shipyard" },
           nextStepId: "buy-starter-ship",
         },
       ],
@@ -138,23 +142,46 @@ export const chapterOneNewShipMission = {
       id: "buy-starter-ship",
       objective: "Buy the Rook special starter ship.",
       helpText:
-        "Return to Barvis at the Shipyard and buy the Rook special. It includes a miner and cargo hold so you can take mining work.",
+        "Use Barvis's Merchant panel to buy the Rook special. It includes a miner and cargo hold so you can take mining work.",
       onEnter: [
+        { type: "showComponent", componentId: "merchant", componentName: "Merchant" },
         {
           type: "say",
           speaker: "Barvis",
           text:
-            "Funding is in place. Come back to the Shipyard and the Rook special will be ready with a miner and cargo hold. Select that offer and we'll put the ship in your name.",
+            "Funding is in place. The Rook special is ready with a miner and cargo hold. Select that offer and we'll put the ship in your name.",
         },
       ],
       transitions: [
         {
           eventType: "ship.purchased",
           payloadEquals: { offerId: "rook-yard-skiff-miner" },
+          nextStepId: "find-rook",
           actions: [
+            { type: "hideComponent", componentId: "merchant" },
             { type: "unlockHubService", siteId: "yard-exchange", serviceId: "rook-industries" },
-            { type: "completeMission" },
           ],
+        },
+      ],
+    },
+    {
+      id: "find-rook",
+      objective: "Talk to Rook Industries.",
+      helpText:
+        "Barvis is done with the sale. Choose Rook Industries in the Yard Exchange service panel to get your first mining work.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Barvis",
+          text:
+            "Congratulations, sir. The ship is yours. Rook is waiting in his office now; select Rook Industries from the service panel when you're ready.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "hub.serviceOpened",
+          payloadEquals: { siteId: "yard-exchange", serviceId: "rook-industries" },
+          actions: [{ type: "completeMission" }],
         },
       ],
     },

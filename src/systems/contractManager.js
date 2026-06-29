@@ -250,6 +250,13 @@ export function createContractManager({ state, onChange = () => {} }) {
       creditsPaid: credits,
       accountCredits: state.components.account.credits,
     });
+
+    if (!getOpenContractIds().includes(contract.id)) {
+      state.contracts.currentContractId = getOpenContractIds()[0] ?? null;
+      onChange(getCurrentContract());
+      return;
+    }
+
     onChange(contract);
   }
 

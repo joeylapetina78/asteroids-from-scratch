@@ -1,10 +1,10 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=story-hub-gates-v1";
-import { createContractManager } from "./systems/contractManager.js?v=story-hub-gates-v1";
+import { Game } from "./game.js?v=hub-drive-through-v1";
+import { createContractManager } from "./systems/contractManager.js?v=hub-drive-through-v1";
 import { createGameAudio } from "./systems/audio.js?v=softer-engine-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=story-hub-gates-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=story-hub-gates-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=hub-drive-through-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
 import { createGameState } from "./state/gameState.js?v=story-hub-gates-v1";
@@ -67,6 +67,7 @@ const contractSummary = document.querySelector("#contract-summary");
 const contractTertiaryLabel = document.querySelector("#contract-tertiary-label");
 const contractTitle = document.querySelector("#contract-title");
 const contractVin = document.querySelector("#contract-vin");
+const componentCloseButtons = document.querySelectorAll("[data-close-panel]");
 const fuelCount = document.querySelector("#fuel-count");
 const fuelFill = document.querySelector("#fuel-fill");
 const hullCount = document.querySelector("#hull-count");
@@ -142,8 +143,9 @@ const cargoHold = new Processor(cargoCanvas, depositCargoUnit, { isClickable: tr
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio);
 const contractManager = createContractManager({
   state,
-  onChange: () => {
-    renderContract();
+  onChange: (contract) => {
+    renderContract(contract);
+    syncContractPanelVisibility(contract);
     updateHudDisplay();
   },
 });
@@ -277,6 +279,13 @@ hubServiceMenu.addEventListener("click", (event) => {
   }
 
   openHubService(button.dataset.serviceId);
+});
+
+componentCloseButtons.forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    closeDriveThroughPanel(button.dataset.closePanel);
+  });
 });
 
 renderProcessorOutputs();
@@ -446,6 +455,7 @@ function updateHubServiceDisplay(siteState) {
 
   if (!site) {
     activeHubServiceId = null;
+    closeDriveThroughWindows();
     hubName.textContent = "Hub";
     hubStatus.textContent = "service window";
     hubDetail.textContent = "Dock to access services";
@@ -479,6 +489,12 @@ function updateHubServiceDisplay(siteState) {
   hubSellCargoButton.disabled = !isSupplyAvailable || getCargoHoldValue() <= 0;
   hubRepairButton.disabled = !isSupplyAvailable || !siteState.canRepair || hullPercent >= 100 || siteState.credits < siteState.repairCost;
   renderHubServiceMenu(site);
+}
+
+function syncContractPanelVisibility(contract = contractManager.getCurrentContract()) {
+  if (!contract) {
+    setComponentAvailable("contract", false);
+  }
 }
 
 function renderHubServiceMenu(site) {
@@ -545,6 +561,7 @@ function openHubService(serviceId) {
     return;
   }
 
+  closeDriveThroughWindows({ keepServiceType: service.serviceType });
   activeHubServiceId = service.id;
   hubStatus.textContent = service.organization;
   hubDetail.textContent = `${service.npcName}: ${getHubServicePrompt(service)}`;
@@ -579,6 +596,38 @@ function openHubService(serviceId) {
 
   if (service.serviceType === "supply") {
     bringPanelToFront(hubPanel);
+  }
+}
+
+function closeDriveThroughPanel(panelId) {
+  if (panelId === "merchant") {
+    setComponentAvailable("merchant", false);
+
+    if (activeHubServiceId && getHubService(currentSiteState?.dockedSite?.id, activeHubServiceId)?.serviceType === "shipyard") {
+      activeHubServiceId = null;
+      renderHubServiceMenu(currentSiteState?.dockedSite);
+    }
+
+    return;
+  }
+
+  if (panelId === "contract") {
+    setComponentAvailable("contract", false);
+
+    if (activeHubServiceId && ["contracts", "finance"].includes(getHubService(currentSiteState?.dockedSite?.id, activeHubServiceId)?.serviceType)) {
+      activeHubServiceId = null;
+      renderHubServiceMenu(currentSiteState?.dockedSite);
+    }
+  }
+}
+
+function closeDriveThroughWindows({ keepServiceType = null } = {}) {
+  if (keepServiceType !== "shipyard") {
+    setComponentAvailable("merchant", false);
+  }
+
+  if (!["contracts", "finance"].includes(keepServiceType) && !contractManager.getCurrentContract()) {
+    setComponentAvailable("contract", false);
   }
 }
 
@@ -1243,7 +1292,7 @@ function makePanelsDraggable() {
     savePanelLayout(panel, offset);
 
     handle.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0) {
+      if (event.button !== 0 || event.target.closest("[data-close-panel]")) {
         return;
       }
 

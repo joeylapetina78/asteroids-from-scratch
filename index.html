@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=story-hub-gates-v1" />
+    <link rel="stylesheet" href="./src/styles.css?v=hub-drive-through-v1" />
   </head>
   <body>
     <main class="game-shell">
@@ -175,6 +175,7 @@
                   <strong id="contract-title">Contract</strong>
                   <span id="contract-status">no offer</span>
                 </div>
+                <button class="component-close-button" type="button" data-close-panel="contract" aria-label="Close contract window">x</button>
               </div>
               <div class="contract-readout" aria-live="polite">
                 <span id="contract-issuer">Issuer: --</span>
@@ -214,6 +215,7 @@
                   <strong>Barvis Shipyard</strong>
                   <span>available hulls and packages</span>
                 </div>
+                <button class="component-close-button" type="button" data-close-panel="merchant" aria-label="Close shipyard window">x</button>
               </div>
               <div class="merchant-intro">
                 <span>Account: <strong id="merchant-credits">0 cr</strong></span>
@@ -291,6 +293,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=story-hub-gates-v1"></script>
+    <script type="module" src="./src/main.js?v=hub-drive-through-v1"></script>
   </body>
 </html>

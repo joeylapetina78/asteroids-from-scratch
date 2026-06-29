@@ -183,6 +183,23 @@ body {
   color: #ffffff;
 }
 
+.component-close-button {
+  border: 1px solid #333846;
+  border-radius: 999px;
+  width: 24px;
+  height: 24px;
+  background: #11151d;
+  color: #aeb7c9;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.component-close-button:hover,
+.component-close-button:focus-visible {
+  border-color: #6f7c94;
+  color: #ffffff;
+}
+
 .engine-panel,
 .scanner-panel,
 .miner-panel,
