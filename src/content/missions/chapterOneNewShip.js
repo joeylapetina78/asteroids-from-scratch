@@ -182,7 +182,7 @@ export const chapterOneNewShipMission = {
         {
           eventType: "hub.serviceOpened",
           payloadEquals: { siteId: "yard-exchange", serviceId: "rook-industries" },
-          actions: [{ type: "completeMission" }],
+          actions: [{ type: "completeAndStartMission", missionId: "chapter-1-red-work" }],
         },
       ],
     },

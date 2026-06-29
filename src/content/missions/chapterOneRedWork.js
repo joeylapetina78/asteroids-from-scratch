@@ -1,5 +1,6 @@
 export const chapterOneRedWorkMission = {
   id: "chapter-1-red-work",
+  autoAcceptOnStart: true,
   prologue: {
     chapterId: "chapter-1",
     chapterName: "Chapter 1",
@@ -9,7 +10,7 @@ export const chapterOneRedWorkMission = {
       "Hey, you ended up with our baby. Good for you. I hope it serves you well in the days to come. To get you started, head starboard, east-ish from Yard Exchange, and find some resources. Mine red rocks and bring me back 5 red resources. Drive over the loose red squares to scoop them into cargo, but don't drive the ship into rocks. That's called crashing, not mining. Try to stay close to the hub if you can. If you hit Red Teeth, you've gone too far; there's stuff out there that'll tear you up.",
     title: "First Red Run",
     objective: "Take Rook's first mining contract.",
-    actionLabel: "Talk Contract",
+    actionLabel: null,
     helpText:
       "Rook wants 5 red resources delivered to Yard Exchange. Red resources are the red square pickups that come from breaking red rocks.",
   },
@@ -34,19 +35,14 @@ export const chapterOneRedWorkMission = {
       id: "offer-red-contract",
       objective: "Review Rook's red resource contract.",
       helpText:
-        "Open the Contract panel and accept Rook's Red Resource Run when you're ready. It pays 100 credits per red resource for 5 red resources.",
+        "Rook's Red Resource Run is open in the Contract panel. Accept it when you're ready. It pays 100 credits per red resource for 5 red resources.",
       onEnter: [
         {
           type: "say",
           speaker: "Rook",
           text:
-            "Let's put a contract together. Five red resources, delivered here to Yard Exchange, one hundred credits each. Simple work, honest enough.",
-          acknowledgement: { label: "Read Contract" },
+            "Here's the first one. Five red resources, delivered here to Yard Exchange, one hundred credits each. The contract is on your panel already. Read it, accept it, then get to work.",
         },
-      ],
-      onAcknowledge: [
-        { type: "clearMessage" },
-        { type: "offerContract", contractId: "rook-red-resource-run" },
       ],
       transitions: [
         {
