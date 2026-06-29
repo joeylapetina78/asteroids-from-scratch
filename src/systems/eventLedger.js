@@ -7,6 +7,8 @@ export function createEventLedger(options = {}) {
   const historyLimit = options.historyLimit ?? DEFAULT_HISTORY_LIMIT;
   const events = [];
   const stats = {};
+  const lastSeen = {};
+  const signals = {};
   let nextEventId = 1;
   let version = 0;
 
@@ -29,7 +31,13 @@ export function createEventLedger(options = {}) {
 
     incrementStat("events.total");
     incrementStat(`events.${type}`);
+    lastSeen[type] = {
+      id: event.id,
+      time: event.time,
+      payload: event.payload,
+    };
     applyEventStats(event);
+    applyEventSignals(event);
     version += 1;
 
     return event;
@@ -51,6 +59,27 @@ export function createEventLedger(options = {}) {
 
   function getStatsSnapshot() {
     return { ...stats };
+  }
+
+  function setSignal(key, value = true) {
+    signals[key] = value;
+    return signals[key];
+  }
+
+  function getSignal(key, fallback = false) {
+    return signals[key] ?? fallback;
+  }
+
+  function getSignalsSnapshot() {
+    return { ...signals };
+  }
+
+  function getLastSeen(type) {
+    return lastSeen[type] ?? null;
+  }
+
+  function hasSeen(type) {
+    return Boolean(lastSeen[type]);
   }
 
   function getRecentEvents(count = 5, options = {}) {
@@ -240,12 +269,81 @@ export function createEventLedger(options = {}) {
     }
   }
 
+  function applyEventSignals(event) {
+    if (event.type === "site.docked") {
+      setSignal("player.hasEverDocked");
+      setSignal(`player.hasDocked.${event.payload.siteId ?? "unknown"}`);
+    } else if (event.type === "zone.entered") {
+      setSignal(`player.hasVisitedZone.${event.payload.zoneId ?? "unknown"}`);
+
+      if ((event.payload.tags ?? []).includes("danger") || (event.payload.danger ?? 0) >= 0.45) {
+        setSignal("player.hasVisitedDangerousSpace");
+      }
+    } else if (event.type === "weapon.fired") {
+      setSignal("player.hasEverFired");
+
+      if (getStat("weapon.fired.total") >= 10) {
+        setSignal("player.isAggressive");
+      }
+    } else if (event.type === "scanner.used") {
+      setSignal("player.hasEverScanned");
+    } else if (event.type === "ship.thrusted") {
+      setSignal("player.hasEverThrusted");
+    } else if (event.type === "ship.collision") {
+      setSignal("player.hasCrashed");
+
+      if (getStat("ship.collision.total") >= 3 || getStat("ship.collision.damage.total") >= 100) {
+        setSignal("player.isReckless");
+      }
+
+      if (getStat("ship.collision.damage.max") >= 50) {
+        setSignal("player.hasTakenHeavyHit");
+      }
+    } else if (event.type === "resource.mined") {
+      setSignal("player.hasMinedResources");
+
+      Object.keys(event.payload.units ?? {}).forEach((resourceType) => {
+        setSignal(`player.hasMined.${resourceType}`);
+      });
+    } else if (event.type === "resource.collected") {
+      setSignal("player.hasCollectedResources");
+      setSignal(`player.hasCollected.${event.payload.resourceType ?? "unknown"}`);
+    } else if (event.type === "enemy.destroyed") {
+      setSignal("player.hasDestroyedEnemy");
+
+      if (getStat("enemy.destroyed.total") >= 3) {
+        setSignal("player.isAggressive");
+      }
+    } else if (event.type === "npc.destroyed") {
+      setSignal("player.hasDestroyedNpc");
+    } else if (event.type === "ship.repaired") {
+      setSignal("player.hasRepairedShip");
+
+      if (getStat("ship.repaired.total") >= 3) {
+        setSignal("player.isRepairDependent");
+      }
+    } else if (event.type === "contract.paid") {
+      setSignal("player.hasCompletedPaidContract");
+      setSignal(`player.hasCompletedContract.${event.payload.contractId ?? "unknown"}`);
+    } else if (event.type === "loan.disbursed") {
+      setSignal("player.hasDebt");
+    } else if (event.type === "ship.purchased") {
+      setSignal("player.hasPurchasedShip");
+      setSignal(`player.hasPurchasedShip.${event.payload.offerId ?? "unknown"}`);
+    }
+  }
+
   return {
     recordEvent,
     incrementStat,
     setStatMax,
     getStat,
     getStatsSnapshot,
+    setSignal,
+    getSignal,
+    getSignalsSnapshot,
+    getLastSeen,
+    hasSeen,
     getRecentEvents,
     getRecentEventGroups,
     getEventsAfterId,

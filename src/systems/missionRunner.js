@@ -172,7 +172,11 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
       return false;
     }
 
-    return matchesPayload(rule.payloadEquals ?? {}, event.payload ?? {});
+    if (!matchesPayload(rule.payloadEquals ?? {}, event.payload ?? {})) {
+      return false;
+    }
+
+    return matchesConditions(rule, event);
   }
 
   function matchesPayload(expectedPayload, actualPayload) {
@@ -189,6 +193,76 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     if (rule.setFlag) {
       state.journey.flags[rule.setFlag] = true;
     }
+  }
+
+  function matchesConditions(rule, event) {
+    const ledger = state.ledger;
+
+    if (rule.requiresSignal && !ledger.getSignal(rule.requiresSignal)) {
+      return false;
+    }
+
+    if (rule.requiresSignals?.some((signal) => !ledger.getSignal(signal))) {
+      return false;
+    }
+
+    if (rule.forbidSignal && ledger.getSignal(rule.forbidSignal)) {
+      return false;
+    }
+
+    if (rule.forbidSignals?.some((signal) => ledger.getSignal(signal))) {
+      return false;
+    }
+
+    if (rule.requiresStat && !matchesStatCondition(rule.requiresStat)) {
+      return false;
+    }
+
+    if (rule.requiresStats?.some((condition) => !matchesStatCondition(condition))) {
+      return false;
+    }
+
+    if (rule.requiresRecentEvent && !matchesRecentEventCondition(rule.requiresRecentEvent)) {
+      return false;
+    }
+
+    if (typeof rule.requiresCondition === "function") {
+      return Boolean(rule.requiresCondition({ event, ledger, state }));
+    }
+
+    return true;
+  }
+
+  function matchesStatCondition(condition) {
+    const value = state.ledger.getStat(condition.key, condition.fallback ?? 0);
+
+    if (condition.equals !== undefined && value !== condition.equals) {
+      return false;
+    }
+
+    if (condition.min !== undefined && value < condition.min) {
+      return false;
+    }
+
+    if (condition.max !== undefined && value > condition.max) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function matchesRecentEventCondition(condition) {
+    const lastSeen = state.ledger.getLastSeen(condition.type);
+
+    if (!lastSeen) {
+      return false;
+    }
+
+    if (condition.withinMs !== undefined && Date.now() - lastSeen.time > condition.withinMs) {
+      return false;
+    }
+
+    return matchesPayload(condition.payloadEquals ?? {}, lastSeen.payload ?? {});
   }
 
   return {

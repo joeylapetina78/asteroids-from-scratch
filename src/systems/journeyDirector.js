@@ -1,7 +1,7 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=hub-drive-through-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=hub-drive-through-v1";
 import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=story-hub-gates-v1";
-import { createMissionRunner } from "./missionRunner.js?v=hub-drive-through-v1";
+import { createMissionRunner } from "./missionRunner.js?v=ledger-reactivity-v1";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
