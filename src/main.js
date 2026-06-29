@@ -1,8 +1,9 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=atari-audio-v1";
+import { Game } from "./game.js?v=hub-services-v1";
 import { createContractManager } from "./systems/contractManager.js?v=contract-card-v1";
 import { createGameAudio } from "./systems/audio.js?v=softer-engine-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=hub-services-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=contract-complete-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=red-work-considerations-v1";
@@ -83,6 +84,7 @@ const hubPanel = document.querySelector("[data-panel-id='hub']");
 const hubRepairButton = document.querySelector("#hub-repair");
 const hubRepairCost = document.querySelector("#hub-repair-cost");
 const hubSellCargoButton = document.querySelector("#hub-sell-cargo");
+const hubServiceMenu = document.querySelector("#hub-service-menu");
 const hubStatus = document.querySelector("#hub-status");
 const journeyAcceptButton = document.querySelector("#journey-accept");
 const journeyChapter = document.querySelector("#journey-chapter");
@@ -161,6 +163,7 @@ let lastAudioEventId = 0;
 let journeyTypeTimers = [];
 let currentSiteState = null;
 let activeDepositContractId = null;
+let activeHubServiceId = null;
 let saveTimer = null;
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
@@ -262,6 +265,16 @@ hubRepairButton.addEventListener("click", () => {
 
 hubSellCargoButton.addEventListener("click", () => {
   sellCargoHold();
+});
+
+hubServiceMenu.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-service-id]");
+
+  if (!button) {
+    return;
+  }
+
+  openHubService(button.dataset.serviceId);
 });
 
 renderProcessorOutputs();
@@ -428,6 +441,7 @@ function updateHubServiceDisplay(siteState) {
   hubPanel.setAttribute("aria-hidden", String(!site));
 
   if (!site) {
+    activeHubServiceId = null;
     hubName.textContent = "Hub";
     hubStatus.textContent = "service window";
     hubDetail.textContent = "Dock to access services";
@@ -436,6 +450,7 @@ function updateHubServiceDisplay(siteState) {
     hubCargoValue.textContent = `${getCargoHoldValue()} cr`;
     hubSellCargoButton.disabled = true;
     hubRepairButton.disabled = true;
+    renderHubServiceMenu(null);
     return;
   }
 
@@ -444,15 +459,114 @@ function updateHubServiceDisplay(siteState) {
   }
 
   const hullPercent = Math.ceil(siteState.hullIntegrity);
+  const activeService = activeHubServiceId ? getHubService(site.id, activeHubServiceId) : null;
 
   hubName.textContent = site.name;
-  hubStatus.textContent = "service window";
-  hubDetail.textContent = "Repair dock available";
+  hubStatus.textContent = activeService?.organization ?? "service menu";
+  hubDetail.textContent = activeService ? `${activeService.npcName}: ${getHubServicePrompt(activeService)}` : "Choose a service window.";
   hubHull.textContent = `${hullPercent}%`;
   hubRepairCost.textContent = `${siteState.repairCost} cr`;
   hubCargoValue.textContent = `${getCargoHoldValue()} cr`;
   hubSellCargoButton.disabled = getCargoHoldValue() <= 0;
   hubRepairButton.disabled = !siteState.canRepair || hullPercent >= 100 || siteState.credits < siteState.repairCost;
+  renderHubServiceMenu(site);
+}
+
+function renderHubServiceMenu(site) {
+  const services = site ? getHubServices(site.id) : [];
+  const nextKey = `${site?.id ?? "none"}:${activeHubServiceId ?? "none"}:${services.map((service) => service.id).join("|")}`;
+
+  if (hubServiceMenu.dataset.renderedKey === nextKey) {
+    return;
+  }
+
+  hubServiceMenu.dataset.renderedKey = nextKey;
+
+  if (services.length === 0) {
+    hubServiceMenu.replaceChildren();
+    return;
+  }
+
+  hubServiceMenu.replaceChildren(
+    ...services.map((service) => {
+      const button = document.createElement("button");
+      const label = document.createElement("strong");
+      const meta = document.createElement("span");
+
+      button.type = "button";
+      button.className = "hub-service-button";
+      button.classList.toggle("is-active-service", service.id === activeHubServiceId);
+      button.dataset.serviceId = service.id;
+      label.textContent = service.label;
+      meta.textContent = `${service.npcName} - ${service.description}`;
+      button.append(label, meta);
+      return button;
+    }),
+  );
+}
+
+function openHubService(serviceId) {
+  const dockedSite = currentSiteState?.dockedSite;
+  const service = dockedSite ? getHubService(dockedSite.id, serviceId) : null;
+
+  if (!service) {
+    return;
+  }
+
+  activeHubServiceId = service.id;
+  hubStatus.textContent = service.organization;
+  hubDetail.textContent = `${service.npcName}: ${getHubServicePrompt(service)}`;
+  renderHubServiceMenu(dockedSite);
+  state.ledger.recordEvent(
+    "hub.serviceOpened",
+    {
+      siteId: dockedSite.id,
+      siteName: dockedSite.name,
+      serviceId: service.id,
+      serviceType: service.serviceType,
+      npcId: service.npcId,
+      npcName: service.npcName,
+      organization: service.organization,
+    },
+    { visible: false },
+  );
+
+  if (service.serviceType === "shipyard") {
+    setComponentAvailable("merchant", true);
+    renderShipOffers();
+    focusPanelById("merchant");
+    return;
+  }
+
+  if (service.serviceType === "contracts" || service.serviceType === "finance") {
+    setComponentAvailable("contract", true);
+    focusPanelById("contract");
+    return;
+  }
+
+  if (service.serviceType === "supply") {
+    bringPanelToFront(hubPanel);
+  }
+}
+
+function getHubServicePrompt(service) {
+  if (service.serviceType === "shipyard") {
+    return "ship offers are open at the yard window.";
+  }
+
+  if (service.serviceType === "finance") {
+    return "financing records are handled through active contracts.";
+  }
+
+  if (service.serviceType === "contracts") {
+    return "work offers will live here as Rook Industries comes online.";
+  }
+
+  if (service.serviceType === "supply") {
+    return "basic repair and cargo services are available here.";
+  }
+
+  return service.description;
 }
 
 function updateWorldDebugDisplay(debug) {
@@ -728,6 +842,14 @@ function setComponentAvailable(componentId, isAvailable = true) {
       bringPanelToFront(panel);
       playPanelReveal(panel);
     }
+  }
+}
+
+function focusPanelById(panelId) {
+  const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
+
+  if (panel) {
+    bringPanelToFront(panel);
   }
 }
 

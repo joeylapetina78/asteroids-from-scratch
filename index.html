@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=contract-card-v1" />
+    <link rel="stylesheet" href="./src/styles.css?v=hub-services-v1" />
   </head>
   <body>
     <main class="game-shell">
@@ -235,8 +235,11 @@
                 <span>Repair: <strong id="hub-repair-cost">0 cr</strong></span>
                 <span>Cargo: <strong id="hub-cargo-value">0 cr</strong></span>
               </div>
-              <button id="hub-sell-cargo" class="sell-button" type="button" disabled>Sell Cargo</button>
-              <button id="hub-repair" class="repair-button" type="button" disabled>Repair</button>
+              <div id="hub-service-menu" class="hub-service-menu" aria-label="Hub service menu"></div>
+              <div class="hub-supply-actions" aria-label="Supply counter quick actions">
+                <button id="hub-sell-cargo" class="sell-button" type="button" disabled>Sell Cargo</button>
+                <button id="hub-repair" class="repair-button" type="button" disabled>Repair</button>
+              </div>
             </div>
 
             <div class="component-panel world-panel" data-panel-id="world" aria-label="World debug component">
@@ -288,6 +291,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=contract-card-v1"></script>
+    <script type="module" src="./src/main.js?v=hub-services-v1"></script>
   </body>
 </html>

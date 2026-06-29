@@ -11,7 +11,7 @@ import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/renderin
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=mission-targets";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=docking-services";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=hub-services-v1";
 import { createGameState } from "./state/gameState.js?v=hull-vin-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world

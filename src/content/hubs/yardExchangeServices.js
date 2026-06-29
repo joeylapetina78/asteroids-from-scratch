@@ -1,0 +1,51 @@
+export const hubServiceDefinitions = {
+  "yard-exchange": [
+    {
+      id: "rook-industries",
+      npcId: "rook",
+      npcName: "Rook",
+      organization: "Rook Industries",
+      serviceType: "contracts",
+      label: "Rook Industries",
+      description: "Resource work and starter hauling jobs.",
+    },
+    {
+      id: "yard-shipyard",
+      npcId: "barvis",
+      npcName: "Barvis",
+      organization: "Yard Exchange Shipyard",
+      serviceType: "shipyard",
+      label: "Shipyard",
+      description: "Ship sales and refits.",
+    },
+    {
+      id: "yard-finance",
+      npcId: "mako",
+      npcName: "Mr. Mako",
+      organization: "Yard Exchange Finance",
+      serviceType: "finance",
+      label: "Finance",
+      description: "Loans and payments.",
+    },
+    {
+      id: "yard-supply",
+      npcId: "finley",
+      npcName: "Finley",
+      organization: "Yard Exchange Supply",
+      serviceType: "supply",
+      label: "Supply",
+      description: "Repair, fuel, mining charges, scanergy, and basic buying.",
+    },
+  ],
+  "scrap-porch": [
+    {
+      id: "scrap-porch-supply",
+      npcId: "porch-dispatch",
+      npcName: "Scrap Porch Dispatch",
+      organization: "Scrap Porch",
+      serviceType: "supply",
+      label: "Dispatch Supply",
+      description: "Basic repair and refuel service.",
+    },
+  ],
+};

@@ -369,6 +369,43 @@ body {
   opacity: 0.45;
 }
 
+.hub-service-menu {
+  display: grid;
+  gap: 7px;
+}
+
+.hub-service-button {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  border: 1px solid #333846;
+  border-radius: 7px;
+  padding: 8px;
+  background: #0b0d13;
+  color: #d9deea;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.hub-service-button:hover,
+.hub-service-button:focus-visible,
+.hub-service-button.is-active-service {
+  border-color: #6da9c7;
+  background: #121922;
+}
+
+.hub-service-button span {
+  color: #9aa4b8;
+  font-size: 0.74rem;
+  line-height: 1.25;
+}
+
+.hub-supply-actions {
+  display: grid;
+  gap: 7px;
+}
+
 .sell-button {
   border-color: #786b42;
   color: #fff0bd;

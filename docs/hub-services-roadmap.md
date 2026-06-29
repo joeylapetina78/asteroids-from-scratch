@@ -86,7 +86,7 @@ For Yard Exchange, the first planned service roster is:
 
 ### Step 1: Document and freeze the architecture direction
 
-Status: next.
+Status: done.
 
 Deliverable:
 
@@ -99,6 +99,8 @@ Purpose:
 - Give future changes a known direction.
 
 ### Step 2: Add hub service data
+
+Status: done.
 
 Goal:
 
@@ -161,7 +163,15 @@ Avoid:
 - Do not remove existing Merchant behavior yet.
 - Do not create all service UIs in this step.
 
+Current implementation:
+
+- `src/content/hubs/yardExchangeServices.js` defines Yard Exchange services for Rook Industries, Yard Exchange Shipyard, Yard Exchange Finance, and Yard Exchange Supply.
+- `src/systems/hubServices.js` resolves services by site id and service id.
+- `src/systems/worldSites.js` now lists service ids on hub sites instead of only the old generic `repair` service.
+
 ### Step 3: Convert the docked Hub panel into a service menu
+
+Status: started.
 
 Goal:
 
@@ -181,6 +191,13 @@ Behavior:
 - Clicking `Finance` focuses/offers finance-related contract UI.
 - Clicking `Rook Industries` focuses/offers work contracts.
 - Clicking `Supply` can initially show "coming soon" or a simple supply window.
+
+Current implementation:
+
+- The Hub panel renders service buttons from hub service data.
+- `Shipyard` opens/focuses the existing Merchant panel.
+- `Finance` and `Rook Industries` focus the Contract panel as a temporary bridge.
+- `Supply` keeps the Hub panel focused and uses the existing repair/sell controls.
 
 Avoid:
 

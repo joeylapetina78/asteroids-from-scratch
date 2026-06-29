@@ -41,6 +41,8 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/content/missions/chapterOneInterview.js](../src/content/missions/chapterOneInterview.js) | Authored data for the first Chapter 1 mission. Holds steps, objectives, help text, event transitions, considerations, and actions. |
 | [src/content/missions/chapterOneNewShip.js](../src/content/missions/chapterOneNewShip.js) | Authored data for buying the first player-owned starter mining ship. |
 | [src/content/missions/chapterOneRedWork.js](../src/content/missions/chapterOneRedWork.js) | Authored data for Rook's first repeatable red-resource mining job. |
+| [src/content/hubs/yardExchangeServices.js](../src/content/hubs/yardExchangeServices.js) | Authored hub service data for Yard Exchange and Scrap Porch NPC/service windows. |
+| [src/systems/hubServices.js](../src/systems/hubServices.js) | Resolves docked hub service definitions for the Hub panel. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. |
 | [src/systems/audio.js](../src/systems/audio.js) | Procedural Atari-style sound effects and Journey chatter using Web Audio. |
 | [src/systems/saveManager.js](../src/systems/saveManager.js) | Lightweight browser-local profile save/load for playtesting. |
@@ -189,6 +191,17 @@ Current contract flow:
 This is intentionally small, but it sets up the later shape for loan contracts, delivery contracts, repeatable resource work, penalties, deadlines, damage modifiers, and hub contract boards.
 
 The next architecture track is captured in [hub-services-roadmap.md](hub-services-roadmap.md). The goal is to make hub NPCs and services real reusable systems, then make missions point the player toward those systems instead of directly faking shops, loans, repairs, and repeatable work.
+
+### Hub Services
+
+[src/content/hubs/yardExchangeServices.js](../src/content/hubs/yardExchangeServices.js) defines the first authored hub service roster. Yard Exchange currently has service entries for:
+
+- `rook-industries`: Rook Industries resource work
+- `yard-shipyard`: Barvis and Yard Exchange Shipyard
+- `yard-finance`: Mr. Mako and Yard Exchange Finance
+- `yard-supply`: Finley and Yard Exchange Supply
+
+[src/systems/hubServices.js](../src/systems/hubServices.js) resolves those services by site id. The docked Hub panel now renders service buttons from this data. The first bridge behavior is intentionally small: Shipyard opens the existing Merchant panel, Finance and Rook Industries focus the Contract panel, and Supply keeps the Hub panel focused with the current repair/sell controls.
 
 ### Ship Offers And Merchant
 
