@@ -1,4 +1,4 @@
-const MASTER_VOLUME = 0.22;
+const MASTER_VOLUME = 0.42;
 const CHATTER_INTERVAL_SECONDS = 0.055;
 const THRUST_TICK_SECONDS = 0.12;
 
@@ -33,8 +33,13 @@ export function createGameAudio() {
   }
 
   function playUiClick() {
-    tone({ frequency: 660, duration: 0.035, type: "square", volume: 0.08 });
-    tone({ frequency: 990, duration: 0.025, delay: 0.028, type: "square", volume: 0.05 });
+    tone({ frequency: 660, duration: 0.035, type: "square", volume: 0.11 });
+    tone({ frequency: 990, duration: 0.025, delay: 0.028, type: "square", volume: 0.07 });
+  }
+
+  function playPanelDrop() {
+    tone({ frequency: 120, endFrequency: 75, duration: 0.055, type: "triangle", volume: 0.07 });
+    noiseBurst({ duration: 0.04, volume: 0.045 });
   }
 
   function playPower(isPowered) {
@@ -88,7 +93,7 @@ export function createGameAudio() {
   function playCargoTransfer(type = "fuel") {
     const frequency = type === "crystal" ? 700 : 420;
 
-    tone({ frequency, duration: 0.035, type: "square", volume: 0.035 });
+    tone({ frequency, duration: 0.035, type: "square", volume: 0.055 });
   }
 
   function playContractPaid() {
@@ -98,7 +103,8 @@ export function createGameAudio() {
   }
 
   function playPanelReveal() {
-    tone({ frequency: 360, endFrequency: 620, duration: 0.09, type: "triangle", volume: 0.045 });
+    tone({ frequency: 360, endFrequency: 620, duration: 0.09, type: "triangle", volume: 0.075 });
+    tone({ frequency: 900, duration: 0.04, delay: 0.07, type: "square", volume: 0.045 });
   }
 
   function chatter(speaker = "Rook", index = 0) {
@@ -229,6 +235,7 @@ export function createGameAudio() {
     playDock,
     playHullHit,
     playMiningShot,
+    playPanelDrop,
     playPanelReveal,
     playPickup,
     playPower,

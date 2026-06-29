@@ -2,7 +2,7 @@ import { getProcessorOutputs, normalizeProcessorOutput } from "./components/comp
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=atari-audio-v1";
 import { createContractManager } from "./systems/contractManager.js?v=red-work-considerations-v1";
-import { createGameAudio } from "./systems/audio.js?v=atari-audio-v1";
+import { createGameAudio } from "./systems/audio.js?v=panel-audio-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=assessment-considerations-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=red-work-considerations-v1";
@@ -178,7 +178,6 @@ function updateShipPowerDisplay() {
 }
 
 powerButton.addEventListener("click", () => {
-  audio.playUiClick();
   game.setShipPowered(!state.components.engine.powered);
   updateShipPowerDisplay();
 });
@@ -190,7 +189,6 @@ document.querySelectorAll("input[name='thrust-mode']").forEach((control) => {
 });
 
 minerArmed.addEventListener("change", () => {
-  audio.playUiClick();
   state.components.miner.armed = minerArmed.checked;
 });
 
@@ -200,7 +198,6 @@ tractorFieldButton.addEventListener("pointerdown", (event) => {
   }
 
   event.preventDefault();
-  audio.playUiClick();
   tractorFieldButton.setPointerCapture(event.pointerId);
   setTractorFieldActive(true);
 });
@@ -219,7 +216,6 @@ tractorFieldButton.addEventListener("pointercancel", () => setTractorFieldActive
 tractorFieldButton.addEventListener("lostpointercapture", () => setTractorFieldActive(false));
 
 scanButton.addEventListener("click", () => {
-  audio.playUiClick();
   game.scanForCrystals();
 });
 
@@ -230,12 +226,10 @@ journeyAcceptButton.addEventListener("click", () => {
 });
 
 dockToggleButton.addEventListener("click", () => {
-  audio.playUiClick();
   game.toggleDock();
 });
 
 contractAcceptButton.addEventListener("click", () => {
-  audio.playUiClick();
   const contract = contractManager.getCurrentContract();
 
   if (contract?.repeatable && contract.status === "paid") {
@@ -255,20 +249,17 @@ contractAcceptButton.addEventListener("click", () => {
 });
 
 contractNextButton.addEventListener("click", () => {
-  audio.playUiClick();
   activeDepositContractId = null;
   contractManager.showNextContract();
   updateHudDisplay();
 });
 
 hubRepairButton.addEventListener("click", () => {
-  audio.playUiClick();
   game.repairAtDock();
   updateHudDisplay();
 });
 
 hubSellCargoButton.addEventListener("click", () => {
-  audio.playUiClick();
   sellCargoHold();
 });
 
@@ -277,6 +268,7 @@ game.placeShipNearSite("scrap-porch");
 restoreSavedWorld({ save: savedProfile, game, cargoHold });
 clearOldPanelLayouts();
 makePanelsDraggable();
+wirePanelControlSounds();
 journeyDirector.start();
 applyDevStart(initialDevStart);
 revealInstalledComponents();
@@ -766,6 +758,33 @@ function playJourneyUpdate() {
   });
 }
 
+function wirePanelControlSounds() {
+  document.addEventListener(
+    "click",
+    (event) => {
+      const control = event.target.closest("button, input, label, summary, select, textarea, [role='button']");
+      const panel = event.target.closest(".component-panel");
+
+      if (!panel || !control || control.closest(".component-panel-title") || isDisabledControl(control)) {
+        return;
+      }
+
+      audio.playUiClick();
+    },
+    true,
+  );
+}
+
+function isDisabledControl(control) {
+  if (control.disabled || control.getAttribute("aria-disabled") === "true") {
+    return true;
+  }
+
+  const nestedControl = control.querySelector?.("button, input, select, textarea");
+
+  return Boolean(nestedControl?.disabled || nestedControl?.getAttribute("aria-disabled") === "true");
+}
+
 function typeJourneyText(element, fullText) {
   clearJourneyTypeTimers();
 
@@ -1056,6 +1075,7 @@ function makePanelsDraggable() {
 
       panel.classList.remove("is-dragging");
       recordPanelDrag(panelId, drag, offset);
+      audio.playPanelDrop();
       drag = null;
     }
   });
