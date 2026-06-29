@@ -19,6 +19,9 @@ export function createGameState() {
       currentContractId: null,
       records: {},
     },
+    hubServices: {
+      unlocked: {},
+    },
     debt: {
       totalBorrowed: 0,
       totalPaid: 0,
@@ -38,6 +41,7 @@ export function createGameState() {
       engine: {
         installed: false,
         powered: false,
+        powerLocked: false,
         thrustMode: "forward",
         fuel: 200,
         maxFuel: 200,

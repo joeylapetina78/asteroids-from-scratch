@@ -1,4 +1,4 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=hub-contract-windows-v1";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=story-hub-gates-v1";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -89,6 +89,8 @@ export function createContractManager({ state, onChange = () => {} }) {
 
       if (event.type === "site.docked") {
         fulfillMatchingDeliveryContracts(event);
+      } else if (event.type === "engine.poweredDown" && event.payload.dockedSiteId) {
+        fulfillMatchingDeliveryContracts({ payload: { siteId: event.payload.dockedSiteId } });
       } else if (event.type === "site.undocked") {
         closeUnacceptedHubServiceOffers(event.payload.siteId);
       }
@@ -133,8 +135,9 @@ export function createContractManager({ state, onChange = () => {} }) {
       .forEach((contract) => {
         const matchesSite = contract.terms.destinationSiteId === event.payload.siteId;
         const matchesVin = contract.terms.deliverShipVin === getAttachedShipVin();
+        const matchesPowerState = !contract.terms.requirePoweredDown || !state.components.engine.powered;
 
-        if (!matchesSite || !matchesVin) {
+        if (!matchesSite || !matchesVin || !matchesPowerState) {
           return;
         }
 

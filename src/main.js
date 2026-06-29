@@ -1,13 +1,13 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=hub-contract-windows-v1";
-import { createContractManager } from "./systems/contractManager.js?v=hub-contract-windows-v1";
+import { Game } from "./game.js?v=story-hub-gates-v1";
+import { createContractManager } from "./systems/contractManager.js?v=story-hub-gates-v1";
 import { createGameAudio } from "./systems/audio.js?v=softer-engine-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=hub-contract-windows-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=contract-complete-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=story-hub-gates-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=story-hub-gates-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=red-work-considerations-v1";
-import { createGameState } from "./state/gameState.js?v=ship-market-v2";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
+import { createGameState } from "./state/gameState.js?v=story-hub-gates-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -86,6 +86,7 @@ const hubRepairCost = document.querySelector("#hub-repair-cost");
 const hubSellCargoButton = document.querySelector("#hub-sell-cargo");
 const hubServiceMenu = document.querySelector("#hub-service-menu");
 const hubStatus = document.querySelector("#hub-status");
+const hubSupplyActions = document.querySelector(".hub-supply-actions");
 const journeyAcceptButton = document.querySelector("#journey-accept");
 const journeyChapter = document.querySelector("#journey-chapter");
 const journeyHelpText = document.querySelector("#journey-help-text");
@@ -155,6 +156,7 @@ const journeyDirector = createJourneyDirector({
     updateHudDisplay();
   },
   showComponent: setComponentAvailable,
+  unlockHubService,
 });
 let bringPanelToFront = () => {};
 let positionPanelById = () => {};
@@ -177,8 +179,8 @@ function updateShipPowerDisplay() {
 
   powerButton.textContent = engine.powered ? "Power Down" : "Power Ship";
   powerButton.setAttribute("aria-pressed", String(engine.powered));
-  powerButton.disabled = !engine.installed || state.components.hull.integrity <= 0;
-  shipStatus.textContent = state.components.hull.integrity <= 0 ? "ship destroyed" : engine.powered ? "ship online" : "ship offline";
+  powerButton.disabled = !engine.installed || state.components.hull.integrity <= 0 || engine.powerLocked;
+  shipStatus.textContent = state.components.hull.integrity <= 0 ? "ship destroyed" : engine.powerLocked ? "power locked" : engine.powered ? "ship online" : "ship offline";
 }
 
 powerButton.addEventListener("click", () => {
@@ -452,6 +454,7 @@ function updateHubServiceDisplay(siteState) {
     hubCargoValue.textContent = `${getCargoHoldValue()} cr`;
     hubSellCargoButton.disabled = true;
     hubRepairButton.disabled = true;
+    hubSupplyActions.hidden = true;
     renderHubServiceMenu(null);
     return;
   }
@@ -464,6 +467,7 @@ function updateHubServiceDisplay(siteState) {
 
   const hullPercent = Math.ceil(siteState.hullIntegrity);
   const activeService = activeHubServiceId ? getHubService(site.id, activeHubServiceId) : null;
+  const isSupplyAvailable = getHubServices(site.id).some((service) => service.serviceType === "supply" && isHubServiceUnlocked(site.id, service));
 
   hubName.textContent = site.name;
   hubStatus.textContent = activeService?.organization ?? "service menu";
@@ -471,13 +475,14 @@ function updateHubServiceDisplay(siteState) {
   hubHull.textContent = `${hullPercent}%`;
   hubRepairCost.textContent = `${siteState.repairCost} cr`;
   hubCargoValue.textContent = `${getCargoHoldValue()} cr`;
-  hubSellCargoButton.disabled = getCargoHoldValue() <= 0;
-  hubRepairButton.disabled = !siteState.canRepair || hullPercent >= 100 || siteState.credits < siteState.repairCost;
+  hubSupplyActions.hidden = !isSupplyAvailable;
+  hubSellCargoButton.disabled = !isSupplyAvailable || getCargoHoldValue() <= 0;
+  hubRepairButton.disabled = !isSupplyAvailable || !siteState.canRepair || hullPercent >= 100 || siteState.credits < siteState.repairCost;
   renderHubServiceMenu(site);
 }
 
 function renderHubServiceMenu(site) {
-  const services = site ? getHubServices(site.id) : [];
+  const services = site ? getHubServices(site.id).filter((service) => isHubServiceUnlocked(site.id, service)) : [];
   const nextKey = `${site?.id ?? "none"}:${activeHubServiceId ?? "none"}:${services.map((service) => service.id).join("|")}`;
 
   if (hubServiceMenu.dataset.renderedKey === nextKey) {
@@ -506,6 +511,29 @@ function renderHubServiceMenu(site) {
       button.append(label, meta);
       return button;
     }),
+  );
+}
+
+function isHubServiceUnlocked(siteId, service) {
+  return Boolean(service.defaultUnlocked || state.hubServices.unlocked[siteId]?.includes(service.id));
+}
+
+function unlockHubService(siteId, serviceId) {
+  const unlockedServices = state.hubServices.unlocked[siteId] ?? [];
+
+  if (unlockedServices.includes(serviceId)) {
+    return;
+  }
+
+  state.hubServices.unlocked[siteId] = [...unlockedServices, serviceId];
+  hubServiceMenu.dataset.renderedKey = "";
+  state.ledger.recordEvent(
+    "hub.serviceUnlocked",
+    {
+      siteId,
+      serviceId,
+    },
+    { visible: false },
   );
 }
 
@@ -1395,6 +1423,7 @@ function buyShipOffer(offer) {
   state.components.engine.fuelBurnRate = 4.5;
   state.components.engine.maxFuel = 260;
   state.components.engine.fuel = Math.max(state.components.engine.fuel, 220);
+  state.components.engine.powerLocked = false;
   state.components.miner.installed = true;
   state.components.miner.ammo = Math.max(state.components.miner.ammo, 150);
   state.components.cargoHold.installed = true;

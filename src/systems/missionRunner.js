@@ -131,6 +131,10 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
       } else if (action.type === "raiseComponentValue") {
         const component = state.components[action.componentId];
         component[action.key] = Math.max(component[action.key], action.value);
+      } else if (action.type === "unlockHubService") {
+        actions.unlockHubService(action.siteId, action.serviceId);
+      } else if (action.type === "setEnginePowerLock") {
+        actions.setEnginePowerLock(action.isLocked);
       } else if (action.type === "goToStep") {
         goToStep(action.stepId);
       } else if (action.type === "completeMission") {

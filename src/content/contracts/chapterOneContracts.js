@@ -9,12 +9,13 @@ export const chapterOneContracts = [
       deliverShipVin: "YRDSKF-01-7A3",
       destinationSiteId: "yard-exchange",
       destinationName: "Yard Exchange",
+      requirePoweredDown: true,
     },
     reward: {
       credits: 500,
     },
     clauses: [
-      "Terms are satisfied when the listed VIN docks at the destination hub.",
+      "Terms are satisfied when the listed VIN docks at the destination hub with ship power down.",
       "Payment releases when the completed contract is confirmed.",
       "Damage penalties are waived for this assessment contract.",
     ],

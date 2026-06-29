@@ -1,13 +1,20 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=contract-complete-v1";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=ship-market-v2";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=red-work-considerations-v1";
-import { createMissionRunner } from "./missionRunner.js?v=red-work-considerations-v1";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=story-hub-gates-v1";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=story-hub-gates-v1";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=story-hub-gates-v1";
+import { createMissionRunner } from "./missionRunner.js?v=story-hub-gates-v1";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
 );
 
-export function createJourneyDirector({ state, game = null, onChange = () => {}, offerContract = () => {}, showComponent = () => {} }) {
+export function createJourneyDirector({
+  state,
+  game = null,
+  onChange = () => {},
+  offerContract = () => {},
+  showComponent = () => {},
+  unlockHubService = () => {},
+}) {
   const journey = state.journey;
   let lastEventId = 0;
   let activeMission = createMission(chapterOneInterviewMission);
@@ -181,8 +188,16 @@ export function createJourneyDirector({ state, game = null, onChange = () => {},
         },
         recordEvent: (...args) => state.ledger.recordEvent(...args),
         say,
+        setEnginePowerLock: (isLocked) => {
+          state.components.engine.powerLocked = isLocked;
+
+          if (isLocked) {
+            game?.setShipPowered(false);
+          }
+        },
         showComponent: unlockComponent,
         spawnHunterNearShip: (reason) => game?.spawnHunterNearShip(reason),
+        unlockHubService,
       },
     });
   }
@@ -205,7 +220,7 @@ function getMissionGrade(hull, elapsedSeconds) {
       line:
         "Okay, we did it. Clean hull, good time, and the contract paid out.",
       followup:
-        "I have a good feeling about you. Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
+        "I have a good feeling about you. I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
     };
   }
 
@@ -216,7 +231,7 @@ function getMissionGrade(hull, elapsedSeconds) {
       line:
         "Okay, we did it. Contract paid out, and the hull's still clean. Took us a minute, but careful beats expensive.",
       followup:
-        "You kept the ship tidy. I like that. Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
+        "You kept the ship tidy. I like that. I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
     };
   }
 
@@ -227,7 +242,7 @@ function getMissionGrade(hull, elapsedSeconds) {
       line:
         "We got here and the contract paid out. We picked up some dents along the way, so next time let's keep the expensive parts farther from the rocks.",
       followup:
-        "It's not worth much any more. You break it, you buy it. Right! Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
+        "It's not worth much any more. You break it, you buy it. Right! I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
     };
   }
 
@@ -237,6 +252,6 @@ function getMissionGrade(hull, elapsedSeconds) {
     line:
       "We made it, and the contract still paid out because those were the terms. But this hull had a rough ride, rookie. Let's not make that a habit.",
     followup:
-      "It's not worth much any more. You break it, you buy it. Right! Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
+      "It's not worth much any more. You break it, you buy it. Right! I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
   };
 }

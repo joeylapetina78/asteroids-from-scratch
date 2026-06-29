@@ -105,7 +105,7 @@ export const chapterOneInterviewMission = {
   title: "The Interview",
   successCriteria: "Dock at Yard Exchange.",
   nextMissionId: "chapter-1-new-ship",
-  nextMissionLabel: "Meet Barvis",
+  nextMissionLabel: "Thanks, Will Do",
   startStepId: "show-hull",
   steps: [
     {
@@ -406,8 +406,9 @@ export const chapterOneInterviewMission = {
     },
     {
       id: "dock-yard-exchange",
-      objective: "Dock at Yard Exchange.",
-      helpText: "Move close to Yard Exchange, then use the Docking panel or press E to dock.",
+      objective: "Dock and power down at Yard Exchange.",
+      helpText:
+        "Dock at Yard Exchange, then power the ship down. The contract will not accept delivery until this VIN is docked and the ship is off.",
       considerations: [
         ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
       ],
@@ -429,6 +430,7 @@ export const chapterOneInterviewMission = {
       objective: "Complete the delivery contract.",
       helpText: "The delivery terms are satisfied. Use the Contract panel and press Complete Contract to receive the 500-credit payout.",
       onEnter: [
+        { type: "setEnginePowerLock", isLocked: true },
         {
           type: "say",
           speaker: "Rook",

@@ -9,6 +9,7 @@ export const hubServiceDefinitions = {
       label: "Rook Industries",
       description: "Resource work and starter hauling jobs.",
       contractIds: ["rook-red-resource-run"],
+      defaultUnlocked: false,
     },
     {
       id: "yard-shipyard",
@@ -18,6 +19,7 @@ export const hubServiceDefinitions = {
       serviceType: "shipyard",
       label: "Shipyard",
       description: "Ship sales and refits.",
+      defaultUnlocked: false,
     },
     {
       id: "yard-finance",
@@ -28,6 +30,7 @@ export const hubServiceDefinitions = {
       label: "Finance",
       description: "Loans and payments.",
       contractIds: ["mako-starter-ship-loan"],
+      defaultUnlocked: false,
     },
     {
       id: "yard-supply",
@@ -37,6 +40,7 @@ export const hubServiceDefinitions = {
       serviceType: "supply",
       label: "Supply",
       description: "Repair, fuel, mining charges, scanergy, and basic buying.",
+      defaultUnlocked: false,
     },
   ],
   "scrap-porch": [
@@ -48,6 +52,7 @@ export const hubServiceDefinitions = {
       serviceType: "supply",
       label: "Dispatch Supply",
       description: "Basic repair and refuel service.",
+      defaultUnlocked: true,
     },
   ],
 };

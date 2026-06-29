@@ -175,6 +175,10 @@ export class Game {
       return;
     }
 
+    if (isPowered && this.state.components.engine.powerLocked) {
+      return;
+    }
+
     const wasPowered = this.state.components.engine.powered;
     this.state.components.engine.powered = isPowered;
     this.audio?.playPower(isPowered);
@@ -185,6 +189,18 @@ export class Game {
         {
           x: Math.round(this.ship.position.x),
           y: Math.round(this.ship.position.y),
+        },
+        { visible: false },
+      );
+    }
+
+    if (!isPowered && wasPowered) {
+      this.state.ledger.recordEvent(
+        "engine.poweredDown",
+        {
+          x: Math.round(this.ship.position.x),
+          y: Math.round(this.ship.position.y),
+          dockedSiteId: this.dockedSite?.id ?? null,
         },
         { visible: false },
       );

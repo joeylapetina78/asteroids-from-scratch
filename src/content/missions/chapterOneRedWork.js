@@ -181,7 +181,10 @@ export const chapterOneRedWorkMission = {
         {
           eventType: "contract.paid",
           payloadEquals: { contractId: "rook-red-resource-run" },
-          actions: [{ type: "completeMission" }],
+          actions: [
+            { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-supply" },
+            { type: "completeMission" },
+          ],
         },
       ],
     },
