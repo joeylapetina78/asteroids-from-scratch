@@ -1,6 +1,6 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=main-loop-heartbeat-v1";
+import { Game } from "./game.js?v=panel-tether-v1";
 import { createContractManager } from "./systems/contractManager.js?v=hub-drive-through-v1";
 import { createGameAudio } from "./systems/audio.js?v=npc-registry-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=npc-registry-v1";
@@ -8,7 +8,7 @@ import { createJourneyDirector } from "./systems/journeyDirector.js?v=rook-contr
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
-import { createGameState } from "./state/gameState.js?v=ledger-reactivity-v1";
+import { createGameState } from "./state/gameState.js?v=panel-tether-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -20,6 +20,7 @@ const OLD_PANEL_LAYOUT_STORAGE_KEYS = [
 ];
 const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v5";
 const JOURNEY_PANEL_Z_INDEX = 100000;
+const VIEWPORT_PANEL_Z_INDEX = 10;
 const PROCESS_OUTPUT_AMOUNT = 50;
 const CRYSTAL_VALUE_MULTIPLIER = 5;
 const CARGO_UNIT_VALUES = {
@@ -1312,6 +1313,18 @@ function makePanelsDraggable() {
       handle.setPointerCapture(event.pointerId);
     });
 
+    panel.addEventListener(
+      "pointerdown",
+      (event) => {
+        if (event.button !== 0 || event.target.closest(".component-panel-title")) {
+          return;
+        }
+
+        setPanelTop(panel);
+      },
+      true,
+    );
+
     handle.addEventListener("pointermove", (event) => {
       if (!drag || event.pointerId !== drag.pointerId) {
         return;
@@ -1358,6 +1371,12 @@ function makePanelsDraggable() {
       return;
     }
 
+    if (panel.dataset.panelId === "viewport") {
+      panel.style.zIndex = String(VIEWPORT_PANEL_Z_INDEX);
+      savePanelLayout(panel);
+      return;
+    }
+
     topPanelZIndex += 1;
     panel.style.zIndex = String(topPanelZIndex);
     savePanelLayout(panel);
@@ -1367,6 +1386,7 @@ function makePanelsDraggable() {
     panel.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
     if (clamp) {
       clampPanelOffset(panel, offset);
+      keepPanelClearOfJourney(panel, offset);
     }
     panel.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
   }
@@ -1391,6 +1411,39 @@ function makePanelsDraggable() {
     offset.x = Math.round((offset.x + adjustX) / gridSize) * gridSize;
     offset.y = Math.round((offset.y + adjustY) / gridSize) * gridSize;
   }
+
+  function keepPanelClearOfJourney(panel, offset) {
+    if (panel.dataset.panelId === "journey" || panel.dataset.panelId === "viewport") {
+      return;
+    }
+
+    const journeyPanel = document.querySelector("[data-panel-id='journey']");
+
+    if (!journeyPanel || isPanelHidden(journeyPanel) || isPanelHidden(panel)) {
+      return;
+    }
+
+    const panelRect = panel.getBoundingClientRect();
+    const journeyRect = journeyPanel.getBoundingClientRect();
+
+    if (!rectsOverlap(panelRect, journeyRect)) {
+      return;
+    }
+
+    const moveRight = journeyRect.right + viewportPadding - panelRect.left;
+    const moveLeft = journeyRect.left - viewportPadding - panelRect.right;
+    const rightFits = panelRect.right + moveRight <= window.innerWidth - viewportPadding;
+    const leftFits = panelRect.left + moveLeft >= viewportPadding;
+    const adjustment = rightFits || !leftFits ? moveRight : moveLeft;
+
+    offset.x = Math.round((offset.x + adjustment) / gridSize) * gridSize;
+    panel.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
+    clampPanelOffset(panel, offset);
+  }
+}
+
+function rectsOverlap(first, second) {
+  return first.left < second.right && first.right > second.left && first.top < second.bottom && first.bottom > second.top;
 }
 
 function renderShipOffers() {
@@ -1491,11 +1544,11 @@ function loadPanelLayout() {
 
 function getSavedTopZIndex(layout) {
   const savedZIndexes = Object.entries(layout.panels ?? {})
-    .filter(([panelId]) => panelId !== "journey")
+    .filter(([panelId]) => panelId !== "journey" && panelId !== "viewport")
     .map(([, panel]) => panel.z)
     .filter((zIndex) => Number.isFinite(zIndex) && zIndex < JOURNEY_PANEL_Z_INDEX);
   const defaultZIndexes = Object.entries(DEFAULT_PANEL_LAYOUT)
-    .filter(([panelId]) => panelId !== "journey")
+    .filter(([panelId]) => panelId !== "journey" && panelId !== "viewport")
     .map(([, panel]) => panel.z)
     .filter((zIndex) => Number.isFinite(zIndex) && zIndex < JOURNEY_PANEL_Z_INDEX);
 
@@ -1505,6 +1558,10 @@ function getSavedTopZIndex(layout) {
 function getInitialPanelZ(panelId, savedPanel, defaultPanel) {
   if (panelId === "journey") {
     return JOURNEY_PANEL_Z_INDEX;
+  }
+
+  if (panelId === "viewport") {
+    return VIEWPORT_PANEL_Z_INDEX;
   }
 
   const savedZ = savedPanel?.z;

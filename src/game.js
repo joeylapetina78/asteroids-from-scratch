@@ -12,7 +12,7 @@ import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=mission-targets";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=hub-contract-windows-v1";
-import { createGameState } from "./state/gameState.js?v=hull-vin-v1";
+import { createGameState } from "./state/gameState.js?v=panel-tether-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -43,6 +43,8 @@ const MAX_IMPACT_SHAKE_PIXELS = 28;
 const STORY_MOVEMENT_DISTANCE = 16;
 const STORY_PROXIMITY_RADIUS = 92;
 const STORY_PROXIMITY_COOLDOWN_SECONDS = 3.5;
+const DOCK_TETHER_BREAK_DAMAGE = 12;
+const DOCK_TETHER_BREAK_IMPULSE = 210;
 
 export class Game {
   constructor(
@@ -337,7 +339,7 @@ export class Game {
     this.nearbySite = nearby?.site ?? null;
 
     if (this.dockedSite && !isInSiteRange(this.ship.position, this.dockedSite)) {
-      this.setDockedSite(null);
+      this.breakDockingTether(this.dockedSite);
     }
 
     if (this.nearbySite && this.nearbySite.id !== previousNearbySiteId && !this.discoveredSiteIds.has(this.nearbySite.id)) {
@@ -539,7 +541,7 @@ export class Game {
     );
   }
 
-  setDockedSite(site) {
+  setDockedSite(site, options = {}) {
     const previousDockedSite = this.dockedSite;
     const previousDockedSiteId = previousDockedSite?.id ?? null;
     this.dockedSite = site;
@@ -567,17 +569,34 @@ export class Game {
       );
     } else if (previousDockedSite) {
       this.state.ledger.recordEvent(
-        "site.undocked",
+        options.forced ? "site.tetherBroken" : "site.undocked",
         {
           siteId: previousDockedSite.id,
           siteName: previousDockedSite.name,
           siteType: previousDockedSite.type,
+          damage: options.damage ?? 0,
         },
-        { visible: false },
+        { visible: Boolean(options.forced) },
       );
     }
 
     this.updateSiteReadout();
+  }
+
+  breakDockingTether(site) {
+    const damage = DOCK_TETHER_BREAK_DAMAGE;
+    const awayX = this.ship.position.x - site.position.x;
+    const awayY = this.ship.position.y - site.position.y;
+    const distance = Math.hypot(awayX, awayY) || 1;
+    const normalX = awayX / distance;
+    const normalY = awayY / distance;
+
+    this.ship.velocity.x += normalX * DOCK_TETHER_BREAK_IMPULSE;
+    this.ship.velocity.y += normalY * DOCK_TETHER_BREAK_IMPULSE;
+    this.createDockTetherBreakSparks(site, normalX, normalY);
+    this.damageHull(damage);
+    this.triggerImpactFeedback(damage);
+    this.setDockedSite(null, { forced: true, damage });
   }
 
   refuelAtHub(site) {
@@ -1641,6 +1660,32 @@ export class Game {
         size: 1 + Math.random() * 2,
         life: 0.22 + Math.random() * 0.28,
         maxLife: 0.5,
+      });
+    }
+  }
+
+  createDockTetherBreakSparks(site, normalX, normalY) {
+    const midpointX = (this.ship.position.x + site.position.x) / 2;
+    const midpointY = (this.ship.position.y + site.position.y) / 2;
+
+    for (let index = 0; index < 34; index += 1) {
+      const angle = Math.atan2(normalY, normalX) + (Math.random() - 0.5) * 2.5;
+      const speed = 100 + Math.random() * 260;
+
+      this.particles.push({
+        type: "spark",
+        position: {
+          x: midpointX + (Math.random() - 0.5) * 28,
+          y: midpointY + (Math.random() - 0.5) * 28,
+        },
+        velocity: {
+          x: Math.cos(angle) * speed,
+          y: Math.sin(angle) * speed,
+        },
+        color: index % 4 === 0 ? "#73d2ff" : index % 2 === 0 ? "#ffd36b" : "#ffffff",
+        size: 1 + Math.random() * 2.4,
+        life: 0.28 + Math.random() * 0.42,
+        maxLife: 0.7,
       });
     }
   }

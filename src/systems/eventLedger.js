@@ -364,6 +364,10 @@ function getDefaultMessage(type, payload) {
     return `Docked at ${payload.siteName ?? payload.siteId}`;
   }
 
+  if (type === "site.tetherBroken") {
+    return `Docking tether snapped at ${payload.siteName ?? payload.siteId}`;
+  }
+
   if (type === "site.enteredViewport") {
     return `${payload.siteName ?? payload.siteId} entered view`;
   }

@@ -1,4 +1,4 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=ledger-reactivity-v1";
+import { createEventLedger } from "../systems/eventLedger.js?v=panel-tether-v1";
 
 // Starting game/component state. This is the current lightweight substitute for
 // future accounts, saves, installed modules, and player profiles.

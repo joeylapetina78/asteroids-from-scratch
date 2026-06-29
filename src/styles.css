@@ -733,7 +733,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  justify-content: flex-end;
+  justify-content: flex-start;
   min-height: 98px;
   color: #d9deea;
   font-size: 0.78rem;
