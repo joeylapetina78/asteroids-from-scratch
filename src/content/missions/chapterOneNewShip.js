@@ -59,7 +59,7 @@ export const chapterOneNewShipMission = {
       id: "offer-loan",
       objective: "Review Mako's financing contract.",
       helpText:
-        "Press Read Contract to see the loan terms. The loan gives you enough credits to buy Rook's starter mining ship.",
+        "Press Call Mako when you are ready to hear the financing offer.",
       onEnter: [
         {
           type: "say",
@@ -78,7 +78,7 @@ export const chapterOneNewShipMission = {
       id: "read-loan-contract",
       objective: "Review Mako's financing contract.",
       helpText:
-        "Press Read Contract to open Mako's loan contract. Accepting it deposits 20,000 credits into your account.",
+        "Press Read Contract to review the loan terms. Accept only if you want the 20,000-credit financing deposited into your account.",
       onEnter: [
         {
           type: "say",

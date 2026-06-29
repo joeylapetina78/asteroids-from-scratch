@@ -1,4 +1,4 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=ship-market-v1";
+import { createEventLedger } from "../systems/eventLedger.js?v=ship-market-v2";
 
 // Starting game/component state. This is the current lightweight substitute for
 // future accounts, saves, installed modules, and player profiles.

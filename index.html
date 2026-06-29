@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=ship-market-v1" />
+    <link rel="stylesheet" href="./src/styles.css?v=ship-market-v2" />
   </head>
   <body>
     <main class="game-shell">
@@ -101,13 +101,13 @@
               </div>
               <label class="arm-toggle">
                 <input id="miner-armed" type="checkbox" />
-                Guns armed
+                Blaster armed
               </label>
               <div class="system-readout" aria-live="polite">
-                <span>Ammo: <strong id="ammo-count">100</strong></span>
+                <span>Charges: <strong id="ammo-count">100</strong></span>
               </div>
               <div class="component-hints">
-                <span>Space fire</span>
+                <span>Space blast</span>
               </div>
             </div>
 
@@ -165,15 +165,15 @@
                 <p id="contract-summary">No active contract.</p>
                 <dl>
                   <div>
-                    <dt>VIN</dt>
+                    <dt id="contract-primary-label">VIN</dt>
                     <dd id="contract-vin">--</dd>
                   </div>
                   <div>
-                    <dt>Destination</dt>
+                    <dt id="contract-secondary-label">Destination</dt>
                     <dd id="contract-destination">--</dd>
                   </div>
                   <div>
-                    <dt>Reward</dt>
+                    <dt id="contract-tertiary-label">Reward</dt>
                     <dd id="contract-reward">0 cr</dd>
                   </div>
                 </dl>
@@ -262,6 +262,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=ship-market-v1"></script>
+    <script type="module" src="./src/main.js?v=ship-market-v2"></script>
   </body>
 </html>

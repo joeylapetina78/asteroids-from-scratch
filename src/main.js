@@ -1,10 +1,10 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js";
-import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v1";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
+import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=rook-tutorial-v1";
-import { createContractManager } from "./systems/contractManager.js?v=ship-market-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=ship-market-v1";
+import { createContractManager } from "./systems/contractManager.js?v=ship-market-v2";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=ship-market-v2";
 import { Processor } from "./systems/processor.js?v=credits-cargo";
-import { createGameState } from "./state/gameState.js?v=ship-market-v1";
+import { createGameState } from "./state/gameState.js?v=ship-market-v2";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -49,9 +49,12 @@ const contractAcceptButton = document.querySelector("#contract-accept");
 const contractClauses = document.querySelector("#contract-clauses");
 const contractDestination = document.querySelector("#contract-destination");
 const contractIssuer = document.querySelector("#contract-issuer");
+const contractPrimaryLabel = document.querySelector("#contract-primary-label");
 const contractReward = document.querySelector("#contract-reward");
+const contractSecondaryLabel = document.querySelector("#contract-secondary-label");
 const contractStatus = document.querySelector("#contract-status");
 const contractSummary = document.querySelector("#contract-summary");
+const contractTertiaryLabel = document.querySelector("#contract-tertiary-label");
 const contractTitle = document.querySelector("#contract-title");
 const contractVin = document.querySelector("#contract-vin");
 const fuelCount = document.querySelector("#fuel-count");
@@ -114,7 +117,7 @@ const worldDebugFields = {
 const state = createGameState();
 const processor = new Processor(processorCanvas, processUnit);
 const cargoHold = new Processor(cargoCanvas, () => {}, { isClickable: false });
-const game = new Game(canvas, state, updateHudDisplay, (type) => processor.addUnit(type), updateWorldDebugDisplay, updateHubDisplay);
+const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay);
 const contractManager = createContractManager({
   state,
   onChange: () => {
@@ -336,8 +339,11 @@ function renderContract(contract = contractManager.getCurrentContract()) {
     contractStatus.textContent = "no offer";
     contractIssuer.textContent = "Issuer: --";
     contractSummary.textContent = "No active contract.";
+    contractPrimaryLabel.textContent = "VIN";
     contractVin.textContent = "--";
+    contractSecondaryLabel.textContent = "Destination";
     contractDestination.textContent = "--";
+    contractTertiaryLabel.textContent = "Reward";
     contractReward.textContent = "0 cr";
     contractAcceptButton.disabled = true;
     contractAcceptButton.textContent = "Accept Contract";
@@ -349,9 +355,7 @@ function renderContract(contract = contractManager.getCurrentContract()) {
   contractStatus.textContent = getContractStatusLabel(contract.status);
   contractIssuer.textContent = `Issuer: ${contract.issuer}`;
   contractSummary.textContent = contract.summary;
-  contractVin.textContent = contract.type === "loan" ? `${contract.terms.principal.toLocaleString()} cr` : contract.terms.deliverShipVin;
-  contractDestination.textContent = contract.type === "loan" ? contract.terms.dueLabel : contract.terms.destinationName;
-  contractReward.textContent = contract.type === "loan" ? `${contract.terms.interestRate * 100}% / cap ${contract.terms.maxInterest} cr` : `${contract.reward.credits ?? 0} cr`;
+  renderContractTerms(contract);
   contractAcceptButton.disabled = contract.status !== "offered";
   contractAcceptButton.textContent = contract.status === "offered" ? "Accept Contract" : getContractButtonLabel(contract.status);
   contractClauses.replaceChildren(
@@ -361,6 +365,25 @@ function renderContract(contract = contractManager.getCurrentContract()) {
       return item;
     }),
   );
+}
+
+function renderContractTerms(contract) {
+  if (contract.type === "loan") {
+    contractPrimaryLabel.textContent = "Principal";
+    contractVin.textContent = `${contract.terms.principal.toLocaleString()} cr`;
+    contractSecondaryLabel.textContent = "Term";
+    contractDestination.textContent = contract.terms.dueLabel;
+    contractTertiaryLabel.textContent = "Interest";
+    contractReward.textContent = `${contract.terms.interestRate * 100}% / cap ${contract.terms.maxInterest} cr`;
+    return;
+  }
+
+  contractPrimaryLabel.textContent = "VIN";
+  contractVin.textContent = contract.terms.deliverShipVin;
+  contractSecondaryLabel.textContent = "Destination";
+  contractDestination.textContent = contract.terms.destinationName;
+  contractTertiaryLabel.textContent = "Reward";
+  contractReward.textContent = `${contract.reward.credits ?? 0} cr`;
 }
 
 function getContractStatusLabel(status) {
@@ -560,6 +583,17 @@ function processUnit(type) {
 
   updateHudDisplay();
   game.refreshSiteReadout();
+}
+
+function receiveCollectedResource(type) {
+  if (state.components.processor.installed) {
+    processor.addUnit(type);
+    return;
+  }
+
+  if (state.components.cargoHold.installed) {
+    cargoHold.addUnit(type);
+  }
 }
 
 function sellCargoHold() {
@@ -871,10 +905,8 @@ function buyShipOffer(offer) {
   state.components.engine.fuel = Math.max(state.components.engine.fuel, 220);
   state.components.miner.installed = true;
   state.components.miner.ammo = Math.max(state.components.miner.ammo, 150);
-  state.components.processor.installed = true;
   state.components.cargoHold.installed = true;
   setComponentAvailable("miner", true);
-  setComponentAvailable("processor", true);
   setComponentAvailable("cargo", true);
   state.ledger.recordEvent("ship.purchased", {
     offerId: offer.id,
@@ -883,6 +915,7 @@ function buyShipOffer(offer) {
     creditsRemaining: Math.floor(state.components.account.credits),
     includedComponents: offer.includedComponents,
   });
+  setComponentAvailable("merchant", false);
   updateHudDisplay();
 }
 

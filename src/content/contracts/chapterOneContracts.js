@@ -22,8 +22,8 @@ export const chapterOneContracts = [
     id: "mako-starter-ship-loan",
     type: "loan",
     title: "Starter Ship Financing",
-    issuer: "Mr. Mako",
-    summary: "Finance the purchase of one approved starter mining ship.",
+    issuer: "Yard Exchange Finance Office",
+    summary: "A financial loan for purchasing one approved starter mining ship.",
     terms: {
       principal: 20000,
       interestRate: 0.12,

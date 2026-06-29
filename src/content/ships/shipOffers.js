@@ -9,7 +9,7 @@ export const shipOffers = [
     description: "A cheap working hull with a miner and cargo hold bolted in. Ugly, slow, and legal.",
     hull: 100,
     engine: "Repaired yard engine, tuned for better fuel efficiency",
-    includedComponents: ["Engine", "Hull", "Docking", "Scanner", "Miner", "Cargo Hold", "Processor"],
+    includedComponents: ["Engine", "Hull", "Docking", "Scanner", "Miner", "Cargo Hold"],
     tradeoffs: ["Starter mining rig", "Low top speed", "Cheap parts", "Eligible for Rook work"],
   },
   {

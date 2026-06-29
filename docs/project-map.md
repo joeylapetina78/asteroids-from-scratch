@@ -146,7 +146,7 @@ Current opening flow:
 17. Clicking the unaffordable Rook special calls in Mr. Mako.
 18. Mako offers a starter ship loan contract.
 19. Accepting the loan funds the account.
-20. Buying the Rook special installs the miner, processor, and cargo hold and completes the mission.
+20. Buying the Rook special installs the miner and cargo hold and completes the mission.
 
 Mission event handling keeps listening while an NPC line is waiting for `Okay`. That lets stronger world facts interrupt tutorial beats: if the player reaches Yard Exchange before acknowledging the Scanner lesson, the mission can skip ahead to the Docking prompt instead of blocking progress.
 
@@ -188,7 +188,7 @@ Buying the Rook special:
 - subtracts the ship price from account credits
 - changes the displayed owned ship name/VIN
 - tunes the existing yard-skiff engine fuel burn slightly better
-- installs the miner, processor, and cargo hold
+- installs the miner and cargo hold
 - records `ship.purchased`
 
 ### Game Loop
@@ -274,7 +274,7 @@ Scanning costs scanergy in `Game.scanForCrystals`. Scanner use no longer require
 - Processor: clickable, crushes units into the selected output.
 - Cargo hold: not clickable, stores units for selling/future quests.
 
-Collected pickups become larger square units falling from a pipe. The processor resolves basic gravity, walls, floor bounce, friction, unit collision, and click sparks.
+Collected pickups normally become larger square units falling from a pipe. If the processor is not installed yet but the cargo hold is installed, pickups route straight into cargo storage. The processor resolves basic gravity, walls, floor bounce, friction, unit collision, and click sparks once that system is available.
 
 ### World Sites
 
@@ -310,7 +310,7 @@ Component state lives under `state.components`.
 | --- | --- | --- |
 | `account` | Credits in Docking panel | Stores credits earned from selling cargo. |
 | `engine` | Power button, fuel, thrust mode, movement hints | Controls ship power, fuel, forward/reverse thrust, top speed, turn speed, fuel burn, thrust strength, thrust visual, and movement permission. |
-| `miner` | Arm switch, ammo, fire hint | Controls shooting. Space fires only when armed, powered, and supplied with ammo. |
+| `miner` | Blaster arm switch, charges, blast hint | Controls mining shots. Space fires only when armed, powered, and supplied with charges. |
 | `scanner` | Scan button, scanergy percent | Controls scan ability and powers the collector pull field. |
 | `collector` | Tractor Field hold button | Pulls loose resource pickups toward the ship while spending scanergy. |
 | `processor` | Processor canvas and output choices | Turns clicked resource units into fuel, ammo, scanergy, or cargo storage. |
@@ -330,15 +330,16 @@ Processor outputs are not hardcoded in the HTML. [src/components/componentRules.
 2. Bullets or ship impacts break rocks into smaller rocks.
 3. Final resource rocks eject small square pickups.
 4. The ship collects pickups by flying over them or pulling them with the collector.
-5. Collected pickups fall into the processor canvas.
-6. Clicking a processor unit sends its value to the selected output:
+5. If the processor is installed, collected pickups fall into the processor canvas.
+6. If the processor is not installed and the cargo hold is installed, collected pickups fall directly into cargo storage.
+7. Clicking a processor unit sends its value to the selected output:
    - Fuel
-   - Ammo
+   - Charges
    - Scanergy
    - Cargo
-7. Cargo units fall into the cargo hold.
-8. While docked at a hub, cargo can be sold for credits.
-9. Credits pay for hull repair.
+8. Cargo units fall into the cargo hold.
+9. While docked at a hub, cargo can be sold for credits.
+10. Credits pay for hull repair.
 
 Current values:
 

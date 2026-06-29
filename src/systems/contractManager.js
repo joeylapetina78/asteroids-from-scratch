@@ -1,4 +1,4 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=ship-market-v1";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=ship-market-v2";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 

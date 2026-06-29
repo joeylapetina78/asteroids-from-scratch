@@ -14,8 +14,8 @@ export function getProcessorOutputs(components) {
   if (components.miner.installed) {
     outputs.push({
       id: "ammo",
-      label: "Ammo",
-      amountLabel: "+50 ammo",
+      label: "Charges",
+      amountLabel: "+50 charges",
     });
   }
 

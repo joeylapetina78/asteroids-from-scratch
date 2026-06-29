@@ -1,5 +1,5 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=contract-v1";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=ship-market-v1";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=ship-market-v2";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=ship-market-v2";
 import { createMissionRunner } from "./missionRunner.js?v=contract-v1";
 
 const MISSION_DEFINITIONS = new Map(
@@ -205,7 +205,7 @@ function getMissionGrade(hull, elapsedSeconds) {
       id: "good",
       bonusCredits: 750,
       line:
-        "Okay, we did it. Clean hull, good time, and the contract paid out. I can see you have what it takes.",
+        "Okay, we did it. Clean hull, good time, and the contract paid out.",
       followup:
         "I have a good feeling about you, so I'm throwing in a 750 credit surprise bonus. Anyway, get yourself your own ship, equipped with a miner, and I'll have work for you.",
     };
