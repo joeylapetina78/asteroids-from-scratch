@@ -57,6 +57,27 @@ export function createHunterRespawn(ship, asteroids, seed) {
   return createLifeformNear("hunter", anchor, random, 340, seed);
 }
 
+export function createHunterNearShip(ship, seed) {
+  const random = createRandom(seed);
+  const baseAngle = Math.atan2(ship.velocity.y, ship.velocity.x);
+  const isMoving = Math.hypot(ship.velocity.x, ship.velocity.y) > 18;
+  const angle = (isMoving ? baseAngle : ship.angle) + randomRange(random, -0.8, 0.8);
+  const distance = randomRange(random, 430, 560);
+  const x = ship.position.x + Math.cos(angle) * distance;
+  const y = ship.position.y + Math.sin(angle) * distance;
+
+  return new Lifeform({
+    type: "hunter",
+    x,
+    y,
+    velocity: {
+      x: Math.cos(angle + Math.PI / 2) * randomRange(random, 35, 70),
+      y: Math.sin(angle + Math.PI / 2) * randomRange(random, 35, 70),
+    },
+    seed: hashNumbers(x, y, seed),
+  });
+}
+
 function addHunters(lifeforms, anchors, random) {
   const weightedAnchors = anchors
     .map((anchor) => ({ asteroid: anchor, weight: getHunterAnchorWeight(anchor) }))

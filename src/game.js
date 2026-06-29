@@ -5,7 +5,7 @@ import { Ship } from "./entities/Ship.js?v=starter-skiff-v1";
 import { createAsteroidField } from "./systems/asteroidField.js?v=zone-aware";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=docking-services";
-import { createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=contract-deposit-v2";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=red-work-tuning-v1";
 import { createNpcRouteShips } from "./systems/npcRoutes.js?v=soft-cargo-train";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=draw-radius";
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
@@ -86,6 +86,7 @@ export class Game {
     this.unarmedFireAttempts = 0;
     this.hasRecordedUnarmedFireReminder = false;
     this.hasRecordedStrandedEvent = false;
+    this.hasRecordedLowFuelEvent = false;
     this.viewportTitle = null;
     this.viewportTitleTimer = 0;
     this.discoveredSiteIds = new Set();
@@ -250,6 +251,7 @@ export class Game {
     if (this.state.components.engine.fuel !== previousFuel) {
       this.onHudChange(this.state);
     }
+    this.updateLowFuelEvent(previousFuel);
     this.updateStrandedEvent(previousFuel);
     this.updateShooting();
     this.bullets.forEach((bullet) => bullet.update(deltaSeconds));
@@ -549,6 +551,7 @@ export class Game {
 
     engine.fuel = engine.maxFuel;
     this.hasRecordedStrandedEvent = false;
+    this.hasRecordedLowFuelEvent = false;
     this.state.ledger.recordEvent("ship.refueled", {
       siteId: site.id,
       siteName: site.name,
@@ -628,6 +631,33 @@ export class Game {
 
   refreshSiteReadout() {
     this.updateSiteReadout();
+  }
+
+  updateLowFuelEvent(previousFuel) {
+    const engine = this.state.components.engine;
+    const lowFuelLine = engine.maxFuel * 0.5;
+
+    if (
+      this.hasRecordedLowFuelEvent ||
+      !engine.installed ||
+      engine.maxFuel <= 0 ||
+      previousFuel <= lowFuelLine ||
+      engine.fuel > lowFuelLine
+    ) {
+      return;
+    }
+
+    this.hasRecordedLowFuelEvent = true;
+    this.state.ledger.recordEvent(
+      "ship.lowFuel",
+      {
+        fuel: Math.floor(engine.fuel),
+        maxFuel: Math.floor(engine.maxFuel),
+        percent: Math.round((engine.fuel / engine.maxFuel) * 100),
+        hasScanner: Boolean(this.state.components.scanner.installed),
+      },
+      { visible: false },
+    );
   }
 
   updateStrandedEvent(previousFuel) {
@@ -986,6 +1016,23 @@ export class Game {
     if (hunter) {
       this.lifeforms.push(hunter);
     }
+  }
+
+  spawnHunterNearShip(reason = "story") {
+    this.hunterRespawnSeed += 1;
+    const hunter = createHunterNearShip(this.ship, this.hunterRespawnSeed);
+
+    this.lifeforms.push(hunter);
+    this.state.ledger.recordEvent(
+      "enemy.spawned",
+      {
+        enemyType: "hunter",
+        reason,
+        x: Math.round(hunter.position.x),
+        y: Math.round(hunter.position.y),
+      },
+      { visible: false },
+    );
   }
 
   updateHubDefenses(deltaSeconds) {

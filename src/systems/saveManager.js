@@ -1,4 +1,4 @@
-const SAVE_KEY = "asteroids.profileSave.v1";
+const SAVE_KEY = "asteroids.profileSave.v2";
 
 export function shouldResetSave(search = window.location.search) {
   return new URLSearchParams(search).get("resetSave") === "1";

@@ -151,7 +151,7 @@ Current opening flow:
 19. Accepting the loan funds the account.
 20. Buying the Rook special installs the miner and cargo hold and completes the mission.
 21. Rook returns and offers the first red-resource run.
-22. Accepting the red-resource contract sends the player out to mine 10 red resources.
+22. Accepting the red-resource contract sends the player out to mine 5 red resources.
 23. Docking at Yard Exchange with the required red cargo fulfills and pays the contract.
 
 Mission event handling keeps listening while an NPC line is waiting for `Okay`. That lets stronger world facts interrupt tutorial beats: if the player reaches Yard Exchange before acknowledging the Scanner lesson, the mission can skip ahead to the Docking prompt instead of blocking progress.
@@ -170,7 +170,7 @@ Mission rules can require multiple flags via `requiresFlags`. The first use is p
 
 - `rook-yard-exchange-delivery`: delivery contract. Requires the attached hull VIN `YRDSKF-01-7A3` to dock at Yard Exchange and pays 500 credits.
 - `mako-starter-ship-loan`: loan contract. Deposits 20,000 credits, tracks principal/debt state, and leaves repayment controls for a later pass.
-- `rook-red-resource-run`: repeatable resource-delivery contract. Requires 10 red resources from cargo at Yard Exchange and pays 100 credits per unit.
+- `rook-red-resource-run`: repeatable resource-delivery contract. Requires 5 red resources from cargo at Yard Exchange and pays 100 credits per unit.
 
 Current contract flow:
 

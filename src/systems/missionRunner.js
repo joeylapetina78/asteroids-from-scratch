@@ -135,6 +135,8 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
         goToStep(action.stepId);
       } else if (action.type === "completeMission") {
         actions.completeMission(missionDefinition);
+      } else if (action.type === "spawnHunterNearShip") {
+        actions.spawnHunterNearShip(action.reason);
       }
     });
   }

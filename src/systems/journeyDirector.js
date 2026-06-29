@@ -1,13 +1,13 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=ship-market-v2";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=ship-market-v2";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=profile-save-v1";
-import { createMissionRunner } from "./missionRunner.js?v=contract-v1";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=red-work-considerations-v1";
+import { createMissionRunner } from "./missionRunner.js?v=red-work-considerations-v1";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
 );
 
-export function createJourneyDirector({ state, onChange = () => {}, offerContract = () => {}, showComponent = () => {} }) {
+export function createJourneyDirector({ state, game = null, onChange = () => {}, offerContract = () => {}, showComponent = () => {} }) {
   const journey = state.journey;
   let lastEventId = 0;
   let activeMission = createMission(chapterOneInterviewMission);
@@ -194,6 +194,7 @@ export function createJourneyDirector({ state, onChange = () => {}, offerContrac
         recordEvent: (...args) => state.ledger.recordEvent(...args),
         say,
         showComponent: unlockComponent,
+        spawnHunterNearShip: (reason) => game?.spawnHunterNearShip(reason),
       },
     });
   }
