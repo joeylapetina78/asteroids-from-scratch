@@ -53,6 +53,7 @@ export class Game {
     onDebugChange = () => {},
     onSiteChange = () => {},
     audio = null,
+    onLogicUpdate = () => {},
   ) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
@@ -62,6 +63,7 @@ export class Game {
     this.onDebugChange = onDebugChange;
     this.onSiteChange = onSiteChange;
     this.audio = audio;
+    this.onLogicUpdate = onLogicUpdate;
     this.input = createInput();
     this.camera = createCamera(canvas);
     this.scanner = createScanner(canvas);
@@ -245,6 +247,7 @@ export class Game {
     this.lastFrameTime = time;
 
     this.update(deltaSeconds);
+    this.onLogicUpdate(this.state);
     this.draw();
 
     requestAnimationFrame((nextTime) => this.frame(nextTime));

@@ -1,12 +1,13 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=hub-drive-through-v1";
+import { Game } from "./game.js?v=main-loop-heartbeat-v1";
 import { createContractManager } from "./systems/contractManager.js?v=hub-drive-through-v1";
 import { createGameAudio } from "./systems/audio.js?v=softer-engine-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=story-hub-gates-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=hub-drive-through-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
 import { createGameState } from "./state/gameState.js?v=story-hub-gates-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
@@ -140,7 +141,7 @@ const savedProfile = loadSavedProfile(state);
 const audio = createGameAudio();
 const processor = new Processor(processorCanvas, processUnit);
 const cargoHold = new Processor(cargoCanvas, depositCargoUnit, { isClickable: true });
-const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio);
+const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio, updateLedgerDrivenSystems);
 const contractManager = createContractManager({
   state,
   onChange: (contract) => {
@@ -684,9 +685,12 @@ function getHubServicePrompt(service) {
   return service.description;
 }
 
-function updateWorldDebugDisplay(debug) {
+function updateLedgerDrivenSystems() {
   contractManager.update();
   journeyDirector.update();
+}
+
+function updateWorldDebugDisplay(debug) {
   const zone = debug.zoneProfile;
 
   worldDebugFields.position.textContent = `${Math.round(debug.worldX)}, ${Math.round(debug.worldY)}`;
@@ -1440,51 +1444,15 @@ function renderShipOffers() {
 }
 
 function handleShipOfferClick(offer) {
-  if (state.components.merchant.purchasedOfferId) {
+  const result = purchaseShipOffer(state, offer);
+
+  if (!result.ok) {
+    updateHudDisplay();
     return;
   }
 
-  if (state.components.account.credits < offer.price) {
-    state.ledger.recordEvent(
-      "merchant.cannotAfford",
-      {
-        offerId: offer.id,
-        shipName: offer.title,
-        price: offer.price,
-        credits: Math.floor(state.components.account.credits),
-      },
-      { visible: false },
-    );
-    return;
-  }
-
-  buyShipOffer(offer);
-}
-
-function buyShipOffer(offer) {
-  state.components.account.credits -= offer.price;
-  state.components.merchant.purchasedOfferId = offer.id;
-  state.ship.frameId = "yard-skiff-miner";
-  state.ship.name = offer.title;
-  state.ship.shape = "yard-skiff";
-  state.components.hull.vin = "YRDSKF-M-2B7";
-  state.components.hull.integrity = state.components.hull.maxIntegrity;
-  state.components.engine.fuelBurnRate = 4.5;
-  state.components.engine.maxFuel = 260;
-  state.components.engine.fuel = Math.max(state.components.engine.fuel, 220);
-  state.components.engine.powerLocked = false;
-  state.components.miner.installed = true;
-  state.components.miner.ammo = Math.max(state.components.miner.ammo, 150);
-  state.components.cargoHold.installed = true;
   setComponentAvailable("miner", true);
   setComponentAvailable("cargo", true);
-  state.ledger.recordEvent("ship.purchased", {
-    offerId: offer.id,
-    shipName: offer.title,
-    price: offer.price,
-    creditsRemaining: Math.floor(state.components.account.credits),
-    includedComponents: offer.includedComponents,
-  });
   setComponentAvailable("merchant", false);
   updateHudDisplay();
 }
