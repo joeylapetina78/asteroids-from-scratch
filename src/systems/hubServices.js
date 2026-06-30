@@ -1,4 +1,4 @@
-import { hubServiceDefinitions } from "../content/hubs/yardExchangeServices.js?v=rook-random-contracts-v2";
+import { hubServiceDefinitions } from "../content/hubs/yardExchangeServices.js?v=npc-greetings-v1";
 
 export function getHubServices(siteId) {
   return hubServiceDefinitions[siteId] ?? [];

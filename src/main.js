@@ -3,8 +3,8 @@ import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=ship-registry-v1";
 import { createContractManager } from "./systems/contractManager.js?v=rook-random-contracts-v2";
 import { createGameAudio } from "./systems/audio.js?v=npc-registry-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=rook-random-contracts-v2";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=rook-random-contracts-v2";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=npc-greetings-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=npc-greetings-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
@@ -571,6 +571,10 @@ function openHubService(serviceId) {
   hubStatus.textContent = service.organization;
   hubDetail.textContent = `${service.npcName}: ${getHubServicePrompt(service)}`;
   renderHubServiceMenu(dockedSite);
+
+  if (service.greeting) {
+    journeyDirector.sayAsNpc(service.npcName, service.greeting);
+  }
   state.ledger.recordEvent(
     "hub.serviceOpened",
     {
@@ -1454,44 +1458,46 @@ function renderShipOffers() {
     return;
   }
 
+  const purchasedOfferId = state.components.merchant.purchasedOfferId;
+
   shipOffersPanel.dataset.renderedKey = nextKey;
   shipOffersPanel.replaceChildren(
-    ...shipOffers.map((offer) => {
-      const card = document.createElement("article");
-      const title = document.createElement("h3");
-      const price = document.createElement("strong");
-      const description = document.createElement("p");
-      const meta = document.createElement("div");
-      const tags = document.createElement("div");
-      const button = document.createElement("button");
-      const canAfford = currentCredits >= offer.price;
-      const isPurchased = state.components.merchant.purchasedOfferId === offer.id;
+    ...shipOffers
+      .filter((offer) => offer.id !== purchasedOfferId)
+      .map((offer) => {
+        const card = document.createElement("article");
+        const title = document.createElement("h3");
+        const price = document.createElement("strong");
+        const description = document.createElement("p");
+        const meta = document.createElement("div");
+        const tags = document.createElement("div");
+        const button = document.createElement("button");
+        const canAfford = currentCredits >= offer.price;
 
-      card.className = `ship-offer${offer.special ? " is-special-offer" : ""}`;
-      title.textContent = offer.title;
-      price.className = "ship-offer-price";
-      price.textContent = `${offer.price.toLocaleString()} cr`;
-      description.textContent = offer.description;
-      meta.className = "ship-offer-meta";
-      [offer.brand, offer.model, `${offer.hull}% hull`, offer.engine].forEach((item) => {
-        const chip = document.createElement("span");
-        chip.textContent = item;
-        meta.append(chip);
-      });
-      tags.className = "ship-offer-tags";
-      offer.includedComponents.forEach((componentName) => {
-        const chip = document.createElement("span");
-        chip.textContent = componentName;
-        tags.append(chip);
-      });
-      button.className = "ship-offer-button";
-      button.type = "button";
-      button.textContent = isPurchased ? "Purchased" : canAfford ? "Buy Ship" : offer.special ? "I don't have enough" : "Out of Reach";
-      button.disabled = isPurchased;
-      button.addEventListener("click", () => handleShipOfferClick(offer));
-      card.append(title, price, description, meta, tags, button);
-      return card;
-    }),
+        card.className = `ship-offer${offer.special ? " is-special-offer" : ""}`;
+        title.textContent = offer.title;
+        price.className = "ship-offer-price";
+        price.textContent = `${offer.price.toLocaleString()} cr`;
+        description.textContent = offer.description;
+        meta.className = "ship-offer-meta";
+        [offer.brand, offer.model, `${offer.hull}% hull`, offer.engine].forEach((item) => {
+          const chip = document.createElement("span");
+          chip.textContent = item;
+          meta.append(chip);
+        });
+        tags.className = "ship-offer-tags";
+        offer.includedComponents.forEach((componentName) => {
+          const chip = document.createElement("span");
+          chip.textContent = componentName;
+          tags.append(chip);
+        });
+        button.className = "ship-offer-button";
+        button.type = "button";
+        button.textContent = canAfford ? "Buy Ship" : offer.special ? "I don't have enough" : "Out of Reach";
+        button.addEventListener("click", () => handleShipOfferClick(offer));
+        card.append(title, price, description, meta, tags, button);
+        return card;
+      }),
   );
 }
 
@@ -1506,6 +1512,13 @@ function handleShipOfferClick(offer) {
   setComponentAvailable("miner", true);
   setComponentAvailable("cargo", true);
   setComponentAvailable("merchant", false);
+
+  const shipyardService = currentSiteState?.dockedSite ? getHubService(currentSiteState.dockedSite.id, "yard-shipyard") : null;
+
+  if (shipyardService?.postSaleGreeting) {
+    journeyDirector.sayAsNpc(shipyardService.npcName, shipyardService.postSaleGreeting);
+  }
+
   updateHudDisplay();
 }
 

@@ -175,6 +175,15 @@ export function createJourneyDirector({
     journey.pendingAcknowledgement = acknowledgement;
   }
 
+  function sayAsNpc(speaker, text) {
+    if (journey.pendingAcknowledgement) {
+      return;
+    }
+
+    say(speaker, text);
+    onChange(journey);
+  }
+
   function clearMessage() {
     journey.messages = [];
   }
@@ -211,6 +220,7 @@ export function createJourneyDirector({
   return {
     start,
     startMission,
+    sayAsNpc,
     update,
     acceptMission,
     acknowledge,

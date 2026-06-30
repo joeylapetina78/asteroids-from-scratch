@@ -17,6 +17,7 @@ export const hubServiceDefinitions = {
         "rook-blue-resource-run-10",
       ],
       defaultUnlocked: false,
+      greeting: "Got work if you want it. Check what's in the contract tray and let me know.",
     },
     {
       id: "yard-shipyard",
@@ -27,6 +28,8 @@ export const hubServiceDefinitions = {
       label: "Shipyard",
       description: "Ship sales and refits.",
       defaultUnlocked: false,
+      greeting: "Barvis at the yard window. Take a look at what's on the lot.",
+      postSaleGreeting: "She's yours now. Keep the hull clean and the fuel topped. Come back when you're ready to move up.",
     },
     {
       id: "yard-finance",
@@ -38,6 +41,7 @@ export const hubServiceDefinitions = {
       description: "Loans and payments.",
       contractIds: ["mako-starter-ship-loan"],
       defaultUnlocked: false,
+      greeting: "Mako at Finance. Here to talk terms on something, or check your account?",
     },
     {
       id: "yard-supply",
@@ -48,6 +52,7 @@ export const hubServiceDefinitions = {
       label: "Supply",
       description: "Repair, fuel, mining charges, scanergy, and basic buying.",
       defaultUnlocked: false,
+      greeting: "Finley at Supply. Need repairs, fuel, or looking to move some cargo?",
     },
   ],
   "scrap-porch": [
@@ -60,6 +65,7 @@ export const hubServiceDefinitions = {
       label: "Dispatch Supply",
       description: "Basic repair and refuel service.",
       defaultUnlocked: true,
+      greeting: "Scrap Porch Dispatch here. Repairs and refuel are available at the window.",
     },
   ],
 };
