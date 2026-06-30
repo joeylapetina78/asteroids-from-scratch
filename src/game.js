@@ -818,6 +818,24 @@ export class Game {
     });
   }
 
+  emergencyTow(towCost) {
+    const nearest = getNearestWorldSite(this.ship.position, this.worldSites);
+    const siteId = nearest?.site?.id ?? "yard-exchange";
+    const siteName = nearest?.site?.name ?? "Yard Exchange";
+
+    this.state.components.account.credits -= towCost;
+    this.state.components.engine.fuel = 25;
+    this.hasRecordedStrandedEvent = false;
+    this.hasRecordedLowFuelEvent = false;
+    this.placeShipNearSite(siteId, { x: 240, y: -110 });
+    this.state.ledger.recordEvent(
+      "ship.towed",
+      { siteId, siteName, cost: towCost },
+      { visible: true },
+    );
+    this.onHudChange(this.state);
+  }
+
   updateDebugReadout() {
     this.onDebugChange({
       worldX: this.ship.position.x,

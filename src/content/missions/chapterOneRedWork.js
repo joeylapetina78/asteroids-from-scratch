@@ -168,7 +168,7 @@ export const chapterOneRedWorkMission = {
               type: "say",
               speaker: "Yard Exchange Dispatch",
               text:
-                "We show you out of fuel and drifting. We can send a tow runner later, once the paperwork and debt hooks exist. For now, conserve fuel close to the hub and use red resources carefully.",
+                "We show you out of fuel and drifting. Hit Emergency Tow on your engine panel. Runner will drop you near the closest hub for 300 credits. It'll hurt the account but it beats floating.",
             },
           ],
         },
@@ -178,7 +178,6 @@ export const chapterOneRedWorkMission = {
           eventType: "contract.paid",
           requiresCondition: ({ event }) => event.payload.contractGroup === "rook-resource-run",
           actions: [
-            { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-supply" },
             { type: "completeMission" },
           ],
         },

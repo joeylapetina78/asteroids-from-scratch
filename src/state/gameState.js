@@ -70,7 +70,7 @@ export function createGameState() {
         reverseThrustMultiplier: 0.2,
         rotationSpeed: 2.6,
         maxSpeed: 105,
-        fuelBurnRate: 6,
+        fuelBurnRate: 10,
         thrustVisual: {
           style: "ragged-flame",
           color: "#ffb85c",

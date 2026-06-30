@@ -27,6 +27,7 @@ const CARGO_UNIT_VALUES = {
   fuel: 30,
   crystal: 150,
 };
+const EMERGENCY_TOW_COST = 300;
 const STARTER_REGION_NAME = "First Reach";
 const DEEP_SPACE_REGION_NAME = "The Black";
 const JOURNEY_WORD_DELAY_MS = 34;
@@ -119,6 +120,9 @@ const scanButton = document.querySelector("#ship-scan");
 const scanergyCount = document.querySelector("#scanergy-count");
 const shipOffersPanel = document.querySelector("#ship-offers");
 const shipStatus = document.querySelector("#ship-status");
+const towSection = document.querySelector("#tow-section");
+const towButton = document.querySelector("#tow-button");
+const towCostDisplay = document.querySelector("#tow-cost");
 const tractorFieldButton = document.querySelector("#tractor-field-button");
 const tractorFieldStatus = document.querySelector("#tractor-field-status");
 const viewportRegion = document.querySelector("#viewport-region");
@@ -204,6 +208,16 @@ function updateShipPowerDisplay() {
 powerButton.addEventListener("click", () => {
   game.setShipPowered(!state.components.engine.powered);
   updateShipPowerDisplay();
+});
+
+towButton.addEventListener("click", () => {
+  if (state.components.engine.fuel > 0 || currentSiteState?.dockedSite) {
+    return;
+  }
+
+  game.emergencyTow(EMERGENCY_TOW_COST);
+  towCostDisplay.textContent = `${EMERGENCY_TOW_COST} cr`;
+  updateHudDisplay();
 });
 
 document.querySelectorAll("input[name='thrust-mode']").forEach((control) => {
@@ -341,8 +355,13 @@ function updateHudDisplay() {
   updateCargoTargetDisplay();
 
   creditCount.textContent = String(Math.floor(state.components.account.credits));
-  fuelCount.textContent = String(Math.floor(state.components.engine.fuel));
-  fuelFill.style.width = `${getMeterPercent(state.components.engine.fuel, state.components.engine.maxFuel)}%`;
+  const currentFuel = state.components.engine.fuel;
+  const isStranded = currentFuel <= 0 && state.components.engine.installed && !currentSiteState?.dockedSite;
+
+  fuelCount.textContent = String(Math.floor(currentFuel));
+  fuelFill.style.width = `${getMeterPercent(currentFuel, state.components.engine.maxFuel)}%`;
+  towSection.hidden = !isStranded;
+  towCostDisplay.textContent = `${EMERGENCY_TOW_COST} cr`;
   ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
   scanergyCount.textContent = `${Math.floor(state.components.scanner.scanergy)}%`;
   tractorFieldStatus.textContent = state.components.collector.isActive ? "Pulling" : "Idle";

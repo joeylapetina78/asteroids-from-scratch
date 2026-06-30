@@ -224,6 +224,38 @@ body {
   width: 230px;
 }
 
+.tow-section {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid rgba(255, 93, 108, 0.4);
+  border-radius: 4px;
+  background: rgba(255, 42, 68, 0.06);
+}
+
+.tow-button {
+  width: 100%;
+  padding: 7px 10px;
+  background: rgba(255, 42, 68, 0.12);
+  border: 1px solid rgba(255, 93, 108, 0.6);
+  border-radius: 4px;
+  color: #ff8a95;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.tow-button:hover:not(:disabled),
+.tow-button:focus-visible:not(:disabled) {
+  background: rgba(255, 42, 68, 0.22);
+  border-color: rgba(255, 93, 108, 0.9);
+  color: #ffffff;
+}
+
+.tow-hint {
+  font-size: 0.75rem;
+  color: #6e7a8a;
+}
+
 .scanner-panel,
 .miner-panel,
 .docking-panel,
