@@ -71,6 +71,14 @@ export const npcDefinitions = {
     homeHubIds: [],
     organizations: ["Independent Tow Runner"],
   },
+  murmur: {
+    id: "murmur",
+    name: "Murmur",
+    role: "station drifter and half-credible prophet",
+    voiceFrequency: 310,
+    homeHubIds: ["yard-exchange"],
+    organizations: ["Yard Exchange Back Corridor"],
+  },
 };
 
 const npcsByDisplayName = new Map(

@@ -1,14 +1,14 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=tow-component-v1";
+import { Game } from "./game.js?v=murmur-roadmap-v1";
 import { createContractManager } from "./systems/contractManager.js?v=rook-one-contract-v1";
-import { createGameAudio } from "./systems/audio.js?v=tow-component-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=finley-panel-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=tow-component-v1";
+import { createGameAudio } from "./systems/audio.js?v=murmur-roadmap-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=murmur-roadmap-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=murmur-roadmap-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
-import { createGameState } from "./state/gameState.js?v=tow-component-v1";
+import { createGameState } from "./state/gameState.js?v=murmur-roadmap-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -28,6 +28,8 @@ const CARGO_UNIT_VALUES = {
   crystal: 150,
 };
 const EMERGENCY_TOW_COST = 300;
+const YARD_EXCHANGE_CORE_SERVICES = ["rook-industries", "yard-shipyard", "yard-finance", "yard-supply"];
+const MURMUR_SERVICE_ID = "yard-murmur-roadmap";
 const STARTER_REGION_NAME = "First Reach";
 const DEEP_SPACE_REGION_NAME = "The Black";
 const JOURNEY_WORD_DELAY_MS = 34;
@@ -40,6 +42,7 @@ const DEFAULT_PANEL_LAYOUT = {
   tow: { x: -300, y: 520, z: 125 },
   contract: { x: -300, y: 340, z: 95 },
   finley: { x: 70, y: 120, z: 115 },
+  roadmap: { x: 120, y: 100, z: 130 },
   merchant: { x: 70, y: 120, z: 120 },
   miner: { x: 980, y: 500, z: 60 },
   collector: { x: 980, y: 680, z: 50 },
@@ -481,14 +484,49 @@ function updateHubDisplay(siteState) {
     activeDepositContractId = null;
   }
 
-  if (!siteState.dockedSite) {
-    isCargoSellModeActive = false;
+  if (siteState.dockedSite?.id === "yard-exchange" && areYardExchangeStoryServicesUnlocked()) {
+    state.hubServices.flags.yardCoreSeenDocked = true;
   }
 
+  if (!siteState.dockedSite) {
+    isCargoSellModeActive = false;
+    markYardExchangeReturnOpportunity();
+  }
+
+  maybeUnlockMurmur(siteState.dockedSite);
   renderContract();
   renderFinleyPanel(siteState);
   updateDockingDisplay(siteState);
   updateHubServiceDisplay(siteState);
+}
+
+function markYardExchangeReturnOpportunity() {
+  if (!state.hubServices.flags.yardCoreSeenDocked || !areYardExchangeStoryServicesUnlocked()) {
+    return;
+  }
+
+  state.hubServices.flags.leftYardAfterCoreUnlocked = true;
+}
+
+function maybeUnlockMurmur(dockedSite) {
+  if (
+    dockedSite?.id !== "yard-exchange" ||
+    isHubServiceUnlocked("yard-exchange", { id: MURMUR_SERVICE_ID }) ||
+    !state.hubServices.flags.leftYardAfterCoreUnlocked ||
+    !areYardExchangeStoryServicesUnlocked()
+  ) {
+    return;
+  }
+
+  unlockHubService("yard-exchange", MURMUR_SERVICE_ID);
+  journeyDirector.sayAsNpc(
+    "Murmur",
+    "Psst. Captain. You have met the desk people, now meet the wall people. I keep the board of things that have not happened yet. Back corridor. Click my name if you want to see the shape of the future.",
+  );
+}
+
+function areYardExchangeStoryServicesUnlocked() {
+  return YARD_EXCHANGE_CORE_SERVICES.every((serviceId) => isHubServiceUnlocked("yard-exchange", { id: serviceId }));
 }
 
 
@@ -691,6 +729,13 @@ function openHubService(serviceId) {
     setComponentAvailable("finley", true);
     renderFinleyPanel();
     focusPanelById("finley");
+    return;
+  }
+
+  if (service.serviceType === "roadmap") {
+    setComponentAvailable("roadmap", true);
+    focusPanelById("roadmap");
+    return;
   }
 }
 
@@ -726,6 +771,19 @@ function closeDriveThroughPanel(panelId) {
       activeHubServiceId = null;
       renderHubServiceMenu(currentSiteState?.dockedSite);
     }
+
+    return;
+  }
+
+  if (panelId === "roadmap") {
+    setComponentAvailable("roadmap", false);
+
+    if (activeHubServiceId && getHubService(currentSiteState?.dockedSite?.id, activeHubServiceId)?.serviceType === "roadmap") {
+      activeHubServiceId = null;
+      renderHubServiceMenu(currentSiteState?.dockedSite);
+    }
+
+    return;
   }
 }
 
@@ -742,6 +800,10 @@ function closeDriveThroughWindows({ keepServiceType = null } = {}) {
     isCargoSellModeActive = false;
     updateCargoTargetDisplay();
     setComponentAvailable("finley", false);
+  }
+
+  if (keepServiceType !== "roadmap") {
+    setComponentAvailable("roadmap", false);
   }
 }
 
@@ -824,6 +886,10 @@ function getHubServicePrompt(service) {
 
   if (service.serviceType === "supply") {
     return "Finley handles repair and cargo sales here.";
+  }
+
+  if (service.serviceType === "roadmap") {
+    return "Murmur keeps a future-board in the back corridor.";
   }
 
   return service.description;

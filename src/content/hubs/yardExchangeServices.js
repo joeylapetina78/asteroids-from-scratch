@@ -1,4 +1,4 @@
-import { getNpcName } from "../npcs.js?v=finley-panel-v1";
+import { getNpcName } from "../npcs.js?v=murmur-roadmap-v1";
 
 export const hubServiceDefinitions = {
   "yard-exchange": [
@@ -65,6 +65,18 @@ export const hubServiceDefinitions = {
         chargePerUnit: 3,
         scanergyPerUnit: 1,
       },
+    },
+    {
+      id: "yard-murmur-roadmap",
+      npcId: "murmur",
+      npcName: getNpcName("murmur"),
+      organization: "Yard Exchange Back Corridor",
+      serviceType: "roadmap",
+      label: "Back Corridor",
+      description: "Murmur's prophecies and future systems.",
+      defaultUnlocked: false,
+      greeting:
+        "Psst. You. The one with rock dust on the account. Come down the back corridor. I know what this place becomes.",
     },
   ],
   "scrap-porch": [

@@ -1,4 +1,4 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=tow-component-v1";
+import { createEventLedger } from "../systems/eventLedger.js?v=murmur-roadmap-v1";
 
 // Starting game/component state. This is the current lightweight substitute for
 // future accounts, saves, installed modules, and player profiles.
@@ -21,6 +21,7 @@ export function createGameState() {
     },
     hubServices: {
       unlocked: {},
+      flags: {},
     },
     debt: {
       totalBorrowed: 0,

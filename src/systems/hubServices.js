@@ -1,4 +1,4 @@
-import { hubServiceDefinitions } from "../content/hubs/yardExchangeServices.js?v=finley-panel-v1";
+import { hubServiceDefinitions } from "../content/hubs/yardExchangeServices.js?v=murmur-roadmap-v1";
 
 export function getHubServices(siteId) {
   return hubServiceDefinitions[siteId] ?? [];
