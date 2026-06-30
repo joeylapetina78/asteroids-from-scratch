@@ -24,8 +24,8 @@ const VIEWPORT_PANEL_Z_INDEX = 10;
 const PROCESS_OUTPUT_AMOUNT = 50;
 const CRYSTAL_VALUE_MULTIPLIER = 5;
 const CARGO_UNIT_VALUES = {
-  fuel: 15,
-  crystal: 75,
+  fuel: 30,
+  crystal: 150,
 };
 const STARTER_REGION_NAME = "First Reach";
 const DEEP_SPACE_REGION_NAME = "The Black";
@@ -97,18 +97,10 @@ const dockingDetail = document.querySelector("#docking-detail");
 const dockingStatus = document.querySelector("#docking-status");
 const dockingTarget = document.querySelector("#docking-target");
 const hubDetail = document.querySelector("#hub-detail");
-const hubCargoLine = document.querySelector("#hub-cargo-line");
-const hubCargoValue = document.querySelector("#hub-cargo-value");
-const hubHull = document.querySelector("#hub-hull");
 const hubName = document.querySelector("#hub-name");
 const hubPanel = document.querySelector("[data-panel-id='hub']");
-const hubRepairButton = document.querySelector("#hub-repair");
-const hubRepairCost = document.querySelector("#hub-repair-cost");
-const hubRepairLine = document.querySelector("#hub-repair-line");
-const hubSellCargoButton = document.querySelector("#hub-sell-cargo");
 const hubServiceMenu = document.querySelector("#hub-service-menu");
 const hubStatus = document.querySelector("#hub-status");
-const hubSupplyActions = document.querySelector(".hub-supply-actions");
 const journeyAcceptButton = document.querySelector("#journey-accept");
 const journeyChapter = document.querySelector("#journey-chapter");
 const journeyHelpText = document.querySelector("#journey-help-text");
@@ -166,7 +158,6 @@ const contractManager = createContractManager({
   state,
   onChange: (contract) => {
     renderContract(contract);
-    syncContractPanelVisibility(contract);
     updateHudDisplay();
   },
 });
@@ -281,11 +272,6 @@ contractNextButton.addEventListener("click", () => {
   updateHudDisplay();
 });
 
-hubRepairButton.addEventListener("click", () => {
-  game.repairAtDock();
-  updateHudDisplay();
-});
-
 finleySellToggle.addEventListener("click", () => {
   isCargoSellModeActive = !isCargoSellModeActive;
   updateCargoTargetDisplay();
@@ -308,10 +294,6 @@ finleyChargesButton.addEventListener("click", () => {
 
 finleyScanButton.addEventListener("click", () => {
   buyScanFromFinley();
-});
-
-hubSellCargoButton.addEventListener("click", () => {
-  sellCargoHold();
 });
 
 hubServiceMenu.addEventListener("click", (event) => {
@@ -507,14 +489,6 @@ function updateHubServiceDisplay(siteState) {
     hubName.textContent = "Hub";
     hubStatus.textContent = "service window";
     hubDetail.textContent = "Dock to access services";
-    hubHull.textContent = `${Math.ceil(siteState.hullIntegrity)}%`;
-    hubRepairCost.textContent = `${siteState.repairCost} cr`;
-    hubCargoValue.textContent = `${getCargoHoldValue()} cr`;
-    hubRepairLine.hidden = true;
-    hubCargoLine.hidden = true;
-    hubSellCargoButton.disabled = true;
-    hubRepairButton.disabled = true;
-    hubSupplyActions.hidden = true;
     renderHubServiceMenu(null);
     return;
   }
@@ -525,27 +499,12 @@ function updateHubServiceDisplay(siteState) {
     playPanelReveal(hubPanel);
   }
 
-  const hullPercent = Math.ceil(siteState.hullIntegrity);
   const activeService = activeHubServiceId ? getHubService(site.id, activeHubServiceId) : null;
 
   hubName.textContent = site.name;
   hubStatus.textContent = activeService?.organization ?? "service menu";
   hubDetail.textContent = activeService ? `${activeService.npcName}: ${getHubServicePrompt(activeService)}` : "Choose a service window.";
-  hubHull.textContent = `${hullPercent}%`;
-  hubRepairCost.textContent = `${siteState.repairCost} cr`;
-  hubCargoValue.textContent = `${getCargoHoldValue()} cr`;
-  hubRepairLine.hidden = true;
-  hubCargoLine.hidden = true;
-  hubSupplyActions.hidden = true;
-  hubSellCargoButton.disabled = true;
-  hubRepairButton.disabled = true;
   renderHubServiceMenu(site);
-}
-
-function syncContractPanelVisibility(contract = contractManager.getCurrentContract()) {
-  if (!contract) {
-    setComponentAvailable("contract", false);
-  }
 }
 
 function renderHubServiceMenu(site) {
@@ -696,7 +655,7 @@ function closeDriveThroughWindows({ keepServiceType = null } = {}) {
     setComponentAvailable("merchant", false);
   }
 
-  if (!["contracts", "finance"].includes(keepServiceType) && !contractManager.getCurrentContract()) {
+  if (!["contracts", "finance"].includes(keepServiceType)) {
     setComponentAvailable("contract", false);
   }
 

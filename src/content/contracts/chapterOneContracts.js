@@ -43,7 +43,7 @@ export const chapterOneContracts = [
       requirePoweredDown: true,
     },
     reward: {
-      credits: 500,
+      credits: 1000,
     },
     clauses: [
       "Terms are satisfied when the listed VIN docks at the destination hub with ship power down.",
@@ -89,8 +89,8 @@ export const chapterOneContracts = [
       destinationName: "Yard Exchange",
     },
     reward: {
-      creditsPerUnit: 100,
-      credits: contract.amount * 100,
+      creditsPerUnit: 200,
+      credits: contract.amount * 200,
     },
     clauses: [
       `Terms are satisfied when ${contract.amount} ${contract.resourceName} are delivered from cargo at Yard Exchange.`,
