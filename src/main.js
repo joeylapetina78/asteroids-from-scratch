@@ -383,15 +383,18 @@ function updateHudDisplay() {
 
 function setTowAvailable(isAvailable) {
   setComponentAvailable("tow", isAvailable);
+  const becameAvailable = isAvailable && !wasTowAvailable;
 
-  if (isAvailable && !wasTowAvailable) {
+  // sayAsNpc causes a Journey render, which calls updateHudDisplay again.
+  // Update this guard first so the tow prompt cannot recurse.
+  wasTowAvailable = isAvailable;
+
+  if (becameAvailable) {
     journeyDirector.sayAsNpc(
       "Tow Truck",
       `Dispatch has your beacon. Emergency tow costs ${EMERGENCY_TOW_COST} credits. Accept the tow and we will haul you to the nearest hub with enough fuel and hull to move.`,
     );
   }
-
-  wasTowAvailable = isAvailable;
 }
 
 function getMeterPercent(value, maxValue) {

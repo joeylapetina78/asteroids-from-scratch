@@ -765,6 +765,12 @@ body {
   line-height: 1.35;
 }
 
+.roadmap-intro a {
+  color: #fff0bd;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .roadmap-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
