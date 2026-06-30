@@ -10,7 +10,12 @@ export const hubServiceDefinitions = {
       serviceType: "contracts",
       label: "Rook Industries",
       description: "Resource work and starter hauling jobs.",
-      contractIds: ["rook-red-resource-run"],
+      contractIds: [
+        "rook-red-resource-run-5",
+        "rook-red-resource-run-10",
+        "rook-blue-resource-run-5",
+        "rook-blue-resource-run-10",
+      ],
       defaultUnlocked: false,
     },
     {

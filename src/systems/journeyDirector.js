@@ -1,6 +1,6 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=hub-drive-through-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=rook-contract-handoff-v1";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=rook-contract-handoff-v1";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=rook-random-contracts-v2";
 import { createMissionRunner } from "./missionRunner.js?v=rook-contract-handoff-v1";
 
 const MISSION_DEFINITIONS = new Map(

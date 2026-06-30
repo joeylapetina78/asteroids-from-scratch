@@ -1,4 +1,4 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=story-hub-gates-v1";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=rook-random-contracts-v2";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -74,6 +74,8 @@ export function createContractManager({ state, onChange = () => {} }) {
         contractId: contract.id,
         contractTitle: contract.title,
         issuer: contract.issuer,
+        contractType: contract.type,
+        contractGroup: contract.group,
       },
       { visible: true },
     );
@@ -168,6 +170,7 @@ export function createContractManager({ state, onChange = () => {} }) {
     state.ledger.recordEvent("contract.resourceDeposited", {
       contractId: contract.id,
       contractTitle: contract.title,
+      contractGroup: contract.group,
       resourceType,
       resourceName: contract.terms.resourceName,
       unitsDeposited: 1,
@@ -229,6 +232,7 @@ export function createContractManager({ state, onChange = () => {} }) {
     state.ledger.recordEvent("contract.fulfilled", {
       contractId: contract.id,
       contractTitle: contract.title,
+      contractGroup: contract.group,
       destinationSiteId: fulfillment.destinationSiteId ?? contract.terms.destinationSiteId,
       shipVin: fulfillment.shipVin ?? contract.terms.deliverShipVin,
       resourceType: fulfillment.resourceType,
@@ -247,6 +251,7 @@ export function createContractManager({ state, onChange = () => {} }) {
     state.ledger.recordEvent("contract.paid", {
       contractId: contract.id,
       contractTitle: contract.title,
+      contractGroup: contract.group,
       creditsPaid: credits,
       accountCredits: state.components.account.credits,
     });
@@ -266,12 +271,19 @@ export function createContractManager({ state, onChange = () => {} }) {
   }
 
   function getCurrentContract() {
+    const contract = state.contracts.records[state.contracts.currentContractId] ?? null;
+
+    if (!contract || contract.status !== "paid" || contract.type === "loan") {
+      return contract;
+    }
+
+    state.contracts.currentContractId = getOpenContractIds()[0] ?? null;
     return state.contracts.records[state.contracts.currentContractId] ?? null;
   }
 
   function getOpenContractIds() {
     return Object.values(state.contracts.records)
-      .filter((contract) => contract.status !== "paid" || contract.repeatable || contract.type === "loan")
+      .filter((contract) => contract.status !== "paid" || contract.type === "loan")
       .map((contract) => contract.id);
   }
 

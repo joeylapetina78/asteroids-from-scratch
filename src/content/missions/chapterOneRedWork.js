@@ -7,12 +7,12 @@ export const chapterOneRedWorkMission = {
     episodeName: "Starting Out",
     speaker: "Rook",
     text:
-      "Hey, you ended up with our baby. Good for you. I hope it serves you well in the days to come. To get you started, head starboard, east-ish from Yard Exchange, and find some resources. Mine red rocks and bring me back 5 red resources. Drive over the loose red squares to scoop them into cargo, but don't drive the ship into rocks. That's called crashing, not mining. Try to stay close to the hub if you can. If you hit Red Teeth, you've gone too far; there's stuff out there that'll tear you up.",
+      "Hey, you ended up with our baby. Good for you. I hope it serves you well in the days to come. To get you started, head starboard, east-ish from Yard Exchange, and find some resources. Rook Industries will have the current contract terms. Drive over loose resource squares to scoop them into cargo, but don't drive the ship into rocks. That's called crashing, not mining. Try to stay close to the hub if you can. If you hit Red Teeth, you've gone too far; there's stuff out there that'll tear you up.",
     title: "First Red Run",
     objective: "Take Rook's first mining contract.",
     actionLabel: null,
     helpText:
-      "Rook wants 5 red resources delivered to Yard Exchange. Red resources are the red square pickups that come from breaking red rocks.",
+      "Visit Rook Industries at Yard Exchange to see the current resource contract. Red resources come from red rocks; blue crystals come from blue rocks.",
   },
   activeChapter: {
     chapterId: "chapter-1",
@@ -20,7 +20,7 @@ export const chapterOneRedWorkMission = {
     episodeName: "Starting Out",
   },
   title: "First Red Run",
-  successCriteria: "Deliver 5 red resources to Yard Exchange.",
+  successCriteria: "Complete one resource delivery contract for Rook.",
   completion: {
     speaker: "Rook",
     objective: "Red resource contract complete.",
@@ -35,34 +35,34 @@ export const chapterOneRedWorkMission = {
       id: "offer-red-contract",
       objective: "Review Rook's red resource contract.",
       helpText:
-        "Rook's Red Resource Run is open in the Contract panel. Accept it when you're ready. It pays 100 credits per red resource for 5 red resources.",
+        "Open Rook Industries from the Yard Exchange service panel. Rook will offer one resource contract at a time. Read it, then accept it if you want the work.",
       onEnter: [
         {
           type: "say",
           speaker: "Rook",
           text:
-            "Here's the first one. Five red resources, delivered here to Yard Exchange, one hundred credits each. The contract is on your panel already. Read it, accept it, then get to work.",
+            "Come see me at Rook Industries and I'll show you what's on the board. The job might be red, might be blue, small haul or a bigger one. Read the contract before you sign.",
         },
       ],
       transitions: [
         {
           eventType: "contract.accepted",
-          payloadEquals: { contractId: "rook-red-resource-run" },
+          requiresCondition: ({ event }) => event.payload.contractGroup === "rook-resource-run",
           nextStepId: "mine-red-resources",
         },
       ],
     },
     {
       id: "mine-red-resources",
-      objective: "Mine 5 red resources and return to Yard Exchange.",
+      objective: "Mine the contracted resources and return to Yard Exchange.",
       helpText:
-        "Break red rocks with the miner, then fly over the loose red resource squares to collect them into cargo. Do not ram asteroids with your ship. Dock at Yard Exchange with at least 5 red resources. Head starboard/east from Yard Exchange, but turn back if you reach Red Teeth.",
+        "Check the Contract panel for the exact resource type and amount. Break matching rocks with the miner, then fly over the loose squares to collect them into cargo. Dock at Yard Exchange, select Deposit Cargo on the contract, and click cargo squares to send them in.",
       onEnter: [
         {
           type: "say",
           speaker: "Rook",
           text:
-            "Good. Keep the hub close until you know the neighborhood. Start starboard, east-ish from Yard Exchange. Arm the miner before you start blasting, fire charges into red rocks, then fly over the loose red squares to scoop them into cargo. Do not collect rocks with the hull. Dock here when you've got five. If you need specifics, open Need help below me. If the viewport says Red Teeth, turn around.",
+            "Good. Keep the hub close until you know the neighborhood. Start starboard, east-ish from Yard Exchange. Arm the miner before you start blasting, fire charges into the right color rocks, then fly over the loose squares to scoop them into cargo. Do not collect rocks with the hull. Dock here when the contract count is full. If you need specifics, open Need help below me. If the viewport says Red Teeth, turn around.",
         },
       ],
       considerations: [
@@ -107,7 +107,7 @@ export const chapterOneRedWorkMission = {
               type: "say",
               speaker: "Rook",
               text:
-                "Good, that's cargo now. Bring five red units back to Yard Exchange, dock, then deposit them into the contract.",
+                "Good, that's cargo now. Bring the contracted units back to Yard Exchange, dock, then deposit them into the contract.",
             },
           ],
         },
@@ -176,7 +176,7 @@ export const chapterOneRedWorkMission = {
       transitions: [
         {
           eventType: "contract.paid",
-          payloadEquals: { contractId: "rook-red-resource-run" },
+          requiresCondition: ({ event }) => event.payload.contractGroup === "rook-resource-run",
           actions: [
             { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-supply" },
             { type: "completeMission" },

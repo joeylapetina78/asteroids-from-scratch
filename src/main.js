@@ -1,10 +1,10 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=panel-tether-v1";
-import { createContractManager } from "./systems/contractManager.js?v=hub-drive-through-v1";
+import { createContractManager } from "./systems/contractManager.js?v=rook-random-contracts-v2";
 import { createGameAudio } from "./systems/audio.js?v=npc-registry-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=npc-registry-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=rook-contract-handoff-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=rook-random-contracts-v2";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=rook-random-contracts-v2";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
@@ -80,12 +80,14 @@ const dockingDetail = document.querySelector("#docking-detail");
 const dockingStatus = document.querySelector("#docking-status");
 const dockingTarget = document.querySelector("#docking-target");
 const hubDetail = document.querySelector("#hub-detail");
+const hubCargoLine = document.querySelector("#hub-cargo-line");
 const hubCargoValue = document.querySelector("#hub-cargo-value");
 const hubHull = document.querySelector("#hub-hull");
 const hubName = document.querySelector("#hub-name");
 const hubPanel = document.querySelector("[data-panel-id='hub']");
 const hubRepairButton = document.querySelector("#hub-repair");
 const hubRepairCost = document.querySelector("#hub-repair-cost");
+const hubRepairLine = document.querySelector("#hub-repair-line");
 const hubSellCargoButton = document.querySelector("#hub-sell-cargo");
 const hubServiceMenu = document.querySelector("#hub-service-menu");
 const hubStatus = document.querySelector("#hub-status");
@@ -242,10 +244,7 @@ dockToggleButton.addEventListener("click", () => {
 contractAcceptButton.addEventListener("click", () => {
   const contract = contractManager.getCurrentContract();
 
-  if (contract?.repeatable && contract.status === "paid") {
-    activeDepositContractId = null;
-    contractManager.offerContract(contract.id);
-  } else if (contract?.status === "fulfilled") {
+  if (contract?.status === "fulfilled") {
     activeDepositContractId = null;
     contractManager.collectPayment(contract.id);
   } else if (canDepositToContract(contract)) {
@@ -464,6 +463,8 @@ function updateHubServiceDisplay(siteState) {
     hubHull.textContent = `${Math.ceil(siteState.hullIntegrity)}%`;
     hubRepairCost.textContent = `${siteState.repairCost} cr`;
     hubCargoValue.textContent = `${getCargoHoldValue()} cr`;
+    hubRepairLine.hidden = true;
+    hubCargoLine.hidden = true;
     hubSellCargoButton.disabled = true;
     hubRepairButton.disabled = true;
     hubSupplyActions.hidden = true;
@@ -479,7 +480,7 @@ function updateHubServiceDisplay(siteState) {
 
   const hullPercent = Math.ceil(siteState.hullIntegrity);
   const activeService = activeHubServiceId ? getHubService(site.id, activeHubServiceId) : null;
-  const isSupplyAvailable = getHubServices(site.id).some((service) => service.serviceType === "supply" && isHubServiceUnlocked(site.id, service));
+  const isActiveSupplyService = activeService?.serviceType === "supply";
 
   hubName.textContent = site.name;
   hubStatus.textContent = activeService?.organization ?? "service menu";
@@ -487,9 +488,11 @@ function updateHubServiceDisplay(siteState) {
   hubHull.textContent = `${hullPercent}%`;
   hubRepairCost.textContent = `${siteState.repairCost} cr`;
   hubCargoValue.textContent = `${getCargoHoldValue()} cr`;
-  hubSupplyActions.hidden = !isSupplyAvailable;
-  hubSellCargoButton.disabled = !isSupplyAvailable || getCargoHoldValue() <= 0;
-  hubRepairButton.disabled = !isSupplyAvailable || !siteState.canRepair || hullPercent >= 100 || siteState.credits < siteState.repairCost;
+  hubRepairLine.hidden = !isActiveSupplyService;
+  hubCargoLine.hidden = !isActiveSupplyService;
+  hubSupplyActions.hidden = !isActiveSupplyService;
+  hubSellCargoButton.disabled = !isActiveSupplyService || getCargoHoldValue() <= 0;
+  hubRepairButton.disabled = !isActiveSupplyService || !siteState.canRepair || hullPercent >= 100 || siteState.credits < siteState.repairCost;
   renderHubServiceMenu(site);
 }
 
@@ -654,16 +657,17 @@ function offerHubServiceContract(site, service) {
 
 function getNextHubServiceContractId(service) {
   const contractIds = service.contractIds ?? [];
-
-  return contractIds.find((contractId) => {
+  const eligibleContractIds = contractIds.filter((contractId) => {
     const existingContract = state.contracts.records[contractId];
 
-    if (!existingContract) {
-      return true;
-    }
-
-    return existingContract.repeatable && existingContract.status === "paid";
+    return !existingContract || (existingContract.repeatable && existingContract.status === "paid");
   });
+
+  if (eligibleContractIds.length === 0) {
+    return null;
+  }
+
+  return eligibleContractIds[Math.floor(Math.random() * eligibleContractIds.length)];
 }
 
 function getHubServicePrompt(service) {
@@ -676,11 +680,11 @@ function getHubServicePrompt(service) {
   }
 
   if (service.serviceType === "contracts") {
-    return "work offers will live here as Rook Industries comes online.";
+    return "open contracts are handled here. Rook offers one job from the board at a time.";
   }
 
   if (service.serviceType === "supply") {
-    return "basic repair and cargo services are available here.";
+    return "Finley handles repair and cargo sales here.";
   }
 
   return service.description;
@@ -833,10 +837,6 @@ function getContractButtonLabel(contract) {
     return "Accept Contract";
   }
 
-  if (contract.repeatable && contract.status === "paid") {
-    return "Run Again";
-  }
-
   if (contract.status === "fulfilled") {
     return "Complete Contract";
   }
@@ -864,7 +864,6 @@ function isContractButtonEnabled(contract) {
   return (
     contract.status === "offered" ||
     contract.status === "fulfilled" ||
-    (contract.repeatable && contract.status === "paid") ||
     canDepositToContract(contract)
   );
 }

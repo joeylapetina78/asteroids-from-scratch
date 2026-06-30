@@ -1,3 +1,34 @@
+const RESOURCE_CONTRACTS = [
+  {
+    id: "rook-red-resource-run-5",
+    resourceType: "fuel",
+    resourceName: "red resources",
+    title: "Red Resource Run",
+    amount: 5,
+  },
+  {
+    id: "rook-red-resource-run-10",
+    resourceType: "fuel",
+    resourceName: "red resources",
+    title: "Heavy Red Resource Run",
+    amount: 10,
+  },
+  {
+    id: "rook-blue-resource-run-5",
+    resourceType: "crystal",
+    resourceName: "blue crystals",
+    title: "Blue Crystal Run",
+    amount: 5,
+  },
+  {
+    id: "rook-blue-resource-run-10",
+    resourceType: "crystal",
+    resourceName: "blue crystals",
+    title: "Heavy Blue Crystal Run",
+    amount: 10,
+  },
+];
+
 export const chapterOneContracts = [
   {
     id: "rook-yard-exchange-delivery",
@@ -42,29 +73,30 @@ export const chapterOneContracts = [
       "Payment controls will be added to this contract record as financing comes online.",
     ],
   },
-  {
-    id: "rook-red-resource-run",
+  ...RESOURCE_CONTRACTS.map((contract) => ({
+    id: contract.id,
     type: "resource-delivery",
+    group: "rook-resource-run",
     repeatable: true,
-    title: "Red Resource Run",
+    title: contract.title,
     issuer: "Rook",
-    summary: "Deliver 5 red resources to Yard Exchange.",
+    summary: `Deliver ${contract.amount} ${contract.resourceName} to Yard Exchange.`,
     terms: {
-      resourceType: "fuel",
-      resourceName: "red resources",
-      amount: 5,
+      resourceType: contract.resourceType,
+      resourceName: contract.resourceName,
+      amount: contract.amount,
       destinationSiteId: "yard-exchange",
       destinationName: "Yard Exchange",
     },
     reward: {
       creditsPerUnit: 100,
-      credits: 500,
+      credits: contract.amount * 100,
     },
     clauses: [
-      "Terms are satisfied when 5 red resources are delivered from cargo at Yard Exchange.",
+      `Terms are satisfied when ${contract.amount} ${contract.resourceName} are delivered from cargo at Yard Exchange.`,
       "Payment releases when the completed contract is confirmed.",
       "Resources must be in the cargo hold, not loose in space.",
-      "Rook may offer this work again after a completed run.",
+      "Return to Rook Industries for the next available job.",
     ],
-  },
+  })),
 ];
