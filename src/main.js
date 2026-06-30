@@ -27,6 +27,7 @@ const CARGO_UNIT_VALUES = {
   fuel: 30,
   crystal: 150,
 };
+const DOCKSIDE_RESERVE_FUEL = 25;
 const EMERGENCY_TOW_COST = 300;
 const YARD_EXCHANGE_CORE_SERVICES = ["rook-industries", "yard-shipyard", "yard-finance", "yard-supply"];
 const MURMUR_SERVICE_ID = "yard-murmur-roadmap";
@@ -1369,8 +1370,9 @@ function renderFinleyPanel(siteState = currentSiteState) {
   const repairCost = siteState?.repairCost ?? 0;
   const canRepair = siteState?.canRepair && hull.integrity < hull.maxIntegrity && credits >= repairCost;
   const fuelNeeded = Math.max(0, engine.maxFuel - engine.fuel);
-  const fuelCost = Math.ceil(fuelNeeded * (prices.fuelPerUnit ?? 2));
-  const canFuel = fuelNeeded > 0 && credits >= fuelCost;
+  const isOutOfFuelAtSupply = Boolean(site) && engine.fuel <= 0 && fuelNeeded > 0;
+  const fuelCost = isOutOfFuelAtSupply ? 0 : Math.ceil(fuelNeeded * (prices.fuelPerUnit ?? 2));
+  const canFuel = fuelNeeded > 0 && (isOutOfFuelAtSupply || credits >= fuelCost);
   const chargesNeeded = Math.max(0, miner.maxAmmo - miner.ammo);
   const chargesCost = Math.ceil(chargesNeeded * (prices.chargePerUnit ?? 3));
   const canCharges = chargesNeeded > 0 && credits >= chargesCost;
@@ -1391,6 +1393,7 @@ function renderFinleyPanel(siteState = currentSiteState) {
 
   finleyFuel.textContent = `${Math.floor(engine.fuel)} / ${engine.maxFuel}`;
   finleyFuelCost.textContent = `${fuelCost} cr`;
+  finleyFuelButton.firstChild.textContent = isOutOfFuelAtSupply ? "Reserve " : "Fill ";
   finleyFuelButton.disabled = !canFuel;
 
   finleyCharges.textContent = `${Math.floor(miner.ammo)} / ${miner.maxAmmo}`;
@@ -1408,15 +1411,36 @@ function buyFuelFromFinley() {
   const prices = service?.supplyPrices ?? {};
   const engine = state.components.engine;
   const fuelNeeded = Math.max(0, engine.maxFuel - engine.fuel);
+  const isOutOfFuelAtSupply = Boolean(site) && engine.fuel <= 0 && fuelNeeded > 0;
   const cost = Math.ceil(fuelNeeded * (prices.fuelPerUnit ?? 2));
 
-  if (fuelNeeded <= 0 || state.components.account.credits < cost) {
+  if (!site || fuelNeeded <= 0) {
+    return;
+  }
+
+  if (isOutOfFuelAtSupply) {
+    const fuelAdded = Math.min(DOCKSIDE_RESERVE_FUEL, fuelNeeded);
+
+    engine.fuel += fuelAdded;
+    state.ledger.recordEvent("ship.refueled", {
+      siteId: site.id,
+      siteName: site.name,
+      cost: 0,
+      fuelAdded,
+      source: "dockside-reserve",
+    });
+    renderFinleyPanel();
+    updateHudDisplay();
+    return;
+  }
+
+  if (state.components.account.credits < cost) {
     return;
   }
 
   state.components.account.credits -= cost;
   engine.fuel = engine.maxFuel;
-  state.ledger.recordEvent("ship.refueled", { siteId: site.id, cost, fuelAdded: fuelNeeded });
+  state.ledger.recordEvent("ship.refueled", { siteId: site.id, siteName: site.name, cost, fuelAdded: fuelNeeded });
   renderFinleyPanel();
   updateHudDisplay();
 }
