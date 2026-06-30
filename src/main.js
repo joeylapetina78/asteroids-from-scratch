@@ -158,6 +158,7 @@ const contractManager = createContractManager({
   state,
   onChange: (contract) => {
     renderContract(contract);
+    syncContractPanelVisibility();
     updateHudDisplay();
   },
 });
@@ -181,6 +182,7 @@ let currentSiteState = null;
 let activeDepositContractId = null;
 let activeHubServiceId = null;
 let isCargoSellModeActive = false;
+let lastDockedSiteId = null;
 let saveTimer = null;
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
@@ -443,14 +445,38 @@ function updateHubDisplay(siteState) {
     activeDepositContractId = null;
   }
 
+  const dockedSiteId = siteState.dockedSite?.id ?? null;
+  const justDocked = dockedSiteId && dockedSiteId !== lastDockedSiteId;
+  lastDockedSiteId = dockedSiteId;
+
   if (!siteState.dockedSite) {
     isCargoSellModeActive = false;
+  }
+
+  if (justDocked) {
+    checkContractPullOnDock(siteState.dockedSite);
   }
 
   renderContract();
   renderFinleyPanel(siteState);
   updateDockingDisplay(siteState);
   updateHubServiceDisplay(siteState);
+}
+
+function checkContractPullOnDock(dockedSite) {
+  const openIds = contractManager.getOpenContractIds();
+  const matchingId = openIds.find((contractId) => {
+    const record = state.contracts.records[contractId];
+    return (
+      record &&
+      ["active", "fulfilled"].includes(record.status) &&
+      record.terms?.destinationSiteId === dockedSite.id
+    );
+  });
+
+  if (matchingId) {
+    pullContractToCenter(matchingId);
+  }
 }
 
 function updateDockingDisplay(siteState) {
@@ -505,6 +531,32 @@ function updateHubServiceDisplay(siteState) {
   hubStatus.textContent = activeService?.organization ?? "service menu";
   hubDetail.textContent = activeService ? `${activeService.npcName}: ${getHubServicePrompt(activeService)}` : "Choose a service window.";
   renderHubServiceMenu(site);
+}
+
+function syncContractPanelVisibility() {
+  const hasOpenContracts = contractManager.getOpenContractIds().length > 0;
+  setComponentAvailable("contract", hasOpenContracts);
+}
+
+function pullContractToCenter(contractId) {
+  contractManager.focusContract(contractId);
+  renderContract();
+
+  const hud = document.querySelector(".hud");
+  const contractPanel = document.querySelector("[data-panel-id='contract']");
+
+  if (!hud || !contractPanel) {
+    return;
+  }
+
+  const hudRect = hud.getBoundingClientRect();
+  const panelWidth = contractPanel.offsetWidth || 240;
+  const panelHeight = contractPanel.offsetHeight || 320;
+  const centerX = Math.round((hudRect.width / 2 - panelWidth / 2) / 20) * 20;
+  const centerY = Math.round((hudRect.height / 2 - panelHeight / 2) / 20) * 20;
+
+  positionPanelById("contract", { x: centerX, y: centerY });
+  bringPanelToFront(contractPanel);
 }
 
 function renderHubServiceMenu(site) {
@@ -656,7 +708,7 @@ function closeDriveThroughWindows({ keepServiceType = null } = {}) {
   }
 
   if (!["contracts", "finance"].includes(keepServiceType)) {
-    setComponentAvailable("contract", false);
+    syncContractPanelVisibility();
   }
 
   if (keepServiceType !== "supply") {
@@ -1538,7 +1590,7 @@ function makePanelsDraggable() {
   });
 
   bringPanelToFront = setPanelTop;
-  positionPanelById = (panelId) => {
+  positionPanelById = (panelId, position = null) => {
     const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
     const offset = offsetsByPanelId.get(panelId);
 
@@ -1546,7 +1598,12 @@ function makePanelsDraggable() {
       return;
     }
 
-    applyPanelOffset(panel, offset);
+    if (position) {
+      offset.x = position.x;
+      offset.y = position.y;
+    }
+
+    applyPanelOffset(panel, offset, { clamp: isPanelMeasurable(panel) });
     savePanelLayout(panel, offset);
   };
 
