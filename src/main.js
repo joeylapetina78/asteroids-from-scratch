@@ -182,7 +182,6 @@ let currentSiteState = null;
 let activeDepositContractId = null;
 let activeHubServiceId = null;
 let isCargoSellModeActive = false;
-let lastDockedSiteId = null;
 let saveTimer = null;
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
@@ -445,16 +444,8 @@ function updateHubDisplay(siteState) {
     activeDepositContractId = null;
   }
 
-  const dockedSiteId = siteState.dockedSite?.id ?? null;
-  const justDocked = dockedSiteId && dockedSiteId !== lastDockedSiteId;
-  lastDockedSiteId = dockedSiteId;
-
   if (!siteState.dockedSite) {
     isCargoSellModeActive = false;
-  }
-
-  if (justDocked) {
-    checkContractPullOnDock(siteState.dockedSite);
   }
 
   renderContract();
@@ -463,21 +454,6 @@ function updateHubDisplay(siteState) {
   updateHubServiceDisplay(siteState);
 }
 
-function checkContractPullOnDock(dockedSite) {
-  const openIds = contractManager.getOpenContractIds();
-  const matchingId = openIds.find((contractId) => {
-    const record = state.contracts.records[contractId];
-    return (
-      record &&
-      ["active", "fulfilled"].includes(record.status) &&
-      record.terms?.destinationSiteId === dockedSite.id
-    );
-  });
-
-  if (matchingId) {
-    pullContractToCenter(matchingId);
-  }
-}
 
 function updateDockingDisplay(siteState) {
   const site = siteState.dockedSite ?? siteState.nearbySite;
@@ -536,6 +512,20 @@ function updateHubServiceDisplay(siteState) {
 function syncContractPanelVisibility() {
   const hasOpenContracts = contractManager.getOpenContractIds().length > 0;
   setComponentAvailable("contract", hasOpenContracts);
+}
+
+function pullContractForService(service) {
+  const contractIds = service.contractIds ?? [];
+  const openId = contractIds.find((id) => {
+    const r = state.contracts.records[id];
+    return r && ["offered", "active", "fulfilled"].includes(r.status);
+  });
+
+  if (openId) {
+    pullContractToCenter(openId);
+  } else {
+    focusPanelById("contract");
+  }
 }
 
 function pullContractToCenter(contractId) {
@@ -656,7 +646,7 @@ function openHubService(serviceId) {
   if (service.serviceType === "contracts" || service.serviceType === "finance") {
     setComponentAvailable("contract", true);
     offerHubServiceContract(dockedSite, service);
-    focusPanelById("contract");
+    pullContractForService(service);
     return;
   }
 
