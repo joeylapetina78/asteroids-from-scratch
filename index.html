@@ -83,10 +83,6 @@
                 <span>W thrust</span>
                 <span>S brake</span>
               </div>
-              <div id="tow-section" class="tow-section" hidden>
-                <button id="tow-button" class="tow-button" type="button">Emergency Tow <span id="tow-cost">300 cr</span></button>
-                <span class="tow-hint">Tow runner drops you near the nearest hub.</span>
-              </div>
             </div>
 
             <div class="component-panel scanner-panel" data-panel-id="scanner" aria-label="Scanner component">
@@ -171,6 +167,20 @@
                 <span id="docking-detail">No dock target</span>
               </div>
               <button id="dock-toggle" class="dock-button" type="button" disabled>Dock</button>
+            </div>
+
+            <div class="component-panel tow-panel is-component-locked" data-panel-id="tow" aria-label="Emergency tow component">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Emergency Tow</strong>
+                  <span>rescue dispatch</span>
+                </div>
+              </div>
+              <div id="tow-section" class="tow-section">
+                <p class="tow-quote">Tow runner standing by. Confirm and we pull you to the nearest hub.</p>
+                <button id="tow-button" class="tow-button" type="button">Accept Tow <span id="tow-cost">300 cr</span></button>
+                <span class="tow-hint">Cost is charged to your account. Tow restores enough hull and fuel to limp home.</span>
+              </div>
             </div>
 
             <div class="component-panel contract-panel" data-panel-id="contract" aria-label="Contract component">
@@ -341,6 +351,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=emergency-tow-v2"></script>
+    <script type="module" src="./src/main.js?v=tow-component-v1"></script>
   </body>
 </html>

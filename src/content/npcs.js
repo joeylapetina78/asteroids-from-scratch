@@ -63,6 +63,14 @@ export const npcDefinitions = {
     homeHubIds: ["scrap-porch"],
     organizations: ["Scrap Porch Supply"],
   },
+  "tow-truck": {
+    id: "tow-truck",
+    name: "Tow Truck",
+    role: "emergency recovery pilot",
+    voiceFrequency: 360,
+    homeHubIds: [],
+    organizations: ["Independent Tow Runner"],
+  },
 };
 
 const npcsByDisplayName = new Map(

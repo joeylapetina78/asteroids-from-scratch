@@ -1,14 +1,14 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=emergency-tow-v2";
+import { Game } from "./game.js?v=tow-component-v1";
 import { createContractManager } from "./systems/contractManager.js?v=rook-one-contract-v1";
-import { createGameAudio } from "./systems/audio.js?v=npc-registry-v1";
+import { createGameAudio } from "./systems/audio.js?v=tow-component-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=finley-panel-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=npc-greetings-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=tow-component-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
-import { createGameState } from "./state/gameState.js?v=emergency-tow-v2";
+import { createGameState } from "./state/gameState.js?v=tow-component-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -37,6 +37,7 @@ const DEFAULT_PANEL_LAYOUT = {
   engine: { x: -300, y: 20, z: 70 },
   scanner: { x: 980, y: 300, z: 90 },
   docking: { x: -300, y: 340, z: 100 },
+  tow: { x: -300, y: 520, z: 125 },
   contract: { x: -300, y: 340, z: 95 },
   finley: { x: 70, y: 120, z: 115 },
   merchant: { x: 70, y: 120, z: 120 },
@@ -188,6 +189,7 @@ let currentSiteState = null;
 let activeDepositContractId = null;
 let activeHubServiceId = null;
 let isCargoSellModeActive = false;
+let wasTowAvailable = false;
 let saveTimer = null;
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
@@ -361,7 +363,7 @@ function updateHudDisplay() {
 
   fuelCount.textContent = String(Math.floor(currentFuel));
   fuelFill.style.width = `${getMeterPercent(currentFuel, state.components.engine.maxFuel)}%`;
-  towSection.hidden = !isStranded;
+  setTowAvailable(isStranded);
   towCostDisplay.textContent = `${EMERGENCY_TOW_COST} cr`;
   ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
   scanergyCount.textContent = `${Math.floor(state.components.scanner.scanergy)}%`;
@@ -374,6 +376,19 @@ function updateHudDisplay() {
   merchantCredits.textContent = `${Math.floor(state.components.account.credits)} cr`;
   updateWarningPanels();
   scheduleSave();
+}
+
+function setTowAvailable(isAvailable) {
+  setComponentAvailable("tow", isAvailable);
+
+  if (isAvailable && !wasTowAvailable) {
+    journeyDirector.sayAsNpc(
+      "Tow Truck",
+      `Dispatch has your beacon. Emergency tow costs ${EMERGENCY_TOW_COST} credits. Accept the tow and we will haul you to the nearest hub with enough fuel and hull to move.`,
+    );
+  }
+
+  wasTowAvailable = isAvailable;
 }
 
 function getMeterPercent(value, maxValue) {
