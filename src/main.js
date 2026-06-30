@@ -356,7 +356,8 @@ function updateHudDisplay() {
 
   creditCount.textContent = String(Math.floor(state.components.account.credits));
   const currentFuel = state.components.engine.fuel;
-  const isStranded = currentFuel <= 0 && state.components.engine.installed && !currentSiteState?.dockedSite;
+  const isStranded = state.components.engine.installed && !currentSiteState?.dockedSite &&
+    (currentFuel <= 0 || state.components.hull.integrity <= 0);
 
   fuelCount.textContent = String(Math.floor(currentFuel));
   fuelFill.style.width = `${getMeterPercent(currentFuel, state.components.engine.maxFuel)}%`;
