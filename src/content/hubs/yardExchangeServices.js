@@ -46,7 +46,7 @@ export const hubServiceDefinitions = {
       serviceType: "finance",
       label: "Finance",
       description: "Loans and payments.",
-      contractIds: ["mako-starter-ship-loan"],
+      contractIds: ["mako-starter-ship-loan", "mako-emergency-fuel-loan"],
       defaultUnlocked: false,
       greeting: "Mako at Finance. Here to talk terms on something, or check your account?",
     },

@@ -73,6 +73,30 @@ export const chapterOneContracts = [
       "Payment controls will be added to this contract record as financing comes online.",
     ],
   },
+  {
+    id: "mako-emergency-fuel-loan",
+    type: "loan",
+    repeatable: true,
+    title: "Emergency Fuel Note",
+    issuer: "Yard Exchange Finance Office",
+    summary: "A short emergency loan for stranded pilots who need fuel money.",
+    terms: {
+      principal: 5000,
+      interestRate: 0.18,
+      interestHours: 6,
+      maxInterest: 1500,
+      dueLabel: "6 in-game hours",
+    },
+    reward: {
+      credits: 5000,
+    },
+    clauses: [
+      "5,000 credits are deposited immediately on acceptance.",
+      "This note exists for pilots who made it back alive but not solvent.",
+      "Interest accrues later up to a maximum of 1,500 credits.",
+      "Use Supply to buy fuel after the note funds.",
+    ],
+  },
   ...RESOURCE_CONTRACTS.map((contract) => ({
     id: contract.id,
     type: "resource-delivery",

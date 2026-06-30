@@ -1,9 +1,9 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=murmur-roadmap-v1";
+import { Game } from "./game.js?v=fuel-finance-v1";
 import { createContractManager } from "./systems/contractManager.js?v=rook-one-contract-v1";
 import { createGameAudio } from "./systems/audio.js?v=murmur-roadmap-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=murmur-roadmap-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fuel-finance-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=murmur-roadmap-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
@@ -27,7 +27,6 @@ const CARGO_UNIT_VALUES = {
   fuel: 30,
   crystal: 150,
 };
-const DOCKSIDE_RESERVE_FUEL = 25;
 const EMERGENCY_TOW_COST = 300;
 const YARD_EXCHANGE_CORE_SERVICES = ["rook-industries", "yard-shipyard", "yard-finance", "yard-supply"];
 const MURMUR_SERVICE_ID = "yard-murmur-roadmap";
@@ -204,11 +203,12 @@ const COMPONENT_WARNING_RULES = [
 
 function updateShipPowerDisplay() {
   const engine = state.components.engine;
+  const isOutOfFuel = engine.installed && engine.fuel <= 0;
 
   powerButton.textContent = engine.powered ? "Power Down" : "Power Ship";
   powerButton.setAttribute("aria-pressed", String(engine.powered));
-  powerButton.disabled = !engine.installed || state.components.hull.integrity <= 0 || engine.powerLocked;
-  shipStatus.textContent = state.components.hull.integrity <= 0 ? "ship destroyed" : engine.powerLocked ? "power locked" : engine.powered ? "ship online" : "ship offline";
+  powerButton.disabled = !engine.installed || state.components.hull.integrity <= 0 || engine.powerLocked || (!engine.powered && isOutOfFuel);
+  shipStatus.textContent = state.components.hull.integrity <= 0 ? "ship destroyed" : engine.powerLocked ? "power locked" : isOutOfFuel ? "out of fuel" : engine.powered ? "ship online" : "ship offline";
 }
 
 powerButton.addEventListener("click", () => {
@@ -868,6 +868,15 @@ function offerHubServiceContract(site, service) {
 function getNextHubServiceContractId(service) {
   const contractIds = service.contractIds ?? [];
 
+  if (service.serviceType === "finance" && state.components.engine.fuel <= 0) {
+    const emergencyLoanId = "mako-emergency-fuel-loan";
+    const existingEmergencyLoan = state.contracts.records[emergencyLoanId];
+
+    if (!existingEmergencyLoan || existingEmergencyLoan.status === "paid") {
+      return emergencyLoanId;
+    }
+  }
+
   if (service.singleActiveContract) {
     const hasInProgress = contractIds.some((contractId) => {
       const r = state.contracts.records[contractId];
@@ -1390,9 +1399,8 @@ function renderFinleyPanel(siteState = currentSiteState) {
   const repairCost = siteState?.repairCost ?? 0;
   const canRepair = siteState?.canRepair && hull.integrity < hull.maxIntegrity && credits >= repairCost;
   const fuelNeeded = Math.max(0, engine.maxFuel - engine.fuel);
-  const isOutOfFuelAtSupply = Boolean(site) && engine.fuel <= 0 && fuelNeeded > 0;
-  const fuelCost = isOutOfFuelAtSupply ? 0 : Math.ceil(fuelNeeded * (prices.fuelPerUnit ?? 2));
-  const canFuel = fuelNeeded > 0 && (isOutOfFuelAtSupply || credits >= fuelCost);
+  const fuelCost = Math.ceil(fuelNeeded * (prices.fuelPerUnit ?? 2));
+  const canFuel = fuelNeeded > 0 && credits >= fuelCost;
   const chargesNeeded = Math.max(0, miner.maxAmmo - miner.ammo);
   const chargesCost = Math.ceil(chargesNeeded * (prices.chargePerUnit ?? 3));
   const canCharges = chargesNeeded > 0 && credits >= chargesCost;
@@ -1413,7 +1421,7 @@ function renderFinleyPanel(siteState = currentSiteState) {
 
   finleyFuel.textContent = `${Math.floor(engine.fuel)} / ${engine.maxFuel}`;
   finleyFuelCost.textContent = `${fuelCost} cr`;
-  finleyFuelButton.firstChild.textContent = isOutOfFuelAtSupply ? "Reserve " : "Fill ";
+  finleyFuelButton.firstChild.textContent = "Fill ";
   finleyFuelButton.disabled = !canFuel;
 
   finleyCharges.textContent = `${Math.floor(miner.ammo)} / ${miner.maxAmmo}`;
@@ -1431,26 +1439,9 @@ function buyFuelFromFinley() {
   const prices = service?.supplyPrices ?? {};
   const engine = state.components.engine;
   const fuelNeeded = Math.max(0, engine.maxFuel - engine.fuel);
-  const isOutOfFuelAtSupply = Boolean(site) && engine.fuel <= 0 && fuelNeeded > 0;
   const cost = Math.ceil(fuelNeeded * (prices.fuelPerUnit ?? 2));
 
   if (!site || fuelNeeded <= 0) {
-    return;
-  }
-
-  if (isOutOfFuelAtSupply) {
-    const fuelAdded = Math.min(DOCKSIDE_RESERVE_FUEL, fuelNeeded);
-
-    engine.fuel += fuelAdded;
-    state.ledger.recordEvent("ship.refueled", {
-      siteId: site.id,
-      siteName: site.name,
-      cost: 0,
-      fuelAdded,
-      source: "dockside-reserve",
-    });
-    renderFinleyPanel();
-    updateHudDisplay();
     return;
   }
 

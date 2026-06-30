@@ -1,4 +1,4 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=rook-random-contracts-v2";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fuel-finance-v1";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 

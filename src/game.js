@@ -12,7 +12,7 @@ import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=mission-targets";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=hub-contract-windows-v1";
-import { createGameState } from "./state/gameState.js?v=murmur-roadmap-v1";
+import { createGameState } from "./state/gameState.js?v=fuel-finance-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -179,6 +179,10 @@ export class Game {
       return;
     }
 
+    if (isPowered && this.state.components.engine.fuel <= 0) {
+      return;
+    }
+
     if (isPowered && this.state.components.engine.powerLocked) {
       return;
     }
@@ -269,6 +273,9 @@ export class Game {
     // Order matters: ship/world state is advanced first, then collisions and UI
     // readouts are derived from the updated world.
     this.ship.update(deltaSeconds, this.input);
+    if (previousFuel > 0 && this.state.components.engine.fuel <= 0 && this.state.components.engine.powered) {
+      this.setShipPowered(false);
+    }
     this.audio?.updateEngine({
       powered: this.state.components.engine.powered && !this.shipDestroyed,
       thrusting: this.ship.isThrusting && !this.shipDestroyed,
