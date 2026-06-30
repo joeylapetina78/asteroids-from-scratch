@@ -18,6 +18,8 @@ export const hubServiceDefinitions = {
       ],
       defaultUnlocked: false,
       greeting: "Got work if you want it. Check what's in the contract tray and let me know.",
+      singleActiveContract: true,
+      busyMessage: "Got a job out for you already. Finish that one before I put more work on the board.",
     },
     {
       id: "yard-shipyard",

@@ -1,9 +1,9 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=ship-registry-v1";
-import { createContractManager } from "./systems/contractManager.js?v=rook-random-contracts-v2";
+import { createContractManager } from "./systems/contractManager.js?v=rook-one-contract-v1";
 import { createGameAudio } from "./systems/audio.js?v=npc-registry-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=npc-greetings-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=rook-one-contract-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=npc-greetings-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
@@ -644,6 +644,21 @@ function offerHubServiceContract(site, service) {
   const contractId = getNextHubServiceContractId(service);
 
   if (!contractId) {
+    if (service.singleActiveContract) {
+      const inProgressId = (service.contractIds ?? []).find((id) => {
+        const r = state.contracts.records[id];
+        return r && ["offered", "active", "fulfilled"].includes(r.status);
+      });
+
+      if (inProgressId) {
+        contractManager.focusContract(inProgressId);
+      }
+
+      if (service.busyMessage) {
+        journeyDirector.sayAsNpc(service.npcName, service.busyMessage);
+      }
+    }
+
     return;
   }
 
@@ -661,9 +676,20 @@ function offerHubServiceContract(site, service) {
 
 function getNextHubServiceContractId(service) {
   const contractIds = service.contractIds ?? [];
+
+  if (service.singleActiveContract) {
+    const hasInProgress = contractIds.some((contractId) => {
+      const r = state.contracts.records[contractId];
+      return r && ["offered", "active", "fulfilled"].includes(r.status);
+    });
+
+    if (hasInProgress) {
+      return null;
+    }
+  }
+
   const eligibleContractIds = contractIds.filter((contractId) => {
     const existingContract = state.contracts.records[contractId];
-
     return !existingContract || (existingContract.repeatable && existingContract.status === "paid");
   });
 

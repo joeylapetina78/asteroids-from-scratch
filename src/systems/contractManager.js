@@ -304,6 +304,15 @@ export function createContractManager({ state, onChange = () => {} }) {
     return getCurrentContract();
   }
 
+  function focusContract(contractId) {
+    if (!state.contracts.records[contractId]) {
+      return;
+    }
+
+    state.contracts.currentContractId = contractId;
+    onChange(getCurrentContract());
+  }
+
   function getContractDefinition(contractId) {
     const definition = CONTRACT_DEFINITIONS.get(contractId);
 
@@ -319,6 +328,7 @@ export function createContractManager({ state, onChange = () => {} }) {
     closeUnacceptedHubServiceOffers,
     collectPayment,
     depositResourceUnit,
+    focusContract,
     getCurrentContract,
     getOpenContractIds,
     offerContract,
