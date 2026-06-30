@@ -1,6 +1,6 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=panel-tether-v1";
+import { Game } from "./game.js?v=ship-registry-v1";
 import { createContractManager } from "./systems/contractManager.js?v=rook-random-contracts-v2";
 import { createGameAudio } from "./systems/audio.js?v=npc-registry-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=rook-random-contracts-v2";
@@ -8,7 +8,7 @@ import { createJourneyDirector } from "./systems/journeyDirector.js?v=rook-rando
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
-import { createGameState } from "./state/gameState.js?v=panel-tether-v1";
+import { createGameState } from "./state/gameState.js?v=ship-registry-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.

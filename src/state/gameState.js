@@ -1,4 +1,4 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=panel-tether-v1";
+import { createEventLedger } from "../systems/eventLedger.js?v=ship-registry-v1";
 
 // Starting game/component state. This is the current lightweight substitute for
 // future accounts, saves, installed modules, and player profiles.
@@ -33,6 +33,27 @@ export function createGameState() {
       frameId: "yard-skiff",
       name: "Yard Skiff",
       shape: "yard-skiff",
+      legal: {
+        titleHolder: "Rook Industries",
+        flightLicenseId: "TEMP-ROOKIE-FLIGHT",
+        registrations: {
+          flight: {
+            id: "YR-FLIGHT-TEMP-7A3",
+            status: "temporary",
+            issuingHubId: "yard-exchange",
+          },
+          mining: {
+            id: null,
+            status: "none",
+            issuingHubId: null,
+          },
+          patrol: {
+            id: null,
+            status: "none",
+            issuingHubId: null,
+          },
+        },
+      },
     },
     components: {
       account: {

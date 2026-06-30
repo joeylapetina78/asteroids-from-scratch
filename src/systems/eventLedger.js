@@ -127,6 +127,9 @@ export function createEventLedger(options = {}) {
     if (event.type === "site.docked") {
       incrementStat("site.docked.total");
       incrementStat(`site.docked.${event.payload.siteId}`);
+    } else if (event.type === "ship.registryReviewed") {
+      incrementStat("ship.registryReviewed.total");
+      incrementStat(`ship.registryReviewed.${event.payload.siteId ?? "unknown"}`);
     } else if (event.type === "site.enteredViewport") {
       incrementStat("site.enteredViewport.total");
       incrementStat(`site.enteredViewport.${event.payload.siteId}`);
@@ -366,6 +369,10 @@ function getDefaultMessage(type, payload) {
 
   if (type === "site.tetherBroken") {
     return `Docking tether snapped at ${payload.siteName ?? payload.siteId}`;
+  }
+
+  if (type === "ship.registryReviewed") {
+    return `Registry reviewed for ${payload.vin ?? "unattached VIN"}`;
   }
 
   if (type === "site.enteredViewport") {

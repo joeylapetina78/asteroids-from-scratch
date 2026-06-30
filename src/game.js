@@ -12,7 +12,7 @@ import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=mission-targets";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=hub-contract-windows-v1";
-import { createGameState } from "./state/gameState.js?v=panel-tether-v1";
+import { createGameState } from "./state/gameState.js?v=ship-registry-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -553,6 +553,7 @@ export class Game {
           siteName: site.name,
           siteType: site.type,
         });
+        this.reviewShipRegistryAtHub(site);
         this.audio?.playDock();
       }
 
@@ -581,6 +582,33 @@ export class Game {
     }
 
     this.updateSiteReadout();
+  }
+
+  reviewShipRegistryAtHub(site) {
+    if (site.type !== "hub") {
+      return;
+    }
+
+    const hull = this.state.components.hull;
+    const legal = this.state.ship.legal ?? {};
+    const registrations = legal.registrations ?? {};
+
+    this.state.ledger.recordEvent(
+      "ship.registryReviewed",
+      {
+        siteId: site.id,
+        siteName: site.name,
+        shipName: this.state.ship.name,
+        vin: hull.vinPlateAttached ? hull.vin : null,
+        vinPlateAttached: hull.vinPlateAttached,
+        titleHolder: legal.titleHolder ?? null,
+        flightLicenseId: legal.flightLicenseId ?? null,
+        flightRegistrationStatus: registrations.flight?.status ?? "none",
+        miningRegistrationStatus: registrations.mining?.status ?? "none",
+        patrolRegistrationStatus: registrations.patrol?.status ?? "none",
+      },
+      { visible: false },
+    );
   }
 
   breakDockingTether(site) {
