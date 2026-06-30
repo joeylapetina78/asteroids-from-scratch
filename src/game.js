@@ -45,6 +45,12 @@ const STORY_PROXIMITY_RADIUS = 92;
 const STORY_PROXIMITY_COOLDOWN_SECONDS = 3.5;
 const DOCK_TETHER_BREAK_DAMAGE = 12;
 const DOCK_TETHER_BREAK_IMPULSE = 210;
+const TOW_BASE_COST = 260;
+const TOW_COST_PER_1000_UNITS = 120;
+const TOW_APPROACH_SPEED = 280;
+const TOW_RETURN_SPEED = 220;
+const TOW_ATTACH_DISTANCE = 70;
+const TOW_DELIVERY_DISTANCE = 160;
 
 export class Game {
   constructor(
@@ -111,6 +117,7 @@ export class Game {
       magnitude: 0,
       seed: 0,
     };
+    this.activeTow = null;
   }
 
   start() {
@@ -318,6 +325,7 @@ export class Game {
     this.updateHunterEnvironmentalHits(activeLifeforms, activeAsteroids, deltaSeconds);
     this.updateHunterHits();
     this.updateNpcShips(activeAsteroids, deltaSeconds);
+    this.updateEmergencyTow(deltaSeconds);
     this.updateNpcBulletHits();
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
     this.lifeforms = this.lifeforms.filter((lifeform) => lifeform.isAlive);
@@ -825,21 +833,168 @@ export class Game {
     });
   }
 
-  emergencyTow(towCost) {
-    const nearest = getNearestWorldSite(this.ship.position, this.worldSites);
-    const siteId = nearest?.site?.id ?? "yard-exchange";
-    const siteName = nearest?.site?.name ?? "Yard Exchange";
+  emergencyTow(towCost = null) {
+    if (this.activeTow) {
+      return;
+    }
 
-    this.state.components.account.credits -= towCost;
-    this.state.components.engine.fuel = 25;
-    this.state.components.hull.integrity = Math.max(this.state.components.hull.integrity, 25);
+    const nearest = getNearestWorldSite(this.ship.position, this.worldSites);
+    const site = nearest?.site ?? this.worldSites.find((worldSite) => worldSite.id === "yard-exchange");
+    const distanceToSite = nearest?.distance ?? distance(this.ship.position, site.position);
+    const estimate = this.getEmergencyTowEstimate();
+    const directionToShip = normalizeVector(this.ship.position.x - site.position.x, this.ship.position.y - site.position.y);
+    const startDistance = Math.max(site.interactionRadius + 90, Math.min(distanceToSite * 0.35, 900));
+
+    this.activeTow = {
+      phase: "approach",
+      site,
+      cost: towCost ?? estimate.cost,
+      quotedDistance: Math.round(distanceToSite),
+      position: {
+        x: site.position.x + directionToShip.x * startDistance,
+        y: site.position.y + directionToShip.y * startDistance,
+      },
+      velocity: {
+        x: directionToShip.x * TOW_APPROACH_SPEED,
+        y: directionToShip.y * TOW_APPROACH_SPEED,
+      },
+      heading: Math.atan2(directionToShip.y, directionToShip.x),
+      pulse: 0,
+      towedDistance: 0,
+    };
+
+    this.setShipPowered(false);
+    this.state.ledger.recordEvent(
+      "tow.dispatched",
+      {
+        siteId: site.id,
+        siteName: site.name,
+        cost: this.activeTow.cost,
+        distance: this.activeTow.quotedDistance,
+      },
+      { visible: true },
+    );
+    this.onHudChange(this.state);
+  }
+
+  isTowActive() {
+    return Boolean(this.activeTow);
+  }
+
+  getEmergencyTowEstimate() {
+    const nearest = getNearestWorldSite(this.ship.position, this.worldSites);
+    const distanceToSite = nearest?.distance ?? 0;
+
+    return {
+      siteId: nearest?.site?.id ?? "yard-exchange",
+      siteName: nearest?.site?.name ?? "Yard Exchange",
+      distance: Math.round(distanceToSite),
+      cost: TOW_BASE_COST + Math.ceil(distanceToSite / 1000) * TOW_COST_PER_1000_UNITS,
+    };
+  }
+
+  updateEmergencyTow(deltaSeconds) {
+    if (!this.activeTow) {
+      return;
+    }
+
+    if (this.dockedSite) {
+      this.activeTow = null;
+      return;
+    }
+
+    const tow = this.activeTow;
+
+    tow.pulse += deltaSeconds;
+
+    if (tow.phase === "approach") {
+      this.steerTowRunner(tow, this.ship.position, TOW_APPROACH_SPEED, deltaSeconds);
+
+      if (distance(tow.position, this.ship.position) > TOW_ATTACH_DISTANCE) {
+        return;
+      }
+
+      tow.phase = "return";
+      this.shipDestroyed = false;
+      this.state.components.hull.integrity = Math.max(this.state.components.hull.integrity, 1);
+      this.createTowAttachSparks(tow);
+      this.state.ledger.recordEvent(
+        "tow.attached",
+        {
+          siteId: tow.site.id,
+          siteName: tow.site.name,
+          cost: tow.cost,
+        },
+        { visible: true },
+      );
+      return;
+    }
+
+    const towTarget = getTowDropoffPosition(tow.site, this.ship.position);
+    const distanceToTarget = distance(this.ship.position, towTarget);
+    const directionToHub = normalizeVector(towTarget.x - this.ship.position.x, towTarget.y - this.ship.position.y);
+    const desiredRunnerPosition = {
+      x: this.ship.position.x + directionToHub.x * 85,
+      y: this.ship.position.y + directionToHub.y * 85,
+    };
+    const travelStep = Math.min(TOW_RETURN_SPEED * deltaSeconds, distanceToTarget);
+
+    this.steerTowRunner(tow, desiredRunnerPosition, TOW_RETURN_SPEED * 1.15, deltaSeconds);
+    this.ship.position.x += directionToHub.x * travelStep;
+    this.ship.position.y += directionToHub.y * travelStep;
+    this.ship.velocity.x = directionToHub.x * TOW_RETURN_SPEED * 0.65;
+    this.ship.velocity.y = directionToHub.y * TOW_RETURN_SPEED * 0.65;
+    tow.towedDistance += travelStep;
+
+    if (distanceToTarget > TOW_DELIVERY_DISTANCE) {
+      return;
+    }
+
+    this.completeEmergencyTow();
+  }
+
+  steerTowRunner(tow, target, maxSpeed, deltaSeconds) {
+    const targetDirection = normalizeVector(target.x - tow.position.x, target.y - tow.position.y);
+    const desiredVelocity = {
+      x: targetDirection.x * maxSpeed,
+      y: targetDirection.y * maxSpeed,
+    };
+    const turn = Math.min(1, deltaSeconds * 3.4);
+
+    tow.velocity.x += (desiredVelocity.x - tow.velocity.x) * turn;
+    tow.velocity.y += (desiredVelocity.y - tow.velocity.y) * turn;
+    tow.position.x += tow.velocity.x * deltaSeconds;
+    tow.position.y += tow.velocity.y * deltaSeconds;
+    tow.heading = lerpAngle(tow.heading, Math.atan2(tow.velocity.y, tow.velocity.x), Math.min(1, deltaSeconds * 7));
+  }
+
+  completeEmergencyTow() {
+    const tow = this.activeTow;
+
+    if (!tow) {
+      return;
+    }
+
+    this.activeTow = null;
+    this.state.components.account.credits -= tow.cost;
+    this.state.components.engine.fuel = 0;
+    this.state.components.hull.integrity = Math.max(this.state.components.hull.integrity, 10);
     this.shipDestroyed = false;
     this.hasRecordedStrandedEvent = false;
     this.hasRecordedLowFuelEvent = false;
-    this.placeShipNearSite(siteId, { x: 240, y: -110 });
+    this.ship.velocity.x = 0;
+    this.ship.velocity.y = 0;
+    this.setDockedSite(tow.site);
     this.state.ledger.recordEvent(
       "ship.towed",
-      { siteId, siteName, cost: towCost, fuelAfter: this.state.components.engine.fuel, hullAfter: this.state.components.hull.integrity },
+      {
+        siteId: tow.site.id,
+        siteName: tow.site.name,
+        cost: tow.cost,
+        distance: Math.round(tow.towedDistance),
+        fuelAfter: this.state.components.engine.fuel,
+        hullAfter: this.state.components.hull.integrity,
+      },
       { visible: true },
     );
     this.onHudChange(this.state);
@@ -1717,6 +1872,29 @@ export class Game {
     }
   }
 
+  createTowAttachSparks(tow) {
+    for (let index = 0; index < 28; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 60 + Math.random() * 180;
+
+      this.particles.push({
+        type: "spark",
+        position: {
+          x: this.ship.position.x + (Math.random() - 0.5) * 18,
+          y: this.ship.position.y + (Math.random() - 0.5) * 18,
+        },
+        velocity: {
+          x: tow.velocity.x * 0.2 + Math.cos(angle) * speed,
+          y: tow.velocity.y * 0.2 + Math.sin(angle) * speed,
+        },
+        color: index % 3 === 0 ? "#73d2ff" : "#ffd36b",
+        size: 1 + Math.random() * 2.2,
+        life: 0.24 + Math.random() * 0.34,
+        maxLife: 0.58,
+      });
+    }
+  }
+
   createDockTetherBreakSparks(site, normalX, normalY) {
     const midpointX = (this.ship.position.x + site.position.x) / 2;
     const midpointY = (this.ship.position.y + site.position.y) / 2;
@@ -1841,6 +2019,7 @@ export class Game {
         ship.draw(this.context, drawCamera);
       }
     });
+    this.drawEmergencyTow(drawCamera);
     this.pickups.forEach((pickup) => {
       if (isVisible(pickup, this.canvas, drawCamera)) {
         pickup.draw(this.context, drawCamera);
@@ -1854,6 +2033,54 @@ export class Game {
     this.ship.draw(this.context, drawCamera);
     this.drawDamageFlash();
     this.drawViewportTitle();
+  }
+
+  drawEmergencyTow(camera = this.camera) {
+    if (!this.activeTow) {
+      return;
+    }
+
+    const tow = this.activeTow;
+    const screenX = tow.position.x - camera.x;
+    const screenY = tow.position.y - camera.y;
+
+    this.context.save();
+
+    if (tow.phase === "return") {
+      const shipX = this.ship.position.x - camera.x;
+      const shipY = this.ship.position.y - camera.y;
+      const flow = (tow.pulse * 1.9) % 1;
+      const lightX = shipX + (screenX - shipX) * flow;
+      const lightY = shipY + (screenY - shipY) * flow;
+
+      this.context.strokeStyle = "rgba(255, 211, 107, 0.64)";
+      this.context.lineWidth = 2;
+      this.context.setLineDash([7, 8]);
+      this.context.beginPath();
+      this.context.moveTo(shipX, shipY);
+      this.context.lineTo(screenX, screenY);
+      this.context.stroke();
+      this.context.setLineDash([]);
+      this.context.fillStyle = "#ffd36b";
+      this.context.fillRect(lightX - 3, lightY - 3, 6, 6);
+    }
+
+    this.context.translate(screenX, screenY);
+    this.context.rotate(tow.heading);
+    this.context.strokeStyle = "#ffd36b";
+    this.context.fillStyle = "rgba(255, 211, 107, 0.16)";
+    this.context.lineWidth = 2;
+    this.context.beginPath();
+    this.context.moveTo(28, 0);
+    this.context.lineTo(-13, -15);
+    this.context.lineTo(-7, 0);
+    this.context.lineTo(-13, 15);
+    this.context.closePath();
+    this.context.fill();
+    this.context.stroke();
+    this.context.strokeStyle = "rgba(158, 232, 255, 0.72)";
+    this.context.strokeRect(-31, -10, 16, 20);
+    this.context.restore();
   }
 
   drawWorldSites(camera = this.camera) {
@@ -2063,6 +2290,42 @@ function isNearSimulationArea(entity, canvas, camera, ship, margin) {
   const distanceToShip = Math.hypot(entity.position.x - ship.position.x, entity.position.y - ship.position.y);
 
   return distanceToShip < margin * 1.8 + radius;
+}
+
+function distance(firstPosition, secondPosition) {
+  return Math.hypot(firstPosition.x - secondPosition.x, firstPosition.y - secondPosition.y);
+}
+
+function normalizeVector(x, y) {
+  const length = Math.hypot(x, y) || 1;
+
+  return {
+    x: x / length,
+    y: y / length,
+  };
+}
+
+function getTowDropoffPosition(site, shipPosition) {
+  const awayFromHub = normalizeVector(shipPosition.x - site.position.x, shipPosition.y - site.position.y);
+
+  return {
+    x: site.position.x + awayFromHub.x * Math.min(site.interactionRadius * 0.72, site.radius + 80),
+    y: site.position.y + awayFromHub.y * Math.min(site.interactionRadius * 0.72, site.radius + 80),
+  };
+}
+
+function lerpAngle(from, to, amount) {
+  let difference = to - from;
+
+  while (difference > Math.PI) {
+    difference -= Math.PI * 2;
+  }
+
+  while (difference < -Math.PI) {
+    difference += Math.PI * 2;
+  }
+
+  return from + difference * amount;
 }
 
 function circlesOverlap(firstPosition, firstRadius, secondPosition, secondRadius) {

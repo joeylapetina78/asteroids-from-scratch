@@ -139,6 +139,8 @@ export function createJourneyDirector({
     if (missionDefinition.autoAcceptOnStart) {
       activeMission.accept();
     }
+
+    onChange(journey);
   }
 
   function unlockComponent(componentId, componentName) {

@@ -1,10 +1,10 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=fuel-finance-v1";
+import { Game } from "./game.js?v=tow-runner-v1";
 import { createContractManager } from "./systems/contractManager.js?v=rook-one-contract-v1";
 import { createGameAudio } from "./systems/audio.js?v=murmur-roadmap-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=fuel-finance-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=murmur-roadmap-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=tow-runner-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
@@ -27,7 +27,6 @@ const CARGO_UNIT_VALUES = {
   fuel: 30,
   crystal: 150,
 };
-const EMERGENCY_TOW_COST = 300;
 const YARD_EXCHANGE_CORE_SERVICES = ["rook-industries", "yard-shipyard", "yard-finance", "yard-supply"];
 const MURMUR_SERVICE_ID = "yard-murmur-roadmap";
 const STARTER_REGION_NAME = "First Reach";
@@ -217,12 +216,12 @@ powerButton.addEventListener("click", () => {
 });
 
 towButton.addEventListener("click", () => {
-  if ((state.components.engine.fuel > 0 && state.components.hull.integrity > 0) || currentSiteState?.dockedSite) {
+  if ((state.components.engine.fuel > 0 && state.components.hull.integrity > 0) || currentSiteState?.dockedSite || game.isTowActive()) {
     return;
   }
 
-  game.emergencyTow(EMERGENCY_TOW_COST);
-  towCostDisplay.textContent = `${EMERGENCY_TOW_COST} cr`;
+  game.emergencyTow();
+  updateTowEstimateDisplay();
   updateHudDisplay();
 });
 
@@ -368,7 +367,7 @@ function updateHudDisplay() {
   fuelCount.textContent = String(Math.floor(currentFuel));
   fuelFill.style.width = `${getMeterPercent(currentFuel, state.components.engine.maxFuel)}%`;
   setTowAvailable(isStranded);
-  towCostDisplay.textContent = `${EMERGENCY_TOW_COST} cr`;
+  updateTowEstimateDisplay();
   ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
   scanergyCount.textContent = `${Math.floor(state.components.scanner.scanergy)}%`;
   tractorFieldStatus.textContent = state.components.collector.isActive ? "Pulling" : "Idle";
@@ -391,11 +390,17 @@ function setTowAvailable(isAvailable) {
   wasTowAvailable = isAvailable;
 
   if (becameAvailable) {
+    const estimate = game.getEmergencyTowEstimate();
     journeyDirector.sayAsNpc(
       "Tow Truck",
-      `Dispatch has your beacon. Emergency tow costs ${EMERGENCY_TOW_COST} credits. Accept the tow and we will haul you to the nearest hub with enough fuel and hull to move.`,
+      `Dispatch has your beacon. Emergency tow estimate is ${estimate.cost} credits to ${estimate.siteName}. Accept and a tow runner will fly out, tether up, and haul you back.`,
     );
   }
+}
+
+function updateTowEstimateDisplay() {
+  const estimate = game.getEmergencyTowEstimate();
+  towCostDisplay.textContent = `${estimate.cost} cr`;
 }
 
 function getMeterPercent(value, maxValue) {
@@ -461,6 +466,7 @@ function applyDevStart(devStartId) {
   if (devStartId === "red-work") {
     setupDevRedWorkStart();
     journeyDirector.startMission("chapter-1-red-work");
+    updateHudDisplay();
   }
 }
 
@@ -489,6 +495,11 @@ function setupDevRedWorkStart() {
   state.components.cargoHold.installed = true;
   state.components.docking.installed = true;
   state.components.contract.installed = true;
+  state.hubServices.unlocked["yard-exchange"] = Array.from(
+    new Set([...(state.hubServices.unlocked["yard-exchange"] ?? []), "rook-industries", "yard-supply"]),
+  );
+  state.hubServices.flags.yardCoreSeenDocked = true;
+  game.setDockedSite(game.worldSites.find((site) => site.id === "yard-exchange") ?? null);
   state.ship.frameId = "yard-skiff-miner";
   state.ship.name = "Rook Yard Skiff";
   setComponentAvailable("viewport", true);

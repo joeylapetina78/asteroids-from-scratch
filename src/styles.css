@@ -18,7 +18,7 @@ body {
 .quick-links {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px 14px;
   width: min(100vw - 32px, 1500px);
   margin-bottom: 10px;
@@ -26,13 +26,13 @@ body {
 }
 
 .quick-links a {
-  color: #8f9bad;
+  color: #596273;
   text-decoration: none;
 }
 
 .quick-links a:hover,
 .quick-links a:focus-visible {
-  color: #fff0bd;
+  color: #aeb8c8;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
