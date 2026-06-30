@@ -207,6 +207,7 @@ body {
 .docking-panel,
 .hub-panel,
 .contract-panel,
+.finley-panel,
 .merchant-panel,
 .world-panel,
 .journey-panel {
@@ -563,6 +564,118 @@ body {
 
 .cargo-panel.is-deposit-target #cargo {
   border-color: rgba(255, 211, 107, 0.82);
+}
+
+.cargo-panel.is-sell-target {
+  border-color: rgba(60, 220, 130, 0.75);
+  box-shadow: 0 0 24px rgba(60, 220, 130, 0.16);
+}
+
+.cargo-panel.is-sell-target #cargo {
+  border-color: rgba(60, 220, 130, 0.75);
+}
+
+.finley-panel {
+  width: 260px;
+}
+
+.supply-account-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+  border: 1px solid #242a35;
+}
+
+.supply-section {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #242a35;
+  border-radius: 4px;
+  background: #07080c;
+}
+
+.supply-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.supply-buy-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.supply-status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.supply-status-item span {
+  font-size: 0.78rem;
+  color: #8a93a8;
+}
+
+.supply-status-item strong {
+  font-size: 0.95rem;
+}
+
+.supply-window-button {
+  width: 100%;
+  padding: 7px 12px;
+  background: #0f1520;
+  border: 1px solid #2d3545;
+  border-radius: 5px;
+  color: #c8d3e8;
+  cursor: pointer;
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.supply-window-button:hover:not(:disabled),
+.supply-window-button:focus-visible:not(:disabled) {
+  border-color: rgba(60, 220, 130, 0.6);
+  color: #ffffff;
+}
+
+.supply-window-button.is-open {
+  border-color: rgba(60, 220, 130, 0.7);
+  color: rgba(60, 220, 130, 0.9);
+  background: rgba(60, 220, 130, 0.06);
+}
+
+.supply-window-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.supply-buy-button {
+  padding: 4px 9px;
+  background: #0f1520;
+  border: 1px solid #2d3545;
+  border-radius: 4px;
+  color: #c8d3e8;
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.supply-buy-button:hover:not(:disabled),
+.supply-buy-button:focus-visible:not(:disabled) {
+  border-color: #5a6a88;
+  color: #ffffff;
+}
+
+.supply-buy-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .merchant-intro {

@@ -55,6 +55,11 @@ export const hubServiceDefinitions = {
       description: "Repair, fuel, mining charges, scanergy, and basic buying.",
       defaultUnlocked: false,
       greeting: "Finley at Supply. Need repairs, fuel, or looking to move some cargo?",
+      supplyPrices: {
+        fuelPerUnit: 2,
+        chargePerUnit: 3,
+        scanergyPerUnit: 1,
+      },
     },
   ],
   "scrap-porch": [

@@ -1,4 +1,4 @@
-import { hubServiceDefinitions } from "../content/hubs/yardExchangeServices.js?v=rook-one-contract-v1";
+import { hubServiceDefinitions } from "../content/hubs/yardExchangeServices.js?v=finley-panel-v1";
 
 export function getHubServices(siteId) {
   return hubServiceDefinitions[siteId] ?? [];

@@ -3,7 +3,7 @@ import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=ship-registry-v1";
 import { createContractManager } from "./systems/contractManager.js?v=rook-one-contract-v1";
 import { createGameAudio } from "./systems/audio.js?v=npc-registry-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=rook-one-contract-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=finley-panel-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=npc-greetings-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
@@ -37,6 +37,7 @@ const DEFAULT_PANEL_LAYOUT = {
   scanner: { x: 980, y: 300, z: 90 },
   docking: { x: -300, y: 340, z: 100 },
   contract: { x: -300, y: 340, z: 95 },
+  finley: { x: 70, y: 120, z: 115 },
   merchant: { x: 70, y: 120, z: 120 },
   miner: { x: 980, y: 500, z: 60 },
   collector: { x: 980, y: 680, z: 50 },
@@ -46,6 +47,22 @@ const DEFAULT_PANEL_LAYOUT = {
   processor: { x: 0, y: 0, z: 1 },
   cargo: { x: 0, y: 0, z: 1 },
 };
+const finleyPanel = document.querySelector("[data-panel-id='finley']");
+const finleyCredits = document.querySelector("#finley-credits");
+const finleyCargoValue = document.querySelector("#finley-cargo-value");
+const finleySellToggle = document.querySelector("#finley-sell-toggle");
+const finleyHull = document.querySelector("#finley-hull");
+const finleyRepairButton = document.querySelector("#finley-repair");
+const finleyRepairCost = document.querySelector("#finley-repair-cost");
+const finleyFuel = document.querySelector("#finley-fuel");
+const finleyFuelButton = document.querySelector("#finley-fuel-btn");
+const finleyFuelCost = document.querySelector("#finley-fuel-cost");
+const finleyCharges = document.querySelector("#finley-charges");
+const finleyChargesButton = document.querySelector("#finley-charges-btn");
+const finleyChargesCost = document.querySelector("#finley-charges-cost");
+const finleyScan = document.querySelector("#finley-scan");
+const finleyScanButton = document.querySelector("#finley-scan-btn");
+const finleyScanCost = document.querySelector("#finley-scan-cost");
 const ammoCount = document.querySelector("#ammo-count");
 const cargoCanvas = document.querySelector("#cargo");
 const cargoPanel = document.querySelector("[data-panel-id='cargo']");
@@ -143,7 +160,7 @@ if (shouldResetSave() || initialDevStart) {
 const savedProfile = loadSavedProfile(state);
 const audio = createGameAudio();
 const processor = new Processor(processorCanvas, processUnit);
-const cargoHold = new Processor(cargoCanvas, depositCargoUnit, { isClickable: true });
+const cargoHold = new Processor(cargoCanvas, handleCargoUnitClick, { isClickable: true });
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio, updateLedgerDrivenSystems);
 const contractManager = createContractManager({
   state,
@@ -172,6 +189,7 @@ let journeyTypeTimers = [];
 let currentSiteState = null;
 let activeDepositContractId = null;
 let activeHubServiceId = null;
+let isCargoSellModeActive = false;
 let saveTimer = null;
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
@@ -268,6 +286,30 @@ hubRepairButton.addEventListener("click", () => {
   updateHudDisplay();
 });
 
+finleySellToggle.addEventListener("click", () => {
+  isCargoSellModeActive = !isCargoSellModeActive;
+  updateCargoTargetDisplay();
+  renderFinleyPanel();
+});
+
+finleyRepairButton.addEventListener("click", () => {
+  game.repairAtDock();
+  renderFinleyPanel();
+  updateHudDisplay();
+});
+
+finleyFuelButton.addEventListener("click", () => {
+  buyFuelFromFinley();
+});
+
+finleyChargesButton.addEventListener("click", () => {
+  buyChargesFromFinley();
+});
+
+finleyScanButton.addEventListener("click", () => {
+  buyScanFromFinley();
+});
+
 hubSellCargoButton.addEventListener("click", () => {
   sellCargoHold();
 });
@@ -311,7 +353,7 @@ function updateHudDisplay() {
   renderProcessorOutputs();
   renderShipOffers();
   updateShipPowerDisplay();
-  updateDepositTargetDisplay();
+  updateCargoTargetDisplay();
 
   creditCount.textContent = String(Math.floor(state.components.account.credits));
   fuelCount.textContent = String(Math.floor(state.components.engine.fuel));
@@ -419,7 +461,12 @@ function updateHubDisplay(siteState) {
     activeDepositContractId = null;
   }
 
+  if (!siteState.dockedSite) {
+    isCargoSellModeActive = false;
+  }
+
   renderContract();
+  renderFinleyPanel(siteState);
   updateDockingDisplay(siteState);
   updateHubServiceDisplay(siteState);
 }
@@ -480,7 +527,6 @@ function updateHubServiceDisplay(siteState) {
 
   const hullPercent = Math.ceil(siteState.hullIntegrity);
   const activeService = activeHubServiceId ? getHubService(site.id, activeHubServiceId) : null;
-  const isActiveSupplyService = activeService?.serviceType === "supply";
 
   hubName.textContent = site.name;
   hubStatus.textContent = activeService?.organization ?? "service menu";
@@ -488,11 +534,11 @@ function updateHubServiceDisplay(siteState) {
   hubHull.textContent = `${hullPercent}%`;
   hubRepairCost.textContent = `${siteState.repairCost} cr`;
   hubCargoValue.textContent = `${getCargoHoldValue()} cr`;
-  hubRepairLine.hidden = !isActiveSupplyService;
-  hubCargoLine.hidden = !isActiveSupplyService;
-  hubSupplyActions.hidden = !isActiveSupplyService;
-  hubSellCargoButton.disabled = !isActiveSupplyService || getCargoHoldValue() <= 0;
-  hubRepairButton.disabled = !isActiveSupplyService || !siteState.canRepair || hullPercent >= 100 || siteState.credits < siteState.repairCost;
+  hubRepairLine.hidden = true;
+  hubCargoLine.hidden = true;
+  hubSupplyActions.hidden = true;
+  hubSellCargoButton.disabled = true;
+  hubRepairButton.disabled = true;
   renderHubServiceMenu(site);
 }
 
@@ -604,7 +650,9 @@ function openHubService(serviceId) {
   }
 
   if (service.serviceType === "supply") {
-    bringPanelToFront(hubPanel);
+    setComponentAvailable("finley", true);
+    renderFinleyPanel();
+    focusPanelById("finley");
   }
 }
 
@@ -627,6 +675,19 @@ function closeDriveThroughPanel(panelId) {
       activeHubServiceId = null;
       renderHubServiceMenu(currentSiteState?.dockedSite);
     }
+
+    return;
+  }
+
+  if (panelId === "finley") {
+    isCargoSellModeActive = false;
+    updateCargoTargetDisplay();
+    setComponentAvailable("finley", false);
+
+    if (activeHubServiceId && getHubService(currentSiteState?.dockedSite?.id, activeHubServiceId)?.serviceType === "supply") {
+      activeHubServiceId = null;
+      renderHubServiceMenu(currentSiteState?.dockedSite);
+    }
   }
 }
 
@@ -637,6 +698,12 @@ function closeDriveThroughWindows({ keepServiceType = null } = {}) {
 
   if (!["contracts", "finance"].includes(keepServiceType) && !contractManager.getCurrentContract()) {
     setComponentAvailable("contract", false);
+  }
+
+  if (keepServiceType !== "supply") {
+    isCargoSellModeActive = false;
+    updateCargoTargetDisplay();
+    setComponentAvailable("finley", false);
   }
 }
 
@@ -919,11 +986,12 @@ function canDepositToContract(contract) {
   );
 }
 
-function updateDepositTargetDisplay() {
+function updateCargoTargetDisplay() {
   const contract = contractManager.getCurrentContract();
   const isActiveDepositTarget = activeDepositContractId && contract?.id === activeDepositContractId && canDepositToContract(contract);
 
-  cargoPanel.classList.toggle("is-deposit-target", Boolean(isActiveDepositTarget));
+  cargoPanel.classList.toggle("is-deposit-target", Boolean(isActiveDepositTarget) && !isCargoSellModeActive);
+  cargoPanel.classList.toggle("is-sell-target", isCargoSellModeActive);
 }
 
 function getViewportLocationLabel(debug) {
@@ -1145,6 +1213,136 @@ function receiveCollectedResource(type) {
   if (state.components.cargoHold.installed) {
     cargoHold.addUnit(type);
   }
+}
+
+function handleCargoUnitClick(type) {
+  if (isCargoSellModeActive) {
+    return sellCargoUnit(type);
+  }
+
+  return depositCargoUnit(type);
+}
+
+function sellCargoUnit(type) {
+  const unitValue = CARGO_UNIT_VALUES[type] ?? 0;
+
+  if (!isCargoSellModeActive || !currentSiteState?.dockedSite || unitValue <= 0) {
+    return false;
+  }
+
+  state.components.account.credits += unitValue;
+  state.ledger.recordEvent("cargo.sold", { creditsEarned: unitValue, units: { [type]: 1 }, totalUnits: 1 }, { visible: false });
+  game.createCargoTransferTrail(type);
+  renderFinleyPanel();
+  updateHudDisplay();
+  game.refreshSiteReadout();
+  return true;
+}
+
+function renderFinleyPanel(siteState = currentSiteState) {
+  if (finleyPanel.classList.contains("is-component-locked")) {
+    return;
+  }
+
+  const site = siteState?.dockedSite;
+  const service = site ? getHubService(site.id, "yard-supply") : null;
+  const prices = service?.supplyPrices ?? {};
+  const engine = state.components.engine;
+  const miner = state.components.miner;
+  const scanner = state.components.scanner;
+  const hull = state.components.hull;
+  const credits = state.components.account.credits;
+  const repairCost = siteState?.repairCost ?? 0;
+  const canRepair = siteState?.canRepair && hull.integrity < hull.maxIntegrity && credits >= repairCost;
+  const fuelNeeded = Math.max(0, engine.maxFuel - engine.fuel);
+  const fuelCost = Math.ceil(fuelNeeded * (prices.fuelPerUnit ?? 2));
+  const canFuel = fuelNeeded > 0 && credits >= fuelCost;
+  const chargesNeeded = Math.max(0, miner.maxAmmo - miner.ammo);
+  const chargesCost = Math.ceil(chargesNeeded * (prices.chargePerUnit ?? 3));
+  const canCharges = chargesNeeded > 0 && credits >= chargesCost;
+  const scanNeeded = Math.max(0, scanner.maxScanergy - scanner.scanergy);
+  const scanCost = Math.ceil(scanNeeded * (prices.scanergyPerUnit ?? 1));
+  const canScan = scanNeeded > 0 && credits >= scanCost;
+  const cargoValue = getCargoHoldValue();
+
+  finleyCredits.textContent = `${Math.floor(credits)} cr`;
+  finleyCargoValue.textContent = `${cargoValue} cr`;
+  finleySellToggle.disabled = cargoValue <= 0 && !isCargoSellModeActive;
+  finleySellToggle.textContent = isCargoSellModeActive ? "Close Window" : "Open Window";
+  finleySellToggle.classList.toggle("is-open", isCargoSellModeActive);
+
+  finleyHull.textContent = `${Math.ceil(hull.integrity)}%`;
+  finleyRepairCost.textContent = `${repairCost} cr`;
+  finleyRepairButton.disabled = !canRepair;
+
+  finleyFuel.textContent = `${Math.floor(engine.fuel)} / ${engine.maxFuel}`;
+  finleyFuelCost.textContent = `${fuelCost} cr`;
+  finleyFuelButton.disabled = !canFuel;
+
+  finleyCharges.textContent = `${Math.floor(miner.ammo)} / ${miner.maxAmmo}`;
+  finleyChargesCost.textContent = `${chargesCost} cr`;
+  finleyChargesButton.disabled = !canCharges;
+
+  finleyScan.textContent = `${Math.floor(scanner.scanergy)} / ${scanner.maxScanergy}`;
+  finleyScanCost.textContent = `${scanCost} cr`;
+  finleyScanButton.disabled = !canScan;
+}
+
+function buyFuelFromFinley() {
+  const site = currentSiteState?.dockedSite;
+  const service = site ? getHubService(site.id, "yard-supply") : null;
+  const prices = service?.supplyPrices ?? {};
+  const engine = state.components.engine;
+  const fuelNeeded = Math.max(0, engine.maxFuel - engine.fuel);
+  const cost = Math.ceil(fuelNeeded * (prices.fuelPerUnit ?? 2));
+
+  if (fuelNeeded <= 0 || state.components.account.credits < cost) {
+    return;
+  }
+
+  state.components.account.credits -= cost;
+  engine.fuel = engine.maxFuel;
+  state.ledger.recordEvent("ship.refueled", { siteId: site.id, cost, fuelAdded: fuelNeeded });
+  renderFinleyPanel();
+  updateHudDisplay();
+}
+
+function buyChargesFromFinley() {
+  const site = currentSiteState?.dockedSite;
+  const service = site ? getHubService(site.id, "yard-supply") : null;
+  const prices = service?.supplyPrices ?? {};
+  const miner = state.components.miner;
+  const chargesNeeded = Math.max(0, miner.maxAmmo - miner.ammo);
+  const cost = Math.ceil(chargesNeeded * (prices.chargePerUnit ?? 3));
+
+  if (chargesNeeded <= 0 || state.components.account.credits < cost) {
+    return;
+  }
+
+  state.components.account.credits -= cost;
+  miner.ammo = miner.maxAmmo;
+  state.ledger.recordEvent("supply.chargesBought", { siteId: site.id, cost, chargesAdded: chargesNeeded });
+  renderFinleyPanel();
+  updateHudDisplay();
+}
+
+function buyScanFromFinley() {
+  const site = currentSiteState?.dockedSite;
+  const service = site ? getHubService(site.id, "yard-supply") : null;
+  const prices = service?.supplyPrices ?? {};
+  const scanner = state.components.scanner;
+  const scanNeeded = Math.max(0, scanner.maxScanergy - scanner.scanergy);
+  const cost = Math.ceil(scanNeeded * (prices.scanergyPerUnit ?? 1));
+
+  if (scanNeeded <= 0 || state.components.account.credits < cost) {
+    return;
+  }
+
+  state.components.account.credits -= cost;
+  scanner.scanergy = scanner.maxScanergy;
+  state.ledger.recordEvent("supply.scanBought", { siteId: site.id, cost, scanAdded: scanNeeded });
+  renderFinleyPanel();
+  updateHudDisplay();
 }
 
 function depositCargoUnit(type) {

@@ -557,9 +557,7 @@ export class Game {
         this.audio?.playDock();
       }
 
-      if (site.type === "hub") {
-        this.refuelAtHub(site);
-      }
+      // Fuel is now purchased from the supply window, not auto-filled on dock.
 
       this.showViewportTitle(
         site.name,

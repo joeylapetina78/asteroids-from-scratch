@@ -209,6 +209,57 @@
               </div>
             </div>
 
+            <div class="component-panel finley-panel is-component-locked" data-panel-id="finley" aria-label="Finley supply window" aria-hidden="true">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Supply Window</strong>
+                  <span>Finley — Yard Exchange</span>
+                </div>
+                <button class="component-close-button" type="button" data-close-panel="finley" aria-label="Close supply window">x</button>
+              </div>
+              <div class="supply-account-row">
+                <span>Account</span>
+                <strong id="finley-credits">0 cr</strong>
+              </div>
+              <div class="supply-section">
+                <div class="supply-section-header">
+                  <span>Cargo Hold</span>
+                  <strong id="finley-cargo-value">0 cr</strong>
+                </div>
+                <button id="finley-sell-toggle" class="supply-window-button" type="button" disabled>Open Window</button>
+              </div>
+              <div class="supply-section">
+                <div class="supply-buy-row">
+                  <div class="supply-status-item">
+                    <span>Hull</span>
+                    <strong id="finley-hull">100%</strong>
+                  </div>
+                  <button id="finley-repair" class="supply-buy-button" type="button" disabled>Repair <span id="finley-repair-cost">0 cr</span></button>
+                </div>
+                <div class="supply-buy-row">
+                  <div class="supply-status-item">
+                    <span>Fuel</span>
+                    <strong id="finley-fuel">200</strong>
+                  </div>
+                  <button id="finley-fuel-btn" class="supply-buy-button" type="button" disabled>Fill <span id="finley-fuel-cost">0 cr</span></button>
+                </div>
+                <div class="supply-buy-row">
+                  <div class="supply-status-item">
+                    <span>Charges</span>
+                    <strong id="finley-charges">100</strong>
+                  </div>
+                  <button id="finley-charges-btn" class="supply-buy-button" type="button" disabled>Restock <span id="finley-charges-cost">0 cr</span></button>
+                </div>
+                <div class="supply-buy-row">
+                  <div class="supply-status-item">
+                    <span>Scan</span>
+                    <strong id="finley-scan">0%</strong>
+                  </div>
+                  <button id="finley-scan-btn" class="supply-buy-button" type="button" disabled>Refill <span id="finley-scan-cost">0 cr</span></button>
+                </div>
+              </div>
+            </div>
+
             <div class="component-panel merchant-panel" data-panel-id="merchant" aria-label="Ship merchant component">
               <div class="component-panel-title">
                 <div>
@@ -293,6 +344,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=rook-one-contract-v1"></script>
+    <script type="module" src="./src/main.js?v=finley-panel-v1"></script>
   </body>
 </html>
