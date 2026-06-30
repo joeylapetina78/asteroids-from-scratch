@@ -1,4 +1,4 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=ship-registry-v1";
+import { createEventLedger } from "../systems/eventLedger.js?v=emergency-tow-v2";
 
 // Starting game/component state. This is the current lightweight substitute for
 // future accounts, saves, installed modules, and player profiles.

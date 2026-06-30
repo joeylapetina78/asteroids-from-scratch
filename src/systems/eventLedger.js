@@ -173,6 +173,10 @@ export function createEventLedger(options = {}) {
     } else if (event.type === "ship.stranded") {
       incrementStat("ship.stranded.total");
       incrementStat(`ship.stranded.nearest.${event.payload.nearestSiteId ?? "unknown"}`);
+    } else if (event.type === "ship.towed") {
+      incrementStat("ship.towed.total");
+      incrementStat("credits.spent.tows", event.payload.cost ?? 0);
+      incrementStat(`ship.towed.${event.payload.siteId ?? "unknown"}`);
     } else if (event.type === "site.nearby") {
       incrementStat("site.nearby.total");
       incrementStat(`site.nearby.${event.payload.siteId ?? "unknown"}`);
@@ -409,6 +413,10 @@ function getDefaultMessage(type, payload) {
 
   if (type === "ship.stranded") {
     return `Stranded near ${payload.nearestSiteName ?? payload.nearestSiteId ?? "unknown hub"}`;
+  }
+
+  if (type === "ship.towed") {
+    return `Emergency tow to ${payload.siteName ?? payload.siteId ?? "nearest hub"} for ${payload.cost ?? 0} credits`;
   }
 
   if (type === "site.nearby") {

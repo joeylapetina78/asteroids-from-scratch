@@ -12,7 +12,7 @@ import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=mission-targets";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=hub-contract-windows-v1";
-import { createGameState } from "./state/gameState.js?v=ship-registry-v1";
+import { createGameState } from "./state/gameState.js?v=emergency-tow-v2";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -825,12 +825,14 @@ export class Game {
 
     this.state.components.account.credits -= towCost;
     this.state.components.engine.fuel = 25;
+    this.state.components.hull.integrity = Math.max(this.state.components.hull.integrity, 25);
+    this.shipDestroyed = false;
     this.hasRecordedStrandedEvent = false;
     this.hasRecordedLowFuelEvent = false;
     this.placeShipNearSite(siteId, { x: 240, y: -110 });
     this.state.ledger.recordEvent(
       "ship.towed",
-      { siteId, siteName, cost: towCost },
+      { siteId, siteName, cost: towCost, fuelAfter: this.state.components.engine.fuel, hullAfter: this.state.components.hull.integrity },
       { visible: true },
     );
     this.onHudChange(this.state);
