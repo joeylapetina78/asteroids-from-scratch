@@ -426,11 +426,31 @@ function revealInstalledComponents() {
     return;
   }
 
+  if (shouldRestoreViewport(savedProfile)) {
+    setComponentAvailable("viewport", true);
+  }
+
   Object.entries(state.components).forEach(([componentId, componentState]) => {
     if (componentState?.installed) {
       setComponentAvailable(componentId, true);
     }
   });
+}
+
+function shouldRestoreViewport(save) {
+  const journey = save?.journey;
+  const missionId = journey?.mission?.id;
+  const currentStepId = journey?.currentStepId;
+
+  if (!journey?.mission || journey.mission.status === "offered") {
+    return false;
+  }
+
+  if (missionId !== "chapter-1-interview") {
+    return true;
+  }
+
+  return Boolean(currentStepId && !["show-hull", "move-panels"].includes(currentStepId));
 }
 
 function applyDevStart(devStartId) {
