@@ -55,6 +55,14 @@ export const npcDefinitions = {
     homeHubIds: ["scrap-porch"],
     organizations: ["Scrap Porch"],
   },
+  sal: {
+    id: "sal",
+    name: "Sal",
+    role: "supply counter operator",
+    voiceFrequency: 490,
+    homeHubIds: ["scrap-porch"],
+    organizations: ["Scrap Porch Supply"],
+  },
 };
 
 const npcsByDisplayName = new Map(

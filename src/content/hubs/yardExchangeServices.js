@@ -1,4 +1,4 @@
-import { getNpcName } from "../npcs.js?v=npc-registry-v1";
+import { getNpcName } from "../npcs.js?v=finley-panel-v1";
 
 export const hubServiceDefinitions = {
   "yard-exchange": [
@@ -16,6 +16,11 @@ export const hubServiceDefinitions = {
         "rook-blue-resource-run-5",
         "rook-blue-resource-run-10",
       ],
+      contractPrerequisites: {
+        "rook-red-resource-run-10": ["rook-red-resource-run-5"],
+        "rook-blue-resource-run-5": ["rook-red-resource-run-10"],
+        "rook-blue-resource-run-10": ["rook-blue-resource-run-5"],
+      },
       defaultUnlocked: false,
       greeting: "Got work if you want it. Check what's in the contract tray and let me know.",
       singleActiveContract: true,
@@ -65,14 +70,19 @@ export const hubServiceDefinitions = {
   "scrap-porch": [
     {
       id: "scrap-porch-supply",
-      npcId: "porch-dispatch",
-      npcName: getNpcName("porch-dispatch"),
-      organization: "Scrap Porch",
+      npcId: "sal",
+      npcName: getNpcName("sal"),
+      organization: "Scrap Porch Supply",
       serviceType: "supply",
-      label: "Dispatch Supply",
+      label: "Supply",
       description: "Basic repair and refuel service.",
       defaultUnlocked: true,
-      greeting: "Scrap Porch Dispatch here. Repairs and refuel are available at the window.",
+      greeting: "Sal here. What do you need?",
+      supplyPrices: {
+        fuelPerUnit: 3,
+        chargePerUnit: 4,
+        scanergyPerUnit: 2,
+      },
     },
   ],
 };

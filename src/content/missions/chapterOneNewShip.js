@@ -161,6 +161,7 @@ export const chapterOneNewShipMission = {
           actions: [
             { type: "hideComponent", componentId: "merchant" },
             { type: "unlockHubService", siteId: "yard-exchange", serviceId: "rook-industries" },
+            { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-supply" },
           ],
         },
       ],

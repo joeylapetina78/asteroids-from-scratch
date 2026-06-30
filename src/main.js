@@ -48,6 +48,8 @@ const DEFAULT_PANEL_LAYOUT = {
   cargo: { x: 0, y: 0, z: 1 },
 };
 const finleyPanel = document.querySelector("[data-panel-id='finley']");
+const supplyPanelNpc = document.querySelector("#supply-panel-npc");
+const supplyPanelOrg = document.querySelector("#supply-panel-org");
 const finleyCredits = document.querySelector("#finley-credits");
 const finleyCargoValue = document.querySelector("#finley-cargo-value");
 const finleySellToggle = document.querySelector("#finley-sell-toggle");
@@ -756,9 +758,13 @@ function getNextHubServiceContractId(service) {
     }
   }
 
+  const prereqs = service.contractPrerequisites ?? {};
   const eligibleContractIds = contractIds.filter((contractId) => {
     const existingContract = state.contracts.records[contractId];
-    return !existingContract || (existingContract.repeatable && existingContract.status === "paid");
+    if (existingContract && !(existingContract.repeatable && existingContract.status === "paid")) {
+      return false;
+    }
+    return (prereqs[contractId] ?? []).every((reqId) => state.contracts.records[reqId]?.status === "paid");
   });
 
   if (eligibleContractIds.length === 0) {
@@ -1246,8 +1252,11 @@ function renderFinleyPanel(siteState = currentSiteState) {
   }
 
   const site = siteState?.dockedSite;
-  const service = site ? getHubService(site.id, "yard-supply") : null;
+  const service = site && activeHubServiceId ? getHubService(site.id, activeHubServiceId) : null;
   const prices = service?.supplyPrices ?? {};
+
+  if (supplyPanelNpc) supplyPanelNpc.textContent = service?.npcName ?? "Supply";
+  if (supplyPanelOrg) supplyPanelOrg.textContent = service?.organization ?? "Supply Window";
   const engine = state.components.engine;
   const miner = state.components.miner;
   const scanner = state.components.scanner;
@@ -1291,7 +1300,7 @@ function renderFinleyPanel(siteState = currentSiteState) {
 
 function buyFuelFromFinley() {
   const site = currentSiteState?.dockedSite;
-  const service = site ? getHubService(site.id, "yard-supply") : null;
+  const service = site ? getHubService(site.id, activeHubServiceId) : null;
   const prices = service?.supplyPrices ?? {};
   const engine = state.components.engine;
   const fuelNeeded = Math.max(0, engine.maxFuel - engine.fuel);
@@ -1310,7 +1319,7 @@ function buyFuelFromFinley() {
 
 function buyChargesFromFinley() {
   const site = currentSiteState?.dockedSite;
-  const service = site ? getHubService(site.id, "yard-supply") : null;
+  const service = site ? getHubService(site.id, activeHubServiceId) : null;
   const prices = service?.supplyPrices ?? {};
   const miner = state.components.miner;
   const chargesNeeded = Math.max(0, miner.maxAmmo - miner.ammo);
@@ -1329,7 +1338,7 @@ function buyChargesFromFinley() {
 
 function buyScanFromFinley() {
   const site = currentSiteState?.dockedSite;
-  const service = site ? getHubService(site.id, "yard-supply") : null;
+  const service = site ? getHubService(site.id, activeHubServiceId) : null;
   const prices = service?.supplyPrices ?? {};
   const scanner = state.components.scanner;
   const scanNeeded = Math.max(0, scanner.maxScanergy - scanner.scanergy);
