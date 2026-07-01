@@ -1425,6 +1425,15 @@ body {
   color: #c8d3e8;
 }
 
+.license-form-notice {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #596273;
+  line-height: 1.5;
+  border-left: 2px solid #1e2330;
+  padding-left: 10px;
+}
+
 .license-form-error {
   margin: 0;
   font-size: 0.82rem;

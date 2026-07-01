@@ -2043,7 +2043,7 @@ function initLicenseApplication() {
     licenseFormError.hidden = true;
     const year = new Date().getFullYear();
     const suffix = String(Math.floor(Math.random() * 90000) + 10000);
-    const licenseId = `RI-PROV-${year}-${suffix}`;
+    const licenseId = `RTC-P${year}-${suffix}`;
 
     state.pilot.firstName = firstName;
     state.pilot.lastName = lastName;
