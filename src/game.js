@@ -4,7 +4,7 @@ import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/Re
 import { Ship } from "./entities/Ship.js?v=starter-skiff-v1";
 import { createAsteroidField } from "./systems/asteroidField.js?v=zone-aware";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=docking-services";
+import { createInput } from "./systems/input.js?v=license-form-v1";
 import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=red-work-tuning-v1";
 import { createNpcRouteShips } from "./systems/npcRoutes.js?v=soft-cargo-train";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=draw-radius";
@@ -559,6 +559,11 @@ export class Game {
   }
 
   setDockedSite(site, options = {}) {
+    if (site && this.activeTow?.site?.id === site.id) {
+      this.completeEmergencyTow();
+      return;
+    }
+
     const previousDockedSite = this.dockedSite;
     const previousDockedSiteId = previousDockedSite?.id ?? null;
     this.dockedSite = site;
@@ -845,8 +850,8 @@ export class Game {
   }
 
   emergencyTow(towCost = null) {
-    if (this.activeTow) {
-      return;
+    if (this.activeTow || this.dockedSite) {
+      return false;
     }
 
     const nearest = getNearestWorldSite(this.ship.position, this.worldSites);
@@ -888,6 +893,7 @@ export class Game {
       { visible: true },
     );
     this.onHudChange(this.state);
+    return true;
   }
 
   isTowActive() {

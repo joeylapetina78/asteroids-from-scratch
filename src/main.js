@@ -1,10 +1,10 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=tow-stable-v1";
+import { Game } from "./game.js?v=tow-message-guard-v1";
 import { createContractManager } from "./systems/contractManager.js?v=mako-hunter-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=mako-hunter-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=mako-hunter-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=tow-message-guard-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
@@ -61,6 +61,8 @@ const licenseFormError = document.querySelector("#license-form-error");
 const licensePilotName = document.querySelector("#license-pilot-name");
 const licenseIdDisplay = document.querySelector("#license-id");
 const licenseCreditsDisplay = document.querySelector("#license-credits");
+const paperworkDrawer = document.querySelector("#paperwork-drawer");
+const drawerToggle = document.querySelector("#drawer-toggle");
 const finleyPanel = document.querySelector("[data-panel-id='finley']");
 const supplyPanelNpc = document.querySelector("#supply-panel-npc");
 const supplyPanelOrg = document.querySelector("#supply-panel-org");
@@ -199,6 +201,7 @@ const journeyDirector = createJourneyDirector({
 });
 let bringPanelToFront = () => {};
 let positionPanelById = () => {};
+let contractPulledFromDrawer = false;
 let renderedLedgerVersion = -1;
 let lastAudioEventId = 0;
 let journeyTypeTimers = [];
@@ -350,6 +353,11 @@ componentCloseButtons.forEach((button) => {
   });
 });
 
+drawerToggle?.addEventListener("click", () => {
+  const isOpen = paperworkDrawer.classList.toggle("is-open");
+  drawerToggle.setAttribute("aria-expanded", String(isOpen));
+});
+
 renderProcessorOutputs();
 game.placeShipNearSite("scrap-porch");
 restoreSavedWorld({ save: savedProfile, game, cargoHold });
@@ -379,6 +387,8 @@ function updateHudDisplay() {
   licenseCreditsDisplay.textContent = `${Math.floor(state.components.account.credits)} cr`;
   const currentFuel = state.components.engine.fuel;
   const isStranded = state.components.engine.installed && !currentSiteState?.dockedSite &&
+    !game.isTowActive() &&
+    !state.ledger.getSignal("player.controlLocked") &&
     (currentFuel <= 0 || state.components.hull.integrity <= 0);
 
   fuelCount.textContent = String(Math.floor(currentFuel));
@@ -666,6 +676,16 @@ function pullContractForService(service) {
   }
 }
 
+function returnContractToDrawer() {
+  const shelf = document.querySelector("#paperwork-drawer .drawer-shelf");
+  const contractPanel = document.querySelector("[data-panel-id='contract']");
+  if (shelf && contractPanel && !contractPanel.closest("#paperwork-drawer")) {
+    contractPanel.style.transform = "";
+    shelf.appendChild(contractPanel);
+  }
+  contractPulledFromDrawer = false;
+}
+
 function pullContractToCenter(contractId) {
   contractManager.focusContract(contractId);
   renderContract();
@@ -675,6 +695,12 @@ function pullContractToCenter(contractId) {
 
   if (!hud || !contractPanel) {
     return;
+  }
+
+  if (contractPanel.closest("#paperwork-drawer")) {
+    contractPulledFromDrawer = true;
+    contractPanel.style.transform = "translate(0px, 0px)";
+    hud.appendChild(contractPanel);
   }
 
   const hudRect = hud.getBoundingClientRect();
@@ -815,7 +841,11 @@ function closeDriveThroughPanel(panelId) {
   }
 
   if (panelId === "contract") {
-    setComponentAvailable("contract", false);
+    if (contractPulledFromDrawer) {
+      returnContractToDrawer();
+    } else {
+      setComponentAvailable("contract", false);
+    }
 
     if (activeHubServiceId && ["contracts", "finance"].includes(getHubService(currentSiteState?.dockedSite?.id, activeHubServiceId)?.serviceType)) {
       activeHubServiceId = null;
@@ -1248,6 +1278,15 @@ function setComponentAvailable(componentId, isAvailable = true) {
   const panel = document.querySelector(`[data-panel-id="${componentId}"]`);
 
   if (panel) {
+    if (panel.closest("#paperwork-drawer")) {
+      if (isAvailable) {
+        const wasLocked = panel.classList.contains("is-component-locked");
+        panel.classList.remove("is-component-locked");
+        if (wasLocked) playPanelReveal(panel);
+      }
+      return;
+    }
+
     const wasLocked = panel.classList.contains("is-component-locked");
     panel.classList.toggle("is-component-locked", !isAvailable);
 
@@ -1698,11 +1737,16 @@ function makePanelsDraggable() {
 
     const defaultPanel = DEFAULT_PANEL_LAYOUT[panelId] ?? { x: 0, y: 0, z: 1 };
     const savedPanel = panelId ? savedLayout.panels?.[panelId] : null;
-    const offset = { x: savedPanel?.x ?? defaultPanel.x, y: savedPanel?.y ?? defaultPanel.y };
+    const isInDrawer = Boolean(panel.closest("#paperwork-drawer"));
+    const offset = isInDrawer && !savedPanel?.inDrawer
+      ? { x: 0, y: 0 }
+      : { x: savedPanel?.x ?? defaultPanel.x, y: savedPanel?.y ?? defaultPanel.y };
+
+    offsetsByPanelId.set(panelId, offset);
+
     let drag = null;
 
     panel.style.zIndex = String(getInitialPanelZ(panelId, savedPanel, defaultPanel));
-    offsetsByPanelId.set(panelId, offset);
     applyPanelOffset(panel, offset, { clamp: isPanelMeasurable(panel) });
     savePanelLayout(panel, offset);
 
@@ -1828,7 +1872,7 @@ function makePanelsDraggable() {
   }
 
   function keepPanelClearOfJourney(panel, offset) {
-    if (panel.dataset.panelId === "journey" || panel.dataset.panelId === "viewport") {
+    if (panel.dataset.panelId === "journey" || panel.dataset.panelId === "viewport" || panel.closest("#paperwork-drawer")) {
       return;
     }
 
@@ -2014,6 +2058,7 @@ function savePanelLayout(panel, offset = null) {
       x: offset?.x ?? previousPanel.x ?? 0,
       y: offset?.y ?? previousPanel.y ?? 0,
       z: zIndex,
+      inDrawer: Boolean(panel.closest("#paperwork-drawer")),
     },
   };
 

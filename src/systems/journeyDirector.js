@@ -1,6 +1,6 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=consideration-cycles-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=consideration-cycles-v1";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=mako-hunter-v1";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=tow-message-guard-v1";
 import { createMissionRunner } from "./missionRunner.js?v=tow-stable-v1";
 
 const MISSION_DEFINITIONS = new Map(
@@ -54,6 +54,7 @@ export function createJourneyDirector({
       startMission(acknowledgement.missionId);
     } else if (acknowledgement?.action === "emergencyTow") {
       emergencyTow();
+      clearMessage();
     }
 
     onChange(journey);

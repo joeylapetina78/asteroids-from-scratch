@@ -67,30 +67,6 @@ export const chapterOneRedWorkMission = {
       ],
       considerations: [
         {
-          id: "near-rock-warning",
-          eventType: "ship.nearObject",
-          payloadEquals: { targetType: "asteroid" },
-          repeatable: true,
-          cooldownMs: 14000,
-          responses: [
-            {
-              speaker: "Rook",
-              text:
-                "Easy on the hull. You mine with charges, not by wearing the rock as a hat. If you're unsure of the steps, check Need help below.",
-            },
-            {
-              speaker: "Rook",
-              text:
-                "Too close to the rocks. Arm the miner, use Space to cut them, then fly over the loose squares. Hull-first mining is just crashing.",
-            },
-            {
-              speaker: "Rook",
-              text:
-                "If you're trying to mine, shoot the rock. If you're trying to make Finley rich on repairs, keep doing that.",
-            },
-          ],
-        },
-        {
           id: "first-red-mined",
           eventType: "resource.mined",
           payloadEquals: { resourceType: "fuel" },
