@@ -331,6 +331,21 @@
               </div>
             </div>
 
+            <div class="component-panel component-shop-panel is-component-locked" data-panel-id="component-shop" aria-label="Component shop window" aria-hidden="true">
+              <div class="component-panel-title">
+                <div>
+                  <strong id="component-shop-npc">Modworks</strong>
+                  <span id="component-shop-org">Component sales</span>
+                </div>
+                <button class="component-close-button" type="button" data-close-panel="component-shop" aria-label="Close component shop window">x</button>
+              </div>
+              <div class="merchant-intro">
+                <span>Account: <strong id="component-shop-credits">0 cr</strong></span>
+                <span>First refits are ugly, useful, and usually bolted on twice.</span>
+              </div>
+              <div id="component-offers" class="ship-offers" aria-live="polite"></div>
+            </div>
+
             <div class="component-panel merchant-panel" data-panel-id="merchant" aria-label="Ship merchant component">
               <div class="component-panel-title">
                 <div>
@@ -493,6 +508,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js?v=attention-v1"></script>
+    <script type="module" src="./src/main.js?v=component-shop-v1"></script>
   </body>
 </html>

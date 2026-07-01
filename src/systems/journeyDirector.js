@@ -1,6 +1,6 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=legal-records-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=consideration-cycles-v1";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=tow-message-guard-v1";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=component-shop-v1";
 import { createMissionRunner } from "./missionRunner.js?v=attention-v1";
 
 const MISSION_DEFINITIONS = new Map(
@@ -185,7 +185,7 @@ export function createJourneyDirector({
   }
 
   function showOnlyInitialComponents() {
-    ["viewport", "engine", "scanner", "miner", "collector", "hull", "docking", "hub", "world", "processor", "cargo", "contract", "merchant"].forEach((componentId) => {
+    ["viewport", "engine", "scanner", "miner", "collector", "hull", "docking", "hub", "world", "processor", "cargo", "contract", "merchant", "component-shop"].forEach((componentId) => {
       showComponent(componentId, false);
     });
   }

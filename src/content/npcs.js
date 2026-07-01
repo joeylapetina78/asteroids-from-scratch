@@ -39,6 +39,14 @@ export const npcDefinitions = {
     homeHubIds: ["yard-exchange"],
     organizations: ["Yard Exchange Supply"],
   },
+  nara: {
+    id: "nara",
+    name: "Nara Coil",
+    role: "ship component modification engineer",
+    voiceFrequency: 585,
+    homeHubIds: ["yard-exchange"],
+    organizations: ["Yard Exchange Modworks"],
+  },
   "yard-dispatch": {
     id: "yard-dispatch",
     name: "Yard Exchange Dispatch",

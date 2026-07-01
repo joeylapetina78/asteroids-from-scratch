@@ -3,7 +3,7 @@ import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=tow-message-guard-v1";
 import { createContractManager } from "./systems/contractManager.js?v=mako-hunter-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=mako-hunter-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=component-shop-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=attention-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=attention-v1";
@@ -45,6 +45,7 @@ const DEFAULT_PANEL_LAYOUT = {
   tow: { x: -300, y: 520, z: 125 },
   contract: { x: -300, y: 340, z: 95 },
   finley: { x: 70, y: 120, z: 115 },
+  "component-shop": { x: 80, y: 140, z: 118 },
   roadmap: { x: 120, y: 100, z: 130 },
   merchant: { x: 70, y: 120, z: 120 },
   miner: { x: 980, y: 500, z: 60 },
@@ -83,6 +84,10 @@ const finleyChargesCost = document.querySelector("#finley-charges-cost");
 const finleyScan = document.querySelector("#finley-scan");
 const finleyScanButton = document.querySelector("#finley-scan-btn");
 const finleyScanCost = document.querySelector("#finley-scan-cost");
+const componentShopNpc = document.querySelector("#component-shop-npc");
+const componentShopOrg = document.querySelector("#component-shop-org");
+const componentShopCredits = document.querySelector("#component-shop-credits");
+const componentOffersPanel = document.querySelector("#component-offers");
 const ammoCount = document.querySelector("#ammo-count");
 const cargoCanvas = document.querySelector("#cargo");
 const cargoPanel = document.querySelector("[data-panel-id='cargo']");
@@ -398,6 +403,10 @@ window.addEventListener("beforeunload", () => saveNow());
 function updateHudDisplay() {
   renderProcessorOutputs();
   renderShipOffers();
+  const activeService = currentSiteState?.dockedSite && activeHubServiceId ? getHubService(currentSiteState.dockedSite.id, activeHubServiceId) : null;
+  if (activeService?.serviceType === "components") {
+    renderComponentShop(activeService);
+  }
   updateShipPowerDisplay();
   updateCargoTargetDisplay();
 
@@ -848,6 +857,13 @@ function openHubService(serviceId) {
     return;
   }
 
+  if (service.serviceType === "components") {
+    setComponentAvailable("component-shop", true);
+    renderComponentShop(service);
+    focusPanelById("component-shop");
+    return;
+  }
+
   if (service.serviceType === "roadmap") {
     setComponentAvailable("roadmap", true);
     focusPanelById("roadmap");
@@ -905,6 +921,17 @@ function closeDriveThroughPanel(panelId) {
 
     return;
   }
+
+  if (panelId === "component-shop") {
+    setComponentAvailable("component-shop", false);
+
+    if (activeHubServiceId && getHubService(currentSiteState?.dockedSite?.id, activeHubServiceId)?.serviceType === "components") {
+      activeHubServiceId = null;
+      renderHubServiceMenu(currentSiteState?.dockedSite);
+    }
+
+    return;
+  }
 }
 
 function closeDriveThroughWindows({ keepServiceType = null } = {}) {
@@ -924,6 +951,10 @@ function closeDriveThroughWindows({ keepServiceType = null } = {}) {
 
   if (keepServiceType !== "roadmap") {
     setComponentAvailable("roadmap", false);
+  }
+
+  if (keepServiceType !== "components") {
+    setComponentAvailable("component-shop", false);
   }
 }
 
@@ -1032,6 +1063,10 @@ function getHubServicePrompt(service) {
 
   if (service.serviceType === "supply") {
     return "Finley handles repair and cargo sales here.";
+  }
+
+  if (service.serviceType === "components") {
+    return "component refits and bolt-on ship modifications are sold here.";
   }
 
   if (service.serviceType === "roadmap") {
@@ -2251,6 +2286,91 @@ function renderShipOffers() {
         return card;
       }),
   );
+}
+
+function renderComponentShop(service = null) {
+  if (!componentOffersPanel) {
+    return;
+  }
+
+  const currentCredits = Math.floor(state.components.account.credits);
+  const offers = service?.componentOffers ?? [];
+  const nextKey = `${service?.id ?? "none"}:${currentCredits}:${offers
+    .map((offer) => `${offer.id}:${state.components[offer.componentId]?.installed ? "installed" : "open"}`)
+    .join("|")}`;
+
+  if (componentOffersPanel.dataset.renderedKey === nextKey) {
+    return;
+  }
+
+  componentOffersPanel.dataset.renderedKey = nextKey;
+  componentShopNpc.textContent = service?.npcName ?? "Modworks";
+  componentShopOrg.textContent = service?.organization ?? "Component sales";
+  componentShopCredits.textContent = `${currentCredits.toLocaleString()} cr`;
+
+  componentOffersPanel.replaceChildren(
+    ...offers.map((offer) => {
+      const card = document.createElement("article");
+      const title = document.createElement("h3");
+      const price = document.createElement("strong");
+      const description = document.createElement("p");
+      const tags = document.createElement("div");
+      const button = document.createElement("button");
+      const isInstalled = Boolean(state.components[offer.componentId]?.installed);
+      const canAfford = currentCredits >= offer.price;
+
+      card.className = "ship-offer is-special-offer";
+      title.textContent = offer.title;
+      price.className = "ship-offer-price";
+      price.textContent = `${offer.price.toLocaleString()} cr`;
+      description.textContent = offer.description;
+      tags.className = "ship-offer-tags";
+      (offer.tags ?? []).forEach((tag) => {
+        const chip = document.createElement("span");
+        chip.textContent = tag;
+        tags.append(chip);
+      });
+      button.className = "ship-offer-button";
+      button.type = "button";
+      button.disabled = isInstalled || !canAfford;
+      button.textContent = isInstalled ? "Installed" : canAfford ? "Buy Component" : "Need Credits";
+      button.addEventListener("click", () => buyComponentOffer(offer, service));
+      card.append(title, price, description, tags, button);
+      return card;
+    }),
+  );
+}
+
+function buyComponentOffer(offer, service = null) {
+  const component = state.components[offer.componentId];
+
+  if (!component || component.installed || state.components.account.credits < offer.price) {
+    renderComponentShop(service);
+    return;
+  }
+
+  state.components.account.credits -= offer.price;
+  component.installed = true;
+  setComponentAvailable(offer.componentId, true);
+  state.ledger.recordEvent(
+    "component.purchased",
+    {
+      componentId: offer.componentId,
+      componentName: offer.componentName,
+      offerId: offer.id,
+      price: offer.price,
+      sellerId: service?.npcId ?? null,
+      sellerName: service?.npcName ?? "Component Seller",
+      siteId: currentSiteState?.dockedSite?.id ?? null,
+      siteName: currentSiteState?.dockedSite?.name ?? null,
+      accountCredits: state.components.account.credits,
+    },
+    { visible: true },
+  );
+
+  journeyDirector.sayAsNpc(service?.npcName ?? "Modworks", `${offer.componentName} is bolted in. It will not make you graceful, but it will make you harder to ignore.`);
+  renderComponentShop(service);
+  updateHudDisplay();
 }
 
 function handleShipOfferClick(offer) {

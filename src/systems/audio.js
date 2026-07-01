@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=murmur-roadmap-v1";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=component-shop-v1";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;

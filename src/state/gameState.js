@@ -139,6 +139,9 @@ export function createGameState() {
       merchant: {
         installed: false,
       },
+      "component-shop": {
+        installed: false,
+      },
     },
   };
 }

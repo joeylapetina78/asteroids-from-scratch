@@ -302,6 +302,7 @@ body {
 .contract-panel,
 .finley-panel,
 .merchant-panel,
+.component-shop-panel,
 .roadmap-panel,
 .world-panel,
 .journey-panel {
@@ -378,7 +379,8 @@ body {
   width: 240px;
 }
 
-.merchant-panel {
+.merchant-panel,
+.component-shop-panel {
   width: min(820px, calc(100vw - 72px));
 }
 

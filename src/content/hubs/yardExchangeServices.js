@@ -1,4 +1,4 @@
-import { getNpcName } from "../npcs.js?v=murmur-roadmap-v1";
+import { getNpcName } from "../npcs.js?v=component-shop-v1";
 
 export const hubServiceDefinitions = {
   "yard-exchange": [
@@ -66,6 +66,30 @@ export const hubServiceDefinitions = {
         chargePerUnit: 3,
         scanergyPerUnit: 1,
       },
+    },
+    {
+      id: "yard-modworks",
+      npcId: "nara",
+      npcName: getNpcName("nara"),
+      organization: "Yard Exchange Modworks",
+      serviceType: "components",
+      label: "Modworks",
+      description: "Component sales and rough ship modifications.",
+      defaultUnlocked: false,
+      greeting:
+        "Nara Coil at Modworks. Rook said you might be ready for something that pulls its weight.",
+      componentOffers: [
+        {
+          id: "tractor-field-mk1",
+          componentId: "collector",
+          componentName: "Tractor Field",
+          price: 400,
+          title: "Tractor Field Mk I",
+          description:
+            "A hungry little sweep field. Hold the panel button to pull loose resource squares into the ship.",
+          tags: ["Resource recovery", "Uses scanergy", "Hold to pull"],
+        },
+      ],
     },
     {
       id: "yard-murmur-roadmap",

@@ -27,7 +27,7 @@ export const chapterOneRedWorkMission = {
     helpText:
       "The first red run is complete. Rook can offer more repeatable resource work from here.",
     line:
-      "That's the stuff. Red comes in, credits go out. Bring me another batch whenever you're ready for more work.",
+      "That's the stuff. Red comes in, credits go out. I also told Nara Coil at Modworks you might be worth selling to. She's got a tractor field rig if you want to make pickup work less annoying.",
   },
   startStepId: "offer-red-contract",
   steps: [
@@ -255,6 +255,7 @@ export const chapterOneRedWorkMission = {
           eventType: "contract.paid",
           requiresCondition: ({ event }) => event.payload.contractGroup === "rook-resource-run",
           actions: [
+            { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-modworks" },
             { type: "completeMission" },
           ],
         },

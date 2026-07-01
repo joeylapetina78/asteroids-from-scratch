@@ -7,7 +7,7 @@ export const WORLD_SITES = [
     radius: 58,
     interactionRadius: 230,
     capabilities: ["repair"],
-    services: ["rook-industries", "yard-shipyard", "yard-finance", "yard-supply", "yard-murmur-roadmap"],
+    services: ["rook-industries", "yard-shipyard", "yard-finance", "yard-supply", "yard-modworks", "yard-murmur-roadmap"],
   },
   {
     id: "scrap-porch",
