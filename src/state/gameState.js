@@ -39,12 +39,21 @@ export function createGameState() {
       activeBalance: 0,
       highestDebt: 0,
     },
+    legal: {
+      pilotLicenses: {},
+      shipTitles: {},
+      shipRegistrations: {},
+      liens: {},
+      paperwork: {},
+    },
     ship: {
       frameId: "yard-skiff",
       name: "Yard Skiff",
       shape: "yard-skiff",
       legal: {
         titleHolder: "Rook Industries",
+        titleStatus: "company-owned",
+        lienHolder: null,
         flightLicenseId: "TEMP-ROOKIE-FLIGHT",
         registrations: {
           flight: {

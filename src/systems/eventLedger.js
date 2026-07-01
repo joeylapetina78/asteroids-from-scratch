@@ -270,6 +270,8 @@ export function createEventLedger(options = {}) {
       incrementStat("ship.purchased.total");
       incrementStat(`ship.purchased.${event.payload.offerId ?? "unknown"}`);
       incrementStat("credits.spent.ships", event.payload.price ?? 0);
+    } else if (event.type === "ship.titleIssued" || event.type === "ship.registered" || event.type === "title.lienAttached") {
+      incrementStat(`${event.type}.total`);
     } else if (event.type === "mission.accepted" || event.type === "mission.completed") {
       incrementStat(`${event.type}.total`);
       incrementStat(`${event.type}.${event.payload.missionId ?? "unknown"}`);
@@ -337,6 +339,15 @@ export function createEventLedger(options = {}) {
     } else if (event.type === "ship.purchased") {
       setSignal("player.hasPurchasedShip");
       setSignal(`player.hasPurchasedShip.${event.payload.offerId ?? "unknown"}`);
+    } else if (event.type === "ship.titleIssued") {
+      setSignal("player.hasShipTitle");
+      setSignal(`player.hasShipTitle.${event.payload.shipVin ?? "unknown"}`);
+    } else if (event.type === "ship.registered") {
+      setSignal("player.hasShipRegistration");
+      setSignal(`player.hasShipRegistration.${event.payload.shipVin ?? "unknown"}`);
+    } else if (event.type === "title.lienAttached") {
+      setSignal("player.hasLien");
+      setSignal(`player.hasLien.${event.payload.shipVin ?? "unknown"}`);
     } else if (event.type === "tow.dispatched" || event.type === "tow.attached") {
       setSignal("player.controlLocked");
     } else if (event.type === "ship.towed") {

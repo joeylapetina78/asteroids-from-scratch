@@ -238,6 +238,8 @@ No gameplay changes. Keep testers moving.
 
 ### Stage 2: Add Legal Record Shape To Game State
 
+Status: started.
+
 Add structured state, but keep existing gameplay behavior.
 
 Likely files:
@@ -260,6 +262,8 @@ legal: {
 Risk: low if only initialized and saved.
 
 ### Stage 3: Make Ship Purchase Emit Registration/Title Events
+
+Status: started for the Rook special starter ship.
 
 Keep Barvis flow intact, but make `purchaseShipOffer` create real legal records.
 

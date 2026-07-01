@@ -27,6 +27,7 @@ export function loadSavedProfile(state) {
     mergePlainObject(state.debt, save.debt);
     mergePlainObject(state.hubServices, save.hubServices);
     mergePlainObject(state.journey, save.journey);
+    mergePlainObject(state.legal, save.legal);
     mergePlainObject(state.pilot, save.pilot);
     mergePlainObject(state.ship, save.ship);
 
@@ -46,6 +47,7 @@ export function saveProfile({ state, game, cargoHold }) {
     debt: cloneJsonSafe(state.debt),
     hubServices: cloneJsonSafe(state.hubServices),
     journey: cloneJsonSafe(state.journey),
+    legal: cloneJsonSafe(state.legal),
     pilot: cloneJsonSafe(state.pilot),
     ship: cloneJsonSafe(state.ship),
     world: game?.getSaveSnapshot?.() ?? null,

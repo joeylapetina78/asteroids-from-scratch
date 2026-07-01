@@ -460,11 +460,7 @@ export const chapterOneInterviewMission = {
           type: "say",
           speaker: "Rook",
           text: "There it is. Your docking lock is on the Hull panel, right under the VIN. Get close enough, then use that to tether us in.",
-          acknowledgement: { label: "Check Docking Lock" },
         },
-      ],
-      onAcknowledge: [
-        { type: "clearMessage" },
         { type: "goToStep", stepId: "dock-yard-exchange" },
       ],
     },

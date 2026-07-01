@@ -4,11 +4,11 @@ import { Game } from "./game.js?v=tow-message-guard-v1";
 import { createContractManager } from "./systems/contractManager.js?v=mako-hunter-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=mako-hunter-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=tow-message-guard-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=legal-records-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
-import { createGameState } from "./state/gameState.js?v=tow-control-lock-v1";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=legal-records-v1";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-records-v1";
+import { createGameState } from "./state/gameState.js?v=legal-records-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.

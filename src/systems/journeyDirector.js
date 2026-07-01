@@ -1,4 +1,4 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=consideration-cycles-v1";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=legal-records-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=consideration-cycles-v1";
 import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=tow-message-guard-v1";
 import { createMissionRunner } from "./missionRunner.js?v=tow-stable-v1";
@@ -72,6 +72,7 @@ export function createJourneyDirector({
   }
 
   function update() {
+    recoverCompletedInterviewFromSignals();
     const events = state.ledger.getEventsAfterId(lastEventId, { includeHidden: true });
 
     events.forEach((event) => {
@@ -81,6 +82,24 @@ export function createJourneyDirector({
         onChange(journey);
       }
     });
+  }
+
+  function recoverCompletedInterviewFromSignals() {
+    const deliveryContract = state.contracts.records["rook-yard-exchange-delivery"];
+
+    if (
+      journey.mission?.id !== "chapter-1-interview" ||
+      journey.mission?.status !== "active" ||
+      (
+        !state.ledger.getSignal("player.hasCompletedContract.rook-yard-exchange-delivery") &&
+        deliveryContract?.status !== "paid"
+      )
+    ) {
+      return;
+    }
+
+    completeMission(chapterOneInterviewMission);
+    onChange(journey);
   }
 
   function completeMission(missionDefinition) {
