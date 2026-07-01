@@ -35,6 +35,7 @@ const DEEP_SPACE_REGION_NAME = "The Black";
 const JOURNEY_WORD_DELAY_MS = 34;
 const DEFAULT_PANEL_LAYOUT = {
   viewport: { x: 0, y: 0, z: 20 },
+  license: { x: 980, y: 20, z: 95 },
   journey: { x: 980, y: 20, z: JOURNEY_PANEL_Z_INDEX },
   engine: { x: -300, y: 20, z: 70 },
   scanner: { x: 980, y: 300, z: 90 },
@@ -52,6 +53,14 @@ const DEFAULT_PANEL_LAYOUT = {
   processor: { x: 0, y: 0, z: 1 },
   cargo: { x: 0, y: 0, z: 1 },
 };
+const licenseApplication = document.querySelector("#license-application");
+const licenseForm = document.querySelector("#license-form");
+const licenseFirstName = document.querySelector("#license-first-name");
+const licenseLastName = document.querySelector("#license-last-name");
+const licenseFormError = document.querySelector("#license-form-error");
+const licensePilotName = document.querySelector("#license-pilot-name");
+const licenseIdDisplay = document.querySelector("#license-id");
+const licenseCreditsDisplay = document.querySelector("#license-credits");
 const finleyPanel = document.querySelector("[data-panel-id='finley']");
 const supplyPanelNpc = document.querySelector("#supply-panel-npc");
 const supplyPanelOrg = document.querySelector("#supply-panel-org");
@@ -353,6 +362,7 @@ revealInstalledComponents();
 renderContract();
 updateShipPowerDisplay();
 updateHudDisplay();
+initLicenseApplication();
 
 game.start();
 processor.start();
@@ -366,6 +376,7 @@ function updateHudDisplay() {
   updateCargoTargetDisplay();
 
   creditCount.textContent = String(Math.floor(state.components.account.credits));
+  licenseCreditsDisplay.textContent = `${Math.floor(state.components.account.credits)} cr`;
   const currentFuel = state.components.engine.fuel;
   const isStranded = state.components.engine.installed && !currentSiteState?.dockedSite &&
     (currentFuel <= 0 || state.components.hull.integrity <= 0);
@@ -2007,4 +2018,60 @@ function savePanelLayout(panel, offset = null) {
   };
 
   window.localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(layout));
+}
+
+function initLicenseApplication() {
+  if (state.pilot.licenseId) {
+    applyIssuedLicense(state.pilot);
+    licenseApplication.classList.add("is-dismissed");
+    return;
+  }
+
+  licenseFirstName.focus();
+
+  licenseForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const firstName = licenseFirstName.value.trim();
+    const lastName = licenseLastName.value.trim();
+
+    if (!firstName || !lastName) {
+      licenseFormError.hidden = false;
+      (firstName ? licenseLastName : licenseFirstName).focus();
+      return;
+    }
+
+    licenseFormError.hidden = true;
+    const year = new Date().getFullYear();
+    const suffix = String(Math.floor(Math.random() * 90000) + 10000);
+    const licenseId = `RI-PROV-${year}-${suffix}`;
+
+    state.pilot.firstName = firstName;
+    state.pilot.lastName = lastName;
+    state.pilot.licenseId = licenseId;
+    state.pilot.licenseStatus = "provisional";
+    state.pilot.issuedAt = Date.now();
+    state.ship.legal.flightLicenseId = licenseId;
+
+    state.ledger.recordEvent("pilot.licensed", {
+      licenseId,
+      pilotName: `${firstName} ${lastName}`,
+      licenseStatus: "provisional",
+      authorizedZones: state.pilot.authorizedZones,
+    }, { visible: false });
+
+    applyIssuedLicense(state.pilot);
+    setComponentAvailable("license", true);
+    licenseApplication.classList.add("is-dismissed");
+    saveNow();
+  });
+}
+
+function applyIssuedLicense(pilot) {
+  const fullName = `${pilot.firstName} ${pilot.lastName}`;
+  licensePilotName.textContent = fullName;
+  licenseIdDisplay.textContent = pilot.licenseId;
+  const pilotNameEl = document.querySelector("#pilot-name");
+  if (pilotNameEl) {
+    pilotNameEl.textContent = fullName;
+  }
 }

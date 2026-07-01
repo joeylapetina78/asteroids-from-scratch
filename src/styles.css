@@ -1310,3 +1310,191 @@ body {
     justify-content: flex-start;
   }
 }
+
+/* ── License Application Form ─────────────────────────────────────────────── */
+
+.license-application {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #07080c;
+}
+
+.license-application.is-dismissed {
+  display: none;
+}
+
+.license-form-shell {
+  width: min(520px, calc(100vw - 40px));
+  border: 1px solid rgba(115, 210, 255, 0.32);
+  border-radius: 6px;
+  background: #0c0e13;
+  padding: 28px 28px 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.license-form-header {
+  display: grid;
+  gap: 4px;
+  border-bottom: 1px solid #1e2330;
+  padding-bottom: 16px;
+}
+
+.license-form-org {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: #73d2ff;
+}
+
+.license-form-title {
+  font-size: 1.1rem;
+  color: #ffffff;
+  display: block;
+}
+
+.license-form-meta {
+  font-size: 0.76rem;
+  color: #596273;
+}
+
+.license-form {
+  display: grid;
+  gap: 16px;
+}
+
+.license-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.license-form-field {
+  display: grid;
+  gap: 5px;
+}
+
+.license-form-field label {
+  font-size: 0.76rem;
+  color: #9aa6b6;
+  letter-spacing: 0.04em;
+}
+
+.license-form-field input {
+  background: #0a0c12;
+  border: 1px solid #2d3344;
+  border-radius: 4px;
+  color: #f5f7fb;
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.license-form-field input:focus {
+  border-color: rgba(115, 210, 255, 0.6);
+}
+
+.license-form-readonly {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+  padding: 12px;
+  border: 1px solid #1a1f2b;
+  border-radius: 4px;
+  background: #08090f;
+}
+
+.license-readonly-item {
+  display: grid;
+  gap: 2px;
+}
+
+.license-readonly-item span {
+  font-size: 0.7rem;
+  color: #596273;
+  letter-spacing: 0.05em;
+}
+
+.license-readonly-item strong {
+  font-size: 0.82rem;
+  color: #c8d3e8;
+}
+
+.license-form-error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #ff8a95;
+}
+
+.license-form-error[hidden] {
+  display: none;
+}
+
+.license-submit-button {
+  padding: 10px 16px;
+  background: rgba(115, 210, 255, 0.1);
+  border: 1px solid rgba(115, 210, 255, 0.45);
+  border-radius: 4px;
+  color: #9ee8ff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.license-submit-button:hover,
+.license-submit-button:focus-visible {
+  background: rgba(115, 210, 255, 0.18);
+  border-color: rgba(115, 210, 255, 0.8);
+  color: #ffffff;
+}
+
+/* ── License Panel (HUD card) ─────────────────────────────────────────────── */
+
+.license-panel {
+  width: 200px;
+  display: grid;
+  gap: 8px;
+  border-color: rgba(115, 210, 255, 0.3);
+}
+
+.license-card {
+  display: grid;
+  gap: 5px;
+}
+
+.license-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.license-card-row span {
+  font-size: 0.72rem;
+  color: #596273;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.license-card-row strong {
+  font-size: 0.82rem;
+  color: #c8d3e8;
+  text-align: right;
+}
+
+.license-card-divider {
+  height: 1px;
+  background: #1e2330;
+  margin: 3px 0;
+}
+
+#license-credits {
+  color: #ffd36b;
+}

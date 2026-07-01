@@ -607,6 +607,8 @@ export class Game {
     const hull = this.state.components.hull;
     const legal = this.state.ship.legal ?? {};
     const registrations = legal.registrations ?? {};
+    const pilot = this.state.pilot;
+    const unauthorizedZones = pilot.visitedZoneIds.filter((zoneId) => !pilot.authorizedZones.includes(zoneId));
 
     this.state.ledger.recordEvent(
       "ship.registryReviewed",
@@ -614,6 +616,8 @@ export class Game {
         siteId: site.id,
         siteName: site.name,
         shipName: this.state.ship.name,
+        pilotLicenseId: pilot.licenseId ?? null,
+        pilotName: pilot.firstName ? `${pilot.firstName} ${pilot.lastName}` : null,
         vin: hull.vinPlateAttached ? hull.vin : null,
         vinPlateAttached: hull.vinPlateAttached,
         titleHolder: legal.titleHolder ?? null,
@@ -621,9 +625,23 @@ export class Game {
         flightRegistrationStatus: registrations.flight?.status ?? "none",
         miningRegistrationStatus: registrations.mining?.status ?? "none",
         patrolRegistrationStatus: registrations.patrol?.status ?? "none",
+        unauthorizedZones,
       },
       { visible: false },
     );
+
+    if (unauthorizedZones.length > 0) {
+      this.state.ledger.recordEvent(
+        "legal.zoneFlag",
+        {
+          siteId: site.id,
+          siteName: site.name,
+          unauthorizedZones,
+          pilotLicenseId: pilot.licenseId ?? null,
+        },
+        { visible: true },
+      );
+    }
   }
 
   breakDockingTether(site) {
@@ -649,9 +667,15 @@ export class Game {
       return;
     }
 
-    this.currentZoneId = zoneProfile.strongestZoneId;
+    const zoneId = zoneProfile.strongestZoneId;
+    this.currentZoneId = zoneId;
+
+    if (!this.state.pilot.visitedZoneIds.includes(zoneId)) {
+      this.state.pilot.visitedZoneIds.push(zoneId);
+    }
+
     this.state.ledger.recordEvent("zone.entered", {
-      zoneId: zoneProfile.strongestZoneId,
+      zoneId,
       zoneName: zoneProfile.strongestZoneName,
       influence: zoneProfile.influence,
       danger: zoneProfile.danger,

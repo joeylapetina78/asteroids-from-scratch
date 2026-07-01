@@ -5,6 +5,15 @@ import { createEventLedger } from "../systems/eventLedger.js?v=tow-control-lock-
 export function createGameState() {
   return {
     ledger: createEventLedger(),
+    pilot: {
+      firstName: null,
+      lastName: null,
+      licenseId: null,
+      licenseStatus: "none",
+      issuedAt: null,
+      authorizedZones: ["starter-drift", "open-space", "scrap-wake", "dead-strip", "red-teeth"],
+      visitedZoneIds: [],
+    },
     journey: {
       chapterId: "prologue",
       chapterName: "Prologue",
