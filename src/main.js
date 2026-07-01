@@ -5,7 +5,7 @@ import { Game } from "./game.js?v=docking-tether-v1";
 import { createContractManager } from "./systems/contractManager.js?v=world-refs-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=docking-tether-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=journey-sidebar-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=attention-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-records-v1";
@@ -20,7 +20,7 @@ const OLD_PANEL_LAYOUT_STORAGE_KEYS = [
   "asteroids.panelLayout.v4",
 ];
 const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v5";
-const JOURNEY_PANEL_Z_INDEX = 100000;
+const JOURNEY_PANEL_Z_INDEX = 560;
 const VIEWPORT_PANEL_Z_INDEX = 10;
 const DESK_PANEL_MIN_Z_INDEX = 30;
 const DESK_PANEL_MAX_Z_INDEX = 520;
@@ -141,6 +141,8 @@ const journeyHelpText = document.querySelector("#journey-help-text");
 const journeyLog = document.querySelector("#journey-log");
 const journeyMissionObjective = document.querySelector("#journey-mission-objective");
 const journeyMissionTitle = document.querySelector("#journey-mission-title");
+const journeyPanel = document.querySelector("[data-panel-id='journey']");
+const journeyPortraitArt = document.querySelector("#journey-portrait-art");
 const journeyStatus = document.querySelector("#journey-status");
 const merchantCredits = document.querySelector("#merchant-credits");
 const minerArmed = document.querySelector("#miner-armed");
@@ -1590,6 +1592,10 @@ function focusPanelById(panelId) {
 }
 
 function renderJourney(journey = state.journey) {
+  const latestMessage = journey.messages.at(-1) ?? null;
+  const speaker = latestMessage?.speaker ?? "Journey";
+  const isOpen = Boolean(latestMessage || journey.pendingAcknowledgement || journey.mission?.status === "offered");
+
   journeyChapter.textContent = journey.chapterName ?? "Chapter 1";
   journeyStatus.textContent = journey.episodeName ?? "The Interview";
   journeyMissionTitle.textContent = journey.mission?.title ?? "Journey";
@@ -1597,6 +1603,14 @@ function renderJourney(journey = state.journey) {
   journeyHelpText.textContent = journey.mission?.helpText ?? "Read the current objective and follow the next prompt.";
   journeyAcceptButton.hidden = !journey.pendingAcknowledgement && journey.mission?.status !== "offered";
   journeyAcceptButton.textContent = journey.pendingAcknowledgement?.label ?? journey.mission?.actionLabel ?? "Accept Job";
+  journeyPanel?.classList.toggle("is-journey-open", isOpen);
+  journeyPanel?.classList.toggle("is-journey-speaking", Boolean(latestMessage));
+  journeyPanel?.setAttribute("data-speaker", normalizeSpeakerKey(speaker));
+
+  if (journeyPortraitArt) {
+    journeyPortraitArt.textContent = getSpeakerPortrait(speaker);
+  }
+
   clearJourneyTypeTimers();
   journeyLog.replaceChildren(
     ...journey.messages.slice(-1).map((message) => {
@@ -1614,6 +1628,40 @@ function renderJourney(journey = state.journey) {
     }),
   );
   playJourneyUpdate();
+}
+
+function normalizeSpeakerKey(speaker = "") {
+  return speaker.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "journey";
+}
+
+function getSpeakerPortrait(speaker = "") {
+  const key = normalizeSpeakerKey(speaker);
+
+  if (key.includes("rook")) {
+    return "  _____\n / R   \\\n|  o o |\n|  >   |\n \\__-_/\n  /|\\";
+  }
+
+  if (key.includes("galaxy")) {
+    return " .----.\n/  **  \\\n| *  * |\n|  <>  |\n\\  **  /\n '----'";
+  }
+
+  if (key.includes("barvis")) {
+    return " .----.\n| B  B |\n|  __  |\n| /  \\ |\n '----'\n  /||";
+  }
+
+  if (key.includes("mako") || key.includes("finance")) {
+    return " [MKO]\n |o  o|\n | -- |\n |____|\n  /__\\";
+  }
+
+  if (key.includes("jax") || key.includes("tow") || key.includes("cable")) {
+    return "  .--.\n /JAX \\\n| o  o|\n|  == |\n \\____/\n  /||";
+  }
+
+  if (key.includes("murmur")) {
+    return " /\\/\\\n( .. )\n \\--/\n /##\\\n/____\\";
+  }
+
+  return "  /\\\n /  \\\n| .. |\n| -- |\n \\__/\n  ||";
 }
 
 function playPanelReveal(panel) {
@@ -2019,6 +2067,11 @@ function makePanelsDraggable() {
       return;
     }
 
+    if (panelId === "journey") {
+      panel.style.zIndex = String(JOURNEY_PANEL_Z_INDEX);
+      return;
+    }
+
     const defaultPanel = DEFAULT_PANEL_LAYOUT[panelId] ?? { x: 0, y: 0, z: 1 };
     const savedPanel = panelId ? savedLayout.panels?.[panelId] : null;
     const isInDrawer = Boolean(panel.closest("#paperwork-drawer"));
@@ -2126,6 +2179,14 @@ function makePanelsDraggable() {
       shelf.appendChild(panel);
       offset.x = 0;
       offset.y = 0;
+      state.ledger.recordEvent(
+        "component.filed",
+        {
+          componentId: panelId,
+          destination: "drawer",
+        },
+        { visible: false },
+      );
       paperworkDrawer.classList.add("is-open");
       drawerToggle?.setAttribute("aria-expanded", "true");
       window.setTimeout(() => {

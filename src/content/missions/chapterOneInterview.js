@@ -160,8 +160,9 @@ export const chapterOneInterviewMission = {
       id: "show-hull",
       objective: "Get your bearings.",
       helpText:
-        "This is the Journey panel. It shows the current mission, plain instructions, and your credits. The Hull panel shows ship health, VIN, and the Docking Lock.",
+        "This communicator rail shows mission dialogue, plain instructions, and your credits. The Hull panel shows ship health, VIN, and the Docking Lock. Your license is paperwork you can file in the drawer.",
       onEnter: [
+        { type: "showComponent", componentId: "license", componentName: "License" },
         { type: "showComponent", componentId: "hull", componentName: "Hull" },
         { type: "showComponent", componentId: "docking", componentName: "Docking Lock" },
         {
@@ -179,36 +180,36 @@ export const chapterOneInterviewMission = {
     },
     {
       id: "drag-panels",
-      objective: "Move the Journey and Hull panels.",
+      objective: "Move the License and Hull panels.",
       helpText:
-        "Drag panels by their titles. Move the Journey panel and the Hull panel anywhere comfortable in the display area.",
+        "Drag panels by their titles. Move the License panel and the Hull panel anywhere comfortable in the display area.",
       onEnter: [
         {
           type: "say",
           speaker: "Rook",
           text:
-            "People have preferences, who am I to stand in the way of them. Go ahead and drag this panel and the Hull panel around the display area. Get a feel for how it works.",
+            "People have preferences, who am I to stand in the way of them. Go ahead and drag the License and Hull panels around the display area. Get a feel for how it works.",
         },
       ],
       transitions: [
         {
           eventType: "component.dragged",
-          requiresFlags: ["journeyPanelMoved", "hullPanelMoved"],
-          nextStepId: "show-viewport",
+          requiresFlags: ["licensePanelMoved", "hullPanelMoved"],
+          nextStepId: "file-license",
         },
       ],
       considerations: [
         {
-          id: "journey-panel-moved",
+          id: "license-panel-moved",
           eventType: "component.dragged",
-          payloadEquals: { componentId: "journey" },
-          setFlag: "journeyPanelMoved",
+          payloadEquals: { componentId: "license" },
+          setFlag: "licensePanelMoved",
           once: true,
           actions: [
             {
               type: "say",
               speaker: "Rook",
-              text: "There you go. Even my voice box moves. Now give the Hull panel a try too.",
+              text: "There you go. That's your provisional license. It lets you make this run under my authority, in this zone only. Now move the Hull panel too.",
             },
           ],
         },
@@ -222,9 +223,30 @@ export const chapterOneInterviewMission = {
             {
               type: "say",
               speaker: "Rook",
-              text: "Good, that's the Hull panel. Move the Journey panel too, then we'll get to the flying part.",
+              text: "Good, that's the Hull panel. Move the License too, then we'll get to the flying part.",
             },
           ],
+        },
+      ],
+    },
+    {
+      id: "file-license",
+      objective: "File your provisional license.",
+      helpText:
+        "Press the FILE button on the License panel. It will move into the Paperwork drawer, where you can retrieve paperwork later.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Good. Now file that license for now. We will not need to wave it around, but it says you are provisionally licensed under my authority for this First Reach run only. No wandering into other zones.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "component.filed",
+          payloadEquals: { componentId: "license", destination: "drawer" },
+          nextStepId: "show-viewport",
         },
       ],
     },

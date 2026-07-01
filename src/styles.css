@@ -318,8 +318,78 @@ body {
 }
 
 .journey-panel {
-  width: 300px;
-  z-index: 100000 !important;
+  position: fixed !important;
+  top: 66px;
+  bottom: 44px;
+  left: 0;
+  width: 330px;
+  max-height: none;
+  overflow: hidden auto;
+  border-left: 0;
+  border-color: rgba(0, 211, 255, 0.38);
+  border-radius: 0 8px 8px 0;
+  background:
+    linear-gradient(90deg, rgba(0, 183, 255, 0.09), transparent 42%),
+    linear-gradient(180deg, rgba(8, 12, 19, 0.98), rgba(5, 7, 11, 0.96));
+  box-shadow: 0 0 26px rgba(0, 189, 255, 0.16);
+  transform: translateX(-286px) !important;
+  transition:
+    transform 260ms ease,
+    box-shadow 260ms ease,
+    border-color 260ms ease;
+  z-index: 560;
+}
+
+.journey-panel::after {
+  content: "COMMS";
+  position: absolute;
+  top: 44%;
+  right: 7px;
+  writing-mode: vertical-rl;
+  letter-spacing: 0.18em;
+  color: rgba(115, 210, 255, 0.62);
+  font-size: 0.64rem;
+  pointer-events: none;
+}
+
+.journey-panel.is-journey-open,
+.journey-panel:focus-within,
+.journey-panel:hover {
+  transform: translateX(0) !important;
+}
+
+.journey-panel.is-journey-speaking {
+  border-color: rgba(255, 211, 107, 0.58);
+  box-shadow:
+    0 0 28px rgba(0, 189, 255, 0.18),
+    0 0 26px rgba(255, 211, 107, 0.12);
+}
+
+.journey-panel[data-speaker*="rook"] {
+  --portrait-color: #ffcf6b;
+}
+
+.journey-panel[data-speaker*="galaxy"] {
+  --portrait-color: #00d3ff;
+}
+
+.journey-panel[data-speaker*="barvis"] {
+  --portrait-color: #9ee8ff;
+}
+
+.journey-panel[data-speaker*="mako"],
+.journey-panel[data-speaker*="finance"] {
+  --portrait-color: #92ffba;
+}
+
+.journey-panel[data-speaker*="murmur"] {
+  --portrait-color: #d987ff;
+}
+
+.journey-panel[data-speaker*="jax"],
+.journey-panel[data-speaker*="tow"],
+.journey-panel[data-speaker*="cable"] {
+  --portrait-color: #ff8f73;
 }
 
 .engine-panel {
@@ -1055,9 +1125,35 @@ body {
   flex-direction: column;
   gap: 6px;
   justify-content: flex-start;
-  min-height: 124px;
+  min-height: 96px;
   color: #edf3ff;
   font-size: 0.9rem;
+}
+
+.journey-portrait {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  border: 1px solid rgba(0, 211, 255, 0.2);
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.025) 1px, transparent 1px, transparent 8px),
+    radial-gradient(circle at 50% 10%, rgba(0, 211, 255, 0.12), transparent 56%),
+    rgba(3, 6, 11, 0.58);
+}
+
+.journey-portrait pre {
+  margin: 0;
+  color: var(--portrait-color, #00d3ff);
+  font-family: "Courier New", monospace;
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1.08;
+  text-align: left;
+  text-shadow:
+    0 0 8px currentcolor,
+    0 0 22px currentcolor;
+  transform: skewX(-4deg);
 }
 
 .journey-log:empty::before {
