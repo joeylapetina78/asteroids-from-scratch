@@ -332,6 +332,8 @@ body {
   border-radius: 0;
   padding: 46px 18px 34px 16px;
   background: rgba(5, 7, 11, 0.98);
+  align-content: start;
+  grid-template-rows: auto auto minmax(300px, 42vh) auto auto;
   box-shadow:
     12px 0 38px rgba(0, 0, 0, 0.42),
     0 0 18px rgba(0, 189, 255, 0.08);
@@ -1124,25 +1126,20 @@ body {
 }
 
 .journey-log {
-  order: 4;
+  order: 3;
   display: flex;
   flex-direction: column;
   gap: 6px;
   justify-content: flex-start;
-  min-height: 220px;
-  max-height: 320px;
+  min-height: 300px;
+  max-height: 42vh;
   overflow: hidden auto;
   color: #edf3ff;
   font-size: 1.04rem;
 }
 
 .journey-portrait {
-  order: 3;
-  display: grid;
-  place-items: end center;
-  min-height: 220px;
-  margin: 4px 0 -28px;
-  pointer-events: none;
+  display: none;
 }
 
 .journey-portrait pre {
@@ -1241,18 +1238,20 @@ body {
 .journey-mission > span {
   order: 2;
   display: block;
-  margin: 2px 0 0;
+  margin: 2px 0 10px;
   color: #9ee8ff;
   font-size: clamp(0.95rem, 1.05vw, 1.16rem);
   line-height: 1.25;
 }
 
 .journey-help {
-  order: 5;
-  margin-top: 6px;
+  order: 4;
+  margin-top: 10px;
   border-top: 1px solid rgba(115, 210, 255, 0.22);
   padding-top: 12px;
   color: #c8d3e6;
+  max-height: 190px;
+  overflow: hidden auto;
 }
 
 .journey-help summary {
@@ -1270,7 +1269,8 @@ body {
 }
 
 .journey-panel .journey-button {
-  order: 6;
+  order: 5;
+  margin-top: 8px;
   min-height: 46px;
   border-color: rgba(255, 211, 107, 0.62);
   border-radius: 6px;
