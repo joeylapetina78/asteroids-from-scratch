@@ -139,7 +139,7 @@ export const chapterOneInterviewMission = {
     chapterId: "prologue",
     chapterName: "Prologue",
     episodeName: "Do you want to play?",
-    speaker: "The Galaxy",
+    speaker: "The Storm",
     text: "Welcome to Asteroids RPG. The adventure is waiting. Let's go?",
     title: "Do you want to play?",
     objective: "Yes you do.",

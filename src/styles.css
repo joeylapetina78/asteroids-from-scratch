@@ -322,7 +322,7 @@ body {
   --journey-tab: 44px;
   position: fixed !important;
   top: 0;
-  bottom: 0;
+  bottom: 32px;
   left: 0;
   width: var(--journey-width);
   max-height: none;
@@ -330,10 +330,10 @@ body {
   border-left: 0;
   border-color: rgba(0, 211, 255, 0.28);
   border-radius: 0;
-  padding: 46px 18px 34px 16px;
+  padding: 46px 18px 18px 16px;
   background: rgba(5, 7, 11, 0.98);
   align-content: start;
-  grid-template-rows: auto auto minmax(300px, 42vh) auto auto;
+  grid-template-rows: auto auto minmax(0, 1fr) 156px auto;
   box-shadow:
     12px 0 38px rgba(0, 0, 0, 0.42),
     0 0 18px rgba(0, 189, 255, 0.08);
@@ -370,7 +370,8 @@ body {
   --portrait-color: #ffcf6b;
 }
 
-.journey-panel[data-speaker*="galaxy"] {
+.journey-panel[data-speaker*="galaxy"],
+.journey-panel[data-speaker*="storm"] {
   --portrait-color: #00d3ff;
 }
 
@@ -1131,8 +1132,8 @@ body {
   flex-direction: column;
   gap: 6px;
   justify-content: flex-start;
-  min-height: 300px;
-  max-height: 42vh;
+  min-height: 0;
+  max-height: none;
   overflow: hidden auto;
   color: #edf3ff;
   font-size: 1.04rem;
@@ -1246,11 +1247,12 @@ body {
 
 .journey-help {
   order: 4;
-  margin-top: 10px;
+  align-self: stretch;
+  margin-top: 0;
   border-top: 1px solid rgba(115, 210, 255, 0.22);
   padding-top: 12px;
   color: #c8d3e6;
-  max-height: 190px;
+  max-height: none;
   overflow: hidden auto;
 }
 
@@ -1270,6 +1272,7 @@ body {
 
 .journey-panel .journey-button {
   order: 5;
+  align-self: end;
   margin-top: 8px;
   min-height: 46px;
   border-color: rgba(255, 211, 107, 0.62);

@@ -1,7 +1,7 @@
 export const npcDefinitions = {
   "the-galaxy": {
     id: "the-galaxy",
-    name: "The Galaxy",
+    name: "The Storm",
     role: "opening narrator",
     voiceFrequency: 620,
     homeHubIds: [],
