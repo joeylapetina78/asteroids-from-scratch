@@ -27,6 +27,7 @@ const CARGO_UNIT_VALUES = {
   fuel: 30,
   crystal: 150,
 };
+const PAPERWORK_PANEL_IDS = ["license", "contract"];
 const TOW_DRIVER_NAMES = ["Mara Tow", "Jax Cable", "Nell Winch", "Orson Hook"];
 const YARD_EXCHANGE_CORE_SERVICES = ["rook-industries", "yard-shipyard", "yard-finance", "yard-supply"];
 const MURMUR_SERVICE_ID = "yard-murmur-roadmap";
@@ -201,6 +202,8 @@ const journeyDirector = createJourneyDirector({
 });
 let bringPanelToFront = () => {};
 let positionPanelById = () => {};
+let movePaperPanelToDesk = () => {};
+let movePaperPanelToDrawer = () => {};
 let contractPulledFromDrawer = false;
 let renderedLedgerVersion = -1;
 let lastAudioEventId = 0;
@@ -362,7 +365,9 @@ renderProcessorOutputs();
 game.placeShipNearSite("scrap-porch");
 restoreSavedWorld({ save: savedProfile, game, cargoHold });
 clearOldPanelLayouts();
+setInitialPaperworkLocations();
 makePanelsDraggable();
+setupPaperworkControls();
 wirePanelControlSounds();
 journeyDirector.start();
 applyDevStart(initialDevStart);
@@ -684,6 +689,7 @@ function returnContractToDrawer() {
     shelf.appendChild(contractPanel);
   }
   contractPulledFromDrawer = false;
+  updatePaperworkControlLabels();
 }
 
 function pullContractToCenter(contractId) {
@@ -701,6 +707,7 @@ function pullContractToCenter(contractId) {
     contractPulledFromDrawer = true;
     contractPanel.style.transform = "translate(0px, 0px)";
     hud.appendChild(contractPanel);
+    updatePaperworkControlLabels();
   }
 
   const hudRect = hud.getBoundingClientRect();
@@ -1298,6 +1305,60 @@ function setComponentAvailable(componentId, isAvailable = true) {
   }
 }
 
+function setInitialPaperworkLocations() {
+  const hud = document.querySelector(".hud");
+  const licensePanel = document.querySelector('[data-panel-id="license"]');
+
+  if (hud && licensePanel && licensePanel.closest("#paperwork-drawer")) {
+    hud.appendChild(licensePanel);
+  }
+}
+
+function setupPaperworkControls() {
+  PAPERWORK_PANEL_IDS.forEach((panelId) => {
+    const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
+    const title = panel?.querySelector(".component-panel-title");
+
+    if (!panel || !title || title.querySelector(".paper-file-button")) {
+      return;
+    }
+
+    const button = document.createElement("button");
+    button.className = "paper-file-button";
+    button.type = "button";
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+
+      if (panel.closest("#paperwork-drawer")) {
+        movePaperPanelToDesk(panelId);
+      } else {
+        movePaperPanelToDrawer(panelId);
+      }
+
+      updatePaperworkControlLabels();
+    });
+    title.append(button);
+  });
+
+  updatePaperworkControlLabels();
+}
+
+function updatePaperworkControlLabels() {
+  PAPERWORK_PANEL_IDS.forEach((panelId) => {
+    const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
+    const button = panel?.querySelector(".paper-file-button");
+    const isInDrawer = Boolean(panel?.closest("#paperwork-drawer"));
+
+    if (!button) {
+      return;
+    }
+
+    button.textContent = isInDrawer ? "Desk" : "File";
+    button.title = isInDrawer ? "Move paperwork to the desktop" : "File paperwork in the drawer";
+    button.setAttribute("aria-label", button.title);
+  });
+}
+
 function focusPanelById(panelId) {
   const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
 
@@ -1738,7 +1799,10 @@ function makePanelsDraggable() {
     const defaultPanel = DEFAULT_PANEL_LAYOUT[panelId] ?? { x: 0, y: 0, z: 1 };
     const savedPanel = panelId ? savedLayout.panels?.[panelId] : null;
     const isInDrawer = Boolean(panel.closest("#paperwork-drawer"));
-    const offset = isInDrawer && !savedPanel?.inDrawer
+    const startsOnDeskAfterBeingFiled = !isInDrawer && savedPanel?.inDrawer;
+    const offset = startsOnDeskAfterBeingFiled
+      ? { x: defaultPanel.x, y: defaultPanel.y }
+      : isInDrawer && !savedPanel?.inDrawer
       ? { x: 0, y: 0 }
       : { x: savedPanel?.x ?? defaultPanel.x, y: savedPanel?.y ?? defaultPanel.y };
 
@@ -1751,7 +1815,7 @@ function makePanelsDraggable() {
     savePanelLayout(panel, offset);
 
     handle.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0 || event.target.closest("[data-close-panel]")) {
+      if (event.button !== 0 || event.target.closest("[data-close-panel], .paper-file-button")) {
         return;
       }
 
@@ -1806,6 +1870,8 @@ function makePanelsDraggable() {
   });
 
   bringPanelToFront = setPanelTop;
+  movePaperPanelToDesk = (panelId) => movePaperPanel(panelId, "desk");
+  movePaperPanelToDrawer = (panelId) => movePaperPanel(panelId, "drawer");
   positionPanelById = (panelId, position = null) => {
     const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
     const offset = offsetsByPanelId.get(panelId);
@@ -1822,6 +1888,36 @@ function makePanelsDraggable() {
     applyPanelOffset(panel, offset, { clamp: isPanelMeasurable(panel) });
     savePanelLayout(panel, offset);
   };
+
+  function movePaperPanel(panelId, destination) {
+    const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
+    const offset = offsetsByPanelId.get(panelId);
+    const hud = document.querySelector(".hud");
+    const shelf = document.querySelector("#paperwork-drawer .drawer-shelf");
+
+    if (!panel || !offset || !hud || !shelf) {
+      return;
+    }
+
+    if (destination === "drawer") {
+      shelf.appendChild(panel);
+      offset.x = 0;
+      offset.y = 0;
+      paperworkDrawer.classList.add("is-open");
+      drawerToggle?.setAttribute("aria-expanded", "true");
+    } else {
+      hud.appendChild(panel);
+      const defaultPanel = DEFAULT_PANEL_LAYOUT[panelId] ?? { x: 0, y: 0 };
+      offset.x = defaultPanel.x;
+      offset.y = defaultPanel.y;
+      setPanelTop(panel);
+    }
+
+    applyPanelOffset(panel, offset, { clamp: isPanelMeasurable(panel) });
+    savePanelLayout(panel, offset);
+    updatePaperworkControlLabels();
+    playPanelReveal(panel);
+  }
 
   function setPanelTop(panel) {
     if (panel.dataset.panelId === "journey") {
