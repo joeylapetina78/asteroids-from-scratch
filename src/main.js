@@ -1,10 +1,11 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
 import { Game } from "./game.js?v=tow-message-guard-v1";
-import { createContractManager } from "./systems/contractManager.js?v=mako-hunter-v1";
+import { createContractManager } from "./systems/contractManager.js?v=world-refs-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=component-shop-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=attention-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=world-refs-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=attention-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-records-v1";
@@ -29,10 +30,15 @@ const CARGO_UNIT_VALUES = {
 };
 const PAPERWORK_PANEL_IDS = ["license", "contract"];
 const TOW_DRIVER_NAMES = ["Mara Tow", "Jax Cable", "Nell Winch", "Orson Hook"];
-const YARD_EXCHANGE_CORE_SERVICES = ["rook-industries", "yard-shipyard", "yard-finance", "yard-supply"];
-const MURMUR_SERVICE_ID = "yard-murmur-roadmap";
-const STARTER_REGION_NAME = "First Reach";
-const DEEP_SPACE_REGION_NAME = "The Black";
+const YARD_EXCHANGE_CORE_SERVICES = [
+  yardExchangeServices.rook,
+  yardExchangeServices.shipyard,
+  yardExchangeServices.finance,
+  yardExchangeServices.supply,
+];
+const MURMUR_SERVICE_ID = yardExchangeServices.roadmap;
+const STARTER_REGION_NAME = storyRegions.starterRegion.name;
+const DEEP_SPACE_REGION_NAME = storyRegions.deepSpace.name;
 const JOURNEY_WORD_DELAY_MS = 34;
 const ATTENTION_ONCE_MS = 1800;
 const PAPERWORK_DRAWER_AUTO_CLOSE_MS = 900;
@@ -381,7 +387,7 @@ drawerToggle?.addEventListener("click", () => {
 });
 
 renderProcessorOutputs();
-game.placeShipNearSite("scrap-porch");
+  game.placeShipNearSite(chapterOneRoute.startSite.id);
 restoreSavedWorld({ save: savedProfile, game, cargoHold });
 clearOldPanelLayouts();
 setInitialPaperworkLocations();
@@ -535,7 +541,7 @@ function applyDevStart(devStartId) {
 }
 
 function setupDevRedWorkStart() {
-  game.placeShipNearSite("yard-exchange", { x: 190, y: -70 });
+  game.placeShipNearSite(chapterOneRoute.destinationSite.id, { x: 190, y: -70 });
   Object.assign(state.components.account, { credits: Math.max(state.components.account.credits, 0) });
   Object.assign(state.components.engine, {
     installed: true,
@@ -559,11 +565,11 @@ function setupDevRedWorkStart() {
   state.components.cargoHold.installed = true;
   state.components.docking.installed = true;
   state.components.contract.installed = true;
-  state.hubServices.unlocked["yard-exchange"] = Array.from(
-    new Set([...(state.hubServices.unlocked["yard-exchange"] ?? []), "rook-industries", "yard-supply"]),
+  state.hubServices.unlocked[chapterOneRoute.destinationSite.id] = Array.from(
+    new Set([...(state.hubServices.unlocked[chapterOneRoute.destinationSite.id] ?? []), yardExchangeServices.rook, yardExchangeServices.supply]),
   );
   state.hubServices.flags.yardCoreSeenDocked = true;
-  game.setDockedSite(game.worldSites.find((site) => site.id === "yard-exchange") ?? null);
+  game.setDockedSite(game.worldSites.find((site) => site.id === chapterOneRoute.destinationSite.id) ?? null);
   state.ship.frameId = "yard-skiff-miner";
   state.ship.name = "Rook Yard Skiff";
   setComponentAvailable("viewport", true);
@@ -583,7 +589,7 @@ function updateHubDisplay(siteState) {
     activeDepositContractId = null;
   }
 
-  if (siteState.dockedSite?.id === "yard-exchange" && areYardExchangeStoryServicesUnlocked()) {
+  if (siteState.dockedSite?.id === chapterOneRoute.destinationSite.id && areYardExchangeStoryServicesUnlocked()) {
     state.hubServices.flags.yardCoreSeenDocked = true;
   }
 
@@ -609,15 +615,15 @@ function markYardExchangeReturnOpportunity() {
 
 function maybeUnlockMurmur(dockedSite) {
   if (
-    dockedSite?.id !== "yard-exchange" ||
-    isHubServiceUnlocked("yard-exchange", { id: MURMUR_SERVICE_ID }) ||
+    dockedSite?.id !== chapterOneRoute.destinationSite.id ||
+    isHubServiceUnlocked(chapterOneRoute.destinationSite.id, { id: MURMUR_SERVICE_ID }) ||
     !state.hubServices.flags.leftYardAfterCoreUnlocked ||
     !areYardExchangeStoryServicesUnlocked()
   ) {
     return;
   }
 
-  unlockHubService("yard-exchange", MURMUR_SERVICE_ID);
+  unlockHubService(chapterOneRoute.destinationSite.id, MURMUR_SERVICE_ID);
   journeyDirector.sayAsNpc(
     "Murmur",
     "Psst. Captain. You have met the desk people, now meet the wall people. I keep the board of things that have not happened yet. Back corridor. Click my name if you want to see the shape of the future.",
@@ -625,7 +631,7 @@ function maybeUnlockMurmur(dockedSite) {
 }
 
 function areYardExchangeStoryServicesUnlocked() {
-  return YARD_EXCHANGE_CORE_SERVICES.every((serviceId) => isHubServiceUnlocked("yard-exchange", { id: serviceId }));
+  return YARD_EXCHANGE_CORE_SERVICES.every((serviceId) => isHubServiceUnlocked(chapterOneRoute.destinationSite.id, { id: serviceId }));
 }
 
 
@@ -1097,7 +1103,7 @@ function updateRookFollowupOffers() {
     const site = currentSiteState?.dockedSite;
     const service = site ? getHubService(site.id, activeHubServiceId) : null;
 
-    if (!site || service?.id !== "rook-industries") {
+    if (!site || service?.id !== yardExchangeServices.rook) {
       return;
     }
 
@@ -1174,6 +1180,7 @@ function renderContract(contract = contractManager.getCurrentContract()) {
     contractAcceptButton.textContent = "Accept Contract";
     renderContractNavigation();
     contractClauses.replaceChildren();
+    updatePaperworkControlLabels();
     return;
   }
 
@@ -1193,6 +1200,7 @@ function renderContract(contract = contractManager.getCurrentContract()) {
       return item;
     }),
   );
+  updatePaperworkControlLabels();
 }
 
 function renderContractTerms(contract) {
@@ -1522,6 +1530,10 @@ function setupPaperworkControls() {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
 
+      if (!canMovePaperPanel(panelId)) {
+        return;
+      }
+
       if (panel.closest("#paperwork-drawer")) {
         movePaperPanelToDesk(panelId);
       } else {
@@ -1546,10 +1558,24 @@ function updatePaperworkControlLabels() {
       return;
     }
 
+    button.disabled = !canMovePaperPanel(panelId);
     button.textContent = isInDrawer ? "Desk" : "File";
-    button.title = isInDrawer ? "Move paperwork to the desktop" : "File paperwork in the drawer";
+    button.title = button.disabled
+      ? "Accept this contract before filing it"
+      : isInDrawer
+        ? "Move paperwork to the desktop"
+        : "File paperwork in the drawer";
     button.setAttribute("aria-label", button.title);
   });
+}
+
+function canMovePaperPanel(panelId) {
+  if (panelId !== "contract") {
+    return true;
+  }
+
+  const contract = contractManager.getCurrentContract();
+  return Boolean(contract && contract.status !== "offered");
 }
 
 function focusPanelById(panelId) {
@@ -2390,7 +2416,7 @@ function handleShipOfferClick(offer) {
   setComponentAvailable("cargo", true);
   setComponentAvailable("merchant", false);
 
-  const shipyardService = currentSiteState?.dockedSite ? getHubService(currentSiteState.dockedSite.id, "yard-shipyard") : null;
+  const shipyardService = currentSiteState?.dockedSite ? getHubService(currentSiteState.dockedSite.id, yardExchangeServices.shipyard) : null;
 
   if (shipyardService?.postSaleGreeting) {
     journeyDirector.sayAsNpc(shipyardService.npcName, shipyardService.postSaleGreeting);

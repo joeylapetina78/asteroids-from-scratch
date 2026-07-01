@@ -1,8 +1,10 @@
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=world-refs-v1";
+
 const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
     id: "docked-scrap-porch",
     eventType: "site.docked",
-    payloadEquals: { siteId: "scrap-porch" },
+    payloadEquals: { siteId: storySites.originHub.id },
     setFlag: "dockedWrongHub",
     once: true,
     actions: [
@@ -107,7 +109,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
     id: "left-starter-drift",
     eventType: "zone.entered",
-    payloadEquals: { zoneId: "not:starter-drift" },
+    payloadEquals: { zoneId: `not:${storyZones.starterRoute.id}` },
     repeatable: true,
     cooldownMs: 20000,
     responses: [
@@ -132,7 +134,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
 
 export const chapterOneInterviewMission = {
   id: "chapter-1-yard-exchange",
-  targetSiteId: "yard-exchange",
+  targetSiteId: chapterOneRoute.destinationSite.id,
   prologue: {
     chapterId: "prologue",
     chapterName: "Prologue",
@@ -149,7 +151,7 @@ export const chapterOneInterviewMission = {
     episodeName: "Starting Out",
   },
   title: "The Interview",
-  successCriteria: "Dock at Yard Exchange.",
+  successCriteria: `Dock at ${chapterOneRoute.destinationSite.name}.`,
   nextMissionId: "chapter-1-new-ship",
   nextMissionLabel: "Thanks, Will Do",
   startStepId: "show-hull",
@@ -319,12 +321,12 @@ export const chapterOneInterviewMission = {
       transitions: [
         {
           eventType: "site.enteredViewport",
-          payloadEquals: { siteId: "yard-exchange" },
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
           nextStepId: "show-docking",
         },
         {
           eventType: "site.nearby",
-          payloadEquals: { siteId: "yard-exchange" },
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
           nextStepId: "show-docking",
         },
         {
@@ -373,12 +375,12 @@ export const chapterOneInterviewMission = {
       transitions: [
         {
           eventType: "site.enteredViewport",
-          payloadEquals: { siteId: "yard-exchange" },
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
           nextStepId: "show-docking",
         },
         {
           eventType: "site.nearby",
-          payloadEquals: { siteId: "yard-exchange" },
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
           nextStepId: "show-docking",
         },
         {
@@ -405,12 +407,12 @@ export const chapterOneInterviewMission = {
       transitions: [
         {
           eventType: "site.enteredViewport",
-          payloadEquals: { siteId: "yard-exchange" },
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
           nextStepId: "show-docking",
         },
         {
           eventType: "site.nearby",
-          payloadEquals: { siteId: "yard-exchange" },
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
           nextStepId: "show-docking",
         },
         {
@@ -438,12 +440,12 @@ export const chapterOneInterviewMission = {
       transitions: [
         {
           eventType: "site.enteredViewport",
-          payloadEquals: { siteId: "yard-exchange" },
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
           nextStepId: "show-docking",
         },
         {
           eventType: "site.nearby",
-          payloadEquals: { siteId: "yard-exchange" },
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
           nextStepId: "show-docking",
         },
       ],

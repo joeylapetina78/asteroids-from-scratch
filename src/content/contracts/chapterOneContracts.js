@@ -1,3 +1,5 @@
+import { chapterOneRoute, storySites } from "../storyWorld.js?v=world-refs-v1";
+
 const RESOURCE_CONTRACTS = [
   {
     id: "rook-red-resource-run-5",
@@ -35,11 +37,11 @@ export const chapterOneContracts = [
     type: "delivery",
     title: "Assessment Delivery",
     issuer: "Rook",
-    summary: "Deliver the registered Yard Skiff to Yard Exchange.",
+    summary: `Deliver the registered Yard Skiff to ${storySites.starterHub.name}.`,
     terms: {
       deliverShipVin: "YRDSKF-01-7A3",
-      destinationSiteId: "yard-exchange",
-      destinationName: "Yard Exchange",
+      destinationSiteId: chapterOneRoute.destinationSite.id,
+      destinationName: chapterOneRoute.destinationSite.name,
       requirePoweredDown: true,
     },
     reward: {
@@ -104,20 +106,20 @@ export const chapterOneContracts = [
     repeatable: true,
     title: contract.title,
     issuer: "Rook",
-    summary: `Deliver ${contract.amount} ${contract.resourceName} to Yard Exchange.`,
+    summary: `Deliver ${contract.amount} ${contract.resourceName} to ${storySites.starterHub.name}.`,
     terms: {
       resourceType: contract.resourceType,
       resourceName: contract.resourceName,
       amount: contract.amount,
-      destinationSiteId: "yard-exchange",
-      destinationName: "Yard Exchange",
+      destinationSiteId: storySites.starterHub.id,
+      destinationName: storySites.starterHub.name,
     },
     reward: {
       creditsPerUnit: 200,
       credits: contract.amount * 200,
     },
     clauses: [
-      `Terms are satisfied when ${contract.amount} ${contract.resourceName} are delivered from cargo at Yard Exchange.`,
+      `Terms are satisfied when ${contract.amount} ${contract.resourceName} are delivered from cargo at ${storySites.starterHub.name}.`,
       "Payment releases when the completed contract is confirmed.",
       "Resources must be in the cargo hold, not loose in space.",
       "Return to Rook Industries for the next available job.",

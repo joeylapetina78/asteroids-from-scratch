@@ -41,6 +41,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/content/missions/chapterOneInterview.js](../src/content/missions/chapterOneInterview.js) | Authored data for the first Chapter 1 mission. Holds steps, objectives, help text, event transitions, considerations, and actions. |
 | [src/content/missions/chapterOneNewShip.js](../src/content/missions/chapterOneNewShip.js) | Authored data for buying the first player-owned starter mining ship. |
 | [src/content/missions/chapterOneRedWork.js](../src/content/missions/chapterOneRedWork.js) | Authored data for Rook's first repeatable red-resource mining job. |
+| [src/content/storyWorld.js](../src/content/storyWorld.js) | Shared authored route, site, zone, region, and service ids used by Chapter 1 missions/contracts so future world reshaping does not require hunting raw ids through every mission file. |
 | [src/content/hubs/yardExchangeServices.js](../src/content/hubs/yardExchangeServices.js) | Authored hub service data for Yard Exchange and Scrap Porch NPC/service windows. |
 | [src/systems/hubServices.js](../src/systems/hubServices.js) | Resolves docked hub service definitions for the Hub panel. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. |

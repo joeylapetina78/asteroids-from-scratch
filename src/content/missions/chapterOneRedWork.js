@@ -1,3 +1,5 @@
+import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=world-refs-v1";
+
 export const chapterOneRedWorkMission = {
   id: "chapter-1-red-work",
   autoAcceptOnStart: true,
@@ -146,7 +148,7 @@ export const chapterOneRedWorkMission = {
         {
           id: "red-teeth-warning",
           eventType: "zone.entered",
-          payloadEquals: { zoneId: "red-teeth" },
+          payloadEquals: { zoneId: storyZones.dangerBoundary.id },
           once: true,
           setFlag: "warned-red-teeth",
           actions: [
@@ -255,7 +257,7 @@ export const chapterOneRedWorkMission = {
           eventType: "contract.paid",
           requiresCondition: ({ event }) => event.payload.contractGroup === "rook-resource-run",
           actions: [
-            { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-modworks" },
+            { type: "unlockHubService", siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.modworks },
             { type: "completeMission" },
           ],
         },

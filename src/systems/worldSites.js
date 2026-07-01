@@ -1,17 +1,26 @@
+import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=world-refs-v1";
+
 export const WORLD_SITES = [
   {
-    id: "yard-exchange",
-    name: "Yard Exchange",
+    id: storySites.starterHub.id,
+    name: storySites.starterHub.name,
     type: "hub",
     position: { x: 380, y: -180 },
     radius: 58,
     interactionRadius: 230,
     capabilities: ["repair"],
-    services: ["rook-industries", "yard-shipyard", "yard-finance", "yard-supply", "yard-modworks", "yard-murmur-roadmap"],
+    services: [
+      yardExchangeServices.rook,
+      yardExchangeServices.shipyard,
+      yardExchangeServices.finance,
+      yardExchangeServices.supply,
+      yardExchangeServices.modworks,
+      yardExchangeServices.roadmap,
+    ],
   },
   {
-    id: "scrap-porch",
-    name: "Scrap Porch",
+    id: storySites.originHub.id,
+    name: storySites.originHub.name,
     type: "hub",
     position: { x: -1180, y: 860 },
     radius: 46,

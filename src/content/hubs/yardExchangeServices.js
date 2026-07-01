@@ -1,9 +1,10 @@
 import { getNpcName } from "../npcs.js?v=component-shop-v1";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=world-refs-v1";
 
 export const hubServiceDefinitions = {
-  "yard-exchange": [
+  [storySites.starterHub.id]: [
     {
-      id: "rook-industries",
+      id: yardExchangeServices.rook,
       npcId: "rook",
       npcName: getNpcName("rook"),
       organization: "Rook Industries",
@@ -27,7 +28,7 @@ export const hubServiceDefinitions = {
       busyMessage: "Got a job out for you already. Finish that one before I put more work on the board.",
     },
     {
-      id: "yard-shipyard",
+      id: yardExchangeServices.shipyard,
       npcId: "barvis",
       npcName: getNpcName("barvis"),
       organization: "Yard Exchange Shipyard",
@@ -39,7 +40,7 @@ export const hubServiceDefinitions = {
       postSaleGreeting: "She's yours now. Keep the hull clean and the fuel topped. Come back when you're ready to move up.",
     },
     {
-      id: "yard-finance",
+      id: yardExchangeServices.finance,
       npcId: "mako",
       npcName: getNpcName("mako"),
       organization: "Yard Exchange Finance",
@@ -52,7 +53,7 @@ export const hubServiceDefinitions = {
       greeting: "Mako at Finance. Here to talk terms on something, or check your account?",
     },
     {
-      id: "yard-supply",
+      id: yardExchangeServices.supply,
       npcId: "finley",
       npcName: getNpcName("finley"),
       organization: "Yard Exchange Supply",
@@ -68,7 +69,7 @@ export const hubServiceDefinitions = {
       },
     },
     {
-      id: "yard-modworks",
+      id: yardExchangeServices.modworks,
       npcId: "nara",
       npcName: getNpcName("nara"),
       organization: "Yard Exchange Modworks",
@@ -92,7 +93,7 @@ export const hubServiceDefinitions = {
       ],
     },
     {
-      id: "yard-murmur-roadmap",
+      id: yardExchangeServices.roadmap,
       npcId: "murmur",
       npcName: getNpcName("murmur"),
       organization: "Yard Exchange Back Corridor",
@@ -104,7 +105,7 @@ export const hubServiceDefinitions = {
         "Psst. You. The one with rock dust on the account. Come down the back corridor. I know what this place becomes.",
     },
   ],
-  "scrap-porch": [
+  [storySites.originHub.id]: [
     {
       id: "scrap-porch-supply",
       npcId: "sal",

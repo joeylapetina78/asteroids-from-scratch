@@ -1,3 +1,5 @@
+import { chapterOneRoute, yardExchangeServices } from "../storyWorld.js?v=world-refs-v1";
+
 export const chapterOneNewShipMission = {
   id: "chapter-1-new-ship",
   autoAcceptOnStart: true,
@@ -41,12 +43,12 @@ export const chapterOneNewShipMission = {
       helpText:
         "While docked at Yard Exchange, open the Yard Exchange service panel and choose Shipyard. That opens Barvis's ship sale window.",
       onEnter: [
-        { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-shipyard" },
+        { type: "unlockHubService", siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.shipyard },
       ],
       transitions: [
         {
           eventType: "hub.serviceOpened",
-          payloadEquals: { siteId: "yard-exchange", serviceId: "yard-shipyard" },
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.shipyard },
           nextStepId: "show-merchant",
         },
       ],
@@ -80,7 +82,7 @@ export const chapterOneNewShipMission = {
         "Barvis closed the Shipyard window. Choose Finance in the Yard Exchange service panel to speak with Mr. Mako about a loan.",
       onEnter: [
         { type: "hideComponent", componentId: "merchant" },
-        { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-finance" },
+        { type: "unlockHubService", siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.finance },
         {
           type: "say",
           speaker: "Barvis",
@@ -91,7 +93,7 @@ export const chapterOneNewShipMission = {
       transitions: [
         {
           eventType: "hub.serviceOpened",
-          payloadEquals: { siteId: "yard-exchange", serviceId: "yard-finance" },
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.finance },
           nextStepId: "read-loan-contract",
         },
       ],
@@ -134,7 +136,7 @@ export const chapterOneNewShipMission = {
       transitions: [
         {
           eventType: "hub.serviceOpened",
-          payloadEquals: { siteId: "yard-exchange", serviceId: "yard-shipyard" },
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.shipyard },
           nextStepId: "buy-starter-ship",
         },
       ],
@@ -160,8 +162,8 @@ export const chapterOneNewShipMission = {
           nextStepId: "find-rook",
           actions: [
             { type: "hideComponent", componentId: "merchant" },
-            { type: "unlockHubService", siteId: "yard-exchange", serviceId: "rook-industries" },
-            { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-supply" },
+            { type: "unlockHubService", siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.rook },
+            { type: "unlockHubService", siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.supply },
           ],
         },
       ],
@@ -182,7 +184,7 @@ export const chapterOneNewShipMission = {
       transitions: [
         {
           eventType: "hub.serviceOpened",
-          payloadEquals: { siteId: "yard-exchange", serviceId: "rook-industries" },
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.rook },
           actions: [{ type: "completeAndStartMission", missionId: "chapter-1-red-work" }],
         },
       ],
