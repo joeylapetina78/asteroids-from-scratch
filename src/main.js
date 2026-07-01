@@ -22,6 +22,8 @@ const OLD_PANEL_LAYOUT_STORAGE_KEYS = [
 const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v5";
 const JOURNEY_PANEL_Z_INDEX = 100000;
 const VIEWPORT_PANEL_Z_INDEX = 10;
+const DESK_PANEL_MIN_Z_INDEX = 30;
+const DESK_PANEL_MAX_Z_INDEX = 520;
 const PROCESS_OUTPUT_AMOUNT = 50;
 const CRYSTAL_VALUE_MULTIPLIER = 5;
 const CARGO_UNIT_VALUES = {
@@ -2006,7 +2008,7 @@ function makePanelsDraggable() {
   const viewportPadding = 12;
   const savedLayout = loadPanelLayout();
   const offsetsByPanelId = new Map();
-  let topPanelZIndex = getSavedTopZIndex(savedLayout);
+  let topPanelZIndex = Math.min(getSavedTopZIndex(savedLayout), DESK_PANEL_MAX_Z_INDEX);
 
   document.querySelectorAll(".component-panel").forEach((panel) => {
     const handle = panel.querySelector(".component-panel-title");
@@ -2156,9 +2158,31 @@ function makePanelsDraggable() {
       return;
     }
 
-    topPanelZIndex += 1;
+    topPanelZIndex = getNextDeskPanelZIndex();
     panel.style.zIndex = String(topPanelZIndex);
     savePanelLayout(panel);
+  }
+
+  function getNextDeskPanelZIndex() {
+    if (topPanelZIndex < DESK_PANEL_MAX_Z_INDEX) {
+      return topPanelZIndex + 1;
+    }
+
+    normalizeDeskPanelZIndexes();
+    return topPanelZIndex + 1;
+  }
+
+  function normalizeDeskPanelZIndexes() {
+    const deskPanels = [...document.querySelectorAll(".hud > .component-panel")]
+      .filter((panel) => !["journey", "viewport"].includes(panel.dataset.panelId))
+      .sort((a, b) => (Number(a.style.zIndex) || 0) - (Number(b.style.zIndex) || 0));
+
+    topPanelZIndex = DESK_PANEL_MIN_Z_INDEX;
+    deskPanels.forEach((panel) => {
+      topPanelZIndex += 1;
+      panel.style.zIndex = String(topPanelZIndex);
+      savePanelLayout(panel);
+    });
   }
 
   function applyPanelOffset(panel, offset, { clamp = true } = {}) {
@@ -2461,11 +2485,11 @@ function getSavedTopZIndex(layout) {
   const savedZIndexes = Object.entries(layout.panels ?? {})
     .filter(([panelId]) => panelId !== "journey" && panelId !== "viewport")
     .map(([, panel]) => panel.z)
-    .filter((zIndex) => Number.isFinite(zIndex) && zIndex < JOURNEY_PANEL_Z_INDEX);
+    .filter((zIndex) => Number.isFinite(zIndex) && zIndex >= DESK_PANEL_MIN_Z_INDEX && zIndex <= DESK_PANEL_MAX_Z_INDEX);
   const defaultZIndexes = Object.entries(DEFAULT_PANEL_LAYOUT)
     .filter(([panelId]) => panelId !== "journey" && panelId !== "viewport")
     .map(([, panel]) => panel.z)
-    .filter((zIndex) => Number.isFinite(zIndex) && zIndex < JOURNEY_PANEL_Z_INDEX);
+    .filter((zIndex) => Number.isFinite(zIndex) && zIndex >= DESK_PANEL_MIN_Z_INDEX && zIndex <= DESK_PANEL_MAX_Z_INDEX);
 
   return Math.max(10, ...defaultZIndexes, ...savedZIndexes);
 }
@@ -2481,11 +2505,19 @@ function getInitialPanelZ(panelId, savedPanel, defaultPanel) {
 
   const savedZ = savedPanel?.z;
 
-  if (Number.isFinite(savedZ) && savedZ > 1 && savedZ < JOURNEY_PANEL_Z_INDEX) {
+  if (Number.isFinite(savedZ) && savedZ >= DESK_PANEL_MIN_Z_INDEX && savedZ <= DESK_PANEL_MAX_Z_INDEX) {
     return savedZ;
   }
 
-  return defaultPanel.z;
+  return clampDeskPanelZIndex(defaultPanel.z);
+}
+
+function clampDeskPanelZIndex(zIndex) {
+  if (!Number.isFinite(zIndex)) {
+    return DESK_PANEL_MIN_Z_INDEX;
+  }
+
+  return Math.min(DESK_PANEL_MAX_Z_INDEX, Math.max(DESK_PANEL_MIN_Z_INDEX, zIndex));
 }
 
 function savePanelLayout(panel, offset = null) {

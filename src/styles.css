@@ -64,7 +64,9 @@ body {
   inset: 0;
   color: #d9deea;
   pointer-events: none;
-  z-index: 1000;
+  /* Let individual panels choose their layer. If the whole HUD is above the
+     drawer, every console floats over paperwork no matter what its z-index is. */
+  z-index: auto;
 }
 
 .hud > .component-panel {
@@ -1569,6 +1571,8 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
+  /* Normal ship consoles are capped below this layer in main.js. Paperwork
+     inside the drawer rides with the drawer; Journey stays above everything. */
   z-index: 600;
   background:
     linear-gradient(180deg, rgba(8, 11, 16, 0.94), rgba(5, 7, 11, 0.98)),
