@@ -1503,7 +1503,7 @@ body {
 }
 
 .paperwork-drawer.is-open {
-  max-height: min(82vh, 760px);
+  max-height: min(90vh, 820px);
   box-shadow: 0 -18px 70px rgba(0, 0, 0, 0.45);
 }
 
@@ -1541,6 +1541,7 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 16px;
+  height: min(76vh, 700px);
   min-height: 520px;
   padding: 18px 24px 48px;
   overflow: auto;
@@ -1549,7 +1550,7 @@ body {
 .paperwork-drawer .component-panel {
   position: relative;
   flex-shrink: 0;
-  max-height: calc(min(82vh, 760px) - 92px);
+  max-height: calc(min(90vh, 820px) - 92px);
   overflow: auto;
 }
 

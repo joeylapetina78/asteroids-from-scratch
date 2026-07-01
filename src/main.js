@@ -1851,6 +1851,11 @@ function makePanelsDraggable() {
   }
 
   function clampPanelOffset(panel, offset) {
+    if (panel.closest("#paperwork-drawer")) {
+      clampDrawerPanelOffset(panel, offset);
+      return;
+    }
+
     const rect = panel.getBoundingClientRect();
     let adjustX = 0;
     let adjustY = 0;
@@ -1865,6 +1870,43 @@ function makePanelsDraggable() {
       adjustY = viewportPadding - rect.top;
     } else if (rect.bottom > window.innerHeight - viewportPadding) {
       adjustY = window.innerHeight - viewportPadding - rect.bottom;
+    }
+
+    offset.x = Math.round((offset.x + adjustX) / gridSize) * gridSize;
+    offset.y = Math.round((offset.y + adjustY) / gridSize) * gridSize;
+  }
+
+  function clampDrawerPanelOffset(panel, offset) {
+    const shelf = panel.closest(".drawer-shelf");
+
+    if (!shelf) {
+      return;
+    }
+
+    const rect = panel.getBoundingClientRect();
+    const shelfRect = shelf.getBoundingClientRect();
+    const padding = 14;
+    const minLeft = shelfRect.left + padding;
+    const maxRight = shelfRect.right - padding;
+    const minTop = shelfRect.top + padding;
+    const maxBottom = shelfRect.bottom - padding;
+    let adjustX = 0;
+    let adjustY = 0;
+
+    if (rect.width >= maxRight - minLeft) {
+      adjustX = minLeft - rect.left;
+    } else if (rect.left < minLeft) {
+      adjustX = minLeft - rect.left;
+    } else if (rect.right > maxRight) {
+      adjustX = maxRight - rect.right;
+    }
+
+    if (rect.height >= maxBottom - minTop) {
+      adjustY = minTop - rect.top;
+    } else if (rect.top < minTop) {
+      adjustY = minTop - rect.top;
+    } else if (rect.bottom > maxBottom) {
+      adjustY = maxBottom - rect.bottom;
     }
 
     offset.x = Math.round((offset.x + adjustX) / gridSize) * gridSize;
