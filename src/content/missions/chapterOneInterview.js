@@ -264,9 +264,6 @@ export const chapterOneInterviewMission = {
           acknowledgement: { label: "Read Contract" },
         },
       ],
-      considerations: [
-        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
-      ],
       onAcknowledge: [
         { type: "clearMessage" },
         { type: "offerContract", contractId: "rook-yard-exchange-delivery" },
@@ -291,9 +288,6 @@ export const chapterOneInterviewMission = {
             "Good. Paper's clean. Now let's bring in your viewport so you can see the ship, the hub, and all the ways this job can get expensive.",
           acknowledgement: { label: "Add Viewport" },
         },
-      ],
-      considerations: [
-        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
       ],
       onAcknowledge: [
         { type: "clearMessage" },

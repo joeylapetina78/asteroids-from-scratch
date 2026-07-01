@@ -321,24 +321,21 @@ body {
   --journey-width: clamp(360px, 24vw, 460px);
   --journey-tab: 44px;
   position: fixed !important;
-  top: -42px;
-  bottom: -42px;
+  top: 0;
+  bottom: 0;
   left: 0;
   width: var(--journey-width);
   max-height: none;
   overflow: hidden auto;
   border-left: 0;
-  border-color: rgba(0, 211, 255, 0.42);
+  border-color: rgba(0, 211, 255, 0.28);
   border-radius: 0;
-  padding: 78px 28px 78px 16px;
-  background:
-    linear-gradient(100deg, rgba(0, 183, 255, 0.18), rgba(0, 20, 34, 0.06) 38%, transparent 66%),
-    linear-gradient(180deg, rgba(8, 12, 19, 0.98), rgba(5, 7, 11, 0.96));
+  padding: 46px 18px 34px 16px;
+  background: rgba(5, 7, 11, 0.98);
   box-shadow:
-    12px 0 44px rgba(0, 0, 0, 0.42),
-    0 0 32px rgba(0, 189, 255, 0.13);
-  clip-path: polygon(0 0, calc(100% - 34px) 0, 100% 100%, 0 100%);
-  transform: translateX(calc((var(--journey-width) - var(--journey-tab)) * -1)) skewX(-1.4deg) !important;
+    12px 0 38px rgba(0, 0, 0, 0.42),
+    0 0 18px rgba(0, 189, 255, 0.08);
+  transform: translateX(calc((var(--journey-width) - var(--journey-tab)) * -1)) !important;
   transition:
     transform 260ms ease,
     box-shadow 260ms ease,
@@ -347,25 +344,17 @@ body {
 }
 
 .journey-panel > * {
-  transform: skewX(1.4deg);
+  transform: none;
 }
 
 .journey-panel::after {
-  content: "COMMS";
-  position: absolute;
-  top: 44%;
-  right: 7px;
-  writing-mode: vertical-rl;
-  letter-spacing: 0.18em;
-  color: rgba(115, 210, 255, 0.62);
-  font-size: 0.64rem;
-  pointer-events: none;
+  display: none;
 }
 
 .journey-panel.is-journey-open,
 .journey-panel:focus-within,
 .journey-panel:hover {
-  transform: translateX(0) skewX(-1.4deg) !important;
+  transform: translateX(0) !important;
 }
 
 .journey-panel.is-journey-speaking {
@@ -1140,17 +1129,19 @@ body {
   flex-direction: column;
   gap: 6px;
   justify-content: flex-start;
-  min-height: 148px;
+  min-height: 220px;
+  max-height: 320px;
+  overflow: hidden auto;
   color: #edf3ff;
-  font-size: 1rem;
+  font-size: 1.04rem;
 }
 
 .journey-portrait {
   order: 3;
   display: grid;
   place-items: end center;
-  min-height: 250px;
-  margin: -10px 0 -46px;
+  min-height: 220px;
+  margin: 4px 0 -28px;
   pointer-events: none;
 }
 
@@ -1180,10 +1171,8 @@ body {
   border: 1px solid rgba(255, 211, 107, 0.3);
   border-left: 5px solid rgba(255, 211, 107, 0.88);
   border-radius: 0;
-  padding: 14px 15px;
-  background:
-    linear-gradient(100deg, rgba(255, 211, 107, 0.17), rgba(55, 69, 92, 0.12) 50%, rgba(10, 13, 20, 0.08)),
-    rgba(9, 12, 18, 0.62);
+  padding: 14px 15px 16px;
+  background: rgba(9, 12, 18, 0.72);
   box-shadow: 0 0 18px rgba(255, 211, 107, 0.08);
 }
 
@@ -1246,12 +1235,13 @@ body {
   font-size: clamp(1.32rem, 1.7vw, 2rem);
   line-height: 1;
   letter-spacing: -0.01em;
+  margin: 0;
 }
 
 .journey-mission > span {
   order: 2;
   display: block;
-  margin-bottom: 8px;
+  margin: 2px 0 0;
   color: #9ee8ff;
   font-size: clamp(0.95rem, 1.05vw, 1.16rem);
   line-height: 1.25;
@@ -1281,25 +1271,21 @@ body {
 
 .journey-panel .journey-button {
   order: 6;
-  min-height: 56px;
+  min-height: 46px;
   border-color: rgba(255, 211, 107, 0.62);
-  border-radius: 0;
-  background:
-    linear-gradient(100deg, rgba(255, 211, 107, 0.18), rgba(9, 13, 20, 0.78)),
-    #151922;
+  border-radius: 6px;
+  background: #191c22;
   color: #ffe3a3;
-  font-size: 0.9rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 100%, 0 100%);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  clip-path: none;
 }
 
 .journey-panel .journey-button:hover {
   border-color: rgba(255, 211, 107, 0.92);
-  background:
-    linear-gradient(100deg, rgba(255, 211, 107, 0.3), rgba(27, 37, 52, 0.92)),
-    #202636;
+  background: #222733;
 }
 
 .hull-docking-lock {
