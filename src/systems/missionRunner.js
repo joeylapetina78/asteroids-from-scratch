@@ -71,9 +71,12 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
       return false;
     }
 
-    const consideration = state.journey.pendingAcknowledgement || state.ledger.getSignal("player.controlLocked")
+    const controlLocked = state.ledger.getSignal("player.controlLocked");
+    const consideration = state.journey.pendingAcknowledgement
       ? null
-      : (step.considerations ?? []).find((candidate) => matchesEventRule(candidate, event));
+      : (step.considerations ?? []).find(
+          (candidate) => (!controlLocked || candidate.allowWhileControlLocked) && matchesEventRule(candidate, event),
+        );
 
     if (consideration) {
       const considerationActions = getRuleActions(consideration);

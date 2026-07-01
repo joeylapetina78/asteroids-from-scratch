@@ -1,11 +1,12 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=consideration-cycles-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=consideration-cycles-v1";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=tow-control-lock-v1";
-import { createMissionRunner } from "./missionRunner.js?v=tow-control-lock-v1";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=tow-stable-v1";
+import { createMissionRunner } from "./missionRunner.js?v=tow-stable-v1";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
 );
+const NPC_MESSAGE_DURATION_MS = 18000;
 
 export function createJourneyDirector({
   state,
@@ -168,16 +169,33 @@ export function createJourneyDirector({
     });
   }
 
-  function say(speaker, text, acknowledgement = null) {
+  function say(speaker, text, acknowledgement = null, options = {}) {
+    const messageId = journey.nextMessageId;
+    const durationMs = options.durationMs ?? null;
+
     journey.messages.push({
-      id: journey.nextMessageId,
+      id: messageId,
       speaker,
       text,
       time: Date.now(),
+      expiresAt: durationMs ? Date.now() + durationMs : null,
     });
     journey.nextMessageId += 1;
     journey.messages = journey.messages.slice(-1);
     journey.pendingAcknowledgement = acknowledgement;
+
+    if (durationMs && !acknowledgement && typeof globalThis.setTimeout === "function") {
+      globalThis.setTimeout(() => {
+        const currentMessage = journey.messages[journey.messages.length - 1];
+
+        if (currentMessage?.id !== messageId || journey.pendingAcknowledgement) {
+          return;
+        }
+
+        journey.messages = [];
+        onChange(journey);
+      }, durationMs);
+    }
   }
 
   function sayAsNpc(speaker, text, acknowledgement = null) {
@@ -185,7 +203,9 @@ export function createJourneyDirector({
       return false;
     }
 
-    say(speaker, text, acknowledgement);
+    say(speaker, text, acknowledgement, {
+      durationMs: acknowledgement ? null : NPC_MESSAGE_DURATION_MS,
+    });
     onChange(journey);
     return true;
   }

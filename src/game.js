@@ -50,7 +50,7 @@ const TOW_COST_PER_1000_UNITS = 120;
 const TOW_APPROACH_SPEED = 108;
 const TOW_RETURN_SPEED = 88;
 const TOW_ATTACH_DISTANCE = 84;
-const TOW_DELIVERY_DISTANCE = 28;
+const TOW_DELIVERY_DISTANCE = 48;
 const TOW_LINE_LENGTH = 120;
 const TOW_LINE_STIFFNESS = 2.8;
 const TOW_LINE_DAMPING = 0.965;
@@ -743,11 +743,21 @@ export class Game {
       return;
     }
 
+    this.recordStrandedEvent("out-of-fuel");
+  }
+
+  recordStrandedEvent(reason) {
+    if (this.hasRecordedStrandedEvent) {
+      return;
+    }
+
     const nearest = getNearestWorldSite(this.ship.position, this.worldSites);
 
     this.hasRecordedStrandedEvent = true;
     this.state.ledger.recordEvent("ship.stranded", {
-      fuel: currentFuel,
+      reason,
+      fuel: this.state.components.engine.fuel,
+      hullIntegrity: this.state.components.hull.integrity,
       nearestSiteId: nearest?.site?.id ?? null,
       nearestSiteName: nearest?.site?.name ?? "unknown hub",
       nearestSiteDistance: Math.round(nearest?.distance ?? 0),
@@ -839,6 +849,7 @@ export class Game {
       pulse: 0,
       towedDistance: 0,
       cutterCooldown: 0,
+      dropoffPosition: null,
     };
 
     this.setShipPowered(false);
@@ -895,6 +906,7 @@ export class Game {
       }
 
       tow.phase = "return";
+      tow.dropoffPosition = getTowDropoffPosition(tow.site, this.ship.position);
       this.shipDestroyed = false;
       this.state.components.hull.integrity = Math.max(this.state.components.hull.integrity, 1);
       this.createTowAttachSparks(tow);
@@ -910,11 +922,12 @@ export class Game {
       return;
     }
 
-    const towTarget = getTowDropoffPosition(tow.site, this.ship.position);
+    const towTarget = tow.dropoffPosition ?? getTowDropoffPosition(tow.site, this.ship.position);
+    const runnerTarget = getTowRunnerTarget(tow.site, towTarget);
     const distanceToTarget = distance(this.ship.position, towTarget);
-    const directionToHub = normalizeVector(towTarget.x - tow.position.x, towTarget.y - tow.position.y);
+    const directionToHub = normalizeVector(runnerTarget.x - tow.position.x, runnerTarget.y - tow.position.y);
 
-    this.steerTowRunner(tow, towTarget, TOW_RETURN_SPEED, deltaSeconds);
+    this.steerTowRunner(tow, runnerTarget, TOW_RETURN_SPEED, deltaSeconds);
     this.applyTowLine(tow, deltaSeconds);
     tow.towedDistance += Math.max(0, dotProduct(this.ship.velocity, directionToHub) * deltaSeconds);
 
@@ -929,8 +942,8 @@ export class Game {
     const targetDirection = normalizeVector(target.x - tow.position.x, target.y - tow.position.y);
     const avoidance = getTowAvoidance(tow, this.asteroids);
     const steerDirection = normalizeVector(
-      targetDirection.x + avoidance.x,
-      targetDirection.y + avoidance.y,
+      targetDirection.x + avoidance.x * 0.45,
+      targetDirection.y + avoidance.y * 0.45,
     );
     const desiredVelocity = {
       x: steerDirection.x * maxSpeed,
@@ -998,7 +1011,7 @@ export class Game {
       return;
     }
 
-    const towTarget = getTowDropoffPosition(tow.site, this.ship.position);
+    const towTarget = tow.dropoffPosition ?? getTowDropoffPosition(tow.site, this.ship.position);
 
     this.activeTow = null;
     this.state.components.account.credits -= tow.cost;
@@ -1512,6 +1525,7 @@ export class Game {
     this.input.clearGameKeys();
     this.ship.stopThrusting();
     this.createShipDestructionBurst();
+    this.recordStrandedEvent("hull-destroyed");
   }
 
   getImpactDamage(asteroid) {
@@ -2409,6 +2423,15 @@ function getTowDropoffPosition(site, shipPosition) {
   return {
     x: site.position.x + awayFromHub.x * Math.min(site.interactionRadius * 0.72, site.radius + 80),
     y: site.position.y + awayFromHub.y * Math.min(site.interactionRadius * 0.72, site.radius + 80),
+  };
+}
+
+function getTowRunnerTarget(site, dropoffPosition) {
+  const towardHub = normalizeVector(site.position.x - dropoffPosition.x, site.position.y - dropoffPosition.y);
+
+  return {
+    x: dropoffPosition.x + towardHub.x * TOW_LINE_LENGTH,
+    y: dropoffPosition.y + towardHub.y * TOW_LINE_LENGTH,
   };
 }
 

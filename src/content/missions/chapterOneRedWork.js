@@ -189,14 +189,47 @@ export const chapterOneRedWorkMission = {
         {
           id: "stranded-dispatch",
           eventType: "ship.stranded",
-          once: true,
-          setFlag: "heard-stranded-dispatch",
-          actions: [
+          repeatable: true,
+          cooldownMs: 45000,
+          responses: [
             {
-              type: "say",
               speaker: "Yard Exchange Dispatch",
               text:
                 "We show you out of fuel and drifting. A tow driver should be calling through your communicator. Accept the tow if you want a runner to haul you back to the nearest hub. It'll hurt the account, but it beats floating.",
+            },
+            {
+              speaker: "Rook",
+              text:
+                "Stranded again? Listen, every tow is money you now have to earn back. Take the ride if you need it, then stay closer to the hub.",
+            },
+          ],
+        },
+        {
+          id: "tow-attached",
+          eventType: "tow.attached",
+          allowWhileControlLocked: true,
+          once: true,
+          setFlag: "heard-tow-attached",
+          actions: [
+            {
+              type: "say",
+              speaker: "Rook",
+              text:
+                "Tow runner has us. Hands off the controls and let the driver work. When we're back on the tether, refuel before you try another run.",
+            },
+          ],
+        },
+        {
+          id: "tow-complete",
+          eventType: "ship.towed",
+          once: true,
+          setFlag: "heard-tow-complete",
+          actions: [
+            {
+              type: "say",
+              speaker: "Rook",
+              text:
+                "We're back at a hub. Good news: you're not floating. Bad news: that tow is another bill. Refuel, check the contract, and keep the next run shorter.",
             },
           ],
         },
