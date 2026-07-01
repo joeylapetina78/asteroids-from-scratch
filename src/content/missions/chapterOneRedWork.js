@@ -12,7 +12,7 @@ export const chapterOneRedWorkMission = {
     objective: "Take Rook's first mining contract.",
     actionLabel: null,
     helpText:
-      "Visit Rook Industries at Yard Exchange to see the current resource contract. Red resources come from red rocks; blue crystals come from blue rocks.",
+      "Dock at Yard Exchange, open Rook Industries, and read the resource contract. It will tell you which color resource to bring back and how many units are needed.",
   },
   activeChapter: {
     chapterId: "chapter-1",
@@ -35,7 +35,7 @@ export const chapterOneRedWorkMission = {
       id: "offer-red-contract",
       objective: "Review Rook's red resource contract.",
       helpText:
-        "Open Rook Industries from the Yard Exchange service panel. Rook will offer one resource contract at a time. Read it, then accept it if you want the work.",
+        "Open Rook Industries from the Yard Exchange service panel. Read the offered contract, then accept it to start the mining job.",
       onEnter: [
         {
           type: "say",
@@ -56,7 +56,7 @@ export const chapterOneRedWorkMission = {
       id: "mine-red-resources",
       objective: "Mine the contracted resources and return to Yard Exchange.",
       helpText:
-        "Check the Contract panel for the exact resource type and amount. Break matching rocks with the miner, then fly over the loose squares to collect them into cargo. Dock at Yard Exchange, select Deposit Cargo on the contract, and click cargo squares to send them in.",
+        "Check the Contract panel for the exact resource type and amount. Turn on Blaster armed in the Miner panel, press Space to fire charges at matching rocks, fly over loose squares to collect cargo, dock at Yard Exchange, choose Deposit Cargo on the contract, then click matching cargo squares.",
       onEnter: [
         {
           type: "say",
@@ -70,14 +70,23 @@ export const chapterOneRedWorkMission = {
           id: "near-rock-warning",
           eventType: "ship.nearObject",
           payloadEquals: { targetType: "asteroid" },
-          once: true,
-          setFlag: "warned-near-rock",
-          actions: [
+          repeatable: true,
+          cooldownMs: 14000,
+          responses: [
             {
-              type: "say",
               speaker: "Rook",
               text:
                 "Easy on the hull. You mine with charges, not by wearing the rock as a hat. If you're unsure of the steps, check Need help below.",
+            },
+            {
+              speaker: "Rook",
+              text:
+                "Too close to the rocks. Arm the miner, use Space to cut them, then fly over the loose squares. Hull-first mining is just crashing.",
+            },
+            {
+              speaker: "Rook",
+              text:
+                "If you're trying to mine, shoot the rock. If you're trying to make Finley rich on repairs, keep doing that.",
             },
           ],
         },
@@ -114,28 +123,47 @@ export const chapterOneRedWorkMission = {
         {
           id: "low-fuel-warning",
           eventType: "ship.lowFuel",
-          once: true,
-          setFlag: "warned-low-fuel",
-          actions: [
+          repeatable: true,
+          cooldownMs: 30000,
+          maxRuns: 3,
+          responses: [
             {
-              type: "say",
               speaker: "Rook",
               text:
                 "Fuel's halfway gone, rookie. Scan again if you've got the power and keep Yard Exchange in mind. Docking at any hub refuels you free. Running dry means a tow someday, and a tow means debt.",
+            },
+            {
+              speaker: "Rook",
+              text:
+                "Fuel is getting thin again. If you can see Yard Exchange, head home. If not, scan, find a hub, and dock before this turns into a finance problem.",
+            },
+            {
+              speaker: "Rook",
+              text:
+                "Last friendly reminder from me: empty tanks do not care about ambition. Get to a hub or start thinking about tow fees.",
             },
           ],
         },
         {
           id: "arm-miner-reminder",
           eventType: "weapon.unarmedAttempt",
-          once: true,
-          setFlag: "warned-arm-miner",
-          actions: [
+          repeatable: true,
+          cooldownMs: 10000,
+          responses: [
             {
-              type: "say",
               speaker: "Rook",
               text:
                 "You're squeezing the trigger with the miner safed, rookie. Flip Blaster armed on the Miner panel, then space will cut rock.",
+            },
+            {
+              speaker: "Rook",
+              text:
+                "Still safed. On the Miner panel, check Blaster armed. Then Space fires a mining charge.",
+            },
+            {
+              speaker: "Rook",
+              text:
+                "No shame in safety, but there is no mining with the switch off. Arm the miner first.",
             },
           ],
         },

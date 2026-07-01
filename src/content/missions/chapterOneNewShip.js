@@ -12,7 +12,7 @@ export const chapterOneNewShipMission = {
     objective: "Find Barvis at Yard Exchange Shipyard.",
     actionLabel: "Thanks, Will Do",
     helpText:
-      "You are docked at Yard Exchange. Open the Hub panel and choose Shipyard to talk with Barvis.",
+      "You are docked at Yard Exchange. Open the Yard Exchange service panel and choose Shipyard to talk with Barvis.",
   },
   activeChapter: {
     chapterId: "chapter-1",
@@ -39,7 +39,7 @@ export const chapterOneNewShipMission = {
       id: "find-barvis",
       objective: "Talk to Barvis at Yard Exchange Shipyard.",
       helpText:
-        "While docked at Yard Exchange, open the Hub panel and choose Shipyard. That is Barvis's service window.",
+        "While docked at Yard Exchange, open the Yard Exchange service panel and choose Shipyard. That opens Barvis's ship sale window.",
       onEnter: [
         { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-shipyard" },
       ],
@@ -55,7 +55,7 @@ export const chapterOneNewShipMission = {
       id: "show-merchant",
       objective: "Review ship offers.",
       helpText:
-        "Use Barvis's Merchant panel to compare ships. Most are out of reach, but Rook arranged one starter mining ship near your price range.",
+        "Use Barvis's Merchant panel to compare ships. You cannot afford most of them yet. Click the Rook special, then use I don't have enough if you need financing.",
       onEnter: [
         { type: "showComponent", componentId: "merchant", componentName: "Merchant" },
         {
@@ -77,7 +77,7 @@ export const chapterOneNewShipMission = {
       id: "offer-loan",
       objective: "Talk to Mr. Mako at Yard Exchange Finance.",
       helpText:
-        "Barvis closed the Shipyard window. Choose Finance in the Yard Exchange service panel to speak with Mr. Mako.",
+        "Barvis closed the Shipyard window. Choose Finance in the Yard Exchange service panel to speak with Mr. Mako about a loan.",
       onEnter: [
         { type: "hideComponent", componentId: "merchant" },
         { type: "unlockHubService", siteId: "yard-exchange", serviceId: "yard-finance" },
@@ -100,7 +100,7 @@ export const chapterOneNewShipMission = {
       id: "read-loan-contract",
       objective: "Review Mako's financing contract.",
       helpText:
-        "Read the Starter Ship Financing contract. Accept it only if you want the 20,000-credit financing deposited into your account.",
+        "Open the Starter Ship Financing contract, read the terms, and accept it to deposit 20,000 credits. This is debt, not free money.",
       onEnter: [
         {
           type: "say",
@@ -121,7 +121,7 @@ export const chapterOneNewShipMission = {
       id: "return-to-barvis",
       objective: "Return to Barvis at the Shipyard.",
       helpText:
-        "The loan is active and the money is in your account. Choose Shipyard in the Yard Exchange service panel and buy the Rook special.",
+        "The loan is active and the money is in your account. Choose Shipyard again, then buy the Rook special starter mining ship.",
       onEnter: [
         { type: "hideComponent", componentId: "contract" },
         {
@@ -143,7 +143,7 @@ export const chapterOneNewShipMission = {
       id: "buy-starter-ship",
       objective: "Buy the Rook special starter ship.",
       helpText:
-        "Use Barvis's Merchant panel to buy the Rook special. It includes a miner and cargo hold so you can take mining work.",
+        "Use Barvis's Merchant panel to buy the Rook special. It includes a miner and cargo hold, which you need for Rook's mining work.",
       onEnter: [
         { type: "showComponent", componentId: "merchant", componentName: "Merchant" },
         {
@@ -170,7 +170,7 @@ export const chapterOneNewShipMission = {
       id: "find-rook",
       objective: "Talk to Rook Industries.",
       helpText:
-        "Barvis is done with the sale. Choose Rook Industries in the Yard Exchange service panel to get your first mining work.",
+        "Barvis is done with the sale. Choose Rook Industries in the Yard Exchange service panel to get your first mining contract.",
       onEnter: [
         {
           type: "say",

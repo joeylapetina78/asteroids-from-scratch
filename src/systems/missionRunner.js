@@ -74,8 +74,9 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     const consideration = (step.considerations ?? []).find((candidate) => matchesEventRule(candidate, event));
 
     if (consideration) {
+      const considerationActions = getRuleActions(consideration);
       applyRuleMarkers(consideration);
-      runActions(consideration.actions ?? []);
+      runActions(considerationActions);
     }
 
     const transition = (step.transitions ?? []).find((candidate) => matchesEventRule(candidate, event));
@@ -84,8 +85,9 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
       return Boolean(consideration);
     }
 
+    const transitionActions = getRuleActions(transition);
     applyRuleMarkers(transition);
-    runActions(transition.actions ?? []);
+    runActions(transitionActions);
 
     if (transition.nextStepId) {
       goToStep(transition.nextStepId);
@@ -159,7 +161,19 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
   }
 
   function matchesEventRule(rule, event) {
-    if (rule.once && state.journey.flags[rule.setFlag ?? rule.id]) {
+    if (!rule.repeatable && rule.once && state.journey.flags[rule.setFlag ?? rule.id]) {
+      return false;
+    }
+
+    if (rule.repeatable && rule.cooldownMs) {
+      const lastAt = state.journey.flags[getRuleLastAtKey(rule)] ?? 0;
+
+      if (Date.now() - lastAt < rule.cooldownMs) {
+        return false;
+      }
+    }
+
+    if (rule.maxRuns !== undefined && getRuleRunCount(rule) >= rule.maxRuns) {
       return false;
     }
 
@@ -196,6 +210,42 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     if (rule.setFlag) {
       state.journey.flags[rule.setFlag] = true;
     }
+
+    if (rule.repeatable || rule.responses?.length || rule.maxRuns !== undefined) {
+      state.journey.flags[getRuleCountKey(rule)] = getRuleRunCount(rule) + 1;
+      state.journey.flags[getRuleLastAtKey(rule)] = Date.now();
+    }
+  }
+
+  function getRuleActions(rule) {
+    if (!rule.responses?.length) {
+      return rule.actions ?? [];
+    }
+
+    const runCount = getRuleRunCount(rule);
+    const responseIndex =
+      rule.responseMode === "loop"
+        ? runCount % rule.responses.length
+        : Math.min(runCount, rule.responses.length - 1);
+    const response = rule.responses[responseIndex];
+
+    return [
+      ...(rule.beforeResponseActions ?? []),
+      { type: "say", ...response },
+      ...(rule.afterResponseActions ?? []),
+    ];
+  }
+
+  function getRuleRunCount(rule) {
+    return state.journey.flags[getRuleCountKey(rule)] ?? 0;
+  }
+
+  function getRuleCountKey(rule) {
+    return `rule:${rule.id}:count`;
+  }
+
+  function getRuleLastAtKey(rule) {
+    return `rule:${rule.id}:lastAt`;
   }
 
   function matchesConditions(rule, event) {

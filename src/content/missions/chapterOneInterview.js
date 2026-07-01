@@ -44,13 +44,24 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
     id: "near-rock",
     eventType: "ship.nearObject",
     payloadEquals: { targetType: "asteroid" },
-    setFlag: "nearRock",
-    once: true,
-    actions: [
+    repeatable: true,
+    cooldownMs: 12000,
+    responses: [
       {
-        type: "say",
         speaker: "Rook",
         text: "Careful. Close to rocks is where interviews turn into invoices.",
+      },
+      {
+        speaker: "Rook",
+        text: "Rookie, rocks are cheaper when we do not personally inspect them with the hull.",
+      },
+      {
+        speaker: "Rook",
+        text: "Again with the rocks. Keep some daylight between us and the expensive crunching sounds.",
+      },
+      {
+        speaker: "Rook",
+        text: "I am begging you, with professional restraint, to stop flirting with the rocks.",
       },
     ],
   },
@@ -58,13 +69,24 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
     id: "hit-rock",
     eventType: "ship.collision",
     payloadEquals: { targetType: "asteroid" },
-    setFlag: "hitRock",
-    once: true,
-    actions: [
+    repeatable: true,
+    cooldownMs: 8000,
+    responses: [
       {
-        type: "say",
         speaker: "Rook",
         text: "Hey! This ship is still worth something. Try steering around the rocks, not through them.",
+      },
+      {
+        speaker: "Rook",
+        text: "That was a collision. Hull goes down, repair bill goes up. Simple math, bad math.",
+      },
+      {
+        speaker: "Rook",
+        text: "Every time you hit a rock, Yard Exchange gets a little richer and I get a little older.",
+      },
+      {
+        speaker: "Rook",
+        text: "Careful, rookie. If you keep breaking it, somebody is going to make you buy it.",
       },
     ],
   },
@@ -86,13 +108,23 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
     id: "left-starter-drift",
     eventType: "zone.entered",
     payloadEquals: { zoneId: "not:starter-drift" },
-    setFlag: "leftStarterDrift",
-    once: true,
-    actions: [
+    repeatable: true,
+    cooldownMs: 20000,
+    responses: [
       {
-        type: "say",
         speaker: "Rook",
-        text: "Nope, this is not the way. Turn us around and head back to the Drift. Yard Exchange is back that way.",
+        text:
+          "Nope, this is not the way. Your provisional license only covers this starter route through Starter Drift. Turn us back toward Yard Exchange.",
+      },
+      {
+        speaker: "Rook",
+        text:
+          "Provisional means provisional, rookie. You leave the cleared part of First Reach and the fines start looking for us.",
+      },
+      {
+        speaker: "Rook",
+        text:
+          "Do not make me explain to station control why a temporary license is wandering around where it does not belong.",
       },
     ],
   },
@@ -126,7 +158,7 @@ export const chapterOneInterviewMission = {
       id: "show-hull",
       objective: "Get your bearings.",
       helpText:
-        "This is the Journey panel. The other panel is the Hull panel. Hull integrity is ship health. If it reaches 0%, the ship is wrecked.",
+        "This is the Journey panel. It shows the current mission, plain instructions, and your credits. The Hull panel shows ship health, VIN, and the Docking Lock.",
       onEnter: [
         { type: "showComponent", componentId: "hull", componentName: "Hull" },
         { type: "showComponent", componentId: "docking", componentName: "Docking Lock" },
@@ -134,7 +166,7 @@ export const chapterOneInterviewMission = {
           type: "say",
           speaker: "Rook",
           text:
-            "All right, rookie. Here are our ship controls and displays. You can see the hull of this ship's at 100%. You better keep it that way, ya hear? Consider this your assessment test, training, and interview all in one.",
+            "All right, rookie. Here are our ship controls and displays. You can see the hull of this ship's at 100%. You better keep it that way, ya hear? You've got a provisional license for this starter route, so stay in bounds. Consider this your assessment test, training, and interview all in one.",
           acknowledgement: { label: "Okay" },
         },
       ],
@@ -220,7 +252,7 @@ export const chapterOneInterviewMission = {
       id: "offer-contract",
       objective: "Review Rook's delivery contract.",
       helpText:
-        "Use the Contract panel to accept the delivery terms. The job pays when this VIN docks at Yard Exchange.",
+        "Use the Contract panel to accept the delivery terms. The job pays when this VIN docks at Yard Exchange and the ship is powered down.",
       onEnter: [
         {
           type: "say",
@@ -249,13 +281,13 @@ export const chapterOneInterviewMission = {
       id: "show-scanner",
       objective: "Get your bearings.",
       helpText:
-        "Press Add Scanner to install the starter scanner. This scanner only points toward the mission hub.",
+        "Press Add Scanner to install the starter scanner. This scanner only points toward the mission hub. You have limited scan power.",
       onEnter: [
         {
           type: "say",
           speaker: "Rook",
           text:
-            "We're that unpowered ship in the center of the viewport. There's the hub we came from, Scrap Porch, in the lower left corner. Your Job is to deliver this ship to the other hub in this zone, the Yard Exchange. Let me add the scanner so you know which way to go.",
+            "We're that unpowered ship in the center of the viewport. There's the hub we came from, Scrap Porch, in the lower left corner. Your job is to deliver this ship to the other hub in this zone, the Yard Exchange. Let me add the scanner so you know which way to go.",
           acknowledgement: { label: "Add Scanner" },
         },
       ],
@@ -267,12 +299,15 @@ export const chapterOneInterviewMission = {
         { type: "showComponent", componentId: "scanner", componentName: "Scanner" },
         { type: "goToStep", stepId: "try-scanner" },
       ],
+      considerations: [
+        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
+      ],
     },
     {
       id: "try-scanner",
       objective: "Use the scanner once.",
       helpText:
-        "Press Scan once. The pale marker points toward Yard Exchange. The scanner has limited scanergy, so do not burn it all at once.",
+        "Press Scan once. The pale marker points toward Yard Exchange. If you skip the scanner and find the hub anyway, that still counts.",
       onEnter: [
         {
           type: "say",
@@ -297,6 +332,9 @@ export const chapterOneInterviewMission = {
           nextStepId: "show-engine",
         },
       ],
+      considerations: [
+        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
+      ],
     },
     {
       id: "show-engine",
@@ -316,12 +354,15 @@ export const chapterOneInterviewMission = {
         { type: "showComponent", componentId: "engine", componentName: "Engine" },
         { type: "goToStep", stepId: "power-on" },
       ],
+      considerations: [
+        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
+      ],
     },
     {
       id: "power-on",
       objective: "Power the ship.",
       helpText:
-        "Use the Engine panel and click Power Ship. The controls are shown on that same panel.",
+        "Use the Engine panel and click Power Ship. W thrusts, A/D rotate, and S brakes after the ship is powered.",
       onEnter: [
         {
           type: "say",
@@ -345,12 +386,15 @@ export const chapterOneInterviewMission = {
           nextStepId: "first-thrust",
         },
       ],
+      considerations: [
+        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
+      ],
     },
     {
       id: "first-thrust",
       objective: "Head for Yard Exchange.",
       helpText:
-        "Press W to thrust, A/D to rotate, and S to brake. Yard Exchange is the hub your scanner pointed toward.",
+        "Press W to thrust, A/D to rotate, and S to brake. Keep the ship inside the cleared Starter Drift route and head for Yard Exchange.",
       onEnter: [
         {
           type: "say",

@@ -1,7 +1,7 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=hull-docking-v1";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=rook-contract-handoff-v1";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=murmur-roadmap-v1";
-import { createMissionRunner } from "./missionRunner.js?v=rook-contract-handoff-v1";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=consideration-cycles-v1";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=consideration-cycles-v1";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=consideration-cycles-v1";
+import { createMissionRunner } from "./missionRunner.js?v=consideration-cycles-v1";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
