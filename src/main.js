@@ -1,10 +1,10 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=tow-stable-v1";
-import { createContractManager } from "./systems/contractManager.js?v=rook-one-contract-v1";
+import { createContractManager } from "./systems/contractManager.js?v=mako-hunter-v1";
 import { createGameAudio } from "./systems/audio.js?v=murmur-roadmap-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fuel-finance-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=tow-stable-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=mako-hunter-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=mako-hunter-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
@@ -895,6 +895,15 @@ function offerHubServiceContract(site, service) {
 
 function getNextHubServiceContractId(service) {
   const contractIds = service.contractIds ?? [];
+  const missionFirstContractId = service.missionFirstContractId;
+  const missionFirstContract = missionFirstContractId ? state.contracts.records[missionFirstContractId] : null;
+  const missionFirstResolved =
+    !missionFirstContractId ||
+    (missionFirstContract && ["active", "fulfilled", "paid"].includes(missionFirstContract.status));
+
+  if (!missionFirstResolved) {
+    return missionFirstContractId;
+  }
 
   if (service.serviceType === "finance" && state.components.engine.fuel <= 0) {
     const emergencyLoanId = "mako-emergency-fuel-loan";
@@ -918,6 +927,14 @@ function getNextHubServiceContractId(service) {
 
   const prereqs = service.contractPrerequisites ?? {};
   const eligibleContractIds = contractIds.filter((contractId) => {
+    if (contractId !== missionFirstContractId && !missionFirstResolved) {
+      return false;
+    }
+
+    if (contractId === "mako-emergency-fuel-loan" && state.components.engine.fuel > 0) {
+      return false;
+    }
+
     const existingContract = state.contracts.records[contractId];
     if (existingContract && !(existingContract.repeatable && existingContract.status === "paid")) {
       return false;

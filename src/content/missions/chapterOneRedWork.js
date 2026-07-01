@@ -187,6 +187,46 @@ export const chapterOneRedWorkMission = {
           ],
         },
         {
+          id: "hunter-seen-warning",
+          eventType: "ship.nearObject",
+          payloadEquals: { targetType: "hunter" },
+          once: true,
+          setFlag: "warned-hunter-seen",
+          actions: [
+            {
+              type: "say",
+              speaker: "Rook",
+              text:
+                "Hunter in sight. Red little problem with teeth. If you're light on hull or charges, do not be a hero; get back toward Yard Exchange.",
+            },
+          ],
+        },
+        {
+          id: "hunter-kill-commentary",
+          eventType: "enemy.destroyed",
+          payloadEquals: { enemyType: "hunter" },
+          repeatable: true,
+          cooldownMs: 1200,
+          maxRuns: 3,
+          responses: [
+            {
+              speaker: "Rook",
+              text:
+                "You got it? Huh. Not bad, rookie. Keep your eyes up; those things do not usually travel alone.",
+            },
+            {
+              speaker: "Rook",
+              text:
+                "Another hunter down. I'll admit, that's useful. Still cheaper to avoid them than repair the ship after every scrap.",
+            },
+            {
+              speaker: "Rook",
+              text:
+                "Ace. I'll leave you to it.",
+            },
+          ],
+        },
+        {
           id: "stranded-dispatch",
           eventType: "ship.stranded",
           repeatable: true,

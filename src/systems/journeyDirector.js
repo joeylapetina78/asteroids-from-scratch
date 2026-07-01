@@ -1,6 +1,6 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=consideration-cycles-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=consideration-cycles-v1";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=tow-stable-v1";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=mako-hunter-v1";
 import { createMissionRunner } from "./missionRunner.js?v=tow-stable-v1";
 
 const MISSION_DEFINITIONS = new Map(

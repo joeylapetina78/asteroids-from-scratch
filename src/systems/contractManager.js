@@ -9,6 +9,12 @@ export function createContractManager({ state, onChange = () => {} }) {
     const definition = getContractDefinition(contractId);
     const existingContract = state.contracts.records[contractId];
 
+    if (existingContract?.status === "offered") {
+      state.contracts.currentContractId = contractId;
+      onChange(getCurrentContract());
+      return;
+    }
+
     if (existingContract?.status === "active" || existingContract?.status === "fulfilled" || existingContract?.status === "paid") {
       if (existingContract.status === "paid" && definition.repeatable) {
         state.contracts.records[contractId] = createContractRecord(definition, existingContract.runCount ?? 1, offerSource);
