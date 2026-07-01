@@ -47,10 +47,13 @@ const DOCK_TETHER_BREAK_DAMAGE = 12;
 const DOCK_TETHER_BREAK_IMPULSE = 210;
 const TOW_BASE_COST = 260;
 const TOW_COST_PER_1000_UNITS = 120;
-const TOW_APPROACH_SPEED = 280;
-const TOW_RETURN_SPEED = 220;
-const TOW_ATTACH_DISTANCE = 70;
-const TOW_DELIVERY_DISTANCE = 160;
+const TOW_APPROACH_SPEED = 108;
+const TOW_RETURN_SPEED = 88;
+const TOW_ATTACH_DISTANCE = 84;
+const TOW_DELIVERY_DISTANCE = 28;
+const TOW_LINE_LENGTH = 120;
+const TOW_LINE_STIFFNESS = 2.8;
+const TOW_LINE_DAMPING = 0.965;
 
 export class Game {
   constructor(
@@ -815,7 +818,7 @@ export class Game {
     const distanceToSite = nearest?.distance ?? distance(this.ship.position, site.position);
     const estimate = this.getEmergencyTowEstimate();
     const directionToShip = normalizeVector(this.ship.position.x - site.position.x, this.ship.position.y - site.position.y);
-    const startDistance = Math.max(site.interactionRadius + 90, Math.min(distanceToSite * 0.35, 900));
+    const startDistance = Math.max(site.interactionRadius + 260, Math.min(distanceToSite * 0.55, 1200));
 
     this.activeTow = {
       phase: "approach",
@@ -904,19 +907,11 @@ export class Game {
 
     const towTarget = getTowDropoffPosition(tow.site, this.ship.position);
     const distanceToTarget = distance(this.ship.position, towTarget);
-    const directionToHub = normalizeVector(towTarget.x - this.ship.position.x, towTarget.y - this.ship.position.y);
-    const desiredRunnerPosition = {
-      x: this.ship.position.x + directionToHub.x * 85,
-      y: this.ship.position.y + directionToHub.y * 85,
-    };
-    const travelStep = Math.min(TOW_RETURN_SPEED * deltaSeconds, distanceToTarget);
+    const directionToHub = normalizeVector(towTarget.x - tow.position.x, towTarget.y - tow.position.y);
 
-    this.steerTowRunner(tow, desiredRunnerPosition, TOW_RETURN_SPEED * 1.15, deltaSeconds);
-    this.ship.position.x += directionToHub.x * travelStep;
-    this.ship.position.y += directionToHub.y * travelStep;
-    this.ship.velocity.x = directionToHub.x * TOW_RETURN_SPEED * 0.65;
-    this.ship.velocity.y = directionToHub.y * TOW_RETURN_SPEED * 0.65;
-    tow.towedDistance += travelStep;
+    this.steerTowRunner(tow, towTarget, TOW_RETURN_SPEED, deltaSeconds);
+    this.applyTowLine(tow, deltaSeconds);
+    tow.towedDistance += Math.max(0, dotProduct(this.ship.velocity, directionToHub) * deltaSeconds);
 
     if (distanceToTarget > TOW_DELIVERY_DISTANCE) {
       return;
@@ -927,17 +922,46 @@ export class Game {
 
   steerTowRunner(tow, target, maxSpeed, deltaSeconds) {
     const targetDirection = normalizeVector(target.x - tow.position.x, target.y - tow.position.y);
+    const avoidance = getTowAvoidance(tow, this.asteroids);
+    const steerDirection = normalizeVector(
+      targetDirection.x + avoidance.x,
+      targetDirection.y + avoidance.y,
+    );
     const desiredVelocity = {
-      x: targetDirection.x * maxSpeed,
-      y: targetDirection.y * maxSpeed,
+      x: steerDirection.x * maxSpeed,
+      y: steerDirection.y * maxSpeed,
     };
-    const turn = Math.min(1, deltaSeconds * 3.4);
+    const turn = Math.min(1, deltaSeconds * 1.65);
 
     tow.velocity.x += (desiredVelocity.x - tow.velocity.x) * turn;
     tow.velocity.y += (desiredVelocity.y - tow.velocity.y) * turn;
     tow.position.x += tow.velocity.x * deltaSeconds;
     tow.position.y += tow.velocity.y * deltaSeconds;
-    tow.heading = lerpAngle(tow.heading, Math.atan2(tow.velocity.y, tow.velocity.x), Math.min(1, deltaSeconds * 7));
+    tow.heading = lerpAngle(tow.heading, Math.atan2(tow.velocity.y, tow.velocity.x), Math.min(1, deltaSeconds * 3.8));
+  }
+
+  applyTowLine(tow, deltaSeconds) {
+    const offsetX = tow.position.x - this.ship.position.x;
+    const offsetY = tow.position.y - this.ship.position.y;
+    const lineDistance = Math.hypot(offsetX, offsetY) || 1;
+    const stretch = lineDistance - TOW_LINE_LENGTH;
+
+    if (stretch <= 0) {
+      this.ship.velocity.x *= TOW_LINE_DAMPING;
+      this.ship.velocity.y *= TOW_LINE_DAMPING;
+      return;
+    }
+
+    const pullX = offsetX / lineDistance;
+    const pullY = offsetY / lineDistance;
+    const pull = Math.min(220, stretch * TOW_LINE_STIFFNESS);
+
+    this.ship.velocity.x += pullX * pull * deltaSeconds;
+    this.ship.velocity.y += pullY * pull * deltaSeconds;
+    this.ship.velocity.x = this.ship.velocity.x * TOW_LINE_DAMPING + tow.velocity.x * 0.012;
+    this.ship.velocity.y = this.ship.velocity.y * TOW_LINE_DAMPING + tow.velocity.y * 0.012;
+    this.ship.position.x += this.ship.velocity.x * deltaSeconds;
+    this.ship.position.y += this.ship.velocity.y * deltaSeconds;
   }
 
   completeEmergencyTow() {
@@ -947,6 +971,8 @@ export class Game {
       return;
     }
 
+    const towTarget = getTowDropoffPosition(tow.site, this.ship.position);
+
     this.activeTow = null;
     this.state.components.account.credits -= tow.cost;
     this.state.components.engine.fuel = 0;
@@ -954,6 +980,8 @@ export class Game {
     this.shipDestroyed = false;
     this.hasRecordedStrandedEvent = false;
     this.hasRecordedLowFuelEvent = false;
+    this.ship.position.x = towTarget.x;
+    this.ship.position.y = towTarget.y;
     this.ship.velocity.x = 0;
     this.ship.velocity.y = 0;
     this.setDockedSite(tow.site);
@@ -2242,6 +2270,10 @@ function getRelativeSpeed(firstBody, secondBody) {
   return Math.hypot(firstBody.velocity.x - secondBody.velocity.x, firstBody.velocity.y - secondBody.velocity.y);
 }
 
+function dotProduct(firstVector, secondVector) {
+  return firstVector.x * secondVector.x + firstVector.y * secondVector.y;
+}
+
 function normalizeVector(x, y) {
   const length = Math.hypot(x, y) || 1;
 
@@ -2249,6 +2281,44 @@ function normalizeVector(x, y) {
     x: x / length,
     y: y / length,
   };
+}
+
+function getTowAvoidance(tow, asteroids) {
+  const force = { x: 0, y: 0 };
+  const forward = normalizeVector(tow.velocity.x, tow.velocity.y);
+  const feeler = {
+    x: tow.position.x + forward.x * 120,
+    y: tow.position.y + forward.y * 120,
+  };
+  let count = 0;
+
+  asteroids.forEach((asteroid) => {
+    const safeRadius = asteroid.radius + 145;
+    const distanceToTow = distance(tow.position, asteroid.position);
+    const distanceToFeeler = distance(feeler, asteroid.position);
+    const nearestDistance = Math.min(distanceToTow, distanceToFeeler);
+
+    if (nearestDistance > safeRadius) {
+      return;
+    }
+
+    const strength = ((safeRadius - Math.max(1, nearestDistance)) / safeRadius) ** 1.35;
+    const away = normalizeVector(tow.position.x - asteroid.position.x, tow.position.y - asteroid.position.y);
+    const side = {
+      x: -forward.y,
+      y: forward.x,
+    };
+
+    force.x += away.x * strength * 0.55 + side.x * strength * 0.75;
+    force.y += away.y * strength * 0.55 + side.y * strength * 0.75;
+    count += 1;
+  });
+
+  if (count === 0) {
+    return force;
+  }
+
+  return normalizeVector(force.x / count, force.y / count);
 }
 
 function getTowDropoffPosition(site, shipPosition) {

@@ -71,7 +71,9 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
       return false;
     }
 
-    const consideration = (step.considerations ?? []).find((candidate) => matchesEventRule(candidate, event));
+    const consideration = state.journey.pendingAcknowledgement
+      ? null
+      : (step.considerations ?? []).find((candidate) => matchesEventRule(candidate, event));
 
     if (consideration) {
       const considerationActions = getRuleActions(consideration);
