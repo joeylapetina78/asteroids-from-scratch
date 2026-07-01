@@ -810,27 +810,24 @@ export class Game {
     const normalX = distanceX / transferDistance;
     const normalY = distanceY / transferDistance;
 
-    for (let index = 0; index < 5; index += 1) {
-      const progress = index * 0.045;
-      const sideJitter = (index - 2) * 2.6;
+    const travelTime = Math.max(0.4, transferDistance / 235);
 
-      this.particles.push({
-        type: "cargo-packet",
-        position: {
-          x: this.ship.position.x + distanceX * progress - normalY * sideJitter,
-          y: this.ship.position.y + distanceY * progress + normalX * sideJitter,
-        },
-        velocity: {
-          x: normalX * (230 + index * 14),
-          y: normalY * (230 + index * 14),
-        },
-        color,
-        size: 5,
-        drag: 0.99,
-        life: Math.max(0.35, transferDistance / 235) + index * 0.025,
-        maxLife: Math.max(0.35, transferDistance / 235) + index * 0.025,
-      });
-    }
+    this.particles.push({
+      type: "cargo-packet",
+      position: {
+        x: this.ship.position.x,
+        y: this.ship.position.y,
+      },
+      velocity: {
+        x: normalX * 235,
+        y: normalY * 235,
+      },
+      color,
+      size: 6,
+      drag: 0.995,
+      life: travelTime,
+      maxLife: travelTime,
+    });
   }
 
   updateSiteReadout() {
@@ -2190,10 +2187,10 @@ export class Game {
       this.context.arc(screenX, screenY, site.interactionRadius, 0, Math.PI * 2);
       this.context.stroke();
 
-      if (isNearby) {
+      if (isDocked) {
         const shipX = this.ship.position.x - camera.x;
         const shipY = this.ship.position.y - camera.y;
-        this.context.strokeStyle = isDocked ? "rgba(255, 255, 255, 0.78)" : "rgba(158, 232, 255, 0.46)";
+        this.context.strokeStyle = "rgba(255, 255, 255, 0.78)";
         this.context.setLineDash([8, 8]);
         this.context.beginPath();
         this.context.moveTo(shipX, shipY);

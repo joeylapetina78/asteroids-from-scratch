@@ -235,6 +235,21 @@ export function createJourneyDirector({
     journey.messages = [];
   }
 
+  function clearPendingAcknowledgement(action = null) {
+    if (!journey.pendingAcknowledgement) {
+      return false;
+    }
+
+    if (action && journey.pendingAcknowledgement.action !== action) {
+      return false;
+    }
+
+    journey.pendingAcknowledgement = null;
+    clearMessage();
+    onChange(journey);
+    return true;
+  }
+
   function createMission(missionDefinition) {
     return createMissionRunner({
       missionDefinition,
@@ -273,6 +288,7 @@ export function createJourneyDirector({
     acceptMission,
     acknowledge,
     pressJourneyButton,
+    clearPendingAcknowledgement,
   };
 }
 

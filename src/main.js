@@ -1,11 +1,11 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
-import { Game } from "./game.js?v=tow-message-guard-v1";
+import { Game } from "./game.js?v=docking-tether-v1";
 import { createContractManager } from "./systems/contractManager.js?v=world-refs-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=world-refs-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=docking-tether-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=attention-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-records-v1";
@@ -451,6 +451,7 @@ function setTowAvailable(isAvailable) {
   // sayAsNpc causes a Journey render, which calls updateHudDisplay again.
   // Update this guard first so the tow prompt cannot recurse.
   if (!isAvailable) {
+    journeyDirector.clearPendingAcknowledgement?.("emergencyTow");
     wasTowAvailable = false;
     return;
   }
@@ -641,7 +642,7 @@ function updateDockingDisplay(siteState) {
   const site = siteState.dockedSite ?? siteState.nearbySite;
   const shipSpeed = Math.hypot(game.ship.velocity.x, game.ship.velocity.y);
   const isDocked = Boolean(site && siteState.dockedSite?.id === site.id);
-  const isCaution = Boolean(site && !isDocked && shipSpeed > 24);
+  const isCaution = Boolean(site && isDocked && shipSpeed > 12);
 
   if (!state.components.docking.installed || !site) {
     dockingTarget.textContent = "No target";
