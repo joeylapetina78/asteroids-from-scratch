@@ -1353,7 +1353,7 @@ function processUnit(type) {
   }
 
   updateHudDisplay();
-  game.refreshSiteReadout();
+  game.updateSiteReadout();
 }
 
 function receiveCollectedResource(type) {
@@ -1387,7 +1387,7 @@ function sellCargoUnit(type) {
   game.createCargoTransferTrail(type);
   renderFinleyPanel();
   updateHudDisplay();
-  game.refreshSiteReadout();
+  game.updateSiteReadout();
   return true;
 }
 
@@ -1530,39 +1530,8 @@ function depositCargoUnit(type) {
 
   renderContract();
   updateHudDisplay();
-  game.refreshSiteReadout();
+  game.updateSiteReadout();
   return true;
-}
-
-function sellCargoHold() {
-  if (isPanelHidden(hubPanel) || hubSellCargoButton.disabled) {
-    return;
-  }
-
-  const cargoValue = getCargoHoldValue();
-  const cargoCounts = cargoHold.getUnitCounts();
-  const totalUnits = Object.values(cargoCounts).reduce((sum, count) => sum + count, 0);
-
-  if (cargoValue <= 0) {
-    return;
-  }
-
-  cargoHold.drainUnits();
-  Object.entries(cargoCounts).forEach(([type, count]) => {
-    const visibleTransfers = Math.min(count, 10);
-
-    for (let index = 0; index < visibleTransfers; index += 1) {
-      window.setTimeout(() => game.createCargoTransferTrail(type), index * 90);
-    }
-  });
-  state.components.account.credits += cargoValue;
-  state.ledger.recordEvent("cargo.sold", {
-    creditsEarned: cargoValue,
-    units: cargoCounts,
-    totalUnits,
-  });
-  updateHudDisplay();
-  game.refreshSiteReadout();
 }
 
 function updateEventLedgerDisplay() {

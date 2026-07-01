@@ -389,10 +389,7 @@ export class Game {
   }
 
   updateMovementEvent() {
-    const distanceMoved = Math.hypot(
-      this.ship.position.x - this.lastShipMovementEventPosition.x,
-      this.ship.position.y - this.lastShipMovementEventPosition.y,
-    );
+    const distanceMoved = distance(this.ship.position, this.lastShipMovementEventPosition);
 
     if (distanceMoved < STORY_MOVEMENT_DISTANCE) {
       return;
@@ -515,7 +512,7 @@ export class Game {
 
     candidates.forEach((candidate) => {
       const distanceToSurface =
-        Math.hypot(this.ship.position.x - candidate.position.x, this.ship.position.y - candidate.position.y) -
+        distance(this.ship.position, candidate.position) -
         SHIP_COLLISION_RADIUS -
         candidate.radius;
 
@@ -628,9 +625,9 @@ export class Game {
     const damage = DOCK_TETHER_BREAK_DAMAGE;
     const awayX = this.ship.position.x - site.position.x;
     const awayY = this.ship.position.y - site.position.y;
-    const distance = Math.hypot(awayX, awayY) || 1;
-    const normalX = awayX / distance;
-    const normalY = awayY / distance;
+    const tetherDistance = Math.hypot(awayX, awayY) || 1;
+    const normalX = awayX / tetherDistance;
+    const normalY = awayY / tetherDistance;
 
     this.ship.velocity.x += normalX * DOCK_TETHER_BREAK_IMPULSE;
     this.ship.velocity.y += normalY * DOCK_TETHER_BREAK_IMPULSE;
@@ -638,27 +635,6 @@ export class Game {
     this.damageHull(damage);
     this.triggerImpactFeedback(damage);
     this.setDockedSite(null, { forced: true, damage });
-  }
-
-  refuelAtHub(site) {
-    const engine = this.state.components.engine;
-    const fuelBefore = engine.fuel;
-
-    if (!engine.installed || fuelBefore >= engine.maxFuel) {
-      return;
-    }
-
-    engine.fuel = engine.maxFuel;
-    this.hasRecordedStrandedEvent = false;
-    this.hasRecordedLowFuelEvent = false;
-    this.state.ledger.recordEvent("ship.refueled", {
-      siteId: site.id,
-      siteName: site.name,
-      fuelBefore: Math.floor(fuelBefore),
-      fuelAfter: Math.floor(engine.fuel),
-      fuelAdded: Math.floor(engine.fuel - fuelBefore),
-    });
-    this.onHudChange(this.state);
   }
 
   updateZoneTitle() {
@@ -728,10 +704,6 @@ export class Game {
     return Math.ceil(missingHull * REPAIR_CREDITS_PER_HULL);
   }
 
-  refreshSiteReadout() {
-    this.updateSiteReadout();
-  }
-
   updateLowFuelEvent(previousFuel) {
     const engine = this.state.components.engine;
     const lowFuelLine = engine.maxFuel * 0.5;
@@ -790,9 +762,9 @@ export class Game {
     const color = resourceType === "crystal" ? "#73d2ff" : "#ff7452";
     const distanceX = site.position.x - this.ship.position.x;
     const distanceY = site.position.y - this.ship.position.y;
-    const distance = Math.hypot(distanceX, distanceY) || 1;
-    const normalX = distanceX / distance;
-    const normalY = distanceY / distance;
+    const transferDistance = distance(this.ship.position, site.position) || 1;
+    const normalX = distanceX / transferDistance;
+    const normalY = distanceY / transferDistance;
 
     for (let index = 0; index < 5; index += 1) {
       const progress = index * 0.045;
@@ -811,8 +783,8 @@ export class Game {
         color,
         size: 5,
         drag: 0.99,
-        life: Math.max(0.35, distance / 235) + index * 0.025,
-        maxLife: Math.max(0.35, distance / 235) + index * 0.025,
+        life: Math.max(0.35, transferDistance / 235) + index * 0.025,
+        maxLife: Math.max(0.35, transferDistance / 235) + index * 0.025,
       });
     }
   }
@@ -1038,7 +1010,7 @@ export class Game {
         continue;
       }
 
-      this.bumpHunterFromBody(hunter, hitAsteroid, 0.85);
+      this.bumpBodyFromBody(hunter, hitAsteroid, 0.85, { baseImpulse: 70, overlapImpulse: 3 });
       hunter.damage(this.getHunterEnvironmentDamage(hunter, hitAsteroid));
       hunter.environmentHitCooldown = HUNTER_ENVIRONMENT_HIT_COOLDOWN_SECONDS;
       this.createHunterImpactSparks(hunter);
@@ -1135,7 +1107,7 @@ export class Game {
       return;
     }
 
-    const scanergyCost = this.getCollectorScanergyCost() * deltaSeconds;
+    const scanergyCost = COLLECTOR_MAX_SCANERGY_PER_SECOND * deltaSeconds;
     scanner.scanergy = Math.max(0, scanner.scanergy - scanergyCost);
 
     if (scanner.scanergy === 0) {
@@ -1325,7 +1297,7 @@ export class Game {
           .filter((lifeform) => lifeform.type === "hunter" && lifeform.isAlive && !hitHunters.has(lifeform))
           .map((hunter) => ({
             hunter,
-            distance: Math.hypot(hunter.position.x - site.position.x, hunter.position.y - site.position.y),
+            distance: distance(hunter.position, site.position),
           }))
           .filter(({ hunter, distance }) => distance - hunter.radius <= clearanceRadius)
           .sort((first, second) => first.distance - second.distance)[0]?.hunter;
@@ -1343,7 +1315,7 @@ export class Game {
           .filter((asteroid) => !hitAsteroids.has(asteroid))
           .map((asteroid) => ({
             asteroid,
-            distance: Math.hypot(asteroid.position.x - site.position.x, asteroid.position.y - site.position.y),
+            distance: distance(asteroid.position, site.position),
           }))
           .filter(({ asteroid, distance }) => distance - asteroid.radius <= clearanceRadius)
           .sort((first, second) => first.distance - second.distance)[0]?.asteroid;
@@ -1393,7 +1365,7 @@ export class Game {
         return;
       }
 
-      this.bumpShipFromBody(ship, hitAsteroid, 0.55);
+      this.bumpBodyFromBody(ship, hitAsteroid, 0.55, { baseImpulse: 42, overlapImpulse: 1.8 });
       ship.damage(this.getNpcEnvironmentDamage(ship, hitAsteroid));
       ship.environmentHitCooldown = NPC_ENVIRONMENT_HIT_COOLDOWN_SECONDS;
       this.createNpcImpactSparks(ship);
@@ -1488,9 +1460,7 @@ export class Game {
   }
 
   getImpactDamage(asteroid) {
-    const relativeVelocityX = this.ship.velocity.x - asteroid.velocity.x;
-    const relativeVelocityY = this.ship.velocity.y - asteroid.velocity.y;
-    const relativeSpeed = Math.hypot(relativeVelocityX, relativeVelocityY);
+    const relativeSpeed = getRelativeSpeed(this.ship, asteroid);
     const massScale = asteroid.radius / 34;
     const damage = 4 + relativeSpeed * 0.04 + relativeSpeed * massScale * 0.07 + asteroid.radius * 0.18;
 
@@ -1715,54 +1685,36 @@ export class Game {
     }
   }
 
-  bumpHunterFromBody(hunter, body, strength = 1) {
-    const distanceX = hunter.position.x - body.position.x;
-    const distanceY = hunter.position.y - body.position.y;
-    const distance = Math.hypot(distanceX, distanceY) || 1;
-    const overlap = hunter.radius + body.radius - distance;
+  bumpBodyFromBody(entity, body, strength = 1, { baseImpulse, overlapImpulse }) {
+    const distanceX = entity.position.x - body.position.x;
+    const distanceY = entity.position.y - body.position.y;
+    const centerDistance = distance(entity.position, body.position) || 1;
+    const overlap = entity.radius + body.radius - centerDistance;
 
     if (overlap <= 0) {
       return;
     }
 
-    const normalX = distanceX / distance;
-    const normalY = distanceY / distance;
-    hunter.position.x += normalX * overlap * strength;
-    hunter.position.y += normalY * overlap * strength;
-    hunter.velocity.x += normalX * (70 + overlap * 3);
-    hunter.velocity.y += normalY * (70 + overlap * 3);
-  }
-
-  bumpShipFromBody(ship, body, strength = 1) {
-    const distanceX = ship.position.x - body.position.x;
-    const distanceY = ship.position.y - body.position.y;
-    const distance = Math.hypot(distanceX, distanceY) || 1;
-    const overlap = ship.radius + body.radius - distance;
-
-    if (overlap <= 0) {
-      return;
-    }
-
-    const normalX = distanceX / distance;
-    const normalY = distanceY / distance;
-    ship.position.x += normalX * overlap * strength;
-    ship.position.y += normalY * overlap * strength;
-    ship.velocity.x += normalX * (42 + overlap * 1.8);
-    ship.velocity.y += normalY * (42 + overlap * 1.8);
+    const normalX = distanceX / centerDistance;
+    const normalY = distanceY / centerDistance;
+    entity.position.x += normalX * overlap * strength;
+    entity.position.y += normalY * overlap * strength;
+    entity.velocity.x += normalX * (baseImpulse + overlap * overlapImpulse);
+    entity.velocity.y += normalY * (baseImpulse + overlap * overlapImpulse);
   }
 
   separateHunters(firstHunter, secondHunter) {
     const distanceX = firstHunter.position.x - secondHunter.position.x;
     const distanceY = firstHunter.position.y - secondHunter.position.y;
-    const distance = Math.hypot(distanceX, distanceY) || 1;
-    const overlap = firstHunter.radius + secondHunter.radius - distance;
+    const centerDistance = distance(firstHunter.position, secondHunter.position) || 1;
+    const overlap = firstHunter.radius + secondHunter.radius - centerDistance;
 
     if (overlap <= 0) {
       return;
     }
 
-    const normalX = distanceX / distance;
-    const normalY = distanceY / distance;
+    const normalX = distanceX / centerDistance;
+    const normalY = distanceY / centerDistance;
     const push = overlap * 0.5;
 
     firstHunter.position.x += normalX * push;
@@ -1776,25 +1728,19 @@ export class Game {
   }
 
   getHunterEnvironmentDamage(hunter, body) {
-    const relativeVelocityX = hunter.velocity.x - body.velocity.x;
-    const relativeVelocityY = hunter.velocity.y - body.velocity.y;
-    const relativeSpeed = Math.hypot(relativeVelocityX, relativeVelocityY);
+    const relativeSpeed = getRelativeSpeed(hunter, body);
 
     return Math.min(34, Math.max(7, relativeSpeed * 0.055 + body.radius * 0.08));
   }
 
   getHunterHunterDamage(firstHunter, secondHunter) {
-    const relativeVelocityX = firstHunter.velocity.x - secondHunter.velocity.x;
-    const relativeVelocityY = firstHunter.velocity.y - secondHunter.velocity.y;
-    const relativeSpeed = Math.hypot(relativeVelocityX, relativeVelocityY);
+    const relativeSpeed = getRelativeSpeed(firstHunter, secondHunter);
 
     return Math.min(12, Math.max(2, relativeSpeed * 0.025));
   }
 
   getNpcEnvironmentDamage(ship, body) {
-    const relativeVelocityX = ship.velocity.x - body.velocity.x;
-    const relativeVelocityY = ship.velocity.y - body.velocity.y;
-    const relativeSpeed = Math.hypot(relativeVelocityX, relativeVelocityY);
+    const relativeSpeed = getRelativeSpeed(ship, body);
 
     return Math.min(28, Math.max(4, relativeSpeed * 0.04 + body.radius * 0.055));
   }
@@ -1847,7 +1793,7 @@ export class Game {
 
   createShipSparks(impactBody) {
     const angleToShip = Math.atan2(this.ship.position.y - impactBody.position.y, this.ship.position.x - impactBody.position.x);
-    const relativeSpeed = Math.hypot(this.ship.velocity.x - impactBody.velocity.x, this.ship.velocity.y - impactBody.velocity.y);
+    const relativeSpeed = getRelativeSpeed(this.ship, impactBody);
     const count = Math.min(34, 10 + Math.floor(relativeSpeed / 24));
 
     for (let index = 0; index < count; index += 1) {
@@ -2265,10 +2211,6 @@ export class Game {
   getCollectorRadius() {
     return Math.min(this.canvas.width, this.canvas.height) * 0.48;
   }
-
-  getCollectorScanergyCost() {
-    return COLLECTOR_MAX_SCANERGY_PER_SECOND;
-  }
 }
 
 function isNearSimulationArea(entity, canvas, camera, ship, margin) {
@@ -2287,13 +2229,17 @@ function isNearSimulationArea(entity, canvas, camera, ship, margin) {
     return true;
   }
 
-  const distanceToShip = Math.hypot(entity.position.x - ship.position.x, entity.position.y - ship.position.y);
+  const distanceToShip = distance(entity.position, ship.position);
 
   return distanceToShip < margin * 1.8 + radius;
 }
 
 function distance(firstPosition, secondPosition) {
   return Math.hypot(firstPosition.x - secondPosition.x, firstPosition.y - secondPosition.y);
+}
+
+function getRelativeSpeed(firstBody, secondBody) {
+  return Math.hypot(firstBody.velocity.x - secondBody.velocity.x, firstBody.velocity.y - secondBody.velocity.y);
 }
 
 function normalizeVector(x, y) {
