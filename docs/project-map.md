@@ -192,6 +192,8 @@ This is intentionally small, but it sets up the later shape for loan contracts, 
 
 The next architecture track is captured in [hub-services-roadmap.md](hub-services-roadmap.md). The goal is to make hub NPCs and services real reusable systems, then make missions point the player toward those systems instead of directly faking shops, loans, repairs, and repeatable work.
 
+The legal/economy track is captured in [legal-contracts-roadmap.md](legal-contracts-roadmap.md). That document covers pilot licenses, ship titles, registration, liens, restricted loan funds, and how those should become reusable systems instead of mission-only story glue.
+
 ### Hub Services
 
 [src/content/hubs/yardExchangeServices.js](../src/content/hubs/yardExchangeServices.js) defines the first authored hub service roster. Yard Exchange currently has service entries for:
