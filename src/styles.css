@@ -971,9 +971,9 @@ body {
   flex-direction: column;
   gap: 6px;
   justify-content: flex-start;
-  min-height: 98px;
-  color: #d9deea;
-  font-size: 0.78rem;
+  min-height: 124px;
+  color: #edf3ff;
+  font-size: 0.9rem;
 }
 
 .journey-log:empty::before {
@@ -983,19 +983,29 @@ body {
 }
 
 .journey-line {
-  border-left: 2px solid rgba(255, 211, 107, 0.48);
-  padding-left: 8px;
+  border: 1px solid rgba(255, 211, 107, 0.22);
+  border-left: 3px solid rgba(255, 211, 107, 0.78);
+  border-radius: 6px;
+  padding: 9px 10px;
+  background:
+    linear-gradient(90deg, rgba(255, 211, 107, 0.13), rgba(55, 69, 92, 0.12) 42%, rgba(10, 13, 20, 0.2)),
+    rgba(9, 12, 18, 0.72);
+  box-shadow: 0 0 18px rgba(255, 211, 107, 0.08);
 }
 
 .journey-line strong {
   display: block;
   color: #ffd36b;
-  font-size: 0.72rem;
+  margin-bottom: 4px;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .journey-line-text {
   display: block;
   min-height: 1.15em;
+  line-height: 1.45;
 }
 
 .journey-profile {

@@ -1,6 +1,6 @@
 import { getNpcVoiceFrequency } from "../content/npcs.js?v=murmur-roadmap-v1";
 
-const MASTER_VOLUME = 0.42;
+const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;
 const THRUST_TICK_SECONDS = 0.12;
 

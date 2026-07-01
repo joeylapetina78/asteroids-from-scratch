@@ -2,7 +2,7 @@ import { getProcessorOutputs, normalizeProcessorOutput } from "./components/comp
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { Game } from "./game.js?v=tow-stable-v1";
 import { createContractManager } from "./systems/contractManager.js?v=mako-hunter-v1";
-import { createGameAudio } from "./systems/audio.js?v=murmur-roadmap-v1";
+import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=mako-hunter-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=mako-hunter-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
