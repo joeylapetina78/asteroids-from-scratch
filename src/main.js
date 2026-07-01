@@ -182,6 +182,11 @@ const contractManager = createContractManager({
     renderContract(contract);
     syncContractPanelVisibility();
     updateHudDisplay();
+
+    if (contract?.status === "fulfilled" && !fulfilledContractPanelPulls.has(contract.id)) {
+      fulfilledContractPanelPulls.add(contract.id);
+      window.setTimeout(() => pullContractToCenter(contract.id), 0);
+    }
   },
 });
 const journeyDirector = createJourneyDirector({
@@ -192,7 +197,10 @@ const journeyDirector = createJourneyDirector({
     updateTowEstimateDisplay();
     updateHudDisplay();
   },
-  offerContract: (contractId) => contractManager.offerContract(contractId),
+  offerContract: (contractId) => {
+    contractManager.offerContract(contractId);
+    pullContractToCenter(contractId);
+  },
   onChange: () => {
     renderJourney();
     updateHudDisplay();
@@ -214,6 +222,9 @@ let activeHubServiceId = null;
 let isCargoSellModeActive = false;
 let wasTowAvailable = false;
 let saveTimer = null;
+let lastHubAuthorityEventId = 0;
+let lastRookAutoOfferEventId = 0;
+const fulfilledContractPanelPulls = new Set();
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
   { panelId: "miner", cautionAt: 50, criticalAt: 20, getValue: () => state.components.miner.ammo },
@@ -1024,6 +1035,62 @@ function getHubServicePrompt(service) {
 function updateLedgerDrivenSystems() {
   contractManager.update();
   journeyDirector.update();
+  updateRookFollowupOffers();
+  updateHubAuthorityMessages();
+}
+
+function updateRookFollowupOffers() {
+  const events = state.ledger.getEventsAfterId(lastRookAutoOfferEventId, { includeHidden: true });
+
+  events.forEach((event) => {
+    lastRookAutoOfferEventId = Math.max(lastRookAutoOfferEventId, event.id);
+
+    if (event.type !== "contract.paid" || event.payload.contractGroup !== "rook-resource-run") {
+      return;
+    }
+
+    const site = currentSiteState?.dockedSite;
+    const service = site ? getHubService(site.id, activeHubServiceId) : null;
+
+    if (!site || service?.id !== "rook-industries") {
+      return;
+    }
+
+    offerHubServiceContract(site, service);
+    pullContractForService(service);
+  });
+}
+
+function updateHubAuthorityMessages() {
+  const events = state.ledger.getEventsAfterId(lastHubAuthorityEventId, { includeHidden: true });
+
+  events.forEach((event) => {
+    lastHubAuthorityEventId = Math.max(lastHubAuthorityEventId, event.id);
+
+    if (event.type === "site.nearby" && event.payload.siteType === "hub") {
+      const vin = state.components.hull.vinPlateAttached ? state.components.hull.vin : "unverified VIN";
+      const license = state.pilot.licenseId ?? "no active license";
+      const speaker = `${event.payload.siteName ?? "Hub"} Authority`;
+
+      if (state.journey.pendingAcknowledgement || state.journey.messages.length > 0) {
+        return;
+      }
+
+      journeyDirector.sayAsNpc(
+        speaker,
+        `Approach logged for ${vin} under ${license}. Docking approval is open while you remain inside hub range.`,
+      );
+    } else if (event.type === "site.tetherBroken") {
+      const vin = state.components.hull.vinPlateAttached ? state.components.hull.vin : "unverified VIN";
+      const license = state.pilot.licenseId ?? "no active license";
+      const speaker = `${event.payload.siteName ?? "Hub"} Authority`;
+
+      journeyDirector.sayAsNpc(
+        speaker,
+        `Tether break recorded for ${vin} under ${license}. Clear the lane, stabilize, and request docking again when safe.`,
+      );
+    }
+  });
 }
 
 function updateWorldDebugDisplay(debug) {
