@@ -1,7 +1,7 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=legal-records-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=consideration-cycles-v1";
 import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=tow-message-guard-v1";
-import { createMissionRunner } from "./missionRunner.js?v=tow-stable-v1";
+import { createMissionRunner } from "./missionRunner.js?v=attention-v1";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -15,6 +15,7 @@ export function createJourneyDirector({
   offerContract = () => {},
   showComponent = () => {},
   unlockHubService = () => {},
+  requestAttention = () => {},
   emergencyTow = () => {},
 }) {
   const journey = state.journey;
@@ -249,6 +250,7 @@ export function createJourneyDirector({
         recordEvent: (...args) => state.ledger.recordEvent(...args),
         say,
         startMission,
+        requestAttention,
         setEnginePowerLock: (isLocked) => {
           state.components.engine.powerLocked = isLocked;
 

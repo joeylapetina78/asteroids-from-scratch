@@ -4,11 +4,11 @@ import { Game } from "./game.js?v=tow-message-guard-v1";
 import { createContractManager } from "./systems/contractManager.js?v=mako-hunter-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=mako-hunter-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=legal-records-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=attention-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=legal-records-v1";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=attention-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-records-v1";
-import { createGameState } from "./state/gameState.js?v=legal-records-v1";
+import { createGameState } from "./state/gameState.js?v=attention-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -34,6 +34,7 @@ const MURMUR_SERVICE_ID = "yard-murmur-roadmap";
 const STARTER_REGION_NAME = "First Reach";
 const DEEP_SPACE_REGION_NAME = "The Black";
 const JOURNEY_WORD_DELAY_MS = 34;
+const ATTENTION_ONCE_MS = 1800;
 const DEFAULT_PANEL_LAYOUT = {
   viewport: { x: 0, y: 0, z: 20 },
   license: { x: 980, y: 20, z: 95 },
@@ -207,6 +208,7 @@ const journeyDirector = createJourneyDirector({
   },
   showComponent: setComponentAvailable,
   unlockHubService,
+  requestAttention,
 });
 let bringPanelToFront = () => {};
 let positionPanelById = () => {};
@@ -755,6 +757,7 @@ function renderHubServiceMenu(site) {
       button.type = "button";
       button.className = "hub-service-button";
       button.classList.toggle("is-active-service", service.id === activeHubServiceId);
+      button.classList.toggle("needs-attention-until-clicked", hasAttention(getHubServiceAttentionTarget(site.id, service.id)));
       button.dataset.serviceId = service.id;
       label.textContent = service.label;
       meta.textContent = `${service.npcName} - ${service.description}`;
@@ -776,6 +779,11 @@ function unlockHubService(siteId, serviceId) {
   }
 
   state.hubServices.unlocked[siteId] = [...unlockedServices, serviceId];
+  requestAttention({
+    targetId: getHubServiceAttentionTarget(siteId, serviceId),
+    mode: "until-clicked",
+    reason: "hub-service-unlocked",
+  });
   hubServiceMenu.dataset.renderedKey = "";
   state.ledger.recordEvent(
     "hub.serviceUnlocked",
@@ -797,6 +805,7 @@ function openHubService(serviceId) {
 
   closeDriveThroughWindows({ keepServiceType: service.serviceType });
   activeHubServiceId = service.id;
+  clearAttention(getHubServiceAttentionTarget(dockedSite.id, service.id));
   hubStatus.textContent = service.organization;
   hubDetail.textContent = `${service.npcName}: ${getHubServicePrompt(service)}`;
   renderHubServiceMenu(dockedSite);
@@ -1340,6 +1349,87 @@ function setPanelAlert(panelId, level) {
   panel.classList.toggle("is-low-resource", level === "critical");
 }
 
+function requestAttention({ targetId = null, targetType = null, panelId = null, siteId = null, serviceId = null, mode = "once", reason = "general" }) {
+  const resolvedTargetId = targetId ?? getAttentionTarget({ targetType, panelId, siteId, serviceId });
+
+  if (!resolvedTargetId) {
+    return;
+  }
+
+  if (mode === "once") {
+    const element = findAttentionElement(resolvedTargetId);
+    playAttentionOnce(element);
+    return;
+  }
+
+  state.attention.targets[resolvedTargetId] = {
+    mode,
+    reason,
+    requestedAt: Date.now(),
+  };
+  hubServiceMenu.dataset.renderedKey = "";
+}
+
+function clearAttention(targetId) {
+  if (!targetId || !state.attention.targets[targetId]) {
+    return;
+  }
+
+  delete state.attention.targets[targetId];
+  hubServiceMenu.dataset.renderedKey = "";
+}
+
+function hasAttention(targetId) {
+  return Boolean(targetId && state.attention.targets[targetId]);
+}
+
+function getHubServiceAttentionTarget(siteId, serviceId) {
+  return `hub-service:${siteId}:${serviceId}`;
+}
+
+function getPanelAttentionTarget(panelId) {
+  return `panel:${panelId}`;
+}
+
+function getAttentionTarget({ targetType, panelId, siteId, serviceId }) {
+  if (targetType === "panel" && panelId) {
+    return getPanelAttentionTarget(panelId);
+  }
+
+  if (targetType === "hub-service" && siteId && serviceId) {
+    return getHubServiceAttentionTarget(siteId, serviceId);
+  }
+
+  return null;
+}
+
+function findAttentionElement(targetId) {
+  if (targetId.startsWith("panel:")) {
+    return document.querySelector(`[data-panel-id="${targetId.slice("panel:".length)}"]`);
+  }
+
+  if (targetId.startsWith("hub-service:")) {
+    const [, siteId, serviceId] = targetId.split(":");
+    if (currentSiteState?.dockedSite?.id !== siteId) {
+      return null;
+    }
+    return hubServiceMenu.querySelector(`[data-service-id="${serviceId}"]`);
+  }
+
+  return null;
+}
+
+function playAttentionOnce(element) {
+  if (!element) {
+    return;
+  }
+
+  element.classList.remove("needs-attention-once");
+  void element.offsetWidth;
+  element.classList.add("needs-attention-once");
+  window.setTimeout(() => element.classList.remove("needs-attention-once"), ATTENTION_ONCE_MS);
+}
+
 function setPanelHidden(panel, isHidden) {
   panel.classList.toggle("is-panel-hidden", isHidden);
 }
@@ -1465,6 +1555,7 @@ function playPanelReveal(panel) {
   panel.classList.remove("is-component-revealed");
   void panel.offsetWidth;
   panel.classList.add("is-component-revealed");
+  playAttentionOnce(panel);
   audio.playPanelReveal();
 }
 

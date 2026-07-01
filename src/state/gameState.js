@@ -28,6 +28,9 @@ export function createGameState() {
       currentContractId: null,
       records: {},
     },
+    attention: {
+      targets: {},
+    },
     hubServices: {
       unlocked: {},
       flags: {},

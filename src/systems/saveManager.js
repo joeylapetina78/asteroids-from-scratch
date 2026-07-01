@@ -23,6 +23,7 @@ export function loadSavedProfile(state) {
     const save = JSON.parse(rawSave);
 
     mergePlainObject(state.components, save.components);
+    mergePlainObject(state.attention, save.attention);
     mergePlainObject(state.contracts, save.contracts);
     mergePlainObject(state.debt, save.debt);
     mergePlainObject(state.hubServices, save.hubServices);
@@ -42,6 +43,7 @@ export function saveProfile({ state, game, cargoHold }) {
   const save = {
     version: 1,
     savedAt: Date.now(),
+    attention: cloneJsonSafe(state.attention),
     components: cloneJsonSafe(state.components),
     contracts: cloneJsonSafe(state.contracts),
     debt: cloneJsonSafe(state.debt),

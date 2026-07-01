@@ -142,6 +142,8 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
         component[action.key] = Math.max(component[action.key], action.value);
       } else if (action.type === "unlockHubService") {
         actions.unlockHubService(action.siteId, action.serviceId);
+      } else if (action.type === "requestAttention") {
+        actions.requestAttention(action);
       } else if (action.type === "setEnginePowerLock") {
         actions.setEnginePowerLock(action.isLocked);
       } else if (action.type === "goToStep") {

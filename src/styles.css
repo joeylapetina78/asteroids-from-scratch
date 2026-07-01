@@ -129,6 +129,22 @@ body {
   animation: component-reveal 980ms cubic-bezier(0.2, 0.82, 0.25, 1.08);
 }
 
+.component-panel.is-component-revealed.needs-attention-once {
+  animation:
+    component-reveal 980ms cubic-bezier(0.2, 0.82, 0.25, 1.08),
+    attention-once 1.55s ease-out;
+}
+
+.needs-attention-once {
+  animation: attention-once 1.55s ease-out;
+}
+
+.needs-attention-until-clicked {
+  animation: attention-until-clicked 1.8s ease-in-out infinite;
+  border-color: rgba(255, 211, 107, 0.78);
+  box-shadow: 0 0 18px rgba(255, 211, 107, 0.16);
+}
+
 .component-panel.is-caution-resource,
 .component-panel.is-low-resource {
   animation: resource-alert-pulse 1.6s ease-in-out infinite;
@@ -179,6 +195,41 @@ body {
     opacity: 1;
     filter: brightness(1);
     box-shadow: none;
+  }
+}
+
+@keyframes attention-once {
+  0% {
+    filter: brightness(1);
+    box-shadow: 0 0 0 rgba(255, 211, 107, 0);
+  }
+
+  25% {
+    filter: brightness(1.32);
+    box-shadow: 0 0 28px rgba(255, 211, 107, 0.32);
+  }
+
+  65% {
+    filter: brightness(1.12);
+    box-shadow: 0 0 18px rgba(115, 210, 255, 0.2);
+  }
+
+  100% {
+    filter: brightness(1);
+    box-shadow: 0 0 0 rgba(255, 211, 107, 0);
+  }
+}
+
+@keyframes attention-until-clicked {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow: 0 0 8px rgba(255, 211, 107, 0.08);
+  }
+
+  50% {
+    filter: brightness(1.18);
+    box-shadow: 0 0 22px rgba(255, 211, 107, 0.28);
   }
 }
 
@@ -506,6 +557,11 @@ body {
 .hub-service-button.is-active-service {
   border-color: #6da9c7;
   background: #121922;
+}
+
+.hub-service-button.needs-attention-until-clicked {
+  border-color: rgba(255, 211, 107, 0.78);
+  background: #151307;
 }
 
 .hub-service-button span {
