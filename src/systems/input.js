@@ -4,6 +4,11 @@ export function createInput() {
   const gameKeys = new Set(["KeyA", "KeyD", "KeyW", "KeyS", "KeyE", "Space"]);
 
   window.addEventListener("keydown", (event) => {
+    const tag = document.activeElement?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") {
+      return;
+    }
+
     if (gameKeys.has(event.code)) {
       event.preventDefault();
     }
