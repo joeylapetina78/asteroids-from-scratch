@@ -196,7 +196,7 @@ export const chapterOneRedWorkMission = {
               type: "say",
               speaker: "Yard Exchange Dispatch",
               text:
-                "We show you out of fuel and drifting. The Emergency Tow component should be on your console. Runner will drop you near the closest hub for 300 credits. It'll hurt the account but it beats floating.",
+                "We show you out of fuel and drifting. A tow driver should be calling through your communicator. Accept the tow if you want a runner to haul you back to the nearest hub. It'll hurt the account, but it beats floating.",
             },
           ],
         },

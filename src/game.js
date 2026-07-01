@@ -12,7 +12,7 @@ import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=mission-targets";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=hub-contract-windows-v1";
-import { createGameState } from "./state/gameState.js?v=fuel-finance-v1";
+import { createGameState } from "./state/gameState.js?v=tow-control-lock-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -41,7 +41,7 @@ const DAMAGE_FLASH_DECAY_PER_SECOND = 2.9;
 const MAX_DAMAGE_FLASH_ALPHA = 0.42;
 const MAX_IMPACT_SHAKE_PIXELS = 28;
 const STORY_MOVEMENT_DISTANCE = 16;
-const STORY_PROXIMITY_RADIUS = 92;
+const STORY_PROXIMITY_RADIUS = 64;
 const STORY_PROXIMITY_COOLDOWN_SECONDS = 3.5;
 const DOCK_TETHER_BREAK_DAMAGE = 12;
 const DOCK_TETHER_BREAK_IMPULSE = 210;
@@ -54,6 +54,8 @@ const TOW_DELIVERY_DISTANCE = 28;
 const TOW_LINE_LENGTH = 120;
 const TOW_LINE_STIFFNESS = 2.8;
 const TOW_LINE_DAMPING = 0.965;
+const TOW_CUTTER_RANGE = 285;
+const TOW_CUTTER_COOLDOWN_SECONDS = 1.15;
 
 export class Game {
   constructor(
@@ -836,6 +838,7 @@ export class Game {
       heading: Math.atan2(directionToShip.y, directionToShip.x),
       pulse: 0,
       towedDistance: 0,
+      cutterCooldown: 0,
     };
 
     this.setShipPowered(false);
@@ -881,6 +884,8 @@ export class Game {
     const tow = this.activeTow;
 
     tow.pulse += deltaSeconds;
+    tow.cutterCooldown = Math.max(0, tow.cutterCooldown - deltaSeconds);
+    this.updateTowCutter(tow);
 
     if (tow.phase === "approach") {
       this.steerTowRunner(tow, this.ship.position, TOW_APPROACH_SPEED, deltaSeconds);
@@ -962,6 +967,28 @@ export class Game {
     this.ship.velocity.y = this.ship.velocity.y * TOW_LINE_DAMPING + tow.velocity.y * 0.012;
     this.ship.position.x += this.ship.velocity.x * deltaSeconds;
     this.ship.position.y += this.ship.velocity.y * deltaSeconds;
+  }
+
+  updateTowCutter(tow) {
+    if (tow.cutterCooldown > 0) {
+      return;
+    }
+
+    const obstacle = getTowObstacle(tow, this.asteroids);
+
+    if (!obstacle) {
+      return;
+    }
+
+    tow.cutterCooldown = TOW_CUTTER_COOLDOWN_SECONDS;
+    this.createTowCutterSparks(tow, obstacle);
+    const fragments = this.breakAsteroid(obstacle, {
+      x: tow.velocity.x + Math.cos(tow.heading) * 280,
+      y: tow.velocity.y + Math.sin(tow.heading) * 280,
+    });
+
+    this.asteroids = this.asteroids.filter((asteroid) => asteroid !== obstacle);
+    this.asteroids.push(...fragments);
   }
 
   completeEmergencyTow() {
@@ -1184,7 +1211,7 @@ export class Game {
       newAsteroids.push(...this.breakAsteroid(hitAsteroid, bullet.velocity));
     });
 
-    if (this.shipHitCooldown === 0) {
+    if (this.shipHitCooldown === 0 && !this.activeTow) {
       const shipHitAsteroid = this.asteroids.find(
         (asteroid) =>
           !hitAsteroids.has(asteroid) &&
@@ -1869,6 +1896,32 @@ export class Game {
     }
   }
 
+  createTowCutterSparks(tow, asteroid) {
+    const angleToRock = Math.atan2(asteroid.position.y - tow.position.y, asteroid.position.x - tow.position.x);
+
+    for (let index = 0; index < 22; index += 1) {
+      const progress = index / 22;
+      const sprayAngle = angleToRock + (Math.random() - 0.5) * 0.65;
+      const speed = 70 + Math.random() * 170;
+
+      this.particles.push({
+        type: "spark",
+        position: {
+          x: tow.position.x + (asteroid.position.x - tow.position.x) * progress,
+          y: tow.position.y + (asteroid.position.y - tow.position.y) * progress,
+        },
+        velocity: {
+          x: Math.cos(sprayAngle) * speed,
+          y: Math.sin(sprayAngle) * speed,
+        },
+        color: index % 4 === 0 ? "#73d2ff" : "#ffd36b",
+        size: 1 + Math.random() * 2,
+        life: 0.16 + Math.random() * 0.2,
+        maxLife: 0.36,
+      });
+    }
+  }
+
   createDockTetherBreakSparks(site, normalX, normalY) {
     const midpointX = (this.ship.position.x + site.position.x) / 2;
     const midpointY = (this.ship.position.y + site.position.y) / 2;
@@ -2319,6 +2372,35 @@ function getTowAvoidance(tow, asteroids) {
   }
 
   return normalizeVector(force.x / count, force.y / count);
+}
+
+function getTowObstacle(tow, asteroids) {
+  const forward = normalizeVector(tow.velocity.x, tow.velocity.y);
+  let bestObstacle = null;
+  let bestProjection = Infinity;
+
+  asteroids.forEach((asteroid) => {
+    const offsetX = asteroid.position.x - tow.position.x;
+    const offsetY = asteroid.position.y - tow.position.y;
+    const projection = offsetX * forward.x + offsetY * forward.y;
+
+    if (projection < 42 || projection > TOW_CUTTER_RANGE || projection >= bestProjection) {
+      return;
+    }
+
+    const closestX = tow.position.x + forward.x * projection;
+    const closestY = tow.position.y + forward.y * projection;
+    const laneDistance = Math.hypot(asteroid.position.x - closestX, asteroid.position.y - closestY);
+
+    if (laneDistance > asteroid.radius + 58) {
+      return;
+    }
+
+    bestObstacle = asteroid;
+    bestProjection = projection;
+  });
+
+  return bestObstacle;
 }
 
 function getTowDropoffPosition(site, shipPosition) {

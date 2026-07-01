@@ -337,6 +337,10 @@ export function createEventLedger(options = {}) {
     } else if (event.type === "ship.purchased") {
       setSignal("player.hasPurchasedShip");
       setSignal(`player.hasPurchasedShip.${event.payload.offerId ?? "unknown"}`);
+    } else if (event.type === "tow.dispatched" || event.type === "tow.attached") {
+      setSignal("player.controlLocked");
+    } else if (event.type === "ship.towed") {
+      setSignal("player.controlLocked", false);
     }
   }
 

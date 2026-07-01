@@ -1,14 +1,14 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
-import { Game } from "./game.js?v=soft-tow-v1";
+import { Game } from "./game.js?v=tow-cutter-v1";
 import { createContractManager } from "./systems/contractManager.js?v=rook-one-contract-v1";
 import { createGameAudio } from "./systems/audio.js?v=murmur-roadmap-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=fuel-finance-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=consideration-ack-guard-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=tow-control-lock-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
-import { createGameState } from "./state/gameState.js?v=murmur-roadmap-v1";
+import { createGameState } from "./state/gameState.js?v=tow-control-lock-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -27,6 +27,7 @@ const CARGO_UNIT_VALUES = {
   fuel: 30,
   crystal: 150,
 };
+const TOW_DRIVER_NAMES = ["Mara Tow", "Jax Cable", "Nell Winch", "Orson Hook"];
 const YARD_EXCHANGE_CORE_SERVICES = ["rook-industries", "yard-shipyard", "yard-finance", "yard-supply"];
 const MURMUR_SERVICE_ID = "yard-murmur-roadmap";
 const STARTER_REGION_NAME = "First Reach";
@@ -174,6 +175,11 @@ const contractManager = createContractManager({
 const journeyDirector = createJourneyDirector({
   state,
   game,
+  emergencyTow: () => {
+    game.emergencyTow();
+    updateTowEstimateDisplay();
+    updateHudDisplay();
+  },
   offerContract: (contractId) => contractManager.offerContract(contractId),
   onChange: () => {
     renderJourney();
@@ -382,19 +388,28 @@ function updateHudDisplay() {
 }
 
 function setTowAvailable(isAvailable) {
-  setComponentAvailable("tow", isAvailable);
+  setComponentAvailable("tow", false);
   const becameAvailable = isAvailable && !wasTowAvailable;
 
   // sayAsNpc causes a Journey render, which calls updateHudDisplay again.
   // Update this guard first so the tow prompt cannot recurse.
-  wasTowAvailable = isAvailable;
+  if (!isAvailable) {
+    wasTowAvailable = false;
+    return;
+  }
 
   if (becameAvailable) {
     const estimate = game.getEmergencyTowEstimate();
-    journeyDirector.sayAsNpc(
-      "Tow Truck",
-      `Dispatch has your beacon. Emergency tow estimate is ${estimate.cost} credits to ${estimate.siteName}. Accept and a tow runner will fly out, tether up, and haul you back.`,
+    const driverName = TOW_DRIVER_NAMES[Math.abs(estimate.siteId.length + estimate.cost) % TOW_DRIVER_NAMES.length];
+
+    wasTowAvailable = true;
+    const prompted = journeyDirector.sayAsNpc(
+      driverName,
+      `Tow request picked up. I can get a runner out to you and haul you back to ${estimate.siteName} for ${estimate.cost} credits. We'll move slow, clear the worst junk in the lane, and settle you on the tether. Accept the tow if you want me rolling.`,
+      { label: `Accept Tow ${estimate.cost} cr`, action: "emergencyTow" },
     );
+
+    wasTowAvailable = prompted;
   }
 }
 

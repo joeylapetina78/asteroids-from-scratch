@@ -71,7 +71,7 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
       return false;
     }
 
-    const consideration = state.journey.pendingAcknowledgement
+    const consideration = state.journey.pendingAcknowledgement || state.ledger.getSignal("player.controlLocked")
       ? null
       : (step.considerations ?? []).find((candidate) => matchesEventRule(candidate, event));
 

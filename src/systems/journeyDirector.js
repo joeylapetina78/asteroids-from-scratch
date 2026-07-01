@@ -1,7 +1,7 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=consideration-cycles-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=consideration-cycles-v1";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=consideration-cycles-v1";
-import { createMissionRunner } from "./missionRunner.js?v=consideration-ack-guard-v1";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=tow-control-lock-v1";
+import { createMissionRunner } from "./missionRunner.js?v=tow-control-lock-v1";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -14,6 +14,7 @@ export function createJourneyDirector({
   offerContract = () => {},
   showComponent = () => {},
   unlockHubService = () => {},
+  emergencyTow = () => {},
 }) {
   const journey = state.journey;
   let lastEventId = 0;
@@ -50,6 +51,8 @@ export function createJourneyDirector({
 
     if (acknowledgement?.action === "startMission") {
       startMission(acknowledgement.missionId);
+    } else if (acknowledgement?.action === "emergencyTow") {
+      emergencyTow();
     }
 
     onChange(journey);
@@ -177,13 +180,14 @@ export function createJourneyDirector({
     journey.pendingAcknowledgement = acknowledgement;
   }
 
-  function sayAsNpc(speaker, text) {
+  function sayAsNpc(speaker, text, acknowledgement = null) {
     if (journey.pendingAcknowledgement) {
-      return;
+      return false;
     }
 
-    say(speaker, text);
+    say(speaker, text, acknowledgement);
     onChange(journey);
+    return true;
   }
 
   function clearMessage() {
