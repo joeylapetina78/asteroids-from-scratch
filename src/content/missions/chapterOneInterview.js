@@ -1,5 +1,19 @@
 const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
+    id: "docked-scrap-porch",
+    eventType: "site.docked",
+    payloadEquals: { siteId: "scrap-porch" },
+    setFlag: "dockedWrongHub",
+    once: true,
+    actions: [
+      {
+        type: "say",
+        speaker: "Rook",
+        text: "That is Scrap Porch, rookie. I appreciate the enthusiasm, but this job pays at Yard Exchange. Undock and follow the route.",
+      },
+    ],
+  },
+  {
     id: "first-hauler-seen",
     eventType: "npc.enteredViewport",
     setFlag: "firstHaulerSeen",
@@ -115,6 +129,7 @@ export const chapterOneInterviewMission = {
         "This is the Journey panel. The other panel is the Hull panel. Hull integrity is ship health. If it reaches 0%, the ship is wrecked.",
       onEnter: [
         { type: "showComponent", componentId: "hull", componentName: "Hull" },
+        { type: "showComponent", componentId: "docking", componentName: "Docking Lock" },
         {
           type: "say",
           speaker: "Rook",
@@ -192,6 +207,9 @@ export const chapterOneInterviewMission = {
           acknowledgement: { label: "Add Viewport" },
         },
       ],
+      considerations: [
+        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
+      ],
       onAcknowledge: [
         { type: "clearMessage" },
         { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
@@ -211,6 +229,9 @@ export const chapterOneInterviewMission = {
             "Before we fly, agree to the contract for this job. It just says when you deliver this ship to Yard Exchange, I'll pay you 500 credits. Simple terms, clean paper, real promise.",
           acknowledgement: { label: "Read Contract" },
         },
+      ],
+      considerations: [
+        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
       ],
       onAcknowledge: [
         { type: "clearMessage" },
@@ -389,18 +410,17 @@ export const chapterOneInterviewMission = {
     {
       id: "show-docking",
       objective: "Find Yard Exchange.",
-      helpText: "Press Okay to bring the docking panel online. If Dock is disabled, fly closer to the Yard Exchange hub circle.",
+      helpText: "Use the Docking Lock on the Hull panel. If Dock is disabled, fly closer to the Yard Exchange hub circle.",
       onEnter: [
         {
           type: "say",
           speaker: "Rook",
-          text: "There it is. When we're close enough, I'll bring your docking lock online.",
-          acknowledgement: { label: "Add Docking Panel" },
+          text: "There it is. Your docking lock is on the Hull panel, right under the VIN. Get close enough, then use that to tether us in.",
+          acknowledgement: { label: "Check Docking Lock" },
         },
       ],
       onAcknowledge: [
         { type: "clearMessage" },
-        { type: "showComponent", componentId: "docking", componentName: "Docking" },
         { type: "goToStep", stepId: "dock-yard-exchange" },
       ],
     },

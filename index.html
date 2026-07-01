@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=tow-runner-v1" />
+    <link rel="stylesheet" href="./src/styles.css?v=hull-docking-v1" />
   </head>
   <body>
     <nav class="quick-links" aria-label="Project links and test starts">
@@ -52,6 +52,12 @@
                 </div>
               </div>
               <div class="journey-log" id="journey-log" aria-live="polite"></div>
+              <div class="journey-profile" aria-label="Pilot profile">
+                <span>Pilot</span>
+                <strong id="pilot-name">Rookie</strong>
+                <span>Credits</span>
+                <strong id="credit-count">0</strong>
+              </div>
               <div class="journey-mission">
                 <strong id="journey-mission-title">Assessment Run</strong>
                 <span id="journey-mission-objective">Awaiting instructions.</span>
@@ -160,21 +166,12 @@
                 <span>VIN</span>
                 <strong id="hull-vin">YRDSKF-01-7A3</strong>
               </div>
-            </div>
-
-            <div class="component-panel docking-panel" data-panel-id="docking" aria-label="Docking component">
-              <div class="component-panel-title">
-                <div>
-                  <strong>Docking</strong>
-                  <span id="docking-status">no target</span>
-                </div>
-              </div>
-              <div class="system-readout docking-readout" aria-live="polite">
-                <span>Target: <strong id="docking-target">None</strong></span>
-                <span>Credits: <strong id="credit-count">0</strong></span>
+              <div class="hull-docking-lock" id="hull-docking-lock" aria-live="polite">
+                <span>Docking Lock</span>
+                <strong id="docking-target">No target</strong>
                 <span id="docking-detail">No dock target</span>
+                <button id="dock-toggle" class="dock-button" type="button" disabled>Dock</button>
               </div>
-              <button id="dock-toggle" class="dock-button" type="button" disabled>Dock</button>
             </div>
 
             <div class="component-panel tow-panel is-component-locked" data-panel-id="tow" aria-label="Emergency tow component">
@@ -408,6 +405,6 @@
       </div>
     </main>
 
-    <script type="module" src="./src/main.js?v=tow-runner-v1"></script>
+    <script type="module" src="./src/main.js?v=hull-docking-v1"></script>
   </body>
 </html>

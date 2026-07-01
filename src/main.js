@@ -4,7 +4,7 @@ import { Game } from "./game.js?v=tow-runner-v1";
 import { createContractManager } from "./systems/contractManager.js?v=rook-one-contract-v1";
 import { createGameAudio } from "./systems/audio.js?v=murmur-roadmap-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=fuel-finance-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=tow-runner-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=hull-docking-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=story-hub-gates-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=main-loop-heartbeat-v1";
@@ -98,9 +98,9 @@ const fuelFill = document.querySelector("#fuel-fill");
 const hullCount = document.querySelector("#hull-count");
 const hullFill = document.querySelector("#hull-fill");
 const hullVin = document.querySelector("#hull-vin");
+const hullDockingLock = document.querySelector("#hull-docking-lock");
 const dockToggleButton = document.querySelector("#dock-toggle");
 const dockingDetail = document.querySelector("#docking-detail");
-const dockingStatus = document.querySelector("#docking-status");
 const dockingTarget = document.querySelector("#docking-target");
 const hubDetail = document.querySelector("#hub-detail");
 const hubName = document.querySelector("#hub-name");
@@ -567,23 +567,25 @@ function areYardExchangeStoryServicesUnlocked() {
 
 function updateDockingDisplay(siteState) {
   const site = siteState.dockedSite ?? siteState.nearbySite;
+  const shipSpeed = Math.hypot(game.ship.velocity.x, game.ship.velocity.y);
+  const isDocked = Boolean(site && siteState.dockedSite?.id === site.id);
+  const isCaution = Boolean(site && !isDocked && shipSpeed > 24);
 
   if (!state.components.docking.installed || !site) {
-    dockingStatus.textContent = "no target";
-    dockingTarget.textContent = "None";
+    dockingTarget.textContent = "No target";
     dockingDetail.textContent = "No dock target";
     dockToggleButton.textContent = "Dock";
     dockToggleButton.disabled = true;
+    hullDockingLock.classList.remove("is-docking-active", "is-docking-caution");
     return;
   }
 
-  const isDocked = siteState.dockedSite?.id === site.id;
-
-  dockingStatus.textContent = isDocked ? "tether connected" : "tether available";
   dockingTarget.textContent = site.name;
   dockingDetail.textContent = isDocked ? "Docked" : "Press E to dock";
   dockToggleButton.textContent = isDocked ? "Undock" : "Dock";
   dockToggleButton.disabled = false;
+  hullDockingLock.classList.toggle("is-docking-active", isDocked);
+  hullDockingLock.classList.toggle("is-docking-caution", isCaution);
 }
 
 function updateHubServiceDisplay(siteState) {
@@ -1567,8 +1569,17 @@ function playLedgerAudioEvents() {
       audio.playContractPaid();
     } else if (event.type === "ship.refueled") {
       audio.playDock();
+    } else if (event.type === "site.tetherBroken") {
+      flashDockingDanger();
     }
   });
+}
+
+function flashDockingDanger() {
+  hullDockingLock.classList.remove("is-docking-danger");
+  void hullDockingLock.offsetWidth;
+  hullDockingLock.classList.add("is-docking-danger");
+  window.setTimeout(() => hullDockingLock.classList.remove("is-docking-danger"), 1800);
 }
 
 function getCargoHoldValue() {
