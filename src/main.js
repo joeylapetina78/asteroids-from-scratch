@@ -35,6 +35,7 @@ const STARTER_REGION_NAME = "First Reach";
 const DEEP_SPACE_REGION_NAME = "The Black";
 const JOURNEY_WORD_DELAY_MS = 34;
 const ATTENTION_ONCE_MS = 1800;
+const PAPERWORK_DRAWER_AUTO_CLOSE_MS = 900;
 const DEFAULT_PANEL_LAYOUT = {
   viewport: { x: 0, y: 0, z: 20 },
   license: { x: 980, y: 20, z: 95 },
@@ -2098,6 +2099,10 @@ function makePanelsDraggable() {
       offset.y = 0;
       paperworkDrawer.classList.add("is-open");
       drawerToggle?.setAttribute("aria-expanded", "true");
+      window.setTimeout(() => {
+        paperworkDrawer.classList.remove("is-open");
+        drawerToggle?.setAttribute("aria-expanded", "false");
+      }, PAPERWORK_DRAWER_AUTO_CLOSE_MS);
     } else {
       hud.appendChild(panel);
       const defaultPanel = DEFAULT_PANEL_LAYOUT[panelId] ?? { x: 0, y: 0 };
