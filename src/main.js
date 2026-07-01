@@ -5,7 +5,7 @@ import { Game } from "./game.js?v=docking-tether-v1";
 import { createContractManager } from "./systems/contractManager.js?v=world-refs-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=journey-sidebar-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=journey-sidebar-v2";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=attention-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-records-v1";
@@ -1638,30 +1638,84 @@ function getSpeakerPortrait(speaker = "") {
   const key = normalizeSpeakerKey(speaker);
 
   if (key.includes("rook")) {
-    return "  _____\n / R   \\\n|  o o |\n|  >   |\n \\__-_/\n  /|\\";
+    return String.raw`        .-""""-.
+     .-'  _  _  '-.
+    /   / \/ \     \
+   |   |  o  o |    |
+   |   |   __  |    |
+    \   \ '--' /   /
+     '._ '-..-' _.'
+        /| R |\
+      _/ |___| \_
+     /__/|___|__/
+       /_/ \_/`;
   }
 
   if (key.includes("galaxy")) {
-    return " .----.\n/  **  \\\n| *  * |\n|  <>  |\n\\  **  /\n '----'";
+    return String.raw`      .-._.-.
+   .-'  . .  '-.
+  /   *  ___  * \
+ |  *   /___\   |
+ | .   /  |  \  .
+  \  * \_____/ /
+   '-.  . .  .'
+      '-._.-'`;
   }
 
   if (key.includes("barvis")) {
-    return " .----.\n| B  B |\n|  __  |\n| /  \\ |\n '----'\n  /||";
+    return String.raw`      ______
+   .-'  B  '-.
+  /  _      _  \
+ |  (_)    (_)  |
+ |      __      |
+  \   .'__'.   /
+   '-.______.-'
+      /_||_/
+      /_||_/`;
   }
 
   if (key.includes("mako") || key.includes("finance")) {
-    return " [MKO]\n |o  o|\n | -- |\n |____|\n  /__\\";
+    return String.raw`     [ M A K O ]
+    .----------.
+   /  []    []  \
+  |      /\      |
+  |   .------.   |
+   \  '------'  /
+    '----------'
+       /____/
+       \____/`;
   }
 
   if (key.includes("jax") || key.includes("tow") || key.includes("cable")) {
-    return "  .--.\n /JAX \\\n| o  o|\n|  == |\n \\____/\n  /||";
+    return String.raw`       _______
+    .-' JAX '-.
+   /  _      _  \
+  |  /_\    /_\  |
+  |      ==      |
+   \   \____/   /
+    '---.  .---'
+        |__|`;
   }
 
   if (key.includes("murmur")) {
-    return " /\\/\\\n( .. )\n \\--/\n /##\\\n/____\\";
+    return String.raw`     /\_/\_/\ 
+   .'  . .  '.
+  /   (___)   \
+ |   .-...-.   |
+  \  '-----'  /
+   '._\___/_.'
+      /###/
+      \###/`;
   }
 
-  return "  /\\\n /  \\\n| .. |\n| -- |\n \\__/\n  ||";
+  return String.raw`      .----.
+   .-'      '-.
+  /   .--.     \
+ |   ( .. )     |
+ |    '--'      |
+  \            /
+   '._    _.'
+      |__|`;
 }
 
 function playPanelReveal(panel) {

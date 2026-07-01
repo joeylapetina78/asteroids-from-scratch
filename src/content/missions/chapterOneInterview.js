@@ -246,30 +246,8 @@ export const chapterOneInterviewMission = {
         {
           eventType: "component.filed",
           payloadEquals: { componentId: "license", destination: "drawer" },
-          nextStepId: "show-viewport",
+          nextStepId: "offer-contract",
         },
-      ],
-    },
-    {
-      id: "show-viewport",
-      objective: "Get your bearings.",
-      helpText: "Press Add Viewport to bring up the big space view where the ship, rocks, and hubs appear.",
-      onEnter: [
-        {
-          type: "say",
-          speaker: "Rook",
-          text:
-            "Good good. Now let's bring in your viewport so you can get a feel for things. Ready?",
-          acknowledgement: { label: "Add Viewport" },
-        },
-      ],
-      considerations: [
-        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
-      ],
-      onAcknowledge: [
-        { type: "clearMessage" },
-        { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
-        { type: "goToStep", stepId: "offer-contract" },
       ],
     },
     {
@@ -297,8 +275,30 @@ export const chapterOneInterviewMission = {
         {
           eventType: "contract.accepted",
           payloadEquals: { contractId: "rook-yard-exchange-delivery" },
-          nextStepId: "show-scanner",
+          nextStepId: "show-viewport",
         },
+      ],
+    },
+    {
+      id: "show-viewport",
+      objective: "Get your bearings.",
+      helpText: "Press Add Viewport to bring up the big space view where the ship, rocks, and hubs appear.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Good. Paper's clean. Now let's bring in your viewport so you can see the ship, the hub, and all the ways this job can get expensive.",
+          acknowledgement: { label: "Add Viewport" },
+        },
+      ],
+      considerations: [
+        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
+        { type: "goToStep", stepId: "show-scanner" },
       ],
     },
     {
