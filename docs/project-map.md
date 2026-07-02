@@ -45,6 +45,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/content/hubs/yardExchangeServices.js](../src/content/hubs/yardExchangeServices.js) | Authored hub service data for Yard Exchange and Scrap Porch NPC/service windows. |
 | [src/systems/hubServices.js](../src/systems/hubServices.js) | Resolves docked hub service definitions for the Hub panel. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. |
+| [src/systems/componentRegistry.js](../src/systems/componentRegistry.js) | Central panel/component id registry and startup visibility list. This is the seed of a future unlock/visibility system. |
 | [src/systems/audio.js](../src/systems/audio.js) | Procedural Atari-style sound effects and Journey chatter using Web Audio. |
 | [src/systems/saveManager.js](../src/systems/saveManager.js) | Lightweight browser-local profile save/load for playtesting. |
 
@@ -168,6 +169,8 @@ Each mission step also has `helpText`. This is the plain explanation layer for p
 Mission rules can require multiple flags via `requiresFlags`. The first use is panel-drag training: the DOM drag system records hidden `component.dragged` events, the mission sets separate flags for License and Hull, and then advances when both flags are true.
 
 Mission-specific completion text and grading rules live in mission data. For example, `chapterOneInterview.js` owns the hull/time grading lines Rook uses after the delivery contract pays out, while `journeyDirector.js` only reads the mission's `completion` block and applies generic threshold checks.
+
+Startup panel visibility comes from [src/systems/componentRegistry.js](../src/systems/componentRegistry.js). The director still asks the UI to show and hide panels for mission beats, but raw startup panel ids no longer live inside `journeyDirector.js`.
 
 ### Contracts
 
