@@ -1,8 +1,6 @@
 import { createEventLedger } from "../systems/eventLedger.js?v=beacon-locator-v1";
 import { PANEL_IDS } from "../systems/componentRegistry.js?v=component-visibility-v1";
 
-// Starting game/component state. This is the current lightweight substitute for
-// future accounts, saves, installed modules, and player profiles.
 export function createGameState() {
   return {
     ledger: createEventLedger(),
@@ -20,11 +18,11 @@ export function createGameState() {
       currentContractId: null,
       records: {},
     },
-    attention: {
-      targets: {},
-    },
     ui: {
       panels: createInitialPanelAvailability(),
+      attention: {
+        targets: {},
+      },
     },
     hubServices: {
       unlocked: {},
@@ -80,11 +78,10 @@ export function createGameState() {
       frameId: "yard-skiff",
       name: "Yard Skiff",
       shape: "yard-skiff",
+      purchasedOfferId: null,
     },
+    credits: 0,
     components: {
-      account: {
-        credits: 0,
-      },
       engine: {
         installed: false,
         powered: false,
@@ -139,15 +136,6 @@ export function createGameState() {
       collector: {
         installed: false,
         isActive: false,
-      },
-      contract: {
-        currentContractId: null,
-      },
-      merchant: {
-        purchasedOfferId: null,
-      },
-      "component-shop": {
-        lastViewedOfferId: null,
       },
     },
   };

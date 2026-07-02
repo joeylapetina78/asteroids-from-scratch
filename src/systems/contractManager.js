@@ -217,7 +217,7 @@ export function createContractManager({ state, onChange = () => {} }) {
     contract.disbursedAt = Date.now();
     contract.balance = principal;
     contract.maxBalance = principal + maxInterest;
-    state.components.account.credits += principal;
+    state.credits += principal;
     state.debt.totalBorrowed += principal;
     state.debt.activePrincipal += principal;
     state.debt.activeBalance += principal;
@@ -227,7 +227,7 @@ export function createContractManager({ state, onChange = () => {} }) {
       contractTitle: contract.title,
       principal,
       maxInterest,
-      accountCredits: state.components.account.credits,
+      accountCredits: state.credits,
     });
   }
 
@@ -253,13 +253,13 @@ export function createContractManager({ state, onChange = () => {} }) {
 
     contract.status = "paid";
     contract.paidAt = Date.now();
-    state.components.account.credits += credits;
+    state.credits += credits;
     state.ledger.recordEvent("contract.paid", {
       contractId: contract.id,
       contractTitle: contract.title,
       contractGroup: contract.group,
       creditsPaid: credits,
-      accountCredits: state.components.account.credits,
+      accountCredits: state.credits,
     });
 
     if (!getOpenContractIds().includes(contract.id)) {

@@ -13,7 +13,7 @@ import { createScanner } from "./systems/scanner.js?v=tether-alarm-v1";
 import { getCurrentShipLegal, getPilotLicense, getPilotName, getUnauthorizedVisitedZones, recordVisitedZone } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=beacon-locator-v1";
-import { createGameState } from "./state/gameState.js?v=component-visibility-v1";
+import { createGameState } from "./state/gameState.js?v=credits-refactor-v2";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -742,11 +742,11 @@ export class Game {
     const repairCost = this.getRepairCost();
     const hullBeforeRepair = this.state.components.hull.integrity;
 
-    if (repairCost <= 0 || repairCost > this.state.components.account.credits) {
+    if (repairCost <= 0 || repairCost > this.state.credits) {
       return;
     }
 
-    this.state.components.account.credits -= repairCost;
+    this.state.credits -= repairCost;
     this.state.components.hull.integrity = this.state.components.hull.maxIntegrity;
     this.state.ledger.recordEvent("ship.repaired", {
       siteId: site.id,
@@ -870,7 +870,7 @@ export class Game {
       nearestSiteDistance: nearest?.distance ?? 0,
       canRepair: Boolean(this.dockedSite?.capabilities.includes("repair")),
       repairCost: this.getRepairCost(),
-      credits: this.state.components.account.credits,
+      credits: this.state.credits,
       hullIntegrity: this.state.components.hull.integrity,
       hullMaxIntegrity: this.state.components.hull.maxIntegrity,
     });
@@ -1071,7 +1071,7 @@ export class Game {
     const towTarget = tow.dropoffPosition ?? getTowDropoffPosition(tow.site, this.ship.position);
 
     this.activeTow = null;
-    this.state.components.account.credits -= tow.cost;
+    this.state.credits -= tow.cost;
     this.state.components.engine.fuel = 0;
     this.state.components.hull.integrity = Math.max(this.state.components.hull.integrity, 10);
     this.shipDestroyed = false;

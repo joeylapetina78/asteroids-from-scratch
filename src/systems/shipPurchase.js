@@ -1,26 +1,26 @@
 import { getCurrentShipLegal, getPilotName, updateCurrentShipLegal } from "./legalRecords.js?v=legal-single-home-v1";
 
 export function purchaseShipOffer(state, offer) {
-  if (state.components.merchant.purchasedOfferId) {
+  if (state.ship.purchasedOfferId) {
     return { ok: false, reason: "already-purchased" };
   }
 
-  if (state.components.account.credits < offer.price) {
+  if (state.credits < offer.price) {
     state.ledger.recordEvent(
       "merchant.cannotAfford",
       {
         offerId: offer.id,
         shipName: offer.title,
         price: offer.price,
-        credits: Math.floor(state.components.account.credits),
+        credits: Math.floor(state.credits),
       },
       { visible: false },
     );
     return { ok: false, reason: "insufficient-credits" };
   }
 
-  state.components.account.credits -= offer.price;
-  state.components.merchant.purchasedOfferId = offer.id;
+  state.credits -= offer.price;
+  state.ship.purchasedOfferId = offer.id;
   state.ship.frameId = "yard-skiff-miner";
   state.ship.name = offer.title;
   state.ship.shape = "yard-skiff";
@@ -49,7 +49,7 @@ export function purchaseShipOffer(state, offer) {
     offerId: offer.id,
     shipName: offer.title,
     price: offer.price,
-    creditsRemaining: Math.floor(state.components.account.credits),
+    creditsRemaining: Math.floor(state.credits),
     includedComponents: offer.includedComponents,
     previousVin,
     shipVin: purchasedVin,

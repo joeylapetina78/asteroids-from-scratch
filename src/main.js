@@ -1,17 +1,17 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=beacon-locator-v1";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
-import { Game } from "./game.js?v=component-visibility-v1";
-import { createContractManager } from "./systems/contractManager.js?v=world-refs-v1";
+import { Game } from "./game.js?v=credits-refactor-v2";
+import { createContractManager } from "./systems/contractManager.js?v=credits-refactor-v2";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=component-visibility-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=mission-beats-v3";
 import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=component-visibility-v1";
 import { getPilotLicense, issuePilotLicense, updateCurrentShipLegal } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=component-visibility-v1";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-single-home-v1";
-import { createGameState } from "./state/gameState.js?v=component-visibility-v1";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=credits-refactor-v2";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=credits-refactor-v2";
+import { createGameState } from "./state/gameState.js?v=credits-refactor-v2";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -245,6 +245,7 @@ let wasTowAvailable = false;
 let saveTimer = null;
 let lastHubAuthorityEventId = 0;
 let lastRookAutoOfferEventId = 0;
+let lastTowChatterEventId = 0;
 const fulfilledContractPanelPulls = new Set();
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
@@ -423,8 +424,8 @@ function updateHudDisplay() {
   updateShipPowerDisplay();
   updateCargoTargetDisplay();
 
-  creditCount.textContent = String(Math.floor(state.components.account.credits));
-  licenseCreditsDisplay.textContent = `${Math.floor(state.components.account.credits)} cr`;
+  creditCount.textContent = String(Math.floor(state.credits));
+  licenseCreditsDisplay.textContent = `${Math.floor(state.credits)} cr`;
   const currentFuel = state.components.engine.fuel;
   const isStranded = state.components.engine.installed && !currentSiteState?.dockedSite &&
     !game.isTowActive() &&
@@ -443,7 +444,7 @@ function updateHudDisplay() {
   hullFill.style.width = `${getMeterPercent(state.components.hull.integrity, state.components.hull.maxIntegrity)}%`;
   hullVin.textContent = state.components.hull.vinPlateAttached ? state.components.hull.vin : "UNVERIFIED";
   minerArmed.checked = state.components.miner.armed;
-  merchantCredits.textContent = `${Math.floor(state.components.account.credits)} cr`;
+  merchantCredits.textContent = `${Math.floor(state.credits)} cr`;
   updateWarningPanels();
   scheduleSave();
 }
@@ -553,7 +554,7 @@ function shouldRestoreViewport(save) {
     return true;
   }
 
-  return Boolean(currentStepId && !["show-hull", "move-panels"].includes(currentStepId));
+  return Boolean(currentStepId && !["show-hull", "drag-panels", "file-license"].includes(currentStepId));
 }
 
 function applyDevStart(devStartId) {
@@ -570,7 +571,7 @@ function applyDevStart(devStartId) {
 
 function setupDevRedWorkStart() {
   game.placeShipNearSite(chapterOneRoute.destinationSite.id, { x: 190, y: -70 });
-  Object.assign(state.components.account, { credits: Math.max(state.components.account.credits, 0) });
+  state.credits = Math.max(state.credits, 0);
   Object.assign(state.components.engine, {
     installed: true,
     powered: false,
@@ -1115,6 +1116,25 @@ function updateLedgerDrivenSystems() {
   journeyDirector.update();
   updateRookFollowupOffers();
   updateHubAuthorityMessages();
+  updateTowChatter();
+}
+
+function updateTowChatter() {
+  const events = state.ledger.getEventsAfterId(lastTowChatterEventId, { includeHidden: true });
+
+  events.forEach((event) => {
+    lastTowChatterEventId = Math.max(lastTowChatterEventId, event.id);
+
+    if (event.type === "tow.attached") {
+      const { siteId, cost } = event.payload;
+      const driver = TOW_DRIVER_NAMES[Math.abs(siteId.length + cost) % TOW_DRIVER_NAMES.length];
+      journeyDirector.sayAsNpc(driver, "Got the line set. Hands off the controls, I'll get you home.");
+    } else if (event.type === "ship.towed") {
+      const { siteId, cost } = event.payload;
+      const driver = TOW_DRIVER_NAMES[Math.abs(siteId.length + cost) % TOW_DRIVER_NAMES.length];
+      journeyDirector.sayAsNpc(driver, `You're docked. That's ${cost} credits off your account. Stay closer to home next run.`);
+    }
+  });
 }
 
 function updateRookFollowupOffers() {
@@ -1445,7 +1465,7 @@ function requestAttention({ targetId = null, targetType = null, panelId = null, 
     return;
   }
 
-  state.attention.targets[resolvedTargetId] = {
+  state.ui.attention.targets[resolvedTargetId] = {
     mode,
     reason,
     requestedAt: Date.now(),
@@ -1454,16 +1474,16 @@ function requestAttention({ targetId = null, targetType = null, panelId = null, 
 }
 
 function clearAttention(targetId) {
-  if (!targetId || !state.attention.targets[targetId]) {
+  if (!targetId || !state.ui.attention.targets[targetId]) {
     return;
   }
 
-  delete state.attention.targets[targetId];
+  delete state.ui.attention.targets[targetId];
   hubServiceMenu.dataset.renderedKey = "";
 }
 
 function hasAttention(targetId) {
-  return Boolean(targetId && state.attention.targets[targetId]);
+  return Boolean(targetId && state.ui.attention.targets[targetId]);
 }
 
 function getHubServiceAttentionTarget(siteId, serviceId) {
@@ -1891,7 +1911,7 @@ function sellCargoUnit(type) {
     return false;
   }
 
-  state.components.account.credits += unitValue;
+  state.credits += unitValue;
   state.ledger.recordEvent("cargo.sold", { creditsEarned: unitValue, units: { [type]: 1 }, totalUnits: 1 }, { visible: false });
   game.createCargoTransferTrail(type);
   renderFinleyPanel();
@@ -1915,7 +1935,7 @@ function renderFinleyPanel(siteState = currentSiteState) {
   const miner = state.components.miner;
   const scanner = state.components.scanner;
   const hull = state.components.hull;
-  const credits = state.components.account.credits;
+  const credits = state.credits;
   const repairCost = siteState?.repairCost ?? 0;
   const canRepair = siteState?.canRepair && hull.integrity < hull.maxIntegrity && credits >= repairCost;
   const fuelNeeded = Math.max(0, engine.maxFuel - engine.fuel);
@@ -1965,11 +1985,11 @@ function buyFuelFromFinley() {
     return;
   }
 
-  if (state.components.account.credits < cost) {
+  if (state.credits < cost) {
     return;
   }
 
-  state.components.account.credits -= cost;
+  state.credits -= cost;
   engine.fuel = engine.maxFuel;
   state.ledger.recordEvent("ship.refueled", { siteId: site.id, siteName: site.name, cost, fuelAdded: fuelNeeded });
   renderFinleyPanel();
@@ -1984,11 +2004,11 @@ function buyChargesFromFinley() {
   const chargesNeeded = Math.max(0, miner.maxAmmo - miner.ammo);
   const cost = Math.ceil(chargesNeeded * (prices.chargePerUnit ?? 3));
 
-  if (chargesNeeded <= 0 || state.components.account.credits < cost) {
+  if (chargesNeeded <= 0 || state.credits < cost) {
     return;
   }
 
-  state.components.account.credits -= cost;
+  state.credits -= cost;
   miner.ammo = miner.maxAmmo;
   state.ledger.recordEvent("supply.chargesBought", { siteId: site.id, cost, chargesAdded: chargesNeeded });
   renderFinleyPanel();
@@ -2003,11 +2023,11 @@ function buyScanFromFinley() {
   const scanNeeded = Math.max(0, scanner.maxScanergy - scanner.scanergy);
   const cost = Math.ceil(scanNeeded * (prices.scanergyPerUnit ?? 1));
 
-  if (scanNeeded <= 0 || state.components.account.credits < cost) {
+  if (scanNeeded <= 0 || state.credits < cost) {
     return;
   }
 
-  state.components.account.credits -= cost;
+  state.credits -= cost;
   scanner.scanergy = scanner.maxScanergy;
   state.ledger.recordEvent("supply.scanBought", { siteId: site.id, cost, scanAdded: scanNeeded });
   renderFinleyPanel();
@@ -2447,15 +2467,15 @@ function rectsOverlap(first, second) {
 }
 
 function renderShipOffers() {
-  const currentCredits = Math.floor(state.components.account.credits);
+  const currentCredits = Math.floor(state.credits);
   const renderedKey = shipOffersPanel.dataset.renderedKey;
-  const nextKey = `${currentCredits}:${state.components.merchant.purchasedOfferId ?? "none"}`;
+  const nextKey = `${currentCredits}:${state.ship.purchasedOfferId ?? "none"}`;
 
   if (renderedKey === nextKey) {
     return;
   }
 
-  const purchasedOfferId = state.components.merchant.purchasedOfferId;
+  const purchasedOfferId = state.ship.purchasedOfferId;
 
   shipOffersPanel.dataset.renderedKey = nextKey;
   shipOffersPanel.replaceChildren(
@@ -2503,7 +2523,7 @@ function renderComponentShop(service = null) {
     return;
   }
 
-  const currentCredits = Math.floor(state.components.account.credits);
+  const currentCredits = Math.floor(state.credits);
   const offers = service?.componentOffers ?? [];
   const nextKey = `${service?.id ?? "none"}:${currentCredits}:${offers
     .map((offer) => `${offer.id}:${state.components[offer.componentId]?.installed ? "installed" : "open"}`)
@@ -2554,12 +2574,12 @@ function renderComponentShop(service = null) {
 function buyComponentOffer(offer, service = null) {
   const component = state.components[offer.componentId];
 
-  if (!component || component.installed || state.components.account.credits < offer.price) {
+  if (!component || component.installed || state.credits < offer.price) {
     renderComponentShop(service);
     return;
   }
 
-  state.components.account.credits -= offer.price;
+  state.credits -= offer.price;
   component.installed = true;
   setComponentAvailable(offer.componentId, true);
   state.ledger.recordEvent(
@@ -2573,7 +2593,7 @@ function buyComponentOffer(offer, service = null) {
       sellerName: service?.npcName ?? "Component Seller",
       siteId: currentSiteState?.dockedSite?.id ?? null,
       siteName: currentSiteState?.dockedSite?.name ?? null,
-      accountCredits: state.components.account.credits,
+      accountCredits: state.credits,
     },
     { visible: true },
   );

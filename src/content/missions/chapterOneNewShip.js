@@ -35,8 +35,8 @@ export const chapterOneNewShipMission = {
       missionId: "chapter-1-red-work",
     },
   },
-  startStepId: "find-barvis",
-  steps: [
+  startBeatId: "find-barvis",
+  beats: [
     {
       id: "find-barvis",
       objective: "Talk to Barvis at Yard Exchange Shipyard.",

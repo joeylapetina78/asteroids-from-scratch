@@ -3,6 +3,7 @@ import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyW
 const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
     id: "docked-scrap-porch",
+    fromBeat: "show-scanner",
     eventType: "site.docked",
     payloadEquals: { siteId: storySites.originHub.id },
     setFlag: "dockedWrongHub",
@@ -17,6 +18,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   },
   {
     id: "first-hauler-seen",
+    fromBeat: "show-scanner",
     eventType: "npc.enteredViewport",
     setFlag: "firstHaulerSeen",
     once: true,
@@ -30,6 +32,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   },
   {
     id: "near-hauler",
+    fromBeat: "show-scanner",
     eventType: "ship.nearObject",
     payloadEquals: { targetType: "npc" },
     setFlag: "nearHauler",
@@ -44,6 +47,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   },
   {
     id: "near-rock",
+    fromBeat: "show-scanner",
     eventType: "ship.nearObject",
     payloadEquals: { targetType: "asteroid" },
     repeatable: true,
@@ -69,6 +73,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   },
   {
     id: "hit-rock",
+    fromBeat: "show-scanner",
     eventType: "ship.collision",
     payloadEquals: { targetType: "asteroid" },
     repeatable: true,
@@ -94,6 +99,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   },
   {
     id: "hit-hauler",
+    fromBeat: "show-scanner",
     eventType: "ship.collision",
     payloadEquals: { targetType: "npc" },
     setFlag: "hitHauler",
@@ -108,6 +114,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   },
   {
     id: "left-starter-drift",
+    fromBeat: "show-scanner",
     eventType: "zone.entered",
     payloadEquals: { zoneId: `not:${storyZones.starterRoute.id}` },
     repeatable: true,
@@ -190,8 +197,43 @@ export const chapterOneInterviewMission = {
       },
     ],
   },
-  startStepId: "show-hull",
-  steps: [
+  startBeatId: "show-hull",
+  considerations: [
+    {
+      id: "license-panel-moved",
+      fromBeat: "drag-panels",
+      throughBeat: "drag-panels",
+      eventType: "component.dragged",
+      payloadEquals: { componentId: "license" },
+      setFlag: "licensePanelMoved",
+      once: true,
+      actions: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text: "There you go. That's your provisional license. It lets you make this run under my authority, in this zone only. Now move the Hull panel too.",
+        },
+      ],
+    },
+    {
+      id: "hull-panel-moved",
+      fromBeat: "drag-panels",
+      throughBeat: "drag-panels",
+      eventType: "component.dragged",
+      payloadEquals: { componentId: "hull" },
+      setFlag: "hullPanelMoved",
+      once: true,
+      actions: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text: "Good, that's the Hull panel. Move the License too, then we'll get to the flying part.",
+        },
+      ],
+    },
+    ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
+  ],
+  beats: [
     {
       id: "show-hull",
       objective: "Get your bearings.",
@@ -218,7 +260,7 @@ export const chapterOneInterviewMission = {
       id: "drag-panels",
       objective: "Move the License and Hull panels.",
       helpText:
-        "Drag panels by their titles. Move the License panel and the Hull panel anywhere comfortable in the display area.",
+        "Drag panels by their title bars. Move the License panel and the Hull panel anywhere comfortable in the display area.",
       onEnter: [
         {
           type: "say",
@@ -234,48 +276,18 @@ export const chapterOneInterviewMission = {
           nextStepId: "file-license",
         },
       ],
-      considerations: [
-        {
-          id: "license-panel-moved",
-          eventType: "component.dragged",
-          payloadEquals: { componentId: "license" },
-          setFlag: "licensePanelMoved",
-          once: true,
-          actions: [
-            {
-              type: "say",
-              speaker: "Rook",
-              text: "There you go. That's your provisional license. It lets you make this run under my authority, in this zone only. Now move the Hull panel too.",
-            },
-          ],
-        },
-        {
-          id: "hull-panel-moved",
-          eventType: "component.dragged",
-          payloadEquals: { componentId: "hull" },
-          setFlag: "hullPanelMoved",
-          once: true,
-          actions: [
-            {
-              type: "say",
-              speaker: "Rook",
-              text: "Good, that's the Hull panel. Move the License too, then we'll get to the flying part.",
-            },
-          ],
-        },
-      ],
     },
     {
       id: "file-license",
       objective: "File your provisional license.",
       helpText:
-        "Press the FILE button on the License panel. It will move into the Paperwork drawer, where you can retrieve paperwork later.",
+        "Click the FILE button on the License panel. It will move into the Paperwork drawer at the bottom, where you can retrieve paperwork anytime.",
       onEnter: [
         {
           type: "say",
           speaker: "Rook",
           text:
-            "Good. Now file that license for now. We will not need to wave it around, but it says you are provisionally licensed under my authority for this First Reach run only. No wandering into other zones.",
+            "Good. Now file that license away. Press FILE on the License panel and it will drop into the Paperwork drawer at the bottom. You will not need to wave it around, but it says you are provisionally authorized under my authority for this First Reach run only. No wandering into other zones.",
         },
       ],
       transitions: [
@@ -353,9 +365,6 @@ export const chapterOneInterviewMission = {
         { type: "showComponent", componentId: "scanner", componentName: "Beacon Locator" },
         { type: "goToStep", stepId: "try-scanner" },
       ],
-      considerations: [
-        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
-      ],
     },
     {
       id: "try-scanner",
@@ -374,20 +383,17 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "show-docking",
+          nextStepId: "dock-yard-exchange",
         },
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "show-docking",
+          nextStepId: "dock-yard-exchange",
         },
         {
           eventType: "beaconLocator.used",
           nextStepId: "show-engine",
         },
-      ],
-      considerations: [
-        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
       ],
     },
     {
@@ -408,9 +414,6 @@ export const chapterOneInterviewMission = {
         { type: "showComponent", componentId: "engine", componentName: "Engine" },
         { type: "goToStep", stepId: "power-on" },
       ],
-      considerations: [
-        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
-      ],
     },
     {
       id: "power-on",
@@ -428,20 +431,17 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "show-docking",
+          nextStepId: "dock-yard-exchange",
         },
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "show-docking",
+          nextStepId: "dock-yard-exchange",
         },
         {
           eventType: "engine.powered",
           nextStepId: "first-thrust",
         },
-      ],
-      considerations: [
-        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
       ],
     },
     {
@@ -460,21 +460,18 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "show-docking",
+          nextStepId: "dock-yard-exchange",
         },
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "show-docking",
+          nextStepId: "dock-yard-exchange",
         },
         {
           eventType: "ship.thrusted",
           setFlag: "firstThrust",
           nextStepId: "find-yard-exchange",
         },
-      ],
-      considerations: [
-        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
       ],
     },
     {
@@ -493,29 +490,13 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "show-docking",
+          nextStepId: "dock-yard-exchange",
         },
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "show-docking",
+          nextStepId: "dock-yard-exchange",
         },
-      ],
-      considerations: [
-        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
-      ],
-    },
-    {
-      id: "show-docking",
-      objective: "Find Yard Exchange.",
-      helpText: "Use the Docking Lock on the Hull panel. If Dock is disabled, fly closer to the Yard Exchange hub circle.",
-      onEnter: [
-        {
-          type: "say",
-          speaker: "Rook",
-          text: "There it is. Your docking lock is on the Hull panel, right under the VIN. Get close enough, then use that to tether us in.",
-        },
-        { type: "goToStep", stepId: "dock-yard-exchange" },
       ],
     },
     {
@@ -523,8 +504,12 @@ export const chapterOneInterviewMission = {
       objective: "Dock and power down at Yard Exchange.",
       helpText:
         "Dock at Yard Exchange, then power the ship down. The contract will not accept delivery until this VIN is docked and the ship is off.",
-      considerations: [
-        ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text: "There it is. Your docking lock is on the Hull panel, right under the VIN. Get close enough, then use that to tether us in.",
+        },
       ],
       transitions: [
         {

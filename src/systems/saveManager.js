@@ -22,8 +22,15 @@ export function loadSavedProfile(state) {
   try {
     const save = JSON.parse(rawSave);
 
+    state.credits = save.credits ?? save.components?.account?.credits ?? 0;
     mergePlainObject(state.components, save.components);
-    mergePlainObject(state.attention, save.attention);
+    delete state.components.account;
+    delete state.components.merchant;
+    delete state.components["component-shop"];
+    delete state.components.contract;
+    if (save.attention && !save.ui?.attention) {
+      state.ui.attention = save.attention;
+    }
     mergePlainObject(state.contracts, save.contracts);
     mergePlainObject(state.debt, save.debt);
     mergePlainObject(state.hubServices, save.hubServices);
@@ -31,6 +38,10 @@ export function loadSavedProfile(state) {
     mergePlainObject(state.legal, save.legal);
     mergePlainObject(state.ship, save.ship);
     mergePlainObject(state.ui, save.ui);
+
+    if (!save.ship?.purchasedOfferId && save.components?.merchant?.purchasedOfferId) {
+      state.ship.purchasedOfferId = save.components.merchant.purchasedOfferId;
+    }
 
     return save;
   } catch (error) {
@@ -43,7 +54,7 @@ export function saveProfile({ state, game, cargoHold }) {
   const save = {
     version: 1,
     savedAt: Date.now(),
-    attention: cloneJsonSafe(state.attention),
+    credits: state.credits,
     components: cloneJsonSafe(state.components),
     contracts: cloneJsonSafe(state.contracts),
     debt: cloneJsonSafe(state.debt),

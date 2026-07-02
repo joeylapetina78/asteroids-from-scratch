@@ -30,9 +30,155 @@ export const chapterOneRedWorkMission = {
       "The first red run is complete. Rook can offer more repeatable resource work from here.",
     line:
       "That's the stuff. Red comes in, credits go out. I also told Nara Coil at Modworks you might be worth selling to. She's got a tractor field rig if you want to make pickup work less annoying.",
+    acknowledgement: { label: "Got It" },
   },
-  startStepId: "offer-red-contract",
-  steps: [
+  startBeatId: "offer-red-contract",
+  considerations: [
+    {
+      id: "first-red-mined",
+      fromBeat: "mine-red-resources",
+      eventType: "resource.mined",
+      payloadEquals: { resourceType: "fuel" },
+      once: true,
+      setFlag: "explained-mined-resource",
+      actions: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "That's the break. The little red squares are the useful stuff. Fly over them to scoop them into the cargo hold.",
+        },
+      ],
+    },
+    {
+      id: "first-red-collected",
+      fromBeat: "mine-red-resources",
+      eventType: "resource.collected",
+      payloadEquals: { resourceType: "fuel" },
+      once: true,
+      setFlag: "explained-collected-resource",
+      actions: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Good, that's cargo now. Bring the contracted units back to Yard Exchange, dock, then deposit them into the contract.",
+        },
+      ],
+    },
+    {
+      id: "low-fuel-warning",
+      fromBeat: "mine-red-resources",
+      eventType: "ship.lowFuel",
+      repeatable: true,
+      cooldownMs: 30000,
+      maxRuns: 3,
+      responses: [
+        {
+          speaker: "Rook",
+          text:
+            "Fuel's halfway gone, rookie. Scan again if you've got the power and keep Yard Exchange in mind. Docking at any hub refuels you free. Running dry means a tow someday, and a tow means debt.",
+        },
+        {
+          speaker: "Rook",
+          text:
+            "Fuel is getting thin again. If you can see Yard Exchange, head home. If not, scan, find a hub, and dock before this turns into a finance problem.",
+        },
+        {
+          speaker: "Rook",
+          text:
+            "Last friendly reminder from me: empty tanks do not care about ambition. Get to a hub or start thinking about tow fees.",
+        },
+      ],
+    },
+    {
+      id: "arm-miner-reminder",
+      fromBeat: "mine-red-resources",
+      eventType: "weapon.unarmedAttempt",
+      repeatable: true,
+      cooldownMs: 10000,
+      responses: [
+        {
+          speaker: "Rook",
+          text:
+            "You're squeezing the trigger with the miner safed, rookie. Flip Blaster armed on the Miner panel, then space will cut rock.",
+        },
+        {
+          speaker: "Rook",
+          text:
+            "Still safed. On the Miner panel, check Blaster armed. Then Space fires a mining charge.",
+        },
+        {
+          speaker: "Rook",
+          text:
+            "No shame in safety, but there is no mining with the switch off. Arm the miner first.",
+        },
+      ],
+    },
+    {
+      id: "red-teeth-warning",
+      fromBeat: "mine-red-resources",
+      eventType: "zone.entered",
+      payloadEquals: { zoneId: storyZones.dangerBoundary.id },
+      once: true,
+      setFlag: "warned-red-teeth",
+      actions: [
+        {
+          type: "spawnHunterNearShip",
+          reason: "red-teeth-warning",
+        },
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "That's Red Teeth, rookie. Too far for this run. And now you've got company. Turn us around, get back toward Yard Exchange, and find red rock closer to home.",
+        },
+      ],
+    },
+    {
+      id: "hunter-seen-warning",
+      fromBeat: "mine-red-resources",
+      eventType: "ship.nearObject",
+      payloadEquals: { targetType: "hunter" },
+      once: true,
+      setFlag: "warned-hunter-seen",
+      actions: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Hunter in sight. Red little problem with teeth. If you're light on hull or charges, do not be a hero; get back toward Yard Exchange.",
+        },
+      ],
+    },
+    {
+      id: "hunter-kill-commentary",
+      fromBeat: "mine-red-resources",
+      eventType: "enemy.destroyed",
+      payloadEquals: { enemyType: "hunter" },
+      repeatable: true,
+      cooldownMs: 1200,
+      maxRuns: 3,
+      responses: [
+        {
+          speaker: "Rook",
+          text:
+            "You got it? Huh. Not bad, rookie. Keep your eyes up; those things do not usually travel alone.",
+        },
+        {
+          speaker: "Rook",
+          text:
+            "Another hunter down. I'll admit, that's useful. Still cheaper to avoid them than repair the ship after every scrap.",
+        },
+        {
+          speaker: "Rook",
+          text:
+            "Ace. I'll leave you to it.",
+        },
+      ],
+    },
+  ],
+  beats: [
     {
       id: "offer-red-contract",
       objective: "Review Rook's red resource contract.",
@@ -65,191 +211,6 @@ export const chapterOneRedWorkMission = {
           speaker: "Rook",
           text:
             "Good. Keep the hub close until you know the neighborhood. Start starboard, east-ish from Yard Exchange. Arm the miner before you start blasting, fire charges into the right color rocks, then fly over the loose squares to scoop them into cargo. Do not collect rocks with the hull. Dock here when the contract count is full. If you need specifics, open Need help below me. If the viewport says Red Teeth, turn around.",
-        },
-      ],
-      considerations: [
-        {
-          id: "first-red-mined",
-          eventType: "resource.mined",
-          payloadEquals: { resourceType: "fuel" },
-          once: true,
-          setFlag: "explained-mined-resource",
-          actions: [
-            {
-              type: "say",
-              speaker: "Rook",
-              text:
-                "That's the break. The little red squares are the useful stuff. Fly over them to scoop them into the cargo hold.",
-            },
-          ],
-        },
-        {
-          id: "first-red-collected",
-          eventType: "resource.collected",
-          payloadEquals: { resourceType: "fuel" },
-          once: true,
-          setFlag: "explained-collected-resource",
-          actions: [
-            {
-              type: "say",
-              speaker: "Rook",
-              text:
-                "Good, that's cargo now. Bring the contracted units back to Yard Exchange, dock, then deposit them into the contract.",
-            },
-          ],
-        },
-        {
-          id: "low-fuel-warning",
-          eventType: "ship.lowFuel",
-          repeatable: true,
-          cooldownMs: 30000,
-          maxRuns: 3,
-          responses: [
-            {
-              speaker: "Rook",
-              text:
-                "Fuel's halfway gone, rookie. Scan again if you've got the power and keep Yard Exchange in mind. Docking at any hub refuels you free. Running dry means a tow someday, and a tow means debt.",
-            },
-            {
-              speaker: "Rook",
-              text:
-                "Fuel is getting thin again. If you can see Yard Exchange, head home. If not, scan, find a hub, and dock before this turns into a finance problem.",
-            },
-            {
-              speaker: "Rook",
-              text:
-                "Last friendly reminder from me: empty tanks do not care about ambition. Get to a hub or start thinking about tow fees.",
-            },
-          ],
-        },
-        {
-          id: "arm-miner-reminder",
-          eventType: "weapon.unarmedAttempt",
-          repeatable: true,
-          cooldownMs: 10000,
-          responses: [
-            {
-              speaker: "Rook",
-              text:
-                "You're squeezing the trigger with the miner safed, rookie. Flip Blaster armed on the Miner panel, then space will cut rock.",
-            },
-            {
-              speaker: "Rook",
-              text:
-                "Still safed. On the Miner panel, check Blaster armed. Then Space fires a mining charge.",
-            },
-            {
-              speaker: "Rook",
-              text:
-                "No shame in safety, but there is no mining with the switch off. Arm the miner first.",
-            },
-          ],
-        },
-        {
-          id: "red-teeth-warning",
-          eventType: "zone.entered",
-          payloadEquals: { zoneId: storyZones.dangerBoundary.id },
-          once: true,
-          setFlag: "warned-red-teeth",
-          actions: [
-            {
-              type: "spawnHunterNearShip",
-              reason: "red-teeth-warning",
-            },
-            {
-              type: "say",
-              speaker: "Rook",
-              text:
-                "That's Red Teeth, rookie. Too far for this run. And now you've got company. Turn us around, get back toward Yard Exchange, and find red rock closer to home.",
-            },
-          ],
-        },
-        {
-          id: "hunter-seen-warning",
-          eventType: "ship.nearObject",
-          payloadEquals: { targetType: "hunter" },
-          once: true,
-          setFlag: "warned-hunter-seen",
-          actions: [
-            {
-              type: "say",
-              speaker: "Rook",
-              text:
-                "Hunter in sight. Red little problem with teeth. If you're light on hull or charges, do not be a hero; get back toward Yard Exchange.",
-            },
-          ],
-        },
-        {
-          id: "hunter-kill-commentary",
-          eventType: "enemy.destroyed",
-          payloadEquals: { enemyType: "hunter" },
-          repeatable: true,
-          cooldownMs: 1200,
-          maxRuns: 3,
-          responses: [
-            {
-              speaker: "Rook",
-              text:
-                "You got it? Huh. Not bad, rookie. Keep your eyes up; those things do not usually travel alone.",
-            },
-            {
-              speaker: "Rook",
-              text:
-                "Another hunter down. I'll admit, that's useful. Still cheaper to avoid them than repair the ship after every scrap.",
-            },
-            {
-              speaker: "Rook",
-              text:
-                "Ace. I'll leave you to it.",
-            },
-          ],
-        },
-        {
-          id: "stranded-dispatch",
-          eventType: "ship.stranded",
-          repeatable: true,
-          cooldownMs: 45000,
-          responses: [
-            {
-              speaker: "Yard Exchange Dispatch",
-              text:
-                "We show you out of fuel and drifting. A tow driver should be calling through your communicator. Accept the tow if you want a runner to haul you back to the nearest hub. It'll hurt the account, but it beats floating.",
-            },
-            {
-              speaker: "Rook",
-              text:
-                "Stranded again? Listen, every tow is money you now have to earn back. Take the ride if you need it, then stay closer to the hub.",
-            },
-          ],
-        },
-        {
-          id: "tow-attached",
-          eventType: "tow.attached",
-          allowWhileControlLocked: true,
-          once: true,
-          setFlag: "heard-tow-attached",
-          actions: [
-            {
-              type: "say",
-              speaker: "Rook",
-              text:
-                "Tow runner has us. Hands off the controls and let the driver work. When we're back on the tether, refuel before you try another run.",
-            },
-          ],
-        },
-        {
-          id: "tow-complete",
-          eventType: "ship.towed",
-          once: true,
-          setFlag: "heard-tow-complete",
-          actions: [
-            {
-              type: "say",
-              speaker: "Rook",
-              text:
-                "We're back at a hub. Good news: you're not floating. Bad news: that tow is another bill. Refuel, check the contract, and keep the next run shorter.",
-            },
-          ],
         },
       ],
       transitions: [

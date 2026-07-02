@@ -1,5 +1,8 @@
 export function createMissionRunner({ missionDefinition, state, actions }) {
-  const stepsById = new Map(missionDefinition.steps.map((step) => [step.id, step]));
+  const beatDefs = missionDefinition.beats ?? missionDefinition.steps;
+  const stepsById = new Map(beatDefs.map((beat) => [beat.id, beat]));
+  const beatIndexById = new Map(beatDefs.map((beat, index) => [beat.id, index]));
+  const missionConsiderations = missionDefinition.considerations ?? [];
 
   function startOffer() {
     const prologue = missionDefinition.prologue;
@@ -49,7 +52,7 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
       },
       { visible: false },
     );
-    goToStep(missionDefinition.startStepId);
+    goToStep(missionDefinition.startBeatId ?? missionDefinition.startStepId);
   }
 
   function acknowledge() {
@@ -72,9 +75,16 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     }
 
     const controlLocked = state.ledger.getSignal("player.controlLocked");
+    const currentBeatIndex = beatIndexById.get(state.journey.currentStepId) ?? -1;
+    const activeMissionConsiderations = missionConsiderations.filter((c) => {
+      const fromIndex = c.fromBeat !== undefined ? (beatIndexById.get(c.fromBeat) ?? -1) : 0;
+      const toIndex = c.throughBeat !== undefined ? (beatIndexById.get(c.throughBeat) ?? -1) : Infinity;
+      return currentBeatIndex >= fromIndex && currentBeatIndex <= toIndex;
+    });
+    const allConsiderations = [...(step.considerations ?? []), ...activeMissionConsiderations];
     const consideration = state.journey.pendingAcknowledgement
       ? null
-      : (step.considerations ?? []).find(
+      : allConsiderations.find(
           (candidate) => (!controlLocked || candidate.allowWhileControlLocked) && matchesEventRule(candidate, event),
         );
 
@@ -96,6 +106,8 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
 
     if (transition.nextStepId) {
       goToStep(transition.nextStepId);
+    } else {
+      runActions(step.onEnd ?? []);
     }
 
     return true;
