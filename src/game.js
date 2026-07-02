@@ -10,9 +10,10 @@ import { createNpcRouteShips } from "./systems/npcRoutes.js?v=soft-cargo-train";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=draw-radius";
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=tether-alarm-v1";
+import { getCurrentShipLegal, getPilotLicense, getPilotName, getUnauthorizedVisitedZones, recordVisitedZone } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=beacon-locator-v1";
-import { createGameState } from "./state/gameState.js?v=beacon-locator-v1";
+import { createGameState } from "./state/gameState.js?v=legal-single-home-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -641,10 +642,10 @@ export class Game {
     }
 
     const hull = this.state.components.hull;
-    const legal = this.state.ship.legal ?? {};
+    const legal = getCurrentShipLegal(this.state);
     const registrations = legal.registrations ?? {};
-    const pilot = this.state.pilot;
-    const unauthorizedZones = pilot.visitedZoneIds.filter((zoneId) => !pilot.authorizedZones.includes(zoneId));
+    const pilotLicense = getPilotLicense(this.state);
+    const unauthorizedZones = getUnauthorizedVisitedZones(this.state);
 
     this.state.ledger.recordEvent(
       "ship.registryReviewed",
@@ -652,8 +653,8 @@ export class Game {
         siteId: site.id,
         siteName: site.name,
         shipName: this.state.ship.name,
-        pilotLicenseId: pilot.licenseId ?? null,
-        pilotName: pilot.firstName ? `${pilot.firstName} ${pilot.lastName}` : null,
+        pilotLicenseId: pilotLicense.licenseId ?? null,
+        pilotName: getPilotName(this.state, null),
         vin: hull.vinPlateAttached ? hull.vin : null,
         vinPlateAttached: hull.vinPlateAttached,
         titleHolder: legal.titleHolder ?? null,
@@ -673,7 +674,7 @@ export class Game {
           siteId: site.id,
           siteName: site.name,
           unauthorizedZones,
-          pilotLicenseId: pilot.licenseId ?? null,
+          pilotLicenseId: pilotLicense.licenseId ?? null,
         },
         { visible: true },
       );
@@ -706,9 +707,7 @@ export class Game {
     const zoneId = zoneProfile.strongestZoneId;
     this.currentZoneId = zoneId;
 
-    if (!this.state.pilot.visitedZoneIds.includes(zoneId)) {
-      this.state.pilot.visitedZoneIds.push(zoneId);
-    }
+    recordVisitedZone(this.state, zoneId);
 
     this.state.ledger.recordEvent("zone.entered", {
       zoneId,

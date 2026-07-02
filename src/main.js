@@ -1,15 +1,16 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=beacon-locator-v1";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
-import { Game } from "./game.js?v=tether-alarm-v1";
+import { Game } from "./game.js?v=legal-single-home-v1";
 import { createContractManager } from "./systems/contractManager.js?v=world-refs-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=component-registry-v1";
+import { getPilotLicense, issuePilotLicense, updateCurrentShipLegal } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=attention-v1";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-records-v1";
-import { createGameState } from "./state/gameState.js?v=beacon-locator-v1";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=legal-single-home-v1";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-single-home-v1";
+import { createGameState } from "./state/gameState.js?v=legal-single-home-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -1140,7 +1141,7 @@ function updateHubAuthorityMessages() {
 
     if (event.type === "site.nearby" && event.payload.siteType === "hub") {
       const vin = state.components.hull.vinPlateAttached ? state.components.hull.vin : "unverified VIN";
-      const license = state.pilot.licenseId ?? "no active license";
+      const license = getPilotLicense(state).licenseId ?? "no active license";
       const speaker = `${event.payload.siteName ?? "Hub"} Authority`;
 
       if (state.journey.pendingAcknowledgement || state.journey.messages.length > 0) {
@@ -1153,7 +1154,7 @@ function updateHubAuthorityMessages() {
       );
     } else if (event.type === "site.tetherBroken") {
       const vin = state.components.hull.vinPlateAttached ? state.components.hull.vin : "unverified VIN";
-      const license = state.pilot.licenseId ?? "no active license";
+      const license = getPilotLicense(state).licenseId ?? "no active license";
       const speaker = `${event.payload.siteName ?? "Hub"} Authority`;
 
       journeyDirector.sayAsNpc(
@@ -2688,8 +2689,10 @@ function savePanelLayout(panel, offset = null) {
 }
 
 function initLicenseApplication() {
-  if (state.pilot.licenseId) {
-    applyIssuedLicense(state.pilot);
+  const existingLicense = getPilotLicense(state);
+
+  if (existingLicense.licenseId) {
+    applyIssuedLicense(existingLicense);
     licenseApplication.classList.add("is-dismissed");
     return;
   }
@@ -2712,21 +2715,22 @@ function initLicenseApplication() {
     const suffix = String(Math.floor(Math.random() * 90000) + 10000);
     const licenseId = `RTC-P${year}-${suffix}`;
 
-    state.pilot.firstName = firstName;
-    state.pilot.lastName = lastName;
-    state.pilot.licenseId = licenseId;
-    state.pilot.licenseStatus = "provisional";
-    state.pilot.issuedAt = Date.now();
-    state.ship.legal.flightLicenseId = licenseId;
+    const license = issuePilotLicense(state, {
+      firstName,
+      lastName,
+      licenseId,
+      status: "provisional",
+    });
+    updateCurrentShipLegal(state, { flightLicenseId: licenseId });
 
     state.ledger.recordEvent("pilot.licensed", {
       licenseId,
       pilotName: `${firstName} ${lastName}`,
       licenseStatus: "provisional",
-      authorizedZones: state.pilot.authorizedZones,
+      authorizedZones: license.authorizedZones,
     }, { visible: false });
 
-    applyIssuedLicense(state.pilot);
+    applyIssuedLicense(license);
     setComponentAvailable("license", true);
     licenseApplication.classList.add("is-dismissed");
     saveNow();

@@ -5,15 +5,6 @@ import { createEventLedger } from "../systems/eventLedger.js?v=beacon-locator-v1
 export function createGameState() {
   return {
     ledger: createEventLedger(),
-    pilot: {
-      firstName: null,
-      lastName: null,
-      licenseId: null,
-      licenseStatus: "none",
-      issuedAt: null,
-      authorizedZones: ["starter-drift", "open-space", "scrap-wake", "dead-strip", "red-teeth"],
-      visitedZoneIds: [],
-    },
     journey: {
       chapterId: "prologue",
       chapterName: "Prologue",
@@ -43,17 +34,16 @@ export function createGameState() {
       highestDebt: 0,
     },
     legal: {
-      pilotLicenses: {},
-      shipTitles: {},
-      shipRegistrations: {},
-      liens: {},
-      paperwork: {},
-    },
-    ship: {
-      frameId: "yard-skiff",
-      name: "Yard Skiff",
-      shape: "yard-skiff",
-      legal: {
+      pilotLicense: {
+        firstName: null,
+        lastName: null,
+        licenseId: null,
+        status: "none",
+        issuedAt: null,
+        authorizedZones: ["starter-drift", "open-space", "scrap-wake", "dead-strip", "red-teeth"],
+        visitedZoneIds: [],
+      },
+      currentShip: {
         titleHolder: "Rook Industries",
         titleStatus: "company-owned",
         lienHolder: null,
@@ -76,6 +66,16 @@ export function createGameState() {
           },
         },
       },
+      pilotLicenses: {},
+      shipTitles: {},
+      shipRegistrations: {},
+      liens: {},
+      paperwork: {},
+    },
+    ship: {
+      frameId: "yard-skiff",
+      name: "Yard Skiff",
+      shape: "yard-skiff",
     },
     components: {
       account: {

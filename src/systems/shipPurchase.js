@@ -1,3 +1,5 @@
+import { getCurrentShipLegal, getPilotName, updateCurrentShipLegal } from "./legalRecords.js?v=legal-single-home-v1";
+
 export function purchaseShipOffer(state, offer) {
   if (state.components.merchant.purchasedOfferId) {
     return { ok: false, reason: "already-purchased" };
@@ -60,23 +62,29 @@ function registerPurchasedShipLegalRecords(state, { offer, previousVin, purchase
   const titleId = `title-${purchasedVin.toLowerCase()}`;
   const registrationId = `reg-flight-${purchasedVin.toLowerCase()}`;
   const lienId = `lien-${purchasedVin.toLowerCase()}-starter-finance`;
-  const pilotName = state.pilot.firstName ? `${state.pilot.firstName} ${state.pilot.lastName}` : "Pilot";
+  const pilotName = getPilotName(state);
   const titleStatus = hasStarterLoanLien ? "lien-held" : "owned";
+  const currentShipLegal = getCurrentShipLegal(state);
 
-  state.ship.legal.titleHolder = pilotName;
-  state.ship.legal.titleStatus = titleStatus;
-  state.ship.legal.lienHolder = hasStarterLoanLien ? "Yard Exchange Finance Office" : null;
-  state.ship.legal.flightLicenseId = registrationId;
-  state.ship.legal.registrations.flight = {
-    id: registrationId,
-    status: "active",
-    issuingHubId: "yard-exchange",
-  };
-  state.ship.legal.registrations.mining = {
-    id: `reg-mining-${purchasedVin.toLowerCase()}`,
-    status: "provisional",
-    issuingHubId: "yard-exchange",
-  };
+  updateCurrentShipLegal(state, {
+    titleHolder: pilotName,
+    titleStatus,
+    lienHolder: hasStarterLoanLien ? "Yard Exchange Finance Office" : null,
+    flightLicenseId: registrationId,
+    registrations: {
+      ...currentShipLegal.registrations,
+      flight: {
+        id: registrationId,
+        status: "active",
+        issuingHubId: "yard-exchange",
+      },
+      mining: {
+        id: `reg-mining-${purchasedVin.toLowerCase()}`,
+        status: "provisional",
+        issuingHubId: "yard-exchange",
+      },
+    },
+  });
 
   state.legal.shipTitles[titleId] = {
     id: titleId,

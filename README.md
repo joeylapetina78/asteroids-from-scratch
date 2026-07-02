@@ -58,7 +58,7 @@ The cargo hold has its own pipe and physics space. Units sent there are stored i
 
 The game also has an in-memory event ledger for meaningful career/world events. It records docking, zone entry, shooting, asteroid destruction, resource collection, resource processing, cargo sales, repairs, enemy kills, and NPC ship destruction. The World panel shows a small verification readout with recent visible events and compact stats.
 
-Profiles now save locally in the browser with `localStorage`. The first pass preserves component state, contracts, debt, cargo units, ship identity, and the current ship position. It is intentionally a lightweight playtest save and may be reset by future game updates. Use `?resetSave=1` to clear the local save.
+Profiles have a temporary browser-local playtest save in `localStorage`. It is not durable yet and may be reset as the mission, contract, and legal systems are cleaned up. Use `?resetSave=1` to clear the local save.
 
 For development testing, `?devStart=red-work` starts fresh near Yard Exchange with the starter mining setup so later contract work can be tested without replaying the full intro.
 

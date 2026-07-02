@@ -23,7 +23,7 @@ The game already has useful pieces:
 
 - `contractManager` owns contract records, statuses, fulfillment, loan disbursement, and payout.
 - `eventLedger` records `contract.accepted`, `loan.disbursed`, `ship.purchased`, `ship.registryReviewed`, and related events.
-- `state.ship.legal` already has a title holder, flight license id, and registration slots.
+- `state.legal` now owns the pilot license, current ship legal summary, title records, registration records, liens, and paperwork.
 - The hull has a VIN and a `vinPlateAttached` flag.
 - The license and contract panels are now paperwork panels that can live on the desktop or in the drawer.
 - Hub authority can already greet/check the ship with VIN and license language.

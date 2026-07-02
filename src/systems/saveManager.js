@@ -1,4 +1,4 @@
-const SAVE_KEY = "asteroids.profileSave.v2";
+const SAVE_KEY = "asteroids.profileSave.v3";
 
 export function shouldResetSave(search = window.location.search) {
   return new URLSearchParams(search).get("resetSave") === "1";
@@ -29,7 +29,6 @@ export function loadSavedProfile(state) {
     mergePlainObject(state.hubServices, save.hubServices);
     mergePlainObject(state.journey, save.journey);
     mergePlainObject(state.legal, save.legal);
-    mergePlainObject(state.pilot, save.pilot);
     mergePlainObject(state.ship, save.ship);
 
     return save;
@@ -50,7 +49,6 @@ export function saveProfile({ state, game, cargoHold }) {
     hubServices: cloneJsonSafe(state.hubServices),
     journey: cloneJsonSafe(state.journey),
     legal: cloneJsonSafe(state.legal),
-    pilot: cloneJsonSafe(state.pilot),
     ship: cloneJsonSafe(state.ship),
     world: game?.getSaveSnapshot?.() ?? null,
     cargo: cargoHold?.getSaveSnapshot?.() ?? null,

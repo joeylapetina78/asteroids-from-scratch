@@ -46,6 +46,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/systems/hubServices.js](../src/systems/hubServices.js) | Resolves docked hub service definitions for the Hub panel. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. |
 | [src/systems/componentRegistry.js](../src/systems/componentRegistry.js) | Central panel/component id registry and startup visibility list. This is the seed of a future unlock/visibility system. |
+| [src/systems/legalRecords.js](../src/systems/legalRecords.js) | Helpers for pilot license, visited zones, current ship registration/title summary, and legal record updates. |
 | [src/systems/audio.js](../src/systems/audio.js) | Procedural Atari-style sound effects and Journey chatter using Web Audio. |
 | [src/systems/saveManager.js](../src/systems/saveManager.js) | Lightweight browser-local profile save/load for playtesting. |
 
@@ -336,7 +337,7 @@ When docked and depositing contract cargo, clicked cargo units are consumed from
 
 ### Save Manager
 
-[src/systems/saveManager.js](../src/systems/saveManager.js) is the first browser-local save foundation. It stores a lightweight profile in `localStorage`:
+[src/systems/saveManager.js](../src/systems/saveManager.js) is a temporary browser-local playtest save. It stores a lightweight profile in `localStorage`:
 
 - component state
 - account/debt/contracts
@@ -345,7 +346,13 @@ When docked and depositing contract cargo, clicked cargo units are consumed from
 - cargo hold units
 - current ship position and camera position
 
-This is a playtest save, not an account system. It may be reset by future game updates. Use `?resetSave=1` to clear the local save in a browser, and `?devStart=red-work` to start fresh in the first mining work test setup.
+This is not a durable account/profile system. Architecture cleanup may intentionally bump the save key and strand older test saves. Use `?resetSave=1` to clear the local save in a browser, and `?devStart=red-work` to start fresh in the first mining work test setup. Panel layout uses separate local storage and can survive profile resets.
+
+### Legal Records
+
+[src/systems/legalRecords.js](../src/systems/legalRecords.js) is the current legal/paperwork access layer. Pilot license data, visited zones, current ship legal summary, title records, registration records, liens, and paperwork now live under `state.legal`.
+
+The physical ship still lives under `state.ship`, and the actual hull VIN/integrity still live under `state.components.hull`. The split is intentional: ship frame/component state answers "what is this ship?", while `state.legal` answers "who is allowed to fly it, who owns it, and which authorities recognize it?"
 
 ### World Sites
 
