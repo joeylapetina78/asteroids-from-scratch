@@ -14,7 +14,6 @@ export function createScanner(canvas) {
     pulseAge: SCAN_PULSE_SECONDS,
     markerAge: SCAN_MARKER_SECONDS,
     targets: [],
-    beaconTarget: null,
 
     scan(ship, asteroids, sites = [], options = {}) {
       this.pulseAge = 0;
@@ -38,16 +37,8 @@ export function createScanner(canvas) {
       }
     },
 
-    trackBeacon(site) {
-      this.beaconTarget = site ? { position: site.position, type: "site", isBeacon: true } : null;
-    },
-
     draw(context, camera, ship) {
       drawScanPulse(context, camera, ship, this.pulseAge);
-
-      if (this.beaconTarget) {
-        drawTargetMarker(context, canvas, camera, ship, this.beaconTarget, 0);
-      }
 
       this.targets.forEach((target) => {
         drawTargetMarker(context, canvas, camera, ship, target, this.markerAge);

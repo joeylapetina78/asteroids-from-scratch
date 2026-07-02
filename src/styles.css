@@ -332,6 +332,7 @@ body {
   max-height: none;
   overflow: hidden auto;
   border-top: 0;
+  border-bottom: 0;
   border-left: 0;
   border-color: rgba(0, 211, 255, 0.28);
   border-radius: 0;

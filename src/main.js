@@ -1,11 +1,11 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=beacon-locator-v1";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
-import { Game } from "./game.js?v=beacon-locator-v1";
+import { Game } from "./game.js?v=tether-alarm-v1";
 import { createContractManager } from "./systems/contractManager.js?v=world-refs-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=beacon-locator-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=tether-alarm-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=attention-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-records-v1";
@@ -1159,6 +1159,18 @@ function updateHubAuthorityMessages() {
       journeyDirector.sayAsNpc(
         speaker,
         `Tether break recorded for ${vin} under ${license}. Clear the lane, stabilize, and request docking again when safe.`,
+      );
+    } else if (event.type === "site.tetherStrained") {
+      const vin = state.components.hull.vinPlateAttached ? state.components.hull.vin : "unverified VIN";
+      const speaker = `${event.payload.siteName ?? "Hub"} Authority`;
+
+      if (state.journey.pendingAcknowledgement) {
+        return;
+      }
+
+      journeyDirector.sayAsNpc(
+        speaker,
+        `Docking tether strain alarm for ${vin}. Cut thrust while tethered or undock before maneuvering.`,
       );
     }
   });

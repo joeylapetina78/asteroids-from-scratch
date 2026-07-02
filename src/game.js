@@ -9,7 +9,7 @@ import { createHunterNearShip, createHunterRespawn, createLifeField } from "./sy
 import { createNpcRouteShips } from "./systems/npcRoutes.js?v=soft-cargo-train";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=draw-radius";
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
-import { createScanner } from "./systems/scanner.js?v=beacon-locator-v1";
+import { createScanner } from "./systems/scanner.js?v=tether-alarm-v1";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=beacon-locator-v1";
 import { createGameState } from "./state/gameState.js?v=beacon-locator-v1";
@@ -109,6 +109,7 @@ export class Game {
     this.discoveredSiteIds = new Set();
     this.currentZoneId = null;
     this.hasRecordedPlayerThrust = false;
+    this.tetherStrainCooldown = 0;
     this.lastShipMovementEventPosition = { ...this.ship.position };
     this.visibleStorySiteIds = new Set();
     this.nearbyStorySiteIds = new Set();
@@ -258,7 +259,6 @@ export class Game {
 
     scanner.beaconLocatorUsed = true;
     const activeSite = this.worldSites.find((site) => site.id === scanner.activeBeaconId) ?? null;
-    this.scanner.trackBeacon(activeSite);
     this.audio?.playScanner();
     this.state.ledger.recordEvent(
       "beaconLocator.used",
@@ -294,6 +294,7 @@ export class Game {
     this.shipHitCooldown = Math.max(0, this.shipHitCooldown - deltaSeconds);
     this.viewportTitleTimer = Math.max(0, this.viewportTitleTimer - deltaSeconds);
     this.updateImpactFeedback(deltaSeconds);
+    this.tetherStrainCooldown = Math.max(0, this.tetherStrainCooldown - deltaSeconds);
     const previousFuel = this.state.components.engine.fuel;
     const previousScanergy = this.state.components.scanner.scanergy;
     // Order matters: ship/world state is advanced first, then collisions and UI
@@ -354,7 +355,6 @@ export class Game {
     this.updateSiteDefenseBeams(deltaSeconds);
     this.updateCollector(deltaSeconds);
     this.collectPickups();
-    this.updateBeaconLocator();
     this.scanner.update(deltaSeconds);
     this.camera.follow(this.ship, deltaSeconds);
     this.updateStoryEventSensors(activeAsteroids, activeLifeforms, deltaSeconds);
@@ -364,15 +364,6 @@ export class Game {
     this.updateDebugReadout();
     this.updateSiteReadout();
     this.input.finishFrame();
-  }
-
-  updateBeaconLocator() {
-    const scanner = this.state.components.scanner;
-    const activeSite = scanner.installed
-      ? this.worldSites.find((site) => site.id === scanner.activeBeaconId)
-      : null;
-
-    this.scanner.trackBeacon(activeSite);
   }
 
   updateWorldSiteInteraction() {
@@ -438,6 +429,22 @@ export class Game {
   }
 
   updatePlayerThrustEvent() {
+    if (this.ship.isThrusting && this.dockedSite && this.tetherStrainCooldown <= 0) {
+      this.tetherStrainCooldown = 2.5;
+      this.state.ledger.recordEvent(
+        "site.tetherStrained",
+        {
+          siteId: this.dockedSite.id,
+          siteName: this.dockedSite.name,
+          siteType: this.dockedSite.type,
+          x: Math.round(this.ship.position.x),
+          y: Math.round(this.ship.position.y),
+          speed: Math.round(Math.hypot(this.ship.velocity.x, this.ship.velocity.y)),
+        },
+        { visible: false },
+      );
+    }
+
     if (this.hasRecordedPlayerThrust || !this.ship.isThrusting) {
       return;
     }
