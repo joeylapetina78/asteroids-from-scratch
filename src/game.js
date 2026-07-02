@@ -9,10 +9,10 @@ import { createHunterNearShip, createHunterRespawn, createLifeField } from "./sy
 import { createNpcRouteShips } from "./systems/npcRoutes.js?v=soft-cargo-train";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=draw-radius";
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
-import { createScanner } from "./systems/scanner.js?v=mission-targets";
+import { createScanner } from "./systems/scanner.js?v=beacon-locator-v1";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=world-refs-v1";
-import { createGameState } from "./state/gameState.js?v=tow-control-lock-v1";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=beacon-locator-v1";
+import { createGameState } from "./state/gameState.js?v=beacon-locator-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -237,27 +237,35 @@ export class Game {
   scanForCrystals() {
     const scanner = this.state.components.scanner;
 
-    if (this.shipDestroyed || !scanner.installed || scanner.scanergy < SCANERGY_PER_SCAN) {
+    if (this.shipDestroyed || !scanner.installed) {
       return;
     }
 
-    scanner.scanergy -= SCANERGY_PER_SCAN;
+    const rememberedHubIds = (scanner.beaconMemoryIds ?? [])
+      .filter((siteId) => this.worldSites.some((site) => site.id === siteId && site.type === "hub"));
+
+    if (rememberedHubIds.length === 0) {
+      return;
+    }
+
+    const currentIndex = Math.max(0, rememberedHubIds.indexOf(scanner.activeBeaconId));
+    const nextIndex = (currentIndex + 1) % rememberedHubIds.length;
+    scanner.activeBeaconId = rememberedHubIds[nextIndex];
+    const activeSite = this.worldSites.find((site) => site.id === scanner.activeBeaconId) ?? null;
+    this.scanner.trackBeacon(activeSite);
     this.audio?.playScanner();
     this.state.ledger.recordEvent(
-      "scanner.used",
+      "beaconLocator.used",
       {
-        scanergySpent: SCANERGY_PER_SCAN,
-        scanergyRemaining: scanner.scanergy,
+        beaconId: activeSite?.beaconId ?? scanner.activeBeaconId,
+        siteId: activeSite?.id ?? scanner.activeBeaconId,
+        siteName: activeSite?.name ?? "Unknown beacon",
         x: Math.round(this.ship.position.x),
         y: Math.round(this.ship.position.y),
       },
       { visible: false },
     );
     this.onHudChange(this.state);
-    this.scanner.scan(this.ship, this.asteroids, this.worldSites, {
-      targets: scanner.targets,
-      targetSiteId: this.state.journey.mission?.targetSiteId,
-    });
   }
 
   frame(time) {
@@ -340,6 +348,7 @@ export class Game {
     this.updateSiteDefenseBeams(deltaSeconds);
     this.updateCollector(deltaSeconds);
     this.collectPickups();
+    this.updateBeaconLocator();
     this.scanner.update(deltaSeconds);
     this.camera.follow(this.ship, deltaSeconds);
     this.updateStoryEventSensors(activeAsteroids, activeLifeforms, deltaSeconds);
@@ -349,6 +358,15 @@ export class Game {
     this.updateDebugReadout();
     this.updateSiteReadout();
     this.input.finishFrame();
+  }
+
+  updateBeaconLocator() {
+    const scanner = this.state.components.scanner;
+    const activeSite = scanner.installed
+      ? this.worldSites.find((site) => site.id === scanner.activeBeaconId)
+      : null;
+
+    this.scanner.trackBeacon(activeSite);
   }
 
   updateWorldSiteInteraction() {

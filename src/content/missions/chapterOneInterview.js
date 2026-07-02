@@ -299,22 +299,21 @@ export const chapterOneInterviewMission = {
       id: "show-scanner",
       objective: "Get your bearings.",
       helpText:
-        "Press Add Scanner to install the starter scanner. This scanner only points toward the mission hub. You have limited scan power.",
+        "Press Add Beacon Locator. It does not need power. It points toward hub beacons remembered by the ship.",
       onEnter: [
         {
           type: "say",
           speaker: "Rook",
           text:
-            "We're that unpowered ship in the center of the viewport. There's the hub we came from, Scrap Porch, in the lower left corner. Your job is to deliver this ship to the other hub in this zone, the Yard Exchange. Let me add the scanner so you know which way to go.",
-          acknowledgement: { label: "Add Scanner" },
+            "We're that unpowered ship in the center of the viewport. There's the hub we came from, Scrap Porch, in the lower left corner. Your job is to deliver this ship to the other hub in this zone, the Yard Exchange. Let me add the Beacon Locator so you can follow hub signals.",
+          acknowledgement: { label: "Add Beacon Locator" },
         },
       ],
       onAcknowledge: [
         { type: "clearMessage" },
-        { type: "setComponentValue", componentId: "scanner", key: "maxScanergy", value: 400 },
-        { type: "setComponentValue", componentId: "scanner", key: "targets", value: ["sites"] },
-        { type: "raiseComponentValue", componentId: "scanner", key: "scanergy", value: 400 },
-        { type: "showComponent", componentId: "scanner", componentName: "Scanner" },
+        { type: "setComponentValue", componentId: "scanner", key: "beaconMemoryIds", value: ["scrap-porch", "yard-exchange"] },
+        { type: "setComponentValue", componentId: "scanner", key: "activeBeaconId", value: "yard-exchange" },
+        { type: "showComponent", componentId: "scanner", componentName: "Beacon Locator" },
         { type: "goToStep", stepId: "try-scanner" },
       ],
       considerations: [
@@ -323,15 +322,15 @@ export const chapterOneInterviewMission = {
     },
     {
       id: "try-scanner",
-      objective: "Use the scanner once.",
+      objective: "Check the beacon locator.",
       helpText:
-        "Press Scan once. The pale marker points toward Yard Exchange. If you skip the scanner and find the hub anyway, that still counts.",
+        "Press Next Beacon if needed. The arrow and pale marker point toward the selected hub beacon. Yard Exchange is the destination.",
       onEnter: [
         {
           type: "say",
           speaker: "Rook",
           text:
-            "Go ahead and hit it once to see which way we're headed. You can see it only has so much power. If you run out and still haven't made it to the hub, follow some space truckers.",
+            "The locator already knows the beacons in this zone. Click it to cycle signals if you need to, then follow the Yard Exchange beacon. If you still get turned around, follow some space truckers.",
         },
       ],
       transitions: [
@@ -346,7 +345,7 @@ export const chapterOneInterviewMission = {
           nextStepId: "show-docking",
         },
         {
-          eventType: "scanner.used",
+          eventType: "beaconLocator.used",
           nextStepId: "show-engine",
         },
       ],
@@ -445,7 +444,7 @@ export const chapterOneInterviewMission = {
       id: "find-yard-exchange",
       objective: "Find Yard Exchange.",
       helpText:
-        "Fly toward Yard Exchange. Scan if you need help. The scanner marker points to the hub, which looks like a large circle or ring.",
+        "Fly toward Yard Exchange. The Beacon Locator points to remembered hub beacons. Yard Exchange looks like a large circle or ring.",
       onEnter: [
         {
           type: "say",

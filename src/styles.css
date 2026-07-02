@@ -557,6 +557,30 @@ body {
   color: #c9f1ff;
 }
 
+.beacon-compass {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin: 10px auto 0;
+  border: 1px solid rgba(115, 210, 255, 0.28);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(115, 210, 255, 0.12), transparent 56%),
+    #080a0f;
+}
+
+.beacon-compass span {
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 24px solid #f5f7fb;
+  filter: drop-shadow(0 0 8px rgba(115, 210, 255, 0.6));
+  transform-origin: 50% 75%;
+  transition: transform 180ms ease;
+}
+
 .scan-button:active {
   background: #123044;
 }

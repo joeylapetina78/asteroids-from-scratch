@@ -1,4 +1,4 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=tow-control-lock-v1";
+import { createEventLedger } from "../systems/eventLedger.js?v=beacon-locator-v1";
 
 // Starting game/component state. This is the current lightweight substitute for
 // future accounts, saves, installed modules, and player profiles.
@@ -111,6 +111,9 @@ export function createGameState() {
         scanergy: 0,
         maxScanergy: 400,
         targets: ["resources", "sites"],
+        beaconMemoryIds: ["scrap-porch", "yard-exchange"],
+        activeBeaconId: "yard-exchange",
+        beaconLocatorUsed: false,
       },
       processor: {
         installed: false,

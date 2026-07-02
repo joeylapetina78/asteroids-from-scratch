@@ -1,15 +1,15 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
-import { Game } from "./game.js?v=docking-tether-v1";
+import { Game } from "./game.js?v=beacon-locator-v1";
 import { createContractManager } from "./systems/contractManager.js?v=world-refs-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=journey-sidebar-v6";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=beacon-locator-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=attention-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-records-v1";
-import { createGameState } from "./state/gameState.js?v=attention-v1";
+import { createGameState } from "./state/gameState.js?v=beacon-locator-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -151,6 +151,7 @@ const processorCanvas = document.querySelector("#processor");
 const processorOutputPanel = document.querySelector(".processor-outputs");
 const scanButton = document.querySelector("#ship-scan");
 const scanergyCount = document.querySelector("#scanergy-count");
+const beaconDirectionArrow = document.querySelector("#beacon-direction-arrow");
 const shipOffersPanel = document.querySelector("#ship-offers");
 const shipStatus = document.querySelector("#ship-status");
 const towSection = document.querySelector("#tow-section");
@@ -246,7 +247,6 @@ const fulfilledContractPanelPulls = new Set();
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
   { panelId: "miner", cautionAt: 50, criticalAt: 20, getValue: () => state.components.miner.ammo },
-  { panelId: "scanner", cautionAt: 100, criticalAt: 25, getValue: () => state.components.scanner.scanergy },
   { panelId: "hull", cautionAt: 55, criticalAt: 30, getValue: () => state.components.hull.integrity },
 ];
 
@@ -434,7 +434,7 @@ function updateHudDisplay() {
   setTowAvailable(isStranded);
   updateTowEstimateDisplay();
   ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
-  scanergyCount.textContent = `${Math.floor(state.components.scanner.scanergy)}%`;
+  updateBeaconLocatorDisplay();
   tractorFieldStatus.textContent = state.components.collector.isActive ? "Pulling" : "Idle";
   tractorFieldButton.setAttribute("aria-pressed", String(state.components.collector.isActive));
   hullCount.textContent = `${Math.ceil(state.components.hull.integrity)}%`;
@@ -444,6 +444,21 @@ function updateHudDisplay() {
   merchantCredits.textContent = `${Math.floor(state.components.account.credits)} cr`;
   updateWarningPanels();
   scheduleSave();
+}
+
+function updateBeaconLocatorDisplay() {
+  const locator = state.components.scanner;
+  const activeSite = game.worldSites.find((site) => site.id === locator.activeBeaconId);
+
+  scanergyCount.textContent = activeSite?.name ?? "None";
+  scanButton.disabled = !locator.installed || (locator.beaconMemoryIds?.length ?? 0) === 0;
+
+  if (!beaconDirectionArrow || !activeSite) {
+    return;
+  }
+
+  const angle = Math.atan2(activeSite.position.y - game.ship.position.y, activeSite.position.x - game.ship.position.x);
+  beaconDirectionArrow.style.transform = `rotate(${angle + Math.PI / 2}rad)`;
 }
 
 function setTowAvailable(isAvailable) {

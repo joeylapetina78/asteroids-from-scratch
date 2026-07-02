@@ -4,6 +4,7 @@ export const WORLD_SITES = [
   {
     id: storySites.starterHub.id,
     name: storySites.starterHub.name,
+    beaconId: "beacon-yard-exchange",
     type: "hub",
     position: { x: 380, y: -180 },
     radius: 58,
@@ -21,6 +22,7 @@ export const WORLD_SITES = [
   {
     id: storySites.originHub.id,
     name: storySites.originHub.name,
+    beaconId: "beacon-scrap-porch",
     type: "hub",
     position: { x: -1180, y: 860 },
     radius: 46,
