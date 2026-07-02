@@ -1,67 +1,92 @@
-# Asteroids From Scratch
+# Asteroids RPG
 
-A small browser-based Asteroids project built one understandable slice at a time. It started as ship flight on a canvas and is now becoming an open-space mining/RPG sandbox where page widgets represent ship components.
+A browser-based space RPG built around a world-centric institutional simulation. The player pilots a ship through a procedurally zoned field, but the core of the game is navigating institutions — banks, registries, mining authorities, employers, patrol organizations, shipping companies, factions, and courts — that issue documents, own assets, hire people, lend money, enforce laws, inspect ships, and write contracts.
 
-For the fuller system map, see [docs/project-map.md](docs/project-map.md).
+Mining is one profession within that world. Hauling is another. Salvage, patrol, bounty work, piracy, and search-and-rescue are others. The same underlying systems — documents, contracts, components, inspection rules, and AI behaviors — should support all of them.
+
+For the system map and architecture, see [docs/project-map.md](docs/project-map.md).
+
+---
+
+## Design Direction
+
+**The world is the object. The player is one entity inside it.**
+
+Ships have VINs. Documents are issued by institutions and held by people, ships, or companies. Contracts create obligations and grant permissions. Hubs and patrols check documents through inspection rules. The important question is always: *does this person have a valid document that grants permission to do this action, in this place, with this asset, right now?*
+
+This means:
+
+- You own the ship but the bank holds the title.
+- A hub checks registration but not title.
+- A repo crew has a document giving them legal authority to seize it.
+- A criminal has the ship but not the paperwork.
+- The player has the paperwork but not the ship.
+
+Ships are hulls with components attached. A mining ship is not a special hardcoded type — it is a hull with mining-capable components, valid documents, and the right contracts. A patrol ship is a hull with patrol-related components, patrol authority, and enforcement behavior. The same structure applies to haulers, tow trucks, drones, player ships, and NPC ships.
+
+Documents follow the same philosophy. Pilot licenses, mining licenses, ship registrations, titles, loan agreements, delivery contracts, patrol permits, cargo manifests, and identity documents should be built from a shared authority framework — not as isolated one-off systems. A document can be issued, held, inspected, expired, revoked, forged, transferred, or used as collateral.
+
+The game should feel like a living institutional world that the player participates in, not a set of systems built around the player character.
+
+---
 
 ## Run It
-
-Run a local static server:
 
 ```powershell
 python -m http.server 8123
 ```
 
-Then open `http://127.0.0.1:8123/`.
+Open `http://127.0.0.1:8123/`.
+
+Dev shortcuts:
+
+- `?resetSave=1` — clears the local save
+- `?devStart=red-work` — starts fresh near Yard Exchange with the starter mining setup
+
+---
 
 ## Controls
 
-- A: rotate left
-- D: rotate right
-- W: thrust
-- S: brake
-- Space: fire charge
-- Power Ship button: toggles ship systems on and off
-- Thrust mode: chooses forward thrust or low-power reverse thrust
-- Scan button: sends a forward resource scan from the ship nose
-- Miner armed switch: enables or disables shooting
-- Tractor Field button: hold to pull nearby loose resources while spending scanergy
-- Processor output: chooses where crushed units go
-- Processor click: crushes a collected unit into the selected output
-- Panel title drag: moves component panels on a small snap grid
+| Key / Button | Action |
+|---|---|
+| A / D | Rotate left / right |
+| W | Thrust |
+| S | Brake |
+| Space | Fire mining charge |
+| Power Ship | Toggle ship systems on/off |
+| Thrust mode | Forward or low-power reverse |
+| Blaster armed | Enable/disable mining shots |
+| Tractor Field | Hold to pull nearby loose resources |
+| Processor output | Choose where crushed units go |
+| Processor click | Crush a collected unit into selected output |
+| Panel title drag | Move component panels on snap grid |
 
-## Current Slice
+---
 
-The current opening is a small story prologue. The Journey component appears first, introduces the game, then Rook reveals the viewport and ship systems one beat at a time. Journey stays above the other panels, while newly granted panels appear above older panels so the player can notice and rearrange them.
+## Current State
 
-The ship is modeled as a ship frame plus installed components: engine, miner, scanner, collector, cargo hold, hull, and processor. The page controls are the ship interface for those components.
+The opening chapter runs a guided prologue that introduces the institutional world through Rook Industries and Yard Exchange:
 
-The starter ship is a slow Yard Skiff frame. The engine has a power button, fuel, thrust-direction toggle, top speed, thrust power, rotation speed, fuel burn, and thrust visual settings. When powered off, the ship is dark, cannot be controlled, and cannot fire, but it still drifts. When powered on, the ship turns white and can rotate, thrust, coast, brake, and fire.
+1. Rook issues a provisional flight license under RTC authority (Form RTC–109–P).
+2. The player files the license in the paperwork drawer.
+3. Rook offers a delivery contract — 500 credits to fly the yard skiff to Yard Exchange.
+4. The player powers up, navigates using the beacon locator, and docks.
+5. Completing the contract pays out. Rook evaluates the run.
+6. Barvis at Yard Exchange Shipyard shows the Rook special mining ship.
+7. Mr. Mako at Yard Exchange Finance provides a 20,000-credit starter ship loan.
+8. The player buys the ship, now holding title and debt simultaneously.
+9. Rook opens a repeatable resource-delivery contract board at Rook Industries.
 
-The ship moves through world space while a springy camera follows it, so the grid scrolls underneath the player with a little lag and catch-up.
+The mission system runs on authored **beats** — discrete story units each with an objective, help text, ambient considerations, and event-driven transitions. Mission-level considerations scope ambient dialogue to beat ranges so Rook's rock-collision commentary fires from the first flight beat through the end of the mission without being duplicated across every beat. The tow truck system is global — it operates independently of any mission through a separate event listener in main.
 
-Asteroids are generated from an invisible resource field. Dense regions contain more asteroids, and resource mixes influence color and size.
+The event ledger records meaningful career and world events. Contracts, legal records, ship state, and hub services all read from the same ledger rather than each building their own state.
 
-The field also contains autonomous life forms: hunters, threadling flocks, grazers, and skitters. They use steering behaviors to seek, flee, wander, flock, orbit around rocks, and avoid collisions. Red hunters can be shot, ram the ship, and lose their ship lock when the engine is powered down. Life forms outside the padded camera/ship area are preserved but not simulated every frame.
+The save system is browser-local and for playtesting only. Save keys may be intentionally bumped as architecture evolves.
 
-The world now has a first pass at non-player ship traffic. Small cargo haulers follow routes between hub sites, avoid rocks, can be damaged by asteroid impacts, and can be shot. They are a foundation for later traders, escorts, piracy, reputation, and defend/attack choices.
+---
 
-The field also contains many common white stone asteroids. Bullets and ship impacts break asteroids into smaller chunks before the smallest pieces disappear. Final white stones burst into small white debris squares when destroyed.
+## What's Next
 
-Destroying the smallest resource rocks ejects red fuel squares or blue crystal squares. Flying over those squares sends larger units into the processor canvas instead of immediately turning them into fuel or crystal value. Thrust spends fuel.
+The near-term track is building out the document/authority framework so that pilot licenses, ship titles, registrations, loan liens, mining permits, and hub access passes share structure instead of being isolated systems. That foundation enables inspections, zone enforcement, document forgery, debt mechanics, repo events, and new professions without rewriting the core player systems.
 
-The scan button sends out a forward cone pulse. If it detects resource asteroids ahead, it shows small edge markers: red for fuel rocks and blue for crystal rocks. The tractor field uses scanergy continuously while held, drawing loose resource squares inward.
-
-The smaller processor canvas sits to the left on wide screens. It receives collected units from a pipe at the top. Units fall, stack, collide, and can be clicked to crush them into the selected output. Available processor outputs are driven by installed components, so fuel comes from the engine, ammo comes from the miner, scanergy comes from the scanner, and cargo sends the unit into the cargo hold.
-
-The cargo hold has its own pipe and physics space. Units sent there are stored instead of processed, which gives future quests a place to check for delivered goods. The hull panel tracks ship integrity. Rock impacts throw ship sparks and reduce integrity based on impact speed and asteroid size.
-
-The game also has an in-memory event ledger for meaningful career/world events. It records docking, zone entry, shooting, asteroid destruction, resource collection, resource processing, cargo sales, repairs, enemy kills, and NPC ship destruction. The World panel shows a small verification readout with recent visible events and compact stats.
-
-Profiles have a temporary browser-local playtest save in `localStorage`. It is not durable yet and may be reset as the mission, contract, and legal systems are cleaned up. Use `?resetSave=1` to clear the local save.
-
-For development testing, `?devStart=red-work` starts fresh near Yard Exchange with the starter mining setup so later contract work can be tested without replaying the full intro.
-
-Sound is generated with the browser Web Audio API after the player clicks `Play Asteroids RPG`. The first pass uses simple Atari-like tones for UI, Journey chatter, scanner, power, thrust, miner shots, rock breaks, pickups, docking, cargo transfer, hull hits, and contract success.
-
-Current likely milestone: keep shaping Chapter 1's guided introduction, then connect that story structure to missions, starter economy, and the first ship upgrade.
+The parallel track is a mission and contract designer backend — a web interface for authoring beats, considerations, transitions, and contract terms without touching code.
