@@ -154,6 +154,42 @@ export const chapterOneInterviewMission = {
   successCriteria: `Dock at ${chapterOneRoute.destinationSite.name}.`,
   nextMissionId: "chapter-1-new-ship",
   nextMissionLabel: "Thanks, Will Do",
+  completion: {
+    speaker: "Rook",
+    objective: "Assessment complete.",
+    helpText: "Mission complete. You made it to Yard Exchange.",
+    acknowledgement: {
+      label: "Thanks, Will Do",
+      action: "startMission",
+      missionId: "chapter-1-new-ship",
+    },
+    grades: [
+      {
+        id: "good",
+        minHull: 90,
+        maxElapsedSeconds: 120,
+        line:
+          "Okay, we did it. Clean hull, good time, and the contract paid out. I have a good feeling about you. I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
+      },
+      {
+        id: "careful",
+        minHull: 90,
+        line:
+          "Okay, we did it. Contract paid out, and the hull's still clean. Took us a minute, but careful beats expensive. You kept the ship tidy. I like that. I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
+      },
+      {
+        id: "scuffed",
+        minHull: 51,
+        line:
+          "We got here and the contract paid out. We picked up some dents along the way, so next time let's keep the expensive parts farther from the rocks. It's not worth much any more. You break it, you buy it. Right! I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
+      },
+      {
+        id: "rough",
+        line:
+          "We made it, and the contract still paid out because those were the terms. But this hull had a rough ride, rookie. Let's not make that a habit. It's not worth much any more. You break it, you buy it. Right! I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
+      },
+    ],
+  },
   startStepId: "show-hull",
   steps: [
     {

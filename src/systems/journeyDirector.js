@@ -1,4 +1,4 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=beacon-locator-v1";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=mission-completion-data-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=world-refs-v1";
 import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=world-refs-v1";
 import { createMissionRunner } from "./missionRunner.js?v=attention-v1";
@@ -73,7 +73,6 @@ export function createJourneyDirector({
   }
 
   function update() {
-    recoverCompletedInterviewFromSignals();
     const events = state.ledger.getEventsAfterId(lastEventId, { includeHidden: true });
 
     events.forEach((event) => {
@@ -85,24 +84,6 @@ export function createJourneyDirector({
     });
   }
 
-  function recoverCompletedInterviewFromSignals() {
-    const deliveryContract = state.contracts.records["rook-yard-exchange-delivery"];
-
-    if (
-      journey.mission?.id !== "chapter-1-interview" ||
-      journey.mission?.status !== "active" ||
-      (
-        !state.ledger.getSignal("player.hasCompletedContract.rook-yard-exchange-delivery") &&
-        deliveryContract?.status !== "paid"
-      )
-    ) {
-      return;
-    }
-
-    completeMission(chapterOneInterviewMission);
-    onChange(journey);
-  }
-
   function completeMission(missionDefinition) {
     if (journey.mission?.status === "completed") {
       return;
@@ -110,8 +91,8 @@ export function createJourneyDirector({
 
     const elapsedSeconds = Math.round((Date.now() - journey.mission.acceptedAt) / 1000);
     const hull = Math.round(state.components.hull.integrity);
-    const grade = getMissionGrade(hull, elapsedSeconds);
     const completion = missionDefinition.completion;
+    const grade = getCompletionGrade(completion, { hull, elapsedSeconds });
 
     journey.mission = {
       ...journey.mission,
@@ -120,27 +101,26 @@ export function createJourneyDirector({
       helpText: completion?.helpText ?? "Mission complete. You made it to Yard Exchange.",
       completedAt: Date.now(),
       elapsedSeconds,
-      grade: grade.id,
+      grade: grade?.id ?? null,
     };
     state.ledger.recordEvent(
       "mission.completed",
       {
         missionId: missionDefinition.id,
         missionName: missionDefinition.title,
-        grade: grade.id,
+        grade: grade?.id ?? null,
         hull,
         elapsedSeconds,
-        bonusCredits: 0,
       },
       { visible: true },
     );
     if (completion) {
-      say(completion.speaker ?? "Journey", completion.line, completion.acknowledgement);
+      say(completion.speaker ?? "Journey", grade?.line ?? completion.line ?? "Mission complete.", completion.acknowledgement);
       return;
     }
 
     if (missionDefinition.nextMissionId) {
-      say("Rook", `${grade.line} ${grade.followup}`, {
+      say("Journey", "Mission complete.", {
         label: missionDefinition.nextMissionLabel ?? "Continue",
         action: "startMission",
         missionId: missionDefinition.nextMissionId,
@@ -148,7 +128,7 @@ export function createJourneyDirector({
       return;
     }
 
-    say("Rook", grade.line);
+    say("Journey", "Mission complete.");
   }
 
   function startMission(missionId) {
@@ -292,46 +272,24 @@ export function createJourneyDirector({
   };
 }
 
-function getMissionGrade(hull, elapsedSeconds) {
-  if (hull >= 90 && elapsedSeconds <= 120) {
-    return {
-      id: "good",
-      bonusCredits: 0,
-      line:
-        "Okay, we did it. Clean hull, good time, and the contract paid out.",
-      followup:
-        "I have a good feeling about you. I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
-    };
-  }
+function getCompletionGrade(completion, { hull, elapsedSeconds }) {
+  return completion?.grades?.find((grade) => {
+    if (Number.isFinite(grade.minHull) && hull < grade.minHull) {
+      return false;
+    }
 
-  if (hull >= 90) {
-    return {
-      id: "careful",
-      bonusCredits: 0,
-      line:
-        "Okay, we did it. Contract paid out, and the hull's still clean. Took us a minute, but careful beats expensive.",
-      followup:
-        "You kept the ship tidy. I like that. I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
-    };
-  }
+    if (Number.isFinite(grade.maxHull) && hull > grade.maxHull) {
+      return false;
+    }
 
-  if (hull > 50) {
-    return {
-      id: "scuffed",
-      bonusCredits: 0,
-      line:
-        "We got here and the contract paid out. We picked up some dents along the way, so next time let's keep the expensive parts farther from the rocks.",
-      followup:
-        "It's not worth much any more. You break it, you buy it. Right! I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
-    };
-  }
+    if (Number.isFinite(grade.maxElapsedSeconds) && elapsedSeconds > grade.maxElapsedSeconds) {
+      return false;
+    }
 
-  return {
-    id: "rough",
-    bonusCredits: 0,
-    line:
-      "We made it, and the contract still paid out because those were the terms. But this hull had a rough ride, rookie. Let's not make that a habit.",
-    followup:
-      "It's not worth much any more. You break it, you buy it. Right! I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
-  };
+    if (Number.isFinite(grade.minElapsedSeconds) && elapsedSeconds < grade.minElapsedSeconds) {
+      return false;
+    }
+
+    return true;
+  }) ?? null;
 }

@@ -135,14 +135,14 @@ NPC ships are the first non-player ship actors. They use steering behavior like 
 Current opening flow:
 
 1. Prologue starts with only the Journey panel visible.
-2. The Galaxy invites the player to play.
+2. The Murmur invites the player to play.
 3. Rook starts Chapter 1, `Starting Out`, and mission `The Interview`.
-4. Rook activates the Hull and points out ship integrity.
-5. Rook asks the player to drag both the Journey and Hull panels.
-6. Rook activates the Viewport.
+4. Rook activates the License, Hull, and Docking Lock and points out ship integrity.
+5. Rook asks the player to drag both the License and Hull panels.
+6. Rook asks the player to file the provisional license paperwork.
 7. Rook offers the assessment delivery contract.
 8. Accepting the contract advances the mission.
-9. Rook activates the Scanner and asks the player to scan once.
+9. Rook activates the Viewport and Beacon Locator.
 10. Rook activates the Engine.
 11. Powering the engine advances the mission to movement.
 12. First real player thrust confirms the ship is underway.
@@ -165,7 +165,9 @@ Journey is intentionally not a normal debug log. It shows the current story beat
 
 Each mission step also has `helpText`. This is the plain explanation layer for players who skipped or forgot the NPC line. The Journey panel exposes it separately from the NPC story text.
 
-Mission rules can require multiple flags via `requiresFlags`. The first use is panel-drag training: the DOM drag system records hidden `component.dragged` events, the mission sets separate flags for Journey and Hull, and then advances when both flags are true.
+Mission rules can require multiple flags via `requiresFlags`. The first use is panel-drag training: the DOM drag system records hidden `component.dragged` events, the mission sets separate flags for License and Hull, and then advances when both flags are true.
+
+Mission-specific completion text and grading rules live in mission data. For example, `chapterOneInterview.js` owns the hull/time grading lines Rook uses after the delivery contract pays out, while `journeyDirector.js` only reads the mission's `completion` block and applies generic threshold checks.
 
 ### Contracts
 
