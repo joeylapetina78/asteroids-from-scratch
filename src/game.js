@@ -248,9 +248,15 @@ export class Game {
       return;
     }
 
-    const currentIndex = Math.max(0, rememberedHubIds.indexOf(scanner.activeBeaconId));
-    const nextIndex = (currentIndex + 1) % rememberedHubIds.length;
-    scanner.activeBeaconId = rememberedHubIds[nextIndex];
+    if (scanner.beaconLocatorUsed) {
+      const currentIndex = Math.max(0, rememberedHubIds.indexOf(scanner.activeBeaconId));
+      const nextIndex = (currentIndex + 1) % rememberedHubIds.length;
+      scanner.activeBeaconId = rememberedHubIds[nextIndex];
+    } else if (!rememberedHubIds.includes(scanner.activeBeaconId)) {
+      scanner.activeBeaconId = rememberedHubIds[0];
+    }
+
+    scanner.beaconLocatorUsed = true;
     const activeSite = this.worldSites.find((site) => site.id === scanner.activeBeaconId) ?? null;
     this.scanner.trackBeacon(activeSite);
     this.audio?.playScanner();

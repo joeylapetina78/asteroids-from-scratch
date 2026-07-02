@@ -299,6 +299,8 @@ export function createEventLedger(options = {}) {
       }
     } else if (event.type === "scanner.used") {
       setSignal("player.hasEverScanned");
+    } else if (event.type === "beaconLocator.used") {
+      setSignal("player.hasUsedBeaconLocator");
     } else if (event.type === "ship.thrusted") {
       setSignal("player.hasEverThrusted");
     } else if (event.type === "ship.collision") {

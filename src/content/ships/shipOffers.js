@@ -9,7 +9,7 @@ export const shipOffers = [
     description: "A cheap working hull with a miner and cargo hold bolted in. Ugly, slow, and legal.",
     hull: 100,
     engine: "Repaired yard engine, tuned for better fuel efficiency",
-    includedComponents: ["Engine", "Hull", "Docking", "Scanner", "Miner", "Cargo Hold"],
+    includedComponents: ["Engine", "Hull", "Docking", "Beacon Locator", "Miner", "Cargo Hold"],
     tradeoffs: ["Starter mining rig", "Low top speed", "Cheap parts", "Eligible for Rook work"],
   },
   {
@@ -33,8 +33,8 @@ export const shipOffers = [
     description: "A real mining starter for buyers who arrive with money instead of optimism.",
     hull: 115,
     engine: "Efficient prospector drive",
-    includedComponents: ["Engine", "Hull", "Scanner", "Miner", "Cargo Hold", "Processor"],
-    tradeoffs: ["Efficient mining", "Better scanner bay", "Expensive repairs"],
+    includedComponents: ["Engine", "Hull", "Beacon Locator", "Miner", "Cargo Hold", "Processor"],
+    tradeoffs: ["Efficient mining", "Better locator bay", "Expensive repairs"],
   },
   {
     id: "zenith-dart-runner",
@@ -45,7 +45,7 @@ export const shipOffers = [
     description: "Fast, sleek, and wildly inappropriate for a first mining job.",
     hull: 85,
     engine: "High-output dart drive",
-    includedComponents: ["Engine", "Hull", "Scanner"],
+    includedComponents: ["Engine", "Hull", "Beacon Locator"],
     tradeoffs: ["Fast ship", "Low cargo", "Fragile hull", "No stock miner"],
   },
 ];

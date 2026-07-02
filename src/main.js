@@ -1,5 +1,5 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
-import { shipOffers } from "./content/ships/shipOffers.js?v=ship-market-v2";
+import { shipOffers } from "./content/ships/shipOffers.js?v=beacon-locator-v1";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
 import { Game } from "./game.js?v=beacon-locator-v1";
 import { createContractManager } from "./systems/contractManager.js?v=world-refs-v1";

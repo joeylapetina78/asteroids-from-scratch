@@ -313,6 +313,7 @@ export const chapterOneInterviewMission = {
         { type: "clearMessage" },
         { type: "setComponentValue", componentId: "scanner", key: "beaconMemoryIds", value: ["scrap-porch", "yard-exchange"] },
         { type: "setComponentValue", componentId: "scanner", key: "activeBeaconId", value: "yard-exchange" },
+        { type: "setComponentValue", componentId: "scanner", key: "beaconLocatorUsed", value: false },
         { type: "showComponent", componentId: "scanner", componentName: "Beacon Locator" },
         { type: "goToStep", stepId: "try-scanner" },
       ],
