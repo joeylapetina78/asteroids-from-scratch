@@ -16,17 +16,21 @@ body {
 }
 
 .quick-links {
+  position: fixed;
+  right: 18px;
+  bottom: 44px;
+  z-index: 590;
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-start;
+  justify-content: flex-end;
   gap: 8px 14px;
-  width: min(100vw - 32px, 1500px);
-  margin-bottom: 10px;
+  max-width: min(100vw - 36px, 760px);
   font-size: 0.78rem;
+  pointer-events: auto;
 }
 
 .quick-links a {
-  color: #596273;
+  color: rgba(89, 98, 115, 0.64);
   text-decoration: none;
 }
 
@@ -318,15 +322,16 @@ body {
 }
 
 .journey-panel {
-  --journey-width: clamp(360px, 24vw, 460px);
+  --journey-width: clamp(320px, 21vw, 405px);
   --journey-tab: 44px;
   position: fixed !important;
   top: 0;
-  bottom: 32px;
+  bottom: 40px;
   left: 0;
   width: var(--journey-width);
   max-height: none;
   overflow: hidden auto;
+  border-top: 0;
   border-left: 0;
   border-color: rgba(0, 211, 255, 0.28);
   border-radius: 0;
@@ -361,6 +366,7 @@ body {
 
 .journey-panel.is-journey-speaking {
   border-color: rgba(255, 211, 107, 0.58);
+  border-top-color: transparent;
   box-shadow:
     0 0 28px rgba(0, 189, 255, 0.18),
     0 0 26px rgba(255, 211, 107, 0.12);

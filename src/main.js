@@ -5,7 +5,7 @@ import { Game } from "./game.js?v=docking-tether-v1";
 import { createContractManager } from "./systems/contractManager.js?v=world-refs-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=journey-sidebar-v5";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=journey-sidebar-v6";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=attention-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-records-v1";
@@ -1651,7 +1651,7 @@ function getSpeakerPortrait(speaker = "") {
        /_/ \_/`;
   }
 
-  if (key.includes("galaxy")) {
+  if (key.includes("galaxy") || key.includes("storm")) {
     return String.raw`      .-._.-.
    .-'  . .  '-.
   /   *  ___  * \
