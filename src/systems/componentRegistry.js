@@ -39,3 +39,22 @@ export const STARTUP_HIDDEN_PANEL_IDS = Object.freeze([
   "merchant",
   "component-shop",
 ]);
+
+export const COMPONENT_STATE_BY_PANEL_ID = Object.freeze({
+  engine: "engine",
+  scanner: "scanner",
+  miner: "miner",
+  collector: "collector",
+  hull: "hull",
+  docking: "docking",
+  processor: "processor",
+  cargo: "cargoHold",
+});
+
+export function getComponentStateIdForPanel(panelId) {
+  return COMPONENT_STATE_BY_PANEL_ID[panelId] ?? null;
+}
+
+export function isShipSystemPanel(panelId) {
+  return Boolean(getComponentStateIdForPanel(panelId));
+}

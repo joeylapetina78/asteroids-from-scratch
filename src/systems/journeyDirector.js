@@ -1,7 +1,7 @@
 import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=mission-completion-data-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=world-refs-v1";
 import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=world-refs-v1";
-import { STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=component-registry-v1";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=component-visibility-v1";
 import { createMissionRunner } from "./missionRunner.js?v=attention-v1";
 
 const MISSION_DEFINITIONS = new Map(
@@ -150,8 +150,10 @@ export function createJourneyDirector({
   }
 
   function unlockComponent(componentId, componentName) {
-    if (state.components[componentId]) {
-      state.components[componentId].installed = true;
+    const componentStateId = getComponentStateIdForPanel(componentId);
+
+    if (componentStateId && state.components[componentStateId]) {
+      state.components[componentStateId].installed = true;
     }
 
     showComponent(componentId);

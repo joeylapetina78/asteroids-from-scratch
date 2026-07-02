@@ -13,7 +13,7 @@ import { createScanner } from "./systems/scanner.js?v=tether-alarm-v1";
 import { getCurrentShipLegal, getPilotLicense, getPilotName, getUnauthorizedVisitedZones, recordVisitedZone } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=beacon-locator-v1";
-import { createGameState } from "./state/gameState.js?v=legal-single-home-v1";
+import { createGameState } from "./state/gameState.js?v=component-visibility-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to

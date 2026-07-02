@@ -1,4 +1,5 @@
 import { createEventLedger } from "../systems/eventLedger.js?v=beacon-locator-v1";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=component-visibility-v1";
 
 // Starting game/component state. This is the current lightweight substitute for
 // future accounts, saves, installed modules, and player profiles.
@@ -21,6 +22,9 @@ export function createGameState() {
     },
     attention: {
       targets: {},
+    },
+    ui: {
+      panels: createInitialPanelAvailability(),
     },
     hubServices: {
       unlocked: {},
@@ -137,14 +141,18 @@ export function createGameState() {
         isActive: false,
       },
       contract: {
-        installed: false,
+        currentContractId: null,
       },
       merchant: {
-        installed: false,
+        purchasedOfferId: null,
       },
       "component-shop": {
-        installed: false,
+        lastViewedOfferId: null,
       },
     },
   };
+}
+
+function createInitialPanelAvailability() {
+  return Object.fromEntries(PANEL_IDS.map((panelId) => [panelId, { available: panelId === "journey" }]));
 }

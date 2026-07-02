@@ -45,7 +45,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/content/hubs/yardExchangeServices.js](../src/content/hubs/yardExchangeServices.js) | Authored hub service data for Yard Exchange and Scrap Porch NPC/service windows. |
 | [src/systems/hubServices.js](../src/systems/hubServices.js) | Resolves docked hub service definitions for the Hub panel. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. |
-| [src/systems/componentRegistry.js](../src/systems/componentRegistry.js) | Central panel/component id registry and startup visibility list. This is the seed of a future unlock/visibility system. |
+| [src/systems/componentRegistry.js](../src/systems/componentRegistry.js) | Central panel/component id registry, startup visibility list, and mapping from panel ids to real ship-system state ids. |
 | [src/systems/legalRecords.js](../src/systems/legalRecords.js) | Helpers for pilot license, visited zones, current ship registration/title summary, and legal record updates. |
 | [src/systems/audio.js](../src/systems/audio.js) | Procedural Atari-style sound effects and Journey chatter using Web Audio. |
 | [src/systems/saveManager.js](../src/systems/saveManager.js) | Lightweight browser-local profile save/load for playtesting. |
@@ -172,6 +172,8 @@ Mission rules can require multiple flags via `requiresFlags`. The first use is p
 Mission-specific completion text and grading rules live in mission data. For example, `chapterOneInterview.js` owns the hull/time grading lines Rook uses after the delivery contract pays out, while `journeyDirector.js` only reads the mission's `completion` block and applies generic threshold checks.
 
 Startup panel visibility comes from [src/systems/componentRegistry.js](../src/systems/componentRegistry.js). The director still asks the UI to show and hide panels for mission beats, but raw startup panel ids no longer live inside `journeyDirector.js`.
+
+Panel availability now lives under `state.ui.panels`. Real installed ship systems still live under `state.components`, for example `state.components.engine.installed` and `state.components.miner.installed`. This keeps windows like Contract, Merchant, and Modworks from pretending to be physical ship equipment while preserving their existing UI behavior.
 
 ### Contracts
 

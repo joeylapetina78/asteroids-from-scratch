@@ -1,16 +1,17 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=beacon-locator-v1";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
-import { Game } from "./game.js?v=legal-single-home-v1";
+import { Game } from "./game.js?v=component-visibility-v1";
 import { createContractManager } from "./systems/contractManager.js?v=world-refs-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=component-registry-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=component-visibility-v1";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=component-visibility-v1";
 import { getPilotLicense, issuePilotLicense, updateCurrentShipLegal } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=legal-single-home-v1";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=component-visibility-v1";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=legal-single-home-v1";
-import { createGameState } from "./state/gameState.js?v=legal-single-home-v1";
+import { createGameState } from "./state/gameState.js?v=component-visibility-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -526,9 +527,15 @@ function revealInstalledComponents() {
     setComponentAvailable("viewport", true);
   }
 
-  Object.entries(state.components).forEach(([componentId, componentState]) => {
-    if (componentState?.installed) {
-      setComponentAvailable(componentId, true);
+  Object.entries(COMPONENT_STATE_BY_PANEL_ID).forEach(([panelId, componentStateId]) => {
+    if (state.components[componentStateId]?.installed) {
+      setComponentAvailable(panelId, true);
+    }
+  });
+
+  Object.entries(state.ui.panels).forEach(([panelId, panelState]) => {
+    if (panelState?.available) {
+      setComponentAvailable(panelId, true);
     }
   });
 }
@@ -585,7 +592,6 @@ function setupDevRedWorkStart() {
   });
   state.components.cargoHold.installed = true;
   state.components.docking.installed = true;
-  state.components.contract.installed = true;
   state.hubServices.unlocked[chapterOneRoute.destinationSite.id] = Array.from(
     new Set([...(state.hubServices.unlocked[chapterOneRoute.destinationSite.id] ?? []), yardExchangeServices.rook, yardExchangeServices.supply]),
   );
@@ -1516,6 +1522,11 @@ function isPanelHidden(panel) {
 }
 
 function setComponentAvailable(componentId, isAvailable = true) {
+  if (!state.ui.panels[componentId]) {
+    state.ui.panels[componentId] = { available: false };
+  }
+
+  state.ui.panels[componentId].available = isAvailable;
   const panel = document.querySelector(`[data-panel-id="${componentId}"]`);
 
   if (panel) {
