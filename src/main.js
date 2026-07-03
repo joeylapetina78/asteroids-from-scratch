@@ -2735,7 +2735,7 @@ function makePanelsDraggable() {
       }
 
       panel.classList.remove("is-dragging");
-      recordPanelDrag(panelId, drag, offset);
+      recordPanelDrag(panelId, drag, event);
       audio.playPanelDrop();
       drag = null;
     }
@@ -3117,8 +3117,15 @@ function handleShipOfferClick(offer) {
   updateHudDisplay();
 }
 
-function recordPanelDrag(panelId, drag, offset) {
-  if (!panelId || (drag.originX === offset.x && drag.originY === offset.y)) {
+function recordPanelDrag(panelId, drag, endEvent) {
+  if (!panelId) {
+    return;
+  }
+
+  const mouseDeltaX = Math.abs(endEvent.clientX - drag.startX);
+  const mouseDeltaY = Math.abs(endEvent.clientY - drag.startY);
+
+  if (mouseDeltaX < 4 && mouseDeltaY < 4) {
     return;
   }
 
@@ -3126,8 +3133,8 @@ function recordPanelDrag(panelId, drag, offset) {
     "component.dragged",
     {
       componentId: panelId,
-      x: offset.x,
-      y: offset.y,
+      x: endEvent.clientX,
+      y: endEvent.clientY,
     },
     { visible: false },
   );
