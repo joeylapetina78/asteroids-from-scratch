@@ -25,7 +25,7 @@ export function createResourceField(seed = 1337) {
       const iron = Math.pow(layeredNoise(noise, x + 9000, y + 1200, 2600, 0, 1), 1.6) * 1.5 * zoneProfile.redOreBias;
       const copper = Math.pow(layeredNoise(noise, x - 7000, y + 5400, 3200, 0, 1), 2.1) * 1.35 * zoneProfile.copperBias;
       const ice = Math.pow(layeredNoise(noise, x + 2400, y - 8100, 3800, 0, 1), 1.8) * 1.35 * zoneProfile.iceBias;
-      const crystal = Math.pow(layeredNoise(noise, x - 12000, y - 6000, 5200, 0, 1), 5.5) * 2.8 * zoneProfile.blueOreBias;
+      const crystal = Math.pow(layeredNoise(noise, x - 12000, y - 6000, 5200, 0, 1), 3.0) * 2.8 * zoneProfile.blueOreBias;
       const stone = (0.9 + layeredNoise(noise, x, y, 1400, 0, 0.25)) * zoneProfile.commonRockBias;
       const resources = normalizeResources({ stone, iron, copper, ice, crystal });
 
@@ -74,9 +74,9 @@ function mixResourceColor(resources) {
 
   if (dominant.amount > 0.16) {
     const dominantColor = RESOURCE_COLORS[dominant.resource];
-    mixed[0] = mixed[0] * 0.35 + dominantColor[0] * 0.65;
-    mixed[1] = mixed[1] * 0.35 + dominantColor[1] * 0.65;
-    mixed[2] = mixed[2] * 0.35 + dominantColor[2] * 0.65;
+    mixed[0] = mixed[0] * 0.65 + dominantColor[0] * 0.35;
+    mixed[1] = mixed[1] * 0.65 + dominantColor[1] * 0.35;
+    mixed[2] = mixed[2] * 0.65 + dominantColor[2] * 0.35;
   }
 
   return `rgb(${Math.round(mixed[0])}, ${Math.round(mixed[1])}, ${Math.round(mixed[2])})`;
@@ -84,7 +84,7 @@ function mixResourceColor(resources) {
 
 function sharpenResources(resources) {
   const sharpened = Object.fromEntries(
-    Object.entries(resources).map(([resource, value]) => [resource, Math.pow(value, 3.4)]),
+    Object.entries(resources).map(([resource, value]) => [resource, Math.pow(value, 1.8)]),
   );
 
   return normalizeResources(sharpened);
