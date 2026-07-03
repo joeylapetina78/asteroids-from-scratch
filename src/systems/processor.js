@@ -6,10 +6,11 @@ const GRAVITY = 780;
 const BOUNCE = 0.18;
 const FLOOR_FRICTION = 0.82;
 const SOLVER_STEPS = 4;
-const ANGULAR_DRAG = 0.93;
-const FLOOR_ANGULAR_DRAG = 0.72;
+const ANGULAR_DRAG = 0.86;
+const FLOOR_ANGULAR_DRAG = 0.48;
 const COLLISION_COMPRESSION = 0.9;
 const TRIANGLE_SLOPE_PUSH = 0.42;
+const MAX_ANGULAR_VELOCITY = 1.8;
 
 // Processor is a small square-unit physics canvas. It is used for both the
 // clickable processor and the non-clickable cargo hold, with behavior selected
@@ -46,7 +47,7 @@ export class Processor {
       vx: (slot - 1.5) * 12,
       vy: 0,
       angle: (Math.random() - 0.5) * 0.5,
-      angularVelocity: (Math.random() - 0.5) * 3.5,
+      angularVelocity: (Math.random() - 0.5) * 0.9,
       size: UNIT_SIZE,
     });
   }
@@ -137,6 +138,7 @@ export class Processor {
       unit.y += unit.vy * deltaSeconds;
       unit.angle += unit.angularVelocity * deltaSeconds;
       unit.angularVelocity *= ANGULAR_DRAG;
+      unit.angularVelocity = clamp(unit.angularVelocity, -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
       this.keepInsideBounds(unit);
     });
 
@@ -200,20 +202,20 @@ export class Processor {
     if (unit.x < 0) {
       unit.x = 0;
       unit.vx = Math.abs(unit.vx) * BOUNCE;
-      unit.angularVelocity += Math.abs(unit.vy) * 0.01;
+      unit.angularVelocity += Math.abs(unit.vy) * 0.002;
     }
 
     if (unit.x + unit.size > this.canvas.width) {
       unit.x = this.canvas.width - unit.size;
       unit.vx = -Math.abs(unit.vx) * BOUNCE;
-      unit.angularVelocity -= Math.abs(unit.vy) * 0.01;
+      unit.angularVelocity -= Math.abs(unit.vy) * 0.002;
     }
 
     if (unit.y + unit.size > this.canvas.height) {
       unit.y = this.canvas.height - unit.size;
       unit.vy = -Math.abs(unit.vy) * BOUNCE;
       unit.vx *= FLOOR_FRICTION;
-      unit.angularVelocity = (unit.angularVelocity + unit.vx * 0.035) * FLOOR_ANGULAR_DRAG;
+      unit.angularVelocity = (unit.angularVelocity + unit.vx * 0.008) * FLOOR_ANGULAR_DRAG;
     }
   }
 
@@ -252,8 +254,8 @@ export class Processor {
       second.x -= push * direction;
       first.vx *= -BOUNCE;
       second.vx *= -BOUNCE;
-      first.angularVelocity += direction * Math.abs(second.vy) * 0.018;
-      second.angularVelocity -= direction * Math.abs(first.vy) * 0.018;
+      first.angularVelocity += direction * Math.abs(second.vy) * 0.003;
+      second.angularVelocity -= direction * Math.abs(first.vy) * 0.003;
     } else {
       const push = overlapY / 2;
       const direction = firstCenterY < secondCenterY ? -1 : 1;
@@ -261,7 +263,7 @@ export class Processor {
       second.y -= push * direction;
       first.vy *= -BOUNCE;
       second.vy *= -BOUNCE;
-      const spin = (secondCenterX - firstCenterX) * 0.02;
+      const spin = (secondCenterX - firstCenterX) * 0.004;
       first.angularVelocity -= spin;
       second.angularVelocity += spin;
     }
@@ -293,8 +295,8 @@ export class Processor {
     rider.y -= overlapY * 0.2;
     rider.vx += slide * side * 3.5;
     rider.vy *= 0.35;
-    rider.angularVelocity += side * (0.8 + Math.abs(rider.vy) * 0.01);
-    support.angularVelocity -= side * 0.12;
+    rider.angularVelocity += side * (0.18 + Math.abs(rider.vy) * 0.002);
+    support.angularVelocity -= side * 0.04;
 
     return true;
   }
@@ -345,4 +347,8 @@ export class Processor {
 
 function getCollisionSize(unit) {
   return unit.size * COLLISION_COMPRESSION;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
