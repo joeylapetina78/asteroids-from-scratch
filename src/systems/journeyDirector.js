@@ -20,6 +20,7 @@ export function createJourneyDirector({
   runInspection = () => {},
   spawnPatrolIntercept = () => {},
   emergencyTow = () => {},
+  updatePaperworkControls = () => {},
 }) {
   const journey = state.journey;
   let lastEventId = 0;
@@ -266,7 +267,7 @@ export function createJourneyDirector({
         spawnPatrolIntercept,
         startMission,
         requestAttention,
-        updatePaperworkControls: actions.updatePaperworkControls,
+        updatePaperworkControls,
         setEnginePowerLock: (isLocked) => {
           state.components.engine.powerLocked = isLocked;
 
