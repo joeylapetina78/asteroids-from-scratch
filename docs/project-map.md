@@ -48,7 +48,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/systems/commsDirector.js](../src/systems/commsDirector.js) | Routes non-mission speech — hub authority, tow drivers, service NPCs, world NPCs — into the comms display with a priority queue. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. Central memory spine. |
 | [src/systems/accounts.js](../src/systems/accounts.js) | Cash account bridge. New credit changes go through this system while `state.credits` remains a compatibility mirror for current UI. |
-| [src/systems/obligations.js](../src/systems/obligations.js) | Loan/debt obligation records. Loan contracts create obligations, and the old debt summary is derived from them. |
+| [src/systems/obligations.js](../src/systems/obligations.js) | Loan/debt obligation records. Loan contracts create obligations, Finance can pay them down, and the old debt summary is derived from them. |
 | [src/systems/contractRules.js](../src/systems/contractRules.js) | Maps ledger events to contract fulfillment checks. Seed for declarative contract terms. |
 | [src/systems/missionActions.js](../src/systems/missionActions.js) | Defines and runs the mission action vocabulary. Seed for a future mission editor. |
 | [src/systems/missionRules.js](../src/systems/missionRules.js) | Matches mission event rules: stat/signal conditions, cooldowns, flags, rotating responses. |

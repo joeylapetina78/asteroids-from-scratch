@@ -15,7 +15,7 @@ import {
 import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=service-contracts-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
 import { syncActiveHullFromComponents } from "./systems/hulls.js?v=hulls-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=resource-families-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=drag-panels-v2";
 import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=component-visibility-v1";
 import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=paperwork-v1";
@@ -2697,6 +2697,7 @@ function makePanelsDraggable() {
         startY: event.clientY,
         originX: offset.x,
         originY: offset.y,
+        hasRecordedIntentionalDrag: false,
       };
       setPanelTop(panel);
       panel.classList.add("is-dragging");
@@ -2724,6 +2725,7 @@ function makePanelsDraggable() {
       offset.y = Math.round((drag.originY + event.clientY - drag.startY) / gridSize) * gridSize;
       applyPanelOffset(panel, offset);
       savePanelLayout(panel, offset);
+      recordPanelDrag(panelId, drag, event);
     });
 
     handle.addEventListener("pointerup", endDrag);
@@ -2783,6 +2785,7 @@ function makePanelsDraggable() {
         },
         { visible: false },
       );
+      updateLedgerDrivenSystems();
       paperworkDrawer.classList.add("is-open");
       drawerToggle?.setAttribute("aria-expanded", "true");
       window.setTimeout(() => {
@@ -3125,10 +3128,15 @@ function recordPanelDrag(panelId, drag, endEvent) {
   const mouseDeltaX = Math.abs(endEvent.clientX - drag.startX);
   const mouseDeltaY = Math.abs(endEvent.clientY - drag.startY);
 
+  if (drag.hasRecordedIntentionalDrag) {
+    return;
+  }
+
   if (mouseDeltaX < 4 && mouseDeltaY < 4) {
     return;
   }
 
+  drag.hasRecordedIntentionalDrag = true;
   state.ledger.recordEvent(
     "component.dragged",
     {
@@ -3138,6 +3146,7 @@ function recordPanelDrag(panelId, drag, endEvent) {
     },
     { visible: false },
   );
+  updateLedgerDrivenSystems();
 }
 
 function isPanelMeasurable(panel) {

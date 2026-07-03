@@ -1,3 +1,7 @@
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=accounts-v1";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=hulls-v1";
+import { ensureObligations } from "./obligations.js?v=obligations-v1";
+
 const SAVE_KEY = "asteroids.profileSave.v4";
 
 export function shouldResetSave(search = window.location.search) {
@@ -23,6 +27,12 @@ export function loadSavedProfile(state) {
     const save = JSON.parse(rawSave);
 
     state.credits = save.credits ?? save.components?.account?.credits ?? 0;
+    mergePlainObject(state.accounts, save.accounts);
+    ensureAccounts(state);
+    if (!save.accounts) {
+      state.accounts.records[state.accounts.currentAccountId].balance = state.credits;
+      syncLegacyCredits(state);
+    }
     mergePlainObject(state.components, save.components);
     delete state.components.account;
     delete state.components.merchant;
@@ -32,12 +42,19 @@ export function loadSavedProfile(state) {
       state.ui.attention = save.attention;
     }
     mergePlainObject(state.contracts, save.contracts);
+    mergePlainObject(state.character, save.character);
     mergePlainObject(state.debt, save.debt);
     mergePlainObject(state.hubServices, save.hubServices);
+    mergePlainObject(state.hulls, save.hulls);
+    ensureHulls(state);
     mergePlainObject(state.journey, save.journey);
     mergePlainObject(state.legal, save.legal);
+    mergePlainObject(state.obligations, save.obligations);
+    ensureObligations(state);
     mergePlainObject(state.ship, save.ship);
+    syncActiveHullFromComponents(state);
     mergePlainObject(state.ui, save.ui);
+    mergePlainObject(state.worldRecords, save.worldRecords);
 
     if (!save.ship?.purchasedOfferId && save.components?.merchant?.purchasedOfferId) {
       state.ship.purchasedOfferId = save.components.merchant.purchasedOfferId;
@@ -55,14 +72,19 @@ export function saveProfile({ state, game, cargoHold }) {
     version: 1,
     savedAt: Date.now(),
     credits: state.credits,
+    accounts: cloneJsonSafe(state.accounts),
     components: cloneJsonSafe(state.components),
     contracts: cloneJsonSafe(state.contracts),
+    character: cloneJsonSafe(state.character),
     debt: cloneJsonSafe(state.debt),
     hubServices: cloneJsonSafe(state.hubServices),
+    hulls: cloneJsonSafe(state.hulls),
     journey: cloneJsonSafe(state.journey),
     legal: cloneJsonSafe(state.legal),
+    obligations: cloneJsonSafe(state.obligations),
     ship: cloneJsonSafe(state.ship),
     ui: cloneJsonSafe(state.ui),
+    worldRecords: cloneJsonSafe(state.worldRecords),
     world: game?.getSaveSnapshot?.() ?? null,
     cargo: cargoHold?.getSaveSnapshot?.() ?? null,
   };

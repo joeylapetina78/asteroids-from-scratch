@@ -81,6 +81,14 @@ The mission system runs on authored **beats** — discrete story units each with
 
 The event ledger records meaningful career and world events. Contracts, legal records, ship state, and hub services all read from the same ledger rather than each building their own state.
 
+Recent architecture prep has focused on keeping future content from becoming one-off script glue:
+
+- Mission rules and mission actions now have named system modules.
+- Contract fulfillment rules now have a reusable predicate layer.
+- Hub services now have behavior and contract-selection helpers instead of burying every decision in the page coordinator.
+- `state.worldRecords` now stores the first generic entity/document/relationship records alongside the older `state.legal` compatibility shape.
+- `npm run validate:content` checks mission, contract, hub-service, panel, component, and attention references before content reaches the game.
+
 The save system is browser-local and for playtesting only. Save keys may be intentionally bumped as architecture evolves.
 
 ---

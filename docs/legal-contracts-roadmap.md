@@ -24,6 +24,7 @@ The game already has useful pieces:
 - `contractManager` owns contract records, statuses, fulfillment, loan disbursement, and payout.
 - `eventLedger` records `contract.accepted`, `loan.disbursed`, `ship.purchased`, `ship.registryReviewed`, and related events.
 - `state.legal` now owns the pilot license, current ship legal summary, title records, registration records, liens, and paperwork.
+- `state.worldRecords` now mirrors the first legal facts as generic records: people, institutions, ship assets, documents, and relationships.
 - The hull has a VIN and a `vinPlateAttached` flag.
 - The license and contract panels are now paperwork panels that can live on the desktop or in the drawer.
 - Hub authority can already greet/check the ship with VIN and license language.
@@ -32,9 +33,45 @@ The main gap:
 
 - Loans currently just add credits.
 - Ship purchase currently spends normal credits and directly updates ship state.
-- Registration/title/lien behavior exists mostly as state shape and story idea, not as a reusable system.
+- Registration/title/lien behavior is now written to both `state.legal` and `state.worldRecords`, but gameplay still mostly reads the older compatibility shape.
 
 That is okay for the prototype, but the next foundation should move those rules into reusable contract/economy/legal systems.
+
+## World Records Bridge
+
+`src/systems/worldRecords.js` is the first neutral record layer. It does not replace gameplay systems yet; it gives them a shared factual language.
+
+```js
+worldRecords: {
+  entities: {
+    "person:RTC-P2026-77918": { type: "person", name: "Joey Lapetina" },
+    "institution:yard-exchange-finance": { type: "institution", name: "Yard Exchange Finance Office" },
+    "ship:YRDSKF-M-2B7": { type: "asset", assetType: "ship", vin: "YRDSKF-M-2B7" }
+  },
+  documents: {
+    "reg-flight-yrdskf-m-2b7": { type: "ship-registration", status: "active" },
+    "title-yrdskf-m-2b7": { type: "ship-title", status: "lien-held" }
+  },
+  relationships: {
+    "title-yrdskf-m-2b7::applies-to::ship:YRDSKF-M-2B7": { ... }
+  }
+}
+```
+
+Current bridges:
+
+- Pilot license issuance creates a `person`, the Reach Transit Commission institution, and a pilot-license document.
+- Starter ship purchase creates the Yard Exchange Authority, Yard Exchange Finance Office, the purchased ship asset, title document, registration document, ownership relationship, and lien document when the starter loan is active.
+- The record layer has simple read helpers for fetching entities/documents, finding relationships, and asking which documents apply to or are held by an entity. Future inspections should use those helpers instead of reaching into raw object maps.
+
+The old `state.legal` shape is still kept because today's UI and hub behavior depend on it. The long-term direction is for inspections, ownership checks, and contract effects to read/write `worldRecords` first, with `state.legal` becoming a derived summary or disappearing entirely.
+
+First inspection bridge:
+
+- `src/systems/paperworkInspections.js` builds a ship/paperwork inspection report from `worldRecords`.
+- `game.js` records that report as `ship.registryReviewed` when a ship docks at a hub; the hub is just the current inspector.
+- Current hub approval is still automatic.
+- Future passes can turn the report into an interactive presentation flow: request VIN, request pilot ID, request registration/title/manifest, compare supplied documents to the inspector's registry/rules, then grant or deny clearance.
 
 ## Important Terms
 
@@ -272,6 +309,7 @@ Likely files:
 - `src/systems/shipPurchase.js`
 - `src/state/gameState.js`
 - `src/systems/eventLedger.js`
+- `src/systems/worldRecords.js`
 
 Add events:
 

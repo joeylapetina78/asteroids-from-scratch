@@ -1,4 +1,7 @@
 import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=world-refs-v1";
+import { depositCredits, getCredits } from "./accounts.js?v=accounts-v1";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=contract-vocabulary-v1";
+import { createLoanObligation, payObligation } from "./obligations.js?v=obligations-v1";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -96,9 +99,9 @@ export function createContractManager({ state, onChange = () => {} }) {
       lastEventId = Math.max(lastEventId, event.id);
 
       if (event.type === "site.docked") {
-        fulfillMatchingDeliveryContracts(event);
+        fulfillContractsFromEvent(event);
       } else if (event.type === "engine.poweredDown" && event.payload.dockedSiteId) {
-        fulfillMatchingDeliveryContracts({ payload: { siteId: event.payload.dockedSiteId } });
+        fulfillContractsFromEvent(event);
       } else if (event.type === "site.undocked") {
         closeUnacceptedHubServiceOffers(event.payload.siteId);
       }
@@ -137,19 +140,20 @@ export function createContractManager({ state, onChange = () => {} }) {
     onChange(getCurrentContract());
   }
 
-  function fulfillMatchingDeliveryContracts(event) {
+  function fulfillContractsFromEvent(event) {
     Object.values(state.contracts.records)
-      .filter((contract) => contract.type === "delivery" && contract.status === "active")
+      .filter((contract) => contract.status === "active")
       .forEach((contract) => {
-        const matchesSite = contract.terms.destinationSiteId === event.payload.siteId;
-        const matchesVin = contract.terms.deliverShipVin === getAttachedShipVin();
-        const matchesPowerState = !contract.terms.requirePoweredDown || !state.components.engine.powered;
+        const fulfillment = getContractFulfillmentFromEvent(contract, event, {
+          state,
+          getAttachedShipVin,
+        });
 
-        if (!matchesSite || !matchesVin || !matchesPowerState) {
+        if (!fulfillment) {
           return;
         }
 
-        fulfillContract(contract);
+        fulfillContract(contract, fulfillment);
       });
   }
 
@@ -210,24 +214,47 @@ export function createContractManager({ state, onChange = () => {} }) {
     return true;
   }
 
+  function payLoan(contractId = state.contracts.currentContractId, requestedAmount = Infinity) {
+    const contract = state.contracts.records[contractId];
+
+    if (!contract || contract.type !== "loan" || !contract.obligationId) {
+      return false;
+    }
+
+    const result = payObligation(state, contract.obligationId, requestedAmount);
+
+    if (!result.ok) {
+      return false;
+    }
+
+    contract.balance = result.balance;
+    contract.maxBalance = result.obligation.maxBalance;
+    if (result.balance <= 0) {
+      contract.status = "paid";
+      contract.paidAt = Date.now();
+    }
+
+    onChange(contract);
+    return true;
+  }
+
   function disburseLoan(contract) {
     const principal = contract.terms.principal ?? contract.reward.credits ?? 0;
     const maxInterest = contract.terms.maxInterest ?? 0;
 
     contract.disbursedAt = Date.now();
-    contract.balance = principal;
-    contract.maxBalance = principal + maxInterest;
-    state.credits += principal;
-    state.debt.totalBorrowed += principal;
-    state.debt.activePrincipal += principal;
-    state.debt.activeBalance += principal;
-    state.debt.highestDebt = Math.max(state.debt.highestDebt, state.debt.activeBalance);
+    const obligation = createLoanObligation(state, contract);
+    contract.obligationId = obligation.id;
+    contract.balance = obligation.balance;
+    contract.maxBalance = obligation.maxBalance;
+    depositCredits(state, principal);
     state.ledger.recordEvent("loan.disbursed", {
       contractId: contract.id,
       contractTitle: contract.title,
+      obligationId: obligation.id,
       principal,
       maxInterest,
-      accountCredits: state.credits,
+      accountCredits: getCredits(state),
     });
   }
 
@@ -253,13 +280,13 @@ export function createContractManager({ state, onChange = () => {} }) {
 
     contract.status = "paid";
     contract.paidAt = Date.now();
-    state.credits += credits;
+    depositCredits(state, credits);
     state.ledger.recordEvent("contract.paid", {
       contractId: contract.id,
       contractTitle: contract.title,
       contractGroup: contract.group,
       creditsPaid: credits,
-      accountCredits: state.credits,
+      accountCredits: getCredits(state),
     });
 
     if (!getOpenContractIds().includes(contract.id)) {
@@ -279,7 +306,7 @@ export function createContractManager({ state, onChange = () => {} }) {
   function getCurrentContract() {
     const contract = state.contracts.records[state.contracts.currentContractId] ?? null;
 
-    if (!contract || contract.status !== "paid" || contract.type === "loan") {
+    if (!contract || contract.status !== "paid" || (contract.type === "loan" && (contract.balance ?? 0) > 0)) {
       return contract;
     }
 
@@ -289,7 +316,7 @@ export function createContractManager({ state, onChange = () => {} }) {
 
   function getOpenContractIds() {
     return Object.values(state.contracts.records)
-      .filter((contract) => contract.status !== "paid" || contract.type === "loan")
+      .filter((contract) => contract.status !== "paid" || (contract.type === "loan" && (contract.balance ?? 0) > 0))
       .map((contract) => contract.id);
   }
 
@@ -338,6 +365,7 @@ export function createContractManager({ state, onChange = () => {} }) {
     getCurrentContract,
     getOpenContractIds,
     offerContract,
+    payLoan,
     showNextContract,
     update,
   };

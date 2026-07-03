@@ -66,6 +66,10 @@ export function createEventLedger(options = {}) {
     return signals[key];
   }
 
+  function setSignalAliases(keys, value = true) {
+    keys.forEach((key) => setSignal(key, value));
+  }
+
   function getSignal(key, fallback = false) {
     return signals[key] ?? fallback;
   }
@@ -283,80 +287,110 @@ export function createEventLedger(options = {}) {
 
   function applyEventSignals(event) {
     if (event.type === "site.docked") {
-      setSignal("player.hasEverDocked");
-      setSignal(`player.hasDocked.${event.payload.siteId ?? "unknown"}`);
+      setSignalAliases(["player.hasEverDocked", "actor.hasEverDocked", "controlledShip.hasEverDocked"]);
+      setSignalAliases([
+        `player.hasDocked.${event.payload.siteId ?? "unknown"}`,
+        `actor.hasDocked.${event.payload.siteId ?? "unknown"}`,
+        `controlledShip.hasDocked.${event.payload.siteId ?? "unknown"}`,
+      ]);
     } else if (event.type === "zone.entered") {
-      setSignal(`player.hasVisitedZone.${event.payload.zoneId ?? "unknown"}`);
+      setSignalAliases([
+        `player.hasVisitedZone.${event.payload.zoneId ?? "unknown"}`,
+        `actor.hasVisitedZone.${event.payload.zoneId ?? "unknown"}`,
+        `controlledShip.hasVisitedZone.${event.payload.zoneId ?? "unknown"}`,
+      ]);
 
       if ((event.payload.tags ?? []).includes("danger") || (event.payload.danger ?? 0) >= 0.45) {
-        setSignal("player.hasVisitedDangerousSpace");
+        setSignalAliases(["player.hasVisitedDangerousSpace", "actor.hasVisitedDangerousSpace", "controlledShip.hasVisitedDangerousSpace"]);
       }
     } else if (event.type === "weapon.fired") {
-      setSignal("player.hasEverFired");
+      setSignalAliases(["player.hasEverFired", "actor.hasEverFired", "controlledShip.hasEverFired"]);
 
       if (getStat("weapon.fired.total") >= 10) {
-        setSignal("player.isAggressive");
+        setSignalAliases(["player.isAggressive", "actor.isAggressive"]);
       }
     } else if (event.type === "scanner.used") {
-      setSignal("player.hasEverScanned");
+      setSignalAliases(["player.hasEverScanned", "actor.hasEverScanned", "controlledShip.hasEverScanned"]);
     } else if (event.type === "beaconLocator.used") {
-      setSignal("player.hasUsedBeaconLocator");
+      setSignalAliases(["player.hasUsedBeaconLocator", "actor.hasUsedBeaconLocator", "controlledShip.hasUsedBeaconLocator"]);
     } else if (event.type === "ship.thrusted") {
-      setSignal("player.hasEverThrusted");
+      setSignalAliases(["player.hasEverThrusted", "actor.hasEverThrusted", "controlledShip.hasEverThrusted"]);
     } else if (event.type === "ship.collision") {
-      setSignal("player.hasCrashed");
+      setSignalAliases(["player.hasCrashed", "actor.hasCrashed", "controlledShip.hasCrashed"]);
 
       if (getStat("ship.collision.total") >= 3 || getStat("ship.collision.damage.total") >= 100) {
-        setSignal("player.isReckless");
+        setSignalAliases(["player.isReckless", "actor.isReckless"]);
       }
 
       if (getStat("ship.collision.damage.max") >= 50) {
-        setSignal("player.hasTakenHeavyHit");
+        setSignalAliases(["player.hasTakenHeavyHit", "actor.hasTakenHeavyHit", "controlledShip.hasTakenHeavyHit"]);
       }
     } else if (event.type === "resource.mined") {
-      setSignal("player.hasMinedResources");
+      setSignalAliases(["player.hasMinedResources", "actor.hasMinedResources"]);
 
       Object.keys(event.payload.units ?? {}).forEach((resourceType) => {
-        setSignal(`player.hasMined.${resourceType}`);
+        setSignalAliases([`player.hasMined.${resourceType}`, `actor.hasMined.${resourceType}`]);
       });
     } else if (event.type === "resource.collected") {
-      setSignal("player.hasCollectedResources");
-      setSignal(`player.hasCollected.${event.payload.resourceType ?? "unknown"}`);
+      setSignalAliases(["player.hasCollectedResources", "actor.hasCollectedResources", "controlledShip.hasCollectedResources"]);
+      setSignalAliases([
+        `player.hasCollected.${event.payload.resourceType ?? "unknown"}`,
+        `actor.hasCollected.${event.payload.resourceType ?? "unknown"}`,
+        `controlledShip.hasCollected.${event.payload.resourceType ?? "unknown"}`,
+      ]);
     } else if (event.type === "enemy.destroyed") {
-      setSignal("player.hasDestroyedEnemy");
+      setSignalAliases(["player.hasDestroyedEnemy", "actor.hasDestroyedEnemy"]);
 
       if (getStat("enemy.destroyed.total") >= 3) {
-        setSignal("player.isAggressive");
+        setSignalAliases(["player.isAggressive", "actor.isAggressive"]);
       }
     } else if (event.type === "npc.destroyed") {
-      setSignal("player.hasDestroyedNpc");
+      setSignalAliases(["player.hasDestroyedNpc", "actor.hasDestroyedNpc"]);
     } else if (event.type === "ship.repaired") {
-      setSignal("player.hasRepairedShip");
+      setSignalAliases(["player.hasRepairedShip", "actor.hasRepairedShip", "controlledShip.hasBeenRepaired"]);
 
       if (getStat("ship.repaired.total") >= 3) {
-        setSignal("player.isRepairDependent");
+        setSignalAliases(["player.isRepairDependent", "actor.isRepairDependent"]);
       }
     } else if (event.type === "contract.paid") {
-      setSignal("player.hasCompletedPaidContract");
-      setSignal(`player.hasCompletedContract.${event.payload.contractId ?? "unknown"}`);
+      setSignalAliases(["player.hasCompletedPaidContract", "actor.hasCompletedPaidContract"]);
+      setSignalAliases([
+        `player.hasCompletedContract.${event.payload.contractId ?? "unknown"}`,
+        `actor.hasCompletedContract.${event.payload.contractId ?? "unknown"}`,
+      ]);
     } else if (event.type === "loan.disbursed") {
-      setSignal("player.hasDebt");
+      setSignalAliases(["player.hasDebt", "actor.hasDebt", "pilot.hasDebt"]);
     } else if (event.type === "ship.purchased") {
-      setSignal("player.hasPurchasedShip");
-      setSignal(`player.hasPurchasedShip.${event.payload.offerId ?? "unknown"}`);
+      setSignalAliases(["player.hasPurchasedShip", "actor.hasPurchasedShip"]);
+      setSignalAliases([
+        `player.hasPurchasedShip.${event.payload.offerId ?? "unknown"}`,
+        `actor.hasPurchasedShip.${event.payload.offerId ?? "unknown"}`,
+      ]);
     } else if (event.type === "ship.titleIssued") {
-      setSignal("player.hasShipTitle");
-      setSignal(`player.hasShipTitle.${event.payload.shipVin ?? "unknown"}`);
+      setSignalAliases(["player.hasShipTitle", "actor.hasShipTitle"]);
+      setSignalAliases([
+        `player.hasShipTitle.${event.payload.shipVin ?? "unknown"}`,
+        `actor.hasShipTitle.${event.payload.shipVin ?? "unknown"}`,
+        `ship.hasTitle.${event.payload.shipVin ?? "unknown"}`,
+      ]);
     } else if (event.type === "ship.registered") {
-      setSignal("player.hasShipRegistration");
-      setSignal(`player.hasShipRegistration.${event.payload.shipVin ?? "unknown"}`);
+      setSignalAliases(["player.hasShipRegistration", "actor.hasShipRegistration"]);
+      setSignalAliases([
+        `player.hasShipRegistration.${event.payload.shipVin ?? "unknown"}`,
+        `actor.hasShipRegistration.${event.payload.shipVin ?? "unknown"}`,
+        `ship.hasRegistration.${event.payload.shipVin ?? "unknown"}`,
+      ]);
     } else if (event.type === "title.lienAttached") {
-      setSignal("player.hasLien");
-      setSignal(`player.hasLien.${event.payload.shipVin ?? "unknown"}`);
+      setSignalAliases(["player.hasLien", "actor.hasLien"]);
+      setSignalAliases([
+        `player.hasLien.${event.payload.shipVin ?? "unknown"}`,
+        `actor.hasLien.${event.payload.shipVin ?? "unknown"}`,
+        `ship.hasLien.${event.payload.shipVin ?? "unknown"}`,
+      ]);
     } else if (event.type === "tow.dispatched" || event.type === "tow.attached") {
-      setSignal("player.controlLocked");
+      setSignalAliases(["player.controlLocked", "actor.controlLocked", "controlledShip.controlLocked"]);
     } else if (event.type === "ship.towed") {
-      setSignal("player.controlLocked", false);
+      setSignalAliases(["player.controlLocked", "actor.controlLocked", "controlledShip.controlLocked"], false);
     }
   }
 

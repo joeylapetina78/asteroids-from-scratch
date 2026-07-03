@@ -1,5 +1,9 @@
 import { createEventLedger } from "../systems/eventLedger.js?v=beacon-locator-v1";
 import { PANEL_IDS } from "../systems/componentRegistry.js?v=component-visibility-v1";
+import { createInitialAccounts } from "../systems/accounts.js?v=accounts-v1";
+import { createInitialHulls } from "../systems/hulls.js?v=hulls-v1";
+import { createInitialObligations } from "../systems/obligations.js?v=obligations-v1";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=world-records-v1";
 
 export function createGameState() {
   return {
@@ -28,6 +32,14 @@ export function createGameState() {
       unlocked: {},
       flags: {},
     },
+    worldRecords: createEmptyWorldRecords(),
+    character: {
+      controlledPersonEntityId: null,
+      currentLicenseId: null,
+      activeHullVin: "YRDSKF-01-7A3",
+    },
+    hulls: createInitialHulls(),
+    obligations: createInitialObligations(),
     debt: {
       totalBorrowed: 0,
       totalPaid: 0,
@@ -80,6 +92,7 @@ export function createGameState() {
       shape: "yard-skiff",
       purchasedOfferId: null,
     },
+    accounts: createInitialAccounts(),
     credits: 0,
     components: {
       engine: {

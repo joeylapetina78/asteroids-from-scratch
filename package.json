@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "python -m http.server 8123"
+    "start": "python -m http.server 8123",
+    "validate:content": "node scripts/validateContent.mjs"
   }
 }

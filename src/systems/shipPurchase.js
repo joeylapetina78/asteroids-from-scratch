@@ -1,25 +1,39 @@
 import { getCurrentShipLegal, getPilotName, updateCurrentShipLegal } from "./legalRecords.js?v=legal-single-home-v1";
+import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=accounts-v1";
+import { registerHull, setActiveHull } from "./hulls.js?v=hulls-v1";
+import {
+  WORLD_RECORD_RELATIONSHIPS,
+  ensureInstitution,
+  ensurePerson,
+  ensureShipAsset,
+  getShipAssetId,
+  issueWorldDocument,
+  upsertWorldRelationship,
+} from "./worldRecords.js?v=world-records-v1";
+
+const YARD_EXCHANGE_AUTHORITY_ID = "institution:yard-exchange-authority";
+const YARD_EXCHANGE_FINANCE_ID = "institution:yard-exchange-finance";
 
 export function purchaseShipOffer(state, offer) {
   if (state.ship.purchasedOfferId) {
     return { ok: false, reason: "already-purchased" };
   }
 
-  if (state.credits < offer.price) {
+  if (!canSpendCredits(state, offer.price)) {
     state.ledger.recordEvent(
       "merchant.cannotAfford",
       {
         offerId: offer.id,
         shipName: offer.title,
         price: offer.price,
-        credits: Math.floor(state.credits),
+        credits: Math.floor(getCredits(state)),
       },
       { visible: false },
     );
     return { ok: false, reason: "insufficient-credits" };
   }
 
-  state.credits -= offer.price;
+  spendCredits(state, offer.price);
   state.ship.purchasedOfferId = offer.id;
   state.ship.frameId = "yard-skiff-miner";
   state.ship.name = offer.title;
@@ -30,6 +44,7 @@ export function purchaseShipOffer(state, offer) {
   const hasStarterLoanLien = activeStarterLoan && ["active", "fulfilled"].includes(activeStarterLoan.status);
 
   state.components.hull.vin = purchasedVin;
+  setActiveHull(state, purchasedVin);
   state.components.hull.integrity = state.components.hull.maxIntegrity;
   state.components.engine.fuelBurnRate = 4.5;
   state.components.engine.maxFuel = 260;
@@ -38,6 +53,12 @@ export function purchaseShipOffer(state, offer) {
   state.components.miner.installed = true;
   state.components.miner.ammo = Math.max(state.components.miner.ammo, 150);
   state.components.cargoHold.installed = true;
+  registerHull(state, {
+    vin: purchasedVin,
+    name: offer.title,
+    frameId: state.ship.frameId,
+    status: "financed",
+  });
   registerPurchasedShipLegalRecords(state, {
     offer,
     previousVin,
@@ -49,7 +70,7 @@ export function purchaseShipOffer(state, offer) {
     offerId: offer.id,
     shipName: offer.title,
     price: offer.price,
-    creditsRemaining: Math.floor(state.credits),
+    creditsRemaining: Math.floor(getCredits(state)),
     includedComponents: offer.includedComponents,
     previousVin,
     shipVin: purchasedVin,
@@ -120,6 +141,16 @@ function registerPurchasedShipLegalRecords(state, { offer, previousVin, purchase
     canRemove: !hasStarterLoanLien,
     linkedContractId: sourceContractId,
   };
+  registerPurchasedShipWorldRecords(state, {
+    offer,
+    purchasedVin,
+    titleId,
+    registrationId,
+    lienId,
+    titleStatus,
+    hasStarterLoanLien,
+    sourceContractId,
+  });
 
   state.ledger.recordEvent("ship.titleIssued", {
     titleId,
@@ -167,4 +198,119 @@ function registerPurchasedShipLegalRecords(state, { offer, previousVin, purchase
     titleId,
     holder: "Yard Exchange Finance Office",
   });
+}
+
+function registerPurchasedShipWorldRecords(state, { offer, purchasedVin, titleId, registrationId, lienId, titleStatus, hasStarterLoanLien, sourceContractId }) {
+  const pilotName = getPilotName(state);
+  const pilotEntityId = getPilotEntityId(state);
+  const shipEntityId = getShipAssetId(purchasedVin);
+  const titleHolderEntityId = hasStarterLoanLien ? YARD_EXCHANGE_FINANCE_ID : pilotEntityId;
+
+  ensureInstitution(state, {
+    id: YARD_EXCHANGE_AUTHORITY_ID,
+    name: "Yard Exchange Authority",
+    authorityScope: ["ship-registration", "yard-exchange", "first-reach"],
+  });
+  ensureInstitution(state, {
+    id: YARD_EXCHANGE_FINANCE_ID,
+    name: "Yard Exchange Finance Office",
+    authorityScope: ["loan", "lien", "ship-title-collateral"],
+  });
+  ensurePerson(state, {
+    id: pilotEntityId,
+    name: pilotName,
+    licenseId: state.legal.pilotLicense.licenseId ?? null,
+  });
+  ensureShipAsset(state, {
+    vin: purchasedVin,
+    name: offer.title,
+    frameId: state.ship.frameId,
+  });
+
+  issueWorldDocument(state, {
+    document: {
+      id: titleId,
+      type: "ship-title",
+      title: `${offer.title} Title`,
+      status: titleStatus,
+      assetEntityId: shipEntityId,
+      holderEntityId: titleHolderEntityId,
+      beneficialOwnerEntityId: pilotEntityId,
+      issuerEntityId: YARD_EXCHANGE_AUTHORITY_ID,
+      sourceContractId,
+      issuedAt: Date.now(),
+    },
+    issuerEntityId: YARD_EXCHANGE_AUTHORITY_ID,
+    holderEntityId: titleHolderEntityId,
+    assetEntityId: shipEntityId,
+  });
+  issueWorldDocument(state, {
+    document: {
+      id: registrationId,
+      type: "ship-registration",
+      title: `${offer.title} Flight Registration`,
+      status: "active",
+      assetEntityId: shipEntityId,
+      holderEntityId: pilotEntityId,
+      issuerEntityId: YARD_EXCHANGE_AUTHORITY_ID,
+      grants: [
+        {
+          permission: "operate-ship",
+          regionId: "first-reach",
+        },
+      ],
+      heldByContractId: hasStarterLoanLien ? sourceContractId : null,
+      issuedAt: Date.now(),
+    },
+    issuerEntityId: YARD_EXCHANGE_AUTHORITY_ID,
+    holderEntityId: pilotEntityId,
+    assetEntityId: shipEntityId,
+  });
+  upsertWorldRelationship(state, {
+    fromId: pilotEntityId,
+    toId: shipEntityId,
+    type: WORLD_RECORD_RELATIONSHIPS.OWNS,
+    sourceDocumentId: titleId,
+    status: titleStatus,
+  });
+
+  if (!hasStarterLoanLien) {
+    return;
+  }
+
+  issueWorldDocument(state, {
+    document: {
+      id: lienId,
+      type: "lien",
+      title: `${offer.title} Starter Finance Lien`,
+      status: "active",
+      holderEntityId: YARD_EXCHANGE_FINANCE_ID,
+      issuerEntityId: YARD_EXCHANGE_FINANCE_ID,
+      assetEntityId: shipEntityId,
+      collateralDocumentId: titleId,
+      contractId: sourceContractId,
+      releaseWhen: {
+        contractId: sourceContractId,
+        status: "paid",
+      },
+      issuedAt: Date.now(),
+    },
+    issuerEntityId: YARD_EXCHANGE_FINANCE_ID,
+    holderEntityId: YARD_EXCHANGE_FINANCE_ID,
+    assetEntityId: shipEntityId,
+  });
+  upsertWorldRelationship(state, {
+    fromId: lienId,
+    toId: titleId,
+    type: WORLD_RECORD_RELATIONSHIPS.COLLATERALIZES,
+  });
+}
+
+function getPilotEntityId(state) {
+  const licenseId = state.legal.pilotLicense.licenseId;
+  if (licenseId) {
+    return `person:${licenseId}`;
+  }
+
+  return "person:unlicensed-pilot";
 }
