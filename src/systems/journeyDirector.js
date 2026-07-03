@@ -1,5 +1,5 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=mission-beats-v3";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=mission-beats-v1";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=mission-beats-v4";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=mission-beats-v2";
 import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=mission-beats-v3";
 import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=component-visibility-v1";
 import { createMissionRunner } from "./missionRunner.js?v=mission-beats-v2";
@@ -17,6 +17,8 @@ export function createJourneyDirector({
   showComponent = () => {},
   unlockHubService = () => {},
   requestAttention = () => {},
+  runInspection = () => {},
+  spawnPatrolIntercept = () => {},
   emergencyTow = () => {},
 }) {
   const journey = state.journey;
@@ -255,7 +257,9 @@ export function createJourneyDirector({
         },
         hideComponent: (componentId) => showComponent(componentId, false),
         recordEvent: (...args) => state.ledger.recordEvent(...args),
+        runInspection,
         say,
+        spawnPatrolIntercept,
         startMission,
         requestAttention,
         setEnginePowerLock: (isLocked) => {
