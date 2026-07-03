@@ -163,15 +163,46 @@ function pickFragmentIndexes(fragmentCount, coloredFragmentCount, random) {
   return new Set(indexes.slice(0, coloredFragmentCount));
 }
 
+// Each resource maps to a family. Family determines the silhouette vocabulary
+// so the player can read a rock's type before mining it.
+//
+//  stone    (silicate)   — irregular, lumpy, the common gray rock
+//  iron     (structural) — blocky, few sides, flat-faced like cast metal
+//  copper   (conductor)  — hexagonal, regular angles, crystalline
+//  ice      (volatile)   — round, many sides, smooth comet-like
+//  crystal  (strange)    — spiky, dramatic alternating peaks and valleys
+const FAMILY_SHAPES = {
+  stone:   { pointRange: [9, 13],  distRange: [0.68, 1.18], angleJitter: 0.30 },
+  iron:    { pointRange: [4,  7],  distRange: [0.70, 1.15], angleJitter: 0.10 },
+  copper:  { pointRange: [5,  7],  distRange: [0.82, 1.12], angleJitter: 0.07 },
+  ice:     { pointRange: [14, 19], distRange: [0.90, 1.06], angleJitter: 0.04 },
+  crystal: { pointRange: [7,  11], distRange: [0.28, 1.42], angleJitter: 0.20 },
+};
+
+function getDominantResource(resources) {
+  return Object.entries(resources).reduce(
+    (best, [resource, amount]) => (amount > best.amount ? { resource, amount } : best),
+    { resource: "stone", amount: 0 },
+  ).resource;
+}
+
 function createAsteroid({ x, y, radius, tier, color, resources, random }) {
-  const pointCount = Math.floor(randomRange(random, 8, 15));
+  const dominant = getDominantResource(resources);
+  const shape = FAMILY_SHAPES[dominant] ?? FAMILY_SHAPES.stone;
+  const pointCount = Math.floor(randomRange(random, shape.pointRange[0], shape.pointRange[1] + 1));
   const points = [];
 
   for (let index = 0; index < pointCount; index += 1) {
-    points.push({
-      angle: (Math.PI * 2 * index) / pointCount,
-      distance: radius * randomRange(random, 0.68, 1.18),
-    });
+    const baseAngle = (Math.PI * 2 * index) / pointCount;
+    const angle = baseAngle + randomRange(random, -shape.angleJitter, shape.angleJitter) * Math.PI;
+
+    // Crystal gets alternating spike/valley distances for a star silhouette.
+    const distance =
+      dominant === "crystal" && index % 2 === 0
+        ? radius * randomRange(random, 0.88, 1.42)
+        : radius * randomRange(random, shape.distRange[0], shape.distRange[1]);
+
+    points.push({ angle, distance });
   }
 
   return new Asteroid({

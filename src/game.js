@@ -1,5 +1,5 @@
 import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=burst-fix-2";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=family-shapes-v1";
 import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=burst-fix-2";
 import { Ship } from "./entities/Ship.js?v=starter-skiff-v1";
 import { createAsteroidChunks } from "./systems/asteroidField.js?v=chunk-streaming-v1";
