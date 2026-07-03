@@ -195,7 +195,7 @@ export const chapterOneRedWorkMission = {
       transitions: [
         {
           eventType: "contract.accepted",
-          requiresCondition: ({ event }) => event.payload.contractGroup === "rook-resource-run",
+          payloadEquals: { contractGroup: "rook-resource-run" },
           nextStepId: "mine-red-resources",
         },
       ],
@@ -216,7 +216,7 @@ export const chapterOneRedWorkMission = {
       transitions: [
         {
           eventType: "contract.paid",
-          requiresCondition: ({ event }) => event.payload.contractGroup === "rook-resource-run",
+          payloadEquals: { contractGroup: "rook-resource-run" },
           actions: [
             { type: "unlockHubService", siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.modworks },
             { type: "completeMission" },

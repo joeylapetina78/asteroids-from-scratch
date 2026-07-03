@@ -3,11 +3,22 @@ import { shipOffers } from "./content/ships/shipOffers.js?v=beacon-locator-v1";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
 import { Game } from "./game.js?v=credits-refactor-v2";
 import { createContractManager } from "./systems/contractManager.js?v=credits-refactor-v2";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=comms-director-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=accounts-v1";
+import {
+  getHubServiceBehavior,
+  getHubServicePrompt,
+  getServiceTypesForPanel,
+  shouldKeepServiceWindowOpen,
+} from "./systems/hubServiceBehaviors.js?v=service-behaviors-v1";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=service-contracts-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=hulls-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=mission-beats-v3";
 import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=component-visibility-v1";
 import { getPilotLicense, issuePilotLicense, updateCurrentShipLegal } from "./systems/legalRecords.js?v=legal-single-home-v1";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=paperwork-v1";
 import { Processor } from "./systems/processor.js?v=profile-save-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=credits-refactor-v2";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=credits-refactor-v2";
@@ -229,6 +240,7 @@ const journeyDirector = createJourneyDirector({
   unlockHubService,
   requestAttention,
 });
+const commsDirector = createCommsDirector({ state, journeyDirector });
 let bringPanelToFront = () => {};
 let positionPanelById = () => {};
 let movePaperPanelToDesk = () => {};
@@ -246,6 +258,7 @@ let saveTimer = null;
 let lastHubAuthorityEventId = 0;
 let lastRookAutoOfferEventId = 0;
 let lastTowChatterEventId = 0;
+let lastDockingInspectionEventId = 0;
 const fulfilledContractPanelPulls = new Set();
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
@@ -424,12 +437,14 @@ function updateHudDisplay() {
   updateShipPowerDisplay();
   updateCargoTargetDisplay();
 
-  creditCount.textContent = String(Math.floor(state.credits));
-  licenseCreditsDisplay.textContent = `${Math.floor(state.credits)} cr`;
+  const currentCredits = getCredits(state);
+
+  creditCount.textContent = String(Math.floor(currentCredits));
+  licenseCreditsDisplay.textContent = `${Math.floor(currentCredits)} cr`;
   const currentFuel = state.components.engine.fuel;
   const isStranded = state.components.engine.installed && !currentSiteState?.dockedSite &&
     !game.isTowActive() &&
-    !state.ledger.getSignal("player.controlLocked") &&
+    !state.ledger.getSignal("actor.controlLocked") &&
     (currentFuel <= 0 || state.components.hull.integrity <= 0);
 
   fuelCount.textContent = String(Math.floor(currentFuel));
@@ -444,7 +459,7 @@ function updateHudDisplay() {
   hullFill.style.width = `${getMeterPercent(state.components.hull.integrity, state.components.hull.maxIntegrity)}%`;
   hullVin.textContent = state.components.hull.vinPlateAttached ? state.components.hull.vin : "UNVERIFIED";
   minerArmed.checked = state.components.miner.armed;
-  merchantCredits.textContent = `${Math.floor(state.credits)} cr`;
+  merchantCredits.textContent = `${Math.floor(currentCredits)} cr`;
   updateWarningPanels();
   scheduleSave();
 }
@@ -471,7 +486,7 @@ function setTowAvailable(isAvailable) {
   // sayAsNpc causes a Journey render, which calls updateHudDisplay again.
   // Update this guard first so the tow prompt cannot recurse.
   if (!isAvailable) {
-    journeyDirector.clearPendingAcknowledgement?.("emergencyTow");
+    commsDirector.clearPendingAcknowledgement("emergencyTow");
     wasTowAvailable = false;
     return;
   }
@@ -481,11 +496,13 @@ function setTowAvailable(isAvailable) {
     const driverName = TOW_DRIVER_NAMES[Math.abs(estimate.siteId.length + estimate.cost) % TOW_DRIVER_NAMES.length];
 
     wasTowAvailable = true;
-    const prompted = journeyDirector.sayAsNpc(
-      driverName,
-      `Tow request picked up. I can get a runner out to you and haul you back to ${estimate.siteName} for ${estimate.cost} credits. We'll move slow, clear the worst junk in the lane, and settle you on the tether. Accept the tow if you want me rolling.`,
-      { label: `Accept Tow ${estimate.cost} cr`, action: "emergencyTow" },
-    );
+    const prompted = commsDirector.say({
+      source: COMMS_SOURCES.tow,
+      speaker: driverName,
+      text:
+        `Tow request picked up. I can get a runner out to you and haul you back to ${estimate.siteName} for ${estimate.cost} credits. We'll move slow, clear the worst junk in the lane, and settle you on the tether. Accept the tow if you want me rolling.`,
+      acknowledgement: { label: `Accept Tow ${estimate.cost} cr`, action: "emergencyTow" },
+    });
 
     wasTowAvailable = prompted;
   }
@@ -571,7 +588,7 @@ function applyDevStart(devStartId) {
 
 function setupDevRedWorkStart() {
   game.placeShipNearSite(chapterOneRoute.destinationSite.id, { x: 190, y: -70 });
-  state.credits = Math.max(state.credits, 0);
+  depositCredits(state, Math.max(0, -getCredits(state)));
   Object.assign(state.components.engine, {
     installed: true,
     powered: false,
@@ -652,10 +669,12 @@ function maybeUnlockMurmur(dockedSite) {
   }
 
   unlockHubService(chapterOneRoute.destinationSite.id, MURMUR_SERVICE_ID);
-  journeyDirector.sayAsNpc(
-    "Murmur",
-    "Psst. Captain. You have met the desk people, now meet the wall people. I keep the board of things that have not happened yet. Back corridor. Click my name if you want to see the shape of the future.",
-  );
+  commsDirector.say({
+    source: COMMS_SOURCES.worldNpc,
+    speaker: "Murmur",
+    text:
+      "Psst. Captain. You have met the desk people, now meet the wall people. I keep the board of things that have not happened yet. Back corridor. Click my name if you want to see the shape of the future.",
+  });
 }
 
 function areYardExchangeStoryServicesUnlocked() {
@@ -847,6 +866,7 @@ function openHubService(serviceId) {
     return;
   }
 
+  const behavior = getHubServiceBehavior(service);
   closeDriveThroughWindows({ keepServiceType: service.serviceType });
   activeHubServiceId = service.id;
   clearAttention(getHubServiceAttentionTarget(dockedSite.id, service.id));
@@ -855,7 +875,11 @@ function openHubService(serviceId) {
   renderHubServiceMenu(dockedSite);
 
   if (service.greeting) {
-    journeyDirector.sayAsNpc(service.npcName, service.greeting);
+    commsDirector.say({
+      source: COMMS_SOURCES.serviceNpc,
+      speaker: service.npcName,
+      text: service.greeting,
+    });
   }
   state.ledger.recordEvent(
     "hub.serviceOpened",
@@ -871,35 +895,35 @@ function openHubService(serviceId) {
     { visible: false },
   );
 
-  if (service.serviceType === "shipyard") {
+  if (behavior.panelId === "merchant") {
     setComponentAvailable("merchant", true);
     renderShipOffers();
     focusPanelById("merchant");
     return;
   }
 
-  if (service.serviceType === "contracts" || service.serviceType === "finance") {
+  if (behavior.offersContracts) {
     setComponentAvailable("contract", true);
     offerHubServiceContract(dockedSite, service);
     pullContractForService(service);
     return;
   }
 
-  if (service.serviceType === "supply") {
+  if (behavior.panelId === "finley") {
     setComponentAvailable("finley", true);
     renderFinleyPanel();
     focusPanelById("finley");
     return;
   }
 
-  if (service.serviceType === "components") {
+  if (behavior.panelId === "component-shop") {
     setComponentAvailable("component-shop", true);
     renderComponentShop(service);
     focusPanelById("component-shop");
     return;
   }
 
-  if (service.serviceType === "roadmap") {
+  if (behavior.panelId === "roadmap") {
     setComponentAvailable("roadmap", true);
     focusPanelById("roadmap");
     return;
@@ -910,7 +934,7 @@ function closeDriveThroughPanel(panelId) {
   if (panelId === "merchant") {
     setComponentAvailable("merchant", false);
 
-    if (activeHubServiceId && getHubService(currentSiteState?.dockedSite?.id, activeHubServiceId)?.serviceType === "shipyard") {
+    if (isActiveServiceUsingPanel("merchant")) {
       activeHubServiceId = null;
       renderHubServiceMenu(currentSiteState?.dockedSite);
     }
@@ -925,7 +949,7 @@ function closeDriveThroughPanel(panelId) {
       setComponentAvailable("contract", false);
     }
 
-    if (activeHubServiceId && ["contracts", "finance"].includes(getHubService(currentSiteState?.dockedSite?.id, activeHubServiceId)?.serviceType)) {
+    if (isActiveServiceUsingPanel("contract")) {
       activeHubServiceId = null;
       renderHubServiceMenu(currentSiteState?.dockedSite);
     }
@@ -938,7 +962,7 @@ function closeDriveThroughPanel(panelId) {
     updateCargoTargetDisplay();
     setComponentAvailable("finley", false);
 
-    if (activeHubServiceId && getHubService(currentSiteState?.dockedSite?.id, activeHubServiceId)?.serviceType === "supply") {
+    if (isActiveServiceUsingPanel("finley")) {
       activeHubServiceId = null;
       renderHubServiceMenu(currentSiteState?.dockedSite);
     }
@@ -949,7 +973,7 @@ function closeDriveThroughPanel(panelId) {
   if (panelId === "roadmap") {
     setComponentAvailable("roadmap", false);
 
-    if (activeHubServiceId && getHubService(currentSiteState?.dockedSite?.id, activeHubServiceId)?.serviceType === "roadmap") {
+    if (isActiveServiceUsingPanel("roadmap")) {
       activeHubServiceId = null;
       renderHubServiceMenu(currentSiteState?.dockedSite);
     }
@@ -960,7 +984,7 @@ function closeDriveThroughPanel(panelId) {
   if (panelId === "component-shop") {
     setComponentAvailable("component-shop", false);
 
-    if (activeHubServiceId && getHubService(currentSiteState?.dockedSite?.id, activeHubServiceId)?.serviceType === "components") {
+    if (isActiveServiceUsingPanel("component-shop")) {
       activeHubServiceId = null;
       renderHubServiceMenu(currentSiteState?.dockedSite);
     }
@@ -969,46 +993,52 @@ function closeDriveThroughPanel(panelId) {
   }
 }
 
+function isActiveServiceUsingPanel(panelId) {
+  const activeService = activeHubServiceId ? getHubService(currentSiteState?.dockedSite?.id, activeHubServiceId) : null;
+  return getServiceTypesForPanel(panelId).includes(activeService?.serviceType);
+}
+
 function closeDriveThroughWindows({ keepServiceType = null } = {}) {
-  if (keepServiceType !== "shipyard") {
+  if (!shouldKeepServiceWindowOpen(keepServiceType, "merchant")) {
     setComponentAvailable("merchant", false);
   }
 
-  if (!["contracts", "finance"].includes(keepServiceType)) {
+  if (!shouldKeepServiceWindowOpen(keepServiceType, "contract")) {
     syncContractPanelVisibility();
   }
 
-  if (keepServiceType !== "supply") {
+  if (!shouldKeepServiceWindowOpen(keepServiceType, "finley")) {
     isCargoSellModeActive = false;
     updateCargoTargetDisplay();
     setComponentAvailable("finley", false);
   }
 
-  if (keepServiceType !== "roadmap") {
+  if (!shouldKeepServiceWindowOpen(keepServiceType, "roadmap")) {
     setComponentAvailable("roadmap", false);
   }
 
-  if (keepServiceType !== "components") {
+  if (!shouldKeepServiceWindowOpen(keepServiceType, "component-shop")) {
     setComponentAvailable("component-shop", false);
   }
 }
 
 function offerHubServiceContract(site, service) {
-  const contractId = getNextHubServiceContractId(service);
+  const contractId = getNextHubServiceContractId(service, { state });
 
   if (!contractId) {
     if (service.singleActiveContract) {
-      const inProgressId = (service.contractIds ?? []).find((id) => {
-        const r = state.contracts.records[id];
-        return r && ["offered", "active", "fulfilled"].includes(r.status);
-      });
+      const inProgressId = getInProgressServiceContractId(service, state);
 
       if (inProgressId) {
         contractManager.focusContract(inProgressId);
       }
 
       if (service.busyMessage) {
-        journeyDirector.sayAsNpc(service.npcName, service.busyMessage);
+        commsDirector.say({
+          source: COMMS_SOURCES.serviceNpc,
+          speaker: service.npcName,
+          text: service.busyMessage,
+        });
       }
     }
 
@@ -1027,96 +1057,44 @@ function offerHubServiceContract(site, service) {
   });
 }
 
-function getNextHubServiceContractId(service) {
-  const contractIds = service.contractIds ?? [];
-  const missionFirstContractId = service.missionFirstContractId;
-  const missionFirstContract = missionFirstContractId ? state.contracts.records[missionFirstContractId] : null;
-  const missionFirstResolved =
-    !missionFirstContractId ||
-    (missionFirstContract && ["active", "fulfilled", "paid"].includes(missionFirstContract.status));
-
-  if (!missionFirstResolved) {
-    return missionFirstContractId;
-  }
-
-  if (service.serviceType === "finance" && state.components.engine.fuel <= 0) {
-    const emergencyLoanId = "mako-emergency-fuel-loan";
-    const existingEmergencyLoan = state.contracts.records[emergencyLoanId];
-
-    if (!existingEmergencyLoan || existingEmergencyLoan.status === "paid") {
-      return emergencyLoanId;
-    }
-  }
-
-  if (service.singleActiveContract) {
-    const hasInProgress = contractIds.some((contractId) => {
-      const r = state.contracts.records[contractId];
-      return r && ["offered", "active", "fulfilled"].includes(r.status);
-    });
-
-    if (hasInProgress) {
-      return null;
-    }
-  }
-
-  const prereqs = service.contractPrerequisites ?? {};
-  const eligibleContractIds = contractIds.filter((contractId) => {
-    if (contractId !== missionFirstContractId && !missionFirstResolved) {
-      return false;
-    }
-
-    if (contractId === "mako-emergency-fuel-loan" && state.components.engine.fuel > 0) {
-      return false;
-    }
-
-    const existingContract = state.contracts.records[contractId];
-    if (existingContract && !(existingContract.repeatable && existingContract.status === "paid")) {
-      return false;
-    }
-    return (prereqs[contractId] ?? []).every((reqId) => state.contracts.records[reqId]?.status === "paid");
-  });
-
-  if (eligibleContractIds.length === 0) {
-    return null;
-  }
-
-  return eligibleContractIds[Math.floor(Math.random() * eligibleContractIds.length)];
-}
-
-function getHubServicePrompt(service) {
-  if (service.serviceType === "shipyard") {
-    return "ship offers are open at the yard window.";
-  }
-
-  if (service.serviceType === "finance") {
-    return "financing records are handled through active contracts.";
-  }
-
-  if (service.serviceType === "contracts") {
-    return "open contracts are handled here. Rook offers one job from the board at a time.";
-  }
-
-  if (service.serviceType === "supply") {
-    return "Finley handles repair and cargo sales here.";
-  }
-
-  if (service.serviceType === "components") {
-    return "component refits and bolt-on ship modifications are sold here.";
-  }
-
-  if (service.serviceType === "roadmap") {
-    return "Murmur keeps a future-board in the back corridor.";
-  }
-
-  return service.description;
-}
-
 function updateLedgerDrivenSystems() {
   contractManager.update();
   journeyDirector.update();
+  commsDirector.update();
   updateRookFollowupOffers();
   updateHubAuthorityMessages();
   updateTowChatter();
+  updateDockingInspection();
+  commsDirector.update();
+}
+
+function updateDockingInspection() {
+  const events = state.ledger.getEventsAfterId(lastDockingInspectionEventId, { includeHidden: true });
+
+  events.forEach((event) => {
+    lastDockingInspectionEventId = Math.max(lastDockingInspectionEventId, event.id);
+
+    if (event.type !== "site.docked") {
+      return;
+    }
+
+    const report = createShipPaperworkInspectionReport(state);
+
+    state.ledger.recordEvent(
+      "paperwork.inspected",
+      {
+        siteId: event.payload?.siteId ?? null,
+        siteName: event.payload?.siteName ?? null,
+        vin: report.vin,
+        pilotLicenseId: report.pilotLicenseId,
+        pilotName: report.pilotName,
+        hasVin: report.clearance.hasVin,
+        hasPilotLicense: report.clearance.hasPilotLicense,
+        hasFlightRegistration: report.clearance.hasFlightRegistration,
+      },
+      { visible: false },
+    );
+  });
 }
 
 function updateTowChatter() {
@@ -1128,11 +1106,19 @@ function updateTowChatter() {
     if (event.type === "tow.attached") {
       const { siteId, cost } = event.payload;
       const driver = TOW_DRIVER_NAMES[Math.abs(siteId.length + cost) % TOW_DRIVER_NAMES.length];
-      journeyDirector.sayAsNpc(driver, "Got the line set. Hands off the controls, I'll get you home.");
+      commsDirector.say({
+        source: COMMS_SOURCES.tow,
+        speaker: driver,
+        text: "Got the line set. Hands off the controls, I'll get you home.",
+      });
     } else if (event.type === "ship.towed") {
       const { siteId, cost } = event.payload;
       const driver = TOW_DRIVER_NAMES[Math.abs(siteId.length + cost) % TOW_DRIVER_NAMES.length];
-      journeyDirector.sayAsNpc(driver, `You're docked. That's ${cost} credits off your account. Stay closer to home next run.`);
+      commsDirector.say({
+        source: COMMS_SOURCES.tow,
+        speaker: driver,
+        text: `You're docked. That's ${cost} credits off your account. Stay closer to home next run.`,
+      });
     }
   });
 }
@@ -1170,35 +1156,31 @@ function updateHubAuthorityMessages() {
       const license = getPilotLicense(state).licenseId ?? "no active license";
       const speaker = `${event.payload.siteName ?? "Hub"} Authority`;
 
-      if (state.journey.pendingAcknowledgement || state.journey.messages.length > 0) {
-        return;
-      }
-
-      journeyDirector.sayAsNpc(
+      commsDirector.say({
+        source: COMMS_SOURCES.hubAuthority,
         speaker,
-        `Approach logged for ${vin} under ${license}. Docking approval is open while you remain inside hub range.`,
-      );
+        text: `Approach logged for ${vin} under ${license}. Docking approval is open while you remain inside hub range.`,
+        requireIdle: true,
+      });
     } else if (event.type === "site.tetherBroken") {
       const vin = state.components.hull.vinPlateAttached ? state.components.hull.vin : "unverified VIN";
       const license = getPilotLicense(state).licenseId ?? "no active license";
       const speaker = `${event.payload.siteName ?? "Hub"} Authority`;
 
-      journeyDirector.sayAsNpc(
+      commsDirector.say({
+        source: COMMS_SOURCES.hubAuthority,
         speaker,
-        `Tether break recorded for ${vin} under ${license}. Clear the lane, stabilize, and request docking again when safe.`,
-      );
+        text: `Tether break recorded for ${vin} under ${license}. Clear the lane, stabilize, and request docking again when safe.`,
+      });
     } else if (event.type === "site.tetherStrained") {
       const vin = state.components.hull.vinPlateAttached ? state.components.hull.vin : "unverified VIN";
       const speaker = `${event.payload.siteName ?? "Hub"} Authority`;
 
-      if (state.journey.pendingAcknowledgement) {
-        return;
-      }
-
-      journeyDirector.sayAsNpc(
+      commsDirector.say({
+        source: COMMS_SOURCES.hubAuthority,
         speaker,
-        `Docking tether strain alarm for ${vin}. Cut thrust while tethered or undock before maneuvering.`,
-      );
+        text: `Docking tether strain alarm for ${vin}. Cut thrust while tethered or undock before maneuvering.`,
+      });
     }
   });
 }
@@ -1293,7 +1275,14 @@ function renderContractTerms(contract) {
 
 function renderContractProgress(contract) {
   if (contract.type === "loan") {
-    contractProgress.hidden = true;
+    const balance = contract.balance ?? 0;
+    const maxBalance = contract.maxBalance ?? contract.terms.principal ?? 0;
+    const progressPercent = maxBalance > 0 ? Math.min(100, (balance / maxBalance) * 100) : 0;
+
+    contractProgress.hidden = false;
+    contractProgressLabel.textContent = contract.obligationId ? "Obligation" : "Debt";
+    contractProgressCount.textContent = contract.obligationId ? `${balance.toLocaleString()} cr owed` : "not accepted";
+    contractProgressFill.style.width = `${progressPercent}%`;
     return;
   }
 
@@ -1911,7 +1900,7 @@ function sellCargoUnit(type) {
     return false;
   }
 
-  state.credits += unitValue;
+  depositCredits(state, unitValue);
   state.ledger.recordEvent("cargo.sold", { creditsEarned: unitValue, units: { [type]: 1 }, totalUnits: 1 }, { visible: false });
   game.createCargoTransferTrail(type);
   renderFinleyPanel();
@@ -1935,7 +1924,7 @@ function renderFinleyPanel(siteState = currentSiteState) {
   const miner = state.components.miner;
   const scanner = state.components.scanner;
   const hull = state.components.hull;
-  const credits = state.credits;
+  const credits = getCredits(state);
   const repairCost = siteState?.repairCost ?? 0;
   const canRepair = siteState?.canRepair && hull.integrity < hull.maxIntegrity && credits >= repairCost;
   const fuelNeeded = Math.max(0, engine.maxFuel - engine.fuel);
@@ -1985,11 +1974,11 @@ function buyFuelFromFinley() {
     return;
   }
 
-  if (state.credits < cost) {
+  if (!canSpendCredits(state, cost)) {
     return;
   }
 
-  state.credits -= cost;
+  spendCredits(state, cost);
   engine.fuel = engine.maxFuel;
   state.ledger.recordEvent("ship.refueled", { siteId: site.id, siteName: site.name, cost, fuelAdded: fuelNeeded });
   renderFinleyPanel();
@@ -2004,11 +1993,11 @@ function buyChargesFromFinley() {
   const chargesNeeded = Math.max(0, miner.maxAmmo - miner.ammo);
   const cost = Math.ceil(chargesNeeded * (prices.chargePerUnit ?? 3));
 
-  if (chargesNeeded <= 0 || state.credits < cost) {
+  if (chargesNeeded <= 0 || !canSpendCredits(state, cost)) {
     return;
   }
 
-  state.credits -= cost;
+  spendCredits(state, cost);
   miner.ammo = miner.maxAmmo;
   state.ledger.recordEvent("supply.chargesBought", { siteId: site.id, cost, chargesAdded: chargesNeeded });
   renderFinleyPanel();
@@ -2023,11 +2012,11 @@ function buyScanFromFinley() {
   const scanNeeded = Math.max(0, scanner.maxScanergy - scanner.scanergy);
   const cost = Math.ceil(scanNeeded * (prices.scanergyPerUnit ?? 1));
 
-  if (scanNeeded <= 0 || state.credits < cost) {
+  if (scanNeeded <= 0 || !canSpendCredits(state, cost)) {
     return;
   }
 
-  state.credits -= cost;
+  spendCredits(state, cost);
   scanner.scanergy = scanner.maxScanergy;
   state.ledger.recordEvent("supply.scanBought", { siteId: site.id, cost, scanAdded: scanNeeded });
   renderFinleyPanel();
@@ -2467,7 +2456,7 @@ function rectsOverlap(first, second) {
 }
 
 function renderShipOffers() {
-  const currentCredits = Math.floor(state.credits);
+  const currentCredits = Math.floor(getCredits(state));
   const renderedKey = shipOffersPanel.dataset.renderedKey;
   const nextKey = `${currentCredits}:${state.ship.purchasedOfferId ?? "none"}`;
 
@@ -2523,7 +2512,7 @@ function renderComponentShop(service = null) {
     return;
   }
 
-  const currentCredits = Math.floor(state.credits);
+  const currentCredits = Math.floor(getCredits(state));
   const offers = service?.componentOffers ?? [];
   const nextKey = `${service?.id ?? "none"}:${currentCredits}:${offers
     .map((offer) => `${offer.id}:${state.components[offer.componentId]?.installed ? "installed" : "open"}`)
@@ -2574,13 +2563,14 @@ function renderComponentShop(service = null) {
 function buyComponentOffer(offer, service = null) {
   const component = state.components[offer.componentId];
 
-  if (!component || component.installed || state.credits < offer.price) {
+  if (!component || component.installed || !canSpendCredits(state, offer.price)) {
     renderComponentShop(service);
     return;
   }
 
-  state.credits -= offer.price;
+  spendCredits(state, offer.price);
   component.installed = true;
+  syncActiveHullFromComponents(state);
   setComponentAvailable(offer.componentId, true);
   state.ledger.recordEvent(
     "component.purchased",
@@ -2593,12 +2583,16 @@ function buyComponentOffer(offer, service = null) {
       sellerName: service?.npcName ?? "Component Seller",
       siteId: currentSiteState?.dockedSite?.id ?? null,
       siteName: currentSiteState?.dockedSite?.name ?? null,
-      accountCredits: state.credits,
+      accountCredits: getCredits(state),
     },
     { visible: true },
   );
 
-  journeyDirector.sayAsNpc(service?.npcName ?? "Modworks", `${offer.componentName} is bolted in. It will not make you graceful, but it will make you harder to ignore.`);
+  commsDirector.say({
+    source: COMMS_SOURCES.serviceNpc,
+    speaker: service?.npcName ?? "Modworks",
+    text: `${offer.componentName} is bolted in. It will not make you graceful, but it will make you harder to ignore.`,
+  });
   renderComponentShop(service);
   updateHudDisplay();
 }
@@ -2618,7 +2612,11 @@ function handleShipOfferClick(offer) {
   const shipyardService = currentSiteState?.dockedSite ? getHubService(currentSiteState.dockedSite.id, yardExchangeServices.shipyard) : null;
 
   if (shipyardService?.postSaleGreeting) {
-    journeyDirector.sayAsNpc(shipyardService.npcName, shipyardService.postSaleGreeting);
+    commsDirector.say({
+      source: COMMS_SOURCES.serviceNpc,
+      speaker: shipyardService.npcName,
+      text: shipyardService.postSaleGreeting,
+    });
   }
 
   updateHudDisplay();
