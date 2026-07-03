@@ -1,5 +1,6 @@
 import { createShipPaperworkInspectionReport } from "./paperworkInspections.js?v=paperwork-inspections-v1";
-import { PUBLIC_IDENTITY_KIND } from "./publicIdentity.js?v=patrol-registry-v1";
+import { getRegistryEntityIdForSite, hasRegistryStatus } from "./entityRegistry.js?v=hub-first-contact-v1";
+import { PUBLIC_IDENTITY_KIND } from "./publicIdentity.js?v=hub-first-contact-v1";
 
 export function inspectPublicIdentity(state, { identity, inspector = null, site = null } = {}) {
   if (!identity) {
@@ -21,14 +22,16 @@ export function inspectPublicIdentity(state, { identity, inspector = null, site 
     if (!paperworkReport.clearance.hasFlightRegistration) reasons.push("missing-flight-registration");
     if (paperworkReport.unauthorizedZones.length > 0) reasons.push("unauthorized-zone-history");
 
-    return createInspectionResult({
+    const identityResult = createInspectionResult({
       identity,
       inspector,
       site,
-      status: reasons.length === 0 ? "cleared" : "flagged",
+      status: reasons.length === 0 ? getControlledShipKnownStatus(state, { identity, site }) : "flagged",
       reasons,
       paperworkReport,
     });
+
+    return identityResult;
   }
 
   if (identity.kind === PUBLIC_IDENTITY_KIND.ROUTE_HAULER) {
@@ -51,6 +54,20 @@ export function inspectPublicIdentity(state, { identity, inspector = null, site 
     status: "flagged",
     reasons: ["unknown-public-identity-kind"],
   });
+}
+
+function getControlledShipKnownStatus(state, { identity, site }) {
+  if (!site || !identity?.entityId) {
+    return "cleared";
+  }
+
+  return hasRegistryStatus(state, {
+    registryEntityId: getRegistryEntityIdForSite(site),
+    subjectEntityId: identity.entityId,
+    status: "cleared",
+  })
+    ? "cleared"
+    : "needs-presentation";
 }
 
 function createInspectionResult({ identity, inspector, site, status, reasons, paperworkReport = null }) {

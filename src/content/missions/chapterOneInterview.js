@@ -502,9 +502,9 @@ export const chapterOneInterviewMission = {
     },
     {
       id: "yard-traffic-check",
-      objective: "Transmit ship and pilot identification.",
+      objective: "Present ship and pilot identification.",
       helpText:
-        "Yard Exchange traffic control is checking the ship before docking. Your license identifies you; the Hull VIN identifies the ship. Rook Industries is the registered operator for this delivery skiff.",
+        "Yard Exchange traffic control does not know this ship yet. Click the VIN on the Hull panel, then click the Ref number on your License paperwork to present both IDs.",
       onEnter: [
         {
           type: "spawnPatrolIntercept",
@@ -515,24 +515,38 @@ export const chapterOneInterviewMission = {
           type: "say",
           speaker: "Yard Exchange Traffic",
           text:
-            "Inbound skiff, hold your line. Transmit pilot authorization and ship VIN for registry review before docking clearance.",
-          acknowledgement: { label: "Transmit IDs" },
+            "Inbound skiff, hold your line. Present ship VIN and pilot authorization for first-time registry review before docking clearance.",
         },
-      ],
-      onAcknowledge: [
-        { type: "clearMessage" },
-        { type: "runInspection", siteId: chapterOneRoute.destinationSite.id, inspectionType: "arrival-clearance" },
-        { type: "goToStep", stepId: "yard-traffic-cleared" },
       ],
       transitions: [
         {
-          eventType: "ship.registryReviewed",
-          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          setFlag: "yardRegistryReviewed",
+          eventType: "authority.documentPresented",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id, documentKind: "pilot-license" },
+          requiresFlags: ["yardVinPresented"],
+          actions: [
+            { type: "runInspection", siteId: chapterOneRoute.destinationSite.id, inspectionType: "arrival-clearance" },
+            { type: "goToStep", stepId: "yard-traffic-cleared" },
+          ],
         },
-      ],
-      onEnd: [
-        { type: "goToStep", stepId: "dock-yard-exchange" },
+        {
+          eventType: "authority.documentPresented",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id, documentKind: "ship-vin" },
+          requiresFlags: ["yardLicensePresented"],
+          actions: [
+            { type: "runInspection", siteId: chapterOneRoute.destinationSite.id, inspectionType: "arrival-clearance" },
+            { type: "goToStep", stepId: "yard-traffic-cleared" },
+          ],
+        },
+        {
+          eventType: "authority.documentPresented",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id, documentKind: "ship-vin" },
+          setFlag: "yardVinPresented",
+        },
+        {
+          eventType: "authority.documentPresented",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id, documentKind: "pilot-license" },
+          setFlag: "yardLicensePresented",
+        },
       ],
     },
     {

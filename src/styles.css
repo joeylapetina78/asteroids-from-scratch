@@ -548,9 +548,24 @@ body {
   text-transform: uppercase;
 }
 
-.vin-plate strong {
+.vin-plate strong,
+.identity-click-target {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
   font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0;
+  text-align: inherit;
+}
+
+.identity-click-target:hover,
+.identity-click-target:focus-visible {
+  color: #8feaff;
+  text-shadow: 0 0 10px rgba(143, 234, 255, 0.62);
 }
 
 .world-panel {

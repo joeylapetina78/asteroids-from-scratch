@@ -54,3 +54,7 @@ export function getRegistrySubject(state, { registryEntityId, subjectEntityId })
 export function isKnownToRegistry(state, { registryEntityId, subjectEntityId }) {
   return Boolean(getRegistrySubject(state, { registryEntityId, subjectEntityId }));
 }
+
+export function hasRegistryStatus(state, { registryEntityId, subjectEntityId, status }) {
+  return getRegistrySubject(state, { registryEntityId, subjectEntityId })?.status === status;
+}

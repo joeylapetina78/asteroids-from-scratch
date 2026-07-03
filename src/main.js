@@ -1,7 +1,7 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=beacon-locator-v1";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
-import { Game } from "./game.js?v=patrol-registry-v1";
+import { Game } from "./game.js?v=hub-first-contact-v1";
 import { createContractManager } from "./systems/contractManager.js?v=credits-refactor-v2";
 import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=comms-director-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
@@ -285,6 +285,7 @@ let lastHubAuthorityEventId = 0;
 let lastRookAutoOfferEventId = 0;
 let lastTowChatterEventId = 0;
 let lastDockingInspectionEventId = 0;
+const pendingHubIdentityPresentations = new Map();
 const fulfilledContractPanelPulls = new Set();
 const COMPONENT_WARNING_RULES = [
   { panelId: "engine", cautionAt: 80, criticalAt: 35, getValue: () => state.components.engine.fuel },
@@ -305,6 +306,20 @@ function updateShipPowerDisplay() {
 powerButton.addEventListener("click", () => {
   game.setShipPowered(!state.components.engine.powered);
   updateShipPowerDisplay();
+});
+
+hullVin.addEventListener("click", () => {
+  presentIdentityDocument("ship-vin", {
+    shipVin: state.components.hull.vinPlateAttached ? state.components.hull.vin : null,
+  });
+});
+
+licenseIdDisplay.addEventListener("click", () => {
+  const license = getPilotLicense(state);
+  presentIdentityDocument("pilot-license", {
+    pilotLicenseId: license.licenseId ?? null,
+    pilotName: license.firstName ? `${license.firstName} ${license.lastName}` : null,
+  });
 });
 
 towButton.addEventListener("click", () => {
@@ -1388,7 +1403,29 @@ function updateHubAuthorityMessages() {
   events.forEach((event) => {
     lastHubAuthorityEventId = Math.max(lastHubAuthorityEventId, event.id);
 
-    if (event.type === "site.nearby" && event.payload.siteType === "hub") {
+    if (event.type === "authority.identityRequested") {
+      const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
+      pendingHubIdentityPresentations.set(event.payload.siteId, new Set());
+
+      commsDirector.say({
+        source: COMMS_SOURCES.hubAuthority,
+        speaker,
+        text:
+          "Unregistered contact. Hold your line and present ship VIN plus pilot license for first-time registry review.",
+        requireIdle: true,
+      });
+    } else if (event.type === "authority.documentPresented") {
+      const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
+      const label = event.payload.documentKind === "ship-vin" ? "VIN received" : "pilot license received";
+      markHubIdentityDocumentPresented(event.payload.siteId, event.payload.documentKind);
+
+      commsDirector.say({
+        source: COMMS_SOURCES.hubAuthority,
+        speaker,
+        text: `${label}. Stand by while registry compares the record.`,
+        requireIdle: true,
+      });
+    } else if (event.type === "site.nearby" && event.payload.siteType === "hub") {
       const vin = state.components.hull.vinPlateAttached ? state.components.hull.vin : "unverified VIN";
       const license = getPilotLicense(state).licenseId ?? "no active license";
       const speaker = `${event.payload.siteName ?? "Hub"} Authority`;
@@ -1419,6 +1456,42 @@ function updateHubAuthorityMessages() {
         text: `Docking tether strain alarm for ${vin}. Cut thrust while tethered or undock before maneuvering.`,
       });
     }
+  });
+}
+
+function markHubIdentityDocumentPresented(siteId, documentKind) {
+  if (!siteId || !pendingHubIdentityPresentations.has(siteId)) {
+    return;
+  }
+
+  const presented = pendingHubIdentityPresentations.get(siteId);
+  presented.add(documentKind);
+
+  if (!presented.has("ship-vin") || !presented.has("pilot-license")) {
+    return;
+  }
+
+  pendingHubIdentityPresentations.delete(siteId);
+  const site = game.worldSites.find((candidate) => candidate.id === siteId) ?? null;
+
+  if (!site) {
+    return;
+  }
+
+  game.reviewShipRegistryAtHub(site, {
+    inspector: {
+      type: "hub-traffic",
+      id: `${site.id}-traffic`,
+      name: `${site.name} Traffic`,
+    },
+  });
+  game.dismissPatrolIntercept(site.id);
+
+  commsDirector.say({
+    source: COMMS_SOURCES.hubAuthority,
+    speaker: `${site.name} Traffic`,
+    text: "Identity confirmed. Registry entry opened. You are cleared for routine docking at this hub.",
+    requireIdle: true,
   });
 }
 
@@ -2225,6 +2298,27 @@ function wirePanelControlSounds() {
     },
     true,
   );
+}
+
+function presentIdentityDocument(documentKind, payload = {}) {
+  const site = currentSiteState?.nearbySite?.type === "hub"
+    ? currentSiteState.nearbySite
+    : currentSiteState?.dockedSite?.type === "hub"
+      ? currentSiteState.dockedSite
+      : null;
+
+  state.ledger.recordEvent(
+    "authority.documentPresented",
+    {
+      documentKind,
+      siteId: site?.id ?? null,
+      siteName: site?.name ?? null,
+      ...payload,
+    },
+    { visible: false },
+  );
+
+  updateHudDisplay();
 }
 
 function wireAudioUnlockGestures() {
