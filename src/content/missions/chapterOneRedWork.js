@@ -29,7 +29,7 @@ export const chapterOneRedWorkMission = {
     helpText:
       "The first red run is complete. Rook can offer more repeatable resource work from here.",
     line:
-      "That's the stuff. Red comes in, credits go out. I also told Nara Coil at Modworks you might be worth selling to. She's got a tractor field rig if you want to make pickup work less annoying.",
+      "That's the stuff. Red comes in, credits go out. I also told Nara Coil at Modworks you might be worth selling to. She's got a tractor field rig if you want to make pickup work less annoying. One more thing — there's an outpost called The Ledge, east-northeast past Red Teeth. Small place, nothing fancy, but it's a fuel stop if you're pushing further out. Worth knowing it's there.",
     acknowledgement: { label: "Got It" },
   },
   startBeatId: "offer-red-contract",

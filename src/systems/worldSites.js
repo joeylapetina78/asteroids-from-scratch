@@ -34,13 +34,14 @@ export const WORLD_SITES = [
   },
 
   // ── INNER BELT OUTPOST ───────────────────────────────────────────────────────
-  // Positioned near Red Teeth. Reachable in the starter ship with some fuel.
+  // Positioned past Red Teeth on the way to Ore Ridge. Reachable in the starter
+  // ship — first hub the player can discover on their own.
   {
     id: "the-ledge",
     name: "The Ledge",
     beaconId: "beacon-the-ledge",
     type: "hub",
-    position: { x: 16000, y: -9500 },
+    position: { x: 7000, y: -4500 },
     radius: 42,
     interactionRadius: 180,
     capabilities: ["repair"],
@@ -54,7 +55,7 @@ export const WORLD_SITES = [
     name: "Ore Station One",
     beaconId: "beacon-ore-station-one",
     type: "hub",
-    position: { x: 47000, y: -27000 },
+    position: { x: 40000, y: -24000 },
     radius: 52,
     interactionRadius: 210,
     capabilities: ["repair"],
@@ -65,7 +66,7 @@ export const WORLD_SITES = [
     name: "Coldwater Depot",
     beaconId: "beacon-coldwater-depot",
     type: "hub",
-    position: { x: 82000, y: 52000 },
+    position: { x: 70000, y: 46000 },
     radius: 44,
     interactionRadius: 185,
     capabilities: ["repair"],
@@ -76,7 +77,7 @@ export const WORLD_SITES = [
     name: "Deep Research",
     beaconId: "beacon-deep-research",
     type: "hub",
-    position: { x: -82000, y: 58000 },
+    position: { x: -72000, y: 53000 },
     radius: 38,
     interactionRadius: 175,
     capabilities: ["repair"],
