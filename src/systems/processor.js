@@ -1,18 +1,11 @@
-import { drawResourceShape } from "../entities/ResourcePickup.js?v=resource-shapes-v1";
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=resource-families-v1";
+import { RESOURCE_COLOR, getResourceShape } from "../systems/resourceDefinitions.js?v=resource-families-v1";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
 const BOUNCE = 0.18;
 const FLOOR_FRICTION = 0.82;
 const SOLVER_STEPS = 4;
-const TYPE_COLORS = {
-  iron:    "#ff7452",
-  copper:  "#49e1b8",
-  ice:     "#b8eaff",
-  crystal: "#de6fff",
-  // legacy aliases
-  fuel:    "#ff7452",
-};
 
 // Processor is a small square-unit physics canvas. It is used for both the
 // clickable processor and the non-clickable cargo hold, with behavior selected
@@ -42,7 +35,8 @@ export class Processor {
 
     this.units.push({
       type,
-      color: TYPE_COLORS[type] ?? TYPE_COLORS.iron,
+      color: RESOURCE_COLOR[type] ?? "#ff7452",
+      shape: getResourceShape(type),
       x: this.canvas.width / 2 - spacing * 2 + slot * spacing,
       y: 30,
       vx: (slot - 1.5) * 12,
@@ -106,7 +100,8 @@ export class Processor {
 
     this.units = snapshot.units.map((unit) => ({
       type: unit.type,
-      color: TYPE_COLORS[unit.type],
+      color: RESOURCE_COLOR[unit.type] ?? "#ff7452",
+      shape: getResourceShape(unit.type),
       x: unit.x,
       y: unit.y,
       vx: unit.vx,
@@ -161,7 +156,7 @@ export class Processor {
       this.context.lineWidth = 2;
       this.context.save();
       this.context.translate(unit.x + unit.size / 2, unit.y + unit.size / 2);
-      drawResourceShape(this.context, unit.type, unit.size);
+      drawResourceShape(this.context, unit.shape, unit.size);
       this.context.restore();
     });
 

@@ -1,20 +1,28 @@
-import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=burst-fix-2";
+import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=shape-fix-v1";
 import { createRandom, randomRange } from "../systems/random.js";
+import { RESOURCE_COLOR, getResourceShape } from "../systems/resourceDefinitions.js?v=resource-families-v1";
 
 const PICKUP_RADIUS = 10;
 const PICKUP_DRAG = 0.985;
 
-export const RESOURCE_PICKUP_TYPES = {
-  iron:    { color: "#ff7452", size: 7 },
-  copper:  { color: "#49e1b8", size: 7 },
-  ice:     { color: "#b8eaff", size: 8 },
-  crystal: { color: "#de6fff", size: 7 },
+// Named sizes per family so volatiles feel lighter and strange feel larger.
+const FAMILY_SIZE = {
+  volatile:   8,
+  structural: 7,
+  industrial: 7,
+  conductor:  7,
+  energy:     7,
+  advanced:   7,
+  strange:    9,
 };
 
-// Kept for legacy callsites that pass "fuel" or "crystal" as type strings.
+// Map old or alternate type strings to current resource IDs.
 const LEGACY_TYPE_MAP = {
-  fuel:    "iron",
-  crystal: "crystal",
+  fuel:    "iron-nickel",
+  iron:    "iron-nickel",
+  copper:  "copper",
+  ice:     "water-ice",
+  crystal: "crystal-matrix",
 };
 
 export class ResourcePickup {
@@ -22,10 +30,10 @@ export class ResourcePickup {
     this.position = { x, y };
     this.velocity = velocity;
     this.type = LEGACY_TYPE_MAP[type] ?? type;
-    const def = RESOURCE_PICKUP_TYPES[this.type] ?? RESOURCE_PICKUP_TYPES.iron;
-    this.color = def.color;
+    this.color = RESOURCE_COLOR[this.type] ?? "#888888";
     this.radius = PICKUP_RADIUS;
-    this.size = def.size;
+    this.shape = getResourceShape(this.type);
+    this.size = FAMILY_SIZE[this.shape] ?? 7;
   }
 
   update(deltaSeconds) {
@@ -45,7 +53,7 @@ export class ResourcePickup {
     context.strokeStyle = "rgba(255,255,255,0.7)";
     context.lineWidth = 1;
 
-    drawResourceShape(context, this.type, this.size);
+    drawResourceShape(context, this.shape, this.size);
 
     context.restore();
   }
@@ -99,37 +107,56 @@ function getDominantPickupType(resources) {
   return best.resource;
 }
 
-// Shared shape drawing — called from ResourcePickup.draw and processor.js
-export function drawResourceShape(context, type, size) {
+// Shared shape drawing — called from ResourcePickup.draw and processor.js.
+// Takes the SHAPE string (from getResourceShape), not the resource ID.
+export function drawResourceShape(context, shape, size) {
   const h = size / 2;
 
-  if (type === "iron") {
-    // Blocky square — the original shape
-    context.fillRect(-h, -h, size, size);
-    context.strokeRect(-h, -h, size, size);
-
-  } else if (type === "copper") {
-    // Flat hexagon
-    context.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI / 3) * i - Math.PI / 6;
-      const x = Math.cos(angle) * h;
-      const y = Math.sin(angle) * h;
-      if (i === 0) context.moveTo(x, y); else context.lineTo(x, y);
-    }
-    context.closePath();
-    context.fill();
-    context.stroke();
-
-  } else if (type === "ice") {
-    // Smooth circle — volatile, rounded
+  if (shape === "circle") {
     context.beginPath();
     context.arc(0, 0, h, 0, Math.PI * 2);
     context.fill();
     context.stroke();
 
-  } else if (type === "crystal") {
-    // Diamond / rhombus
+  } else if (shape === "square") {
+    context.fillRect(-h, -h, size, size);
+    context.strokeRect(-h, -h, size, size);
+
+  } else if (shape === "triangle") {
+    const th = h * 1.155; // height of equilateral triangle with half-width h
+    context.beginPath();
+    context.moveTo(0, -th * 0.67);
+    context.lineTo(h, th * 0.33);
+    context.lineTo(-h, th * 0.33);
+    context.closePath();
+    context.fill();
+    context.stroke();
+
+  } else if (shape === "hexagon") {
+    context.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i - Math.PI / 6;
+      const px = Math.cos(angle) * h;
+      const py = Math.sin(angle) * h;
+      if (i === 0) context.moveTo(px, py); else context.lineTo(px, py);
+    }
+    context.closePath();
+    context.fill();
+    context.stroke();
+
+  } else if (shape === "octagon") {
+    context.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI / 4) * i - Math.PI / 8;
+      const px = Math.cos(angle) * h;
+      const py = Math.sin(angle) * h;
+      if (i === 0) context.moveTo(px, py); else context.lineTo(px, py);
+    }
+    context.closePath();
+    context.fill();
+    context.stroke();
+
+  } else if (shape === "diamond") {
     context.beginPath();
     context.moveTo(0, -h * 1.3);
     context.lineTo(h, 0);
@@ -139,8 +166,24 @@ export function drawResourceShape(context, type, size) {
     context.fill();
     context.stroke();
 
+  } else if (shape === "shard") {
+    // 4-pointed sharp star
+    const tip = h * 1.4;
+    const notch = h * 0.32;
+    context.beginPath();
+    context.moveTo(0, -tip);
+    context.lineTo(notch, -notch);
+    context.lineTo(tip, 0);
+    context.lineTo(notch, notch);
+    context.lineTo(0, tip);
+    context.lineTo(-notch, notch);
+    context.lineTo(-tip, 0);
+    context.lineTo(-notch, -notch);
+    context.closePath();
+    context.fill();
+    context.stroke();
+
   } else {
-    // Fallback: square
     context.fillRect(-h, -h, size, size);
     context.strokeRect(-h, -h, size, size);
   }

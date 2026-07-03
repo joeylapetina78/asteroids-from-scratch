@@ -1,6 +1,6 @@
 import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
 import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=shape-fix-v1";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=resource-shapes-v1";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=resource-families-v1";
 import { Ship } from "./entities/Ship.js?v=starter-skiff-v1";
 import { createAsteroidChunks } from "./systems/asteroidField.js?v=chunk-streaming-v1";
 import { createCamera } from "./systems/camera.js";
@@ -8,11 +8,11 @@ import { createInput } from "./systems/input.js?v=license-form-v1";
 import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=red-work-tuning-v1";
 import { createNpcRouteShips } from "./systems/npcRoutes.js?v=soft-cargo-train";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=draw-radius";
-import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
+import { createResourceField } from "./systems/resourceField.js?v=resource-families-v1";
 import { createScanner } from "./systems/scanner.js?v=tether-alarm-v1";
 import { recordVisitedZone } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=paperwork-inspections-v1";
-import { getZoneProfile } from "./systems/worldZones.js?v=expanded-world-v1";
+import { getZoneProfile } from "./systems/worldZones.js?v=resource-families-v1";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=expanded-world-v1";
 import { createGameState } from "./state/gameState.js?v=credits-refactor-v2";
 import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=accounts-v1";
@@ -20,6 +20,15 @@ import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./syste
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
 // main.js so the page panels can stay dumb and component-like.
+// Cargo transfer trail color per resource family (volatile = blue, strange = purple, else orange).
+const CARGO_TRAIL_COLOR = {
+  "water-ice":      "#b8eaff",
+  "methane-ice":    "#d0f0a0",
+  "hydrogen":       "#fffdc0",
+  "crystal-matrix": "#de6fff",
+  "anomaly-shard":  "#ff3080",
+};
+
 const FIRE_COOLDOWN_SECONDS = 0.18;
 const AMMO_PER_SHOT = 1;
 const SCANERGY_PER_SCAN = 100;
@@ -986,7 +995,7 @@ export class Game {
     }
 
     this.audio?.playCargoTransfer(resourceType);
-    const color = resourceType === "crystal" ? "#73d2ff" : "#ff7452";
+    const color = CARGO_TRAIL_COLOR[resourceType] ?? "#ff7452";
     const distanceX = site.position.x - this.ship.position.x;
     const distanceY = site.position.y - this.ship.position.y;
     const transferDistance = distance(this.ship.position, site.position) || 1;
@@ -1933,7 +1942,7 @@ export class Game {
     for (let index = 0; index < count; index += 1) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 55 + Math.random() * 125;
-      const type = Math.random() < 0.18 ? "crystal" : "fuel";
+      const type = Math.random() < 0.18 ? "crystal-matrix" : "iron-nickel";
 
       this.pickups.push(
         new ResourcePickup({
@@ -2770,5 +2779,8 @@ function getAsteroidResourceType(asteroid) {
     return "unknown";
   }
 
-  return dominantResource === "iron" ? "fuel" : "crystal";
+  // Map to "fuel" or "crystal" for the two audio/visual states. Volatile and
+  // strange resources use "crystal" (higher-pitched sound); everything else "fuel".
+  const CRYSTAL_AUDIO_RESOURCES = new Set(["water-ice", "methane-ice", "hydrogen", "crystal-matrix", "anomaly-shard"]);
+  return CRYSTAL_AUDIO_RESOURCES.has(dominantResource) ? "crystal" : "fuel";
 }

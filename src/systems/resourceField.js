@@ -1,16 +1,6 @@
 import { createValueNoise } from "./valueNoise.js";
-import { getZoneProfile } from "./worldZones.js?v=expanded-world-v1";
-
-// The resource field is the invisible geology layer. It combines deterministic
-// noise with the zone profile at a coordinate, then asteroidField turns those
-// profiles into actual rocks.
-const RESOURCE_COLORS = {
-  stone: [170, 185, 210],
-  iron: [255, 116, 82],
-  copper: [73, 225, 184],
-  ice: [115, 210, 255],
-  crystal: [222, 111, 255],
-};
+import { getZoneProfile } from "./worldZones.js?v=resource-families-v1";
+import { RESOURCE_COLOR_RGB, pickFamilyMember } from "./resourceDefinitions.js?v=resource-families-v1";
 
 export function createResourceField(seed = 1337) {
   const noise = createValueNoise(seed);
@@ -18,24 +8,47 @@ export function createResourceField(seed = 1337) {
   return {
     getProfile(x, y) {
       const zoneProfile = getZoneProfile(x, y);
-      // Zones multiply/bias the old noise system; they do not replace it. That
-      // is why zones have personality while still producing lumpy natural fields.
       const densityNoise = Math.pow(layeredNoise(noise, x + 1000, y - 1000, 1800, 0.18, 1), 1.15);
       const density = clamp(densityNoise * zoneProfile.asteroidDensityMultiplier, 0, 1.35);
-      const iron = Math.pow(layeredNoise(noise, x + 9000, y + 1200, 2600, 0, 1), 1.6) * 1.5 * zoneProfile.redOreBias;
-      const copper = Math.pow(layeredNoise(noise, x - 7000, y + 5400, 3200, 0, 1), 2.1) * 1.35 * zoneProfile.copperBias;
-      const ice = Math.pow(layeredNoise(noise, x + 2400, y - 8100, 3800, 0, 1), 1.8) * 1.35 * zoneProfile.iceBias;
-      const crystal = Math.pow(layeredNoise(noise, x - 12000, y - 6000, 5200, 0, 1), 3.0) * 2.8 * zoneProfile.blueOreBias;
-      const stone = (0.9 + layeredNoise(noise, x, y, 1400, 0, 0.25)) * zoneProfile.commonRockBias;
-      const resources = normalizeResources({ stone, iron, copper, ice, crystal });
+
+      // One noise channel per family. Exponent controls rarity — higher = rarer.
+      const volatileRaw   = Math.pow(layeredNoise(noise, x + 2400,   y - 8100,  3800, 0, 1), 1.8) * zoneProfile.volatileBias;
+      const structuralRaw = Math.pow(layeredNoise(noise, x + 9000,   y + 1200,  2600, 0, 1), 1.6) * zoneProfile.structuralBias;
+      const industrialRaw = Math.pow(layeredNoise(noise, x + 1500,   y + 3000,  1800, 0, 1), 1.2) * zoneProfile.industrialBias;
+      const conductorRaw  = Math.pow(layeredNoise(noise, x - 7000,   y + 5400,  3200, 0, 1), 2.1) * zoneProfile.conductorBias;
+      const energyRaw     = Math.pow(layeredNoise(noise, x + 5000,   y - 12000, 4200, 0, 1), 3.5) * zoneProfile.energyBias;
+      const advancedRaw   = Math.pow(layeredNoise(noise, x - 12000,  y - 6000,  4500, 0, 1), 2.8) * zoneProfile.advancedBias;
+      const strangeRaw    = Math.pow(layeredNoise(noise, x - 15000,  y + 8000,  5500, 0, 1), 4.5) * zoneProfile.strangeBias;
+      const stoneRaw      = (0.9 + layeredNoise(noise, x, y, 1400, 0, 0.25)) * zoneProfile.commonRockBias;
+
+      // Pick the specific member for each family using independent selector noise.
+      const volatile   = pickFamilyMember("volatile",   noise(x + 33100, y - 27000, 900));
+      const structural = pickFamilyMember("structural",  noise(x - 28000, y + 41000, 900));
+      const industrial = pickFamilyMember("industrial",  noise(x + 17500, y + 23000, 700));
+      const conductor  = pickFamilyMember("conductor",   noise(x - 44000, y - 18000, 850));
+      const energy     = pickFamilyMember("energy",      noise(x + 52000, y - 31000, 600));
+      const advanced   = pickFamilyMember("advanced",    noise(x - 61000, y + 14000, 750));
+      const strange    = pickFamilyMember("strange",     noise(x + 38000, y + 67000, 500));
+
+      const resources = normalizeResources({
+        stone:      stoneRaw,
+        [volatile]:   volatileRaw,
+        [structural]: structuralRaw,
+        [industrial]: industrialRaw,
+        [conductor]:  conductorRaw,
+        [energy]:     energyRaw,
+        [advanced]:   advancedRaw,
+        [strange]:    strangeRaw,
+      });
+
+      const richness = Math.max(volatileRaw, structuralRaw, conductorRaw, energyRaw, advancedRaw, strangeRaw);
 
       return {
         density,
         resources,
         color: mixResourceColor(resources),
-        richness: Math.max(iron, copper, ice, crystal),
+        richness,
         commonRockBias: zoneProfile.commonRockBias,
-        // TODO: Use scrapBias when white/common rocks can drop trace salvage.
         scrapBias: zoneProfile.scrapBias,
         zoneProfile,
       };
@@ -66,17 +79,23 @@ function mixResourceColor(resources) {
   const dominant = getDominantNonStoneResource(resources);
 
   Object.entries(sharpened).forEach(([resource, amount]) => {
-    const color = RESOURCE_COLORS[resource];
-    mixed[0] += color[0] * amount;
-    mixed[1] += color[1] * amount;
-    mixed[2] += color[2] * amount;
+    const rgb = RESOURCE_COLOR_RGB[resource];
+
+    if (rgb) {
+      mixed[0] += rgb[0] * amount;
+      mixed[1] += rgb[1] * amount;
+      mixed[2] += rgb[2] * amount;
+    }
   });
 
   if (dominant.amount > 0.16) {
-    const dominantColor = RESOURCE_COLORS[dominant.resource];
-    mixed[0] = mixed[0] * 0.65 + dominantColor[0] * 0.35;
-    mixed[1] = mixed[1] * 0.65 + dominantColor[1] * 0.35;
-    mixed[2] = mixed[2] * 0.65 + dominantColor[2] * 0.35;
+    const dominantRgb = RESOURCE_COLOR_RGB[dominant.resource];
+
+    if (dominantRgb) {
+      mixed[0] = mixed[0] * 0.65 + dominantRgb[0] * 0.35;
+      mixed[1] = mixed[1] * 0.65 + dominantRgb[1] * 0.35;
+      mixed[2] = mixed[2] * 0.65 + dominantRgb[2] * 0.35;
+    }
   }
 
   return `rgb(${Math.round(mixed[0])}, ${Math.round(mixed[1])}, ${Math.round(mixed[2])})`;
@@ -93,7 +112,7 @@ function sharpenResources(resources) {
 function getDominantNonStoneResource(resources) {
   return Object.entries(resources).filter(([resource]) => resource !== "stone").reduce(
     (best, [resource, amount]) => (amount > best.amount ? { resource, amount } : best),
-    { resource: "iron", amount: 0 },
+    { resource: "iron-nickel", amount: 0 },
   );
 }
 

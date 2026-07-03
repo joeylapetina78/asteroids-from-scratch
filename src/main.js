@@ -17,9 +17,9 @@ import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-
 import { syncActiveHullFromComponents } from "./systems/hulls.js?v=hulls-v1";
 import { createJourneyDirector } from "./systems/journeyDirector.js?v=explorer-mode-v1";
 import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=component-visibility-v1";
-import { getPilotLicense, issuePilotLicense, updateCurrentShipLegal } from "./systems/legalRecords.js?v=legal-single-home-v1";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=paperwork-v1";
-import { Processor } from "./systems/processor.js?v=profile-save-v1";
+import { Processor } from "./systems/processor.js?v=resource-families-v1";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=credits-refactor-v2";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=credits-refactor-v2";
 import { createGameState } from "./state/gameState.js?v=credits-refactor-v2";
@@ -249,6 +249,20 @@ const journeyDirector = createJourneyDirector({
   showComponent: setComponentAvailable,
   unlockHubService,
   requestAttention,
+  runInspection: (siteId) => {
+    const site = game.worldSites.find((candidate) => candidate.id === siteId) ?? currentSiteState?.nearbySite ?? currentSiteState?.dockedSite ?? null;
+    if (site) {
+      game.reviewShipRegistryAtHub(site, {
+        inspector: {
+          type: "patrol",
+          id: `${site.id}-patrol`,
+          name: `${site.name} Patrol`,
+        },
+      });
+      game.dismissPatrolIntercept(site.id);
+    }
+  },
+  spawnPatrolIntercept: (siteId, reason) => game.spawnPatrolIntercept(siteId, reason),
 });
 const commsDirector = createCommsDirector({ state, journeyDirector });
 let bringPanelToFront = () => {};
@@ -444,6 +458,7 @@ drawerToggle?.addEventListener("click", () => {
 renderProcessorOutputs();
   game.placeShipNearSite(chapterOneRoute.startSite.id);
 restoreSavedWorld({ save: savedProfile, game, cargoHold });
+registerStarterDeliveryShipRecords(state);
 clearOldPanelLayouts();
 setInitialPaperworkLocations();
 makePanelsDraggable();
