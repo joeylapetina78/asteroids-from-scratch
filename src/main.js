@@ -1,7 +1,7 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=beacon-locator-v1";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
-import { Game } from "./game.js?v=hub-patrol-foundation-v1";
+import { Game } from "./game.js?v=patrol-registry-v1";
 import { createContractManager } from "./systems/contractManager.js?v=credits-refactor-v2";
 import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=comms-director-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";

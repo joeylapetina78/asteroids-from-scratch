@@ -1,5 +1,5 @@
 import { createShipPaperworkInspectionReport } from "./paperworkInspections.js?v=paperwork-inspections-v1";
-import { PUBLIC_IDENTITY_KIND } from "./publicIdentity.js?v=hub-patrol-foundation-v1";
+import { PUBLIC_IDENTITY_KIND } from "./publicIdentity.js?v=patrol-registry-v1";
 
 export function inspectPublicIdentity(state, { identity, inspector = null, site = null } = {}) {
   if (!identity) {

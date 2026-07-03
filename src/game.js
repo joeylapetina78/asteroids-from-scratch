@@ -6,13 +6,14 @@ import { createAsteroidChunks } from "./systems/asteroidField.js?v=chunk-streami
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=license-form-v1";
 import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=red-work-tuning-v1";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=hub-patrol-foundation-v1";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=patrol-registry-v1";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=canvas-reset-v1";
 import { createResourceField } from "./systems/resourceField.js?v=resource-families-v1";
 import { createScanner } from "./systems/scanner.js?v=tether-alarm-v1";
 import { recordVisitedZone } from "./systems/legalRecords.js?v=legal-single-home-v1";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=hub-patrol-foundation-v1";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=hub-patrol-foundation-v1";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=patrol-registry-v1";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./systems/entityRegistry.js?v=patrol-registry-v1";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=patrol-registry-v1";
 import { getZoneProfile } from "./systems/worldZones.js?v=resource-families-v1";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=expanded-world-v1";
 import { createGameState } from "./state/gameState.js?v=credits-refactor-v2";
@@ -702,6 +703,27 @@ export class Game {
       this.hubInspectionCache.add(getInspectionCacheKey(site, identity));
     }
 
+    if (site && result.entityId) {
+      rememberRegistrySubject(this.state, {
+        registryEntityId: getRegistryEntityIdForSite(site),
+        subjectEntityId: result.entityId,
+        status: result.status,
+        disposition: result.status === "cleared" ? "cleared" : "flagged",
+        source: inspector?.type ?? "inspection",
+        data: {
+          siteId: site.id,
+          siteName: site.name,
+          identityKind: result.identityKind,
+          pilotEntityId: result.pilotEntityId,
+          pilotLicenseId: result.pilotLicenseId,
+          pilotName: result.pilotName,
+          shipVin: result.shipVin,
+          transponderStatus: result.transponderStatus,
+          reasons: result.reasons,
+        },
+      });
+    }
+
     this.state.ledger.recordEvent(
       "authority.inspectionCompleted",
       {
@@ -775,6 +797,7 @@ export class Game {
       hasArrived: false,
       scanTimer: 0,
       hasScanned: false,
+      requiresManualClearance: reason === "arrival-clearance",
       departTarget: null,
     };
 
@@ -883,7 +906,7 @@ export class Game {
       name: patrol.name,
     });
 
-    if (result.status === "cleared") {
+    if (result.status === "cleared" && !patrol.requiresManualClearance) {
       this.dismissPatrolIntercept(patrol.site.id);
     }
   }
