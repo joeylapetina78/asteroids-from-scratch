@@ -1,11 +1,17 @@
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=resource-shapes-v1";
+
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
 const BOUNCE = 0.18;
 const FLOOR_FRICTION = 0.82;
 const SOLVER_STEPS = 4;
 const TYPE_COLORS = {
-  fuel: "#ff7452",
-  crystal: "#73d2ff",
+  iron:    "#ff7452",
+  copper:  "#49e1b8",
+  ice:     "#b8eaff",
+  crystal: "#de6fff",
+  // legacy aliases
+  fuel:    "#ff7452",
 };
 
 // Processor is a small square-unit physics canvas. It is used for both the
@@ -36,7 +42,7 @@ export class Processor {
 
     this.units.push({
       type,
-      color: TYPE_COLORS[type],
+      color: TYPE_COLORS[type] ?? TYPE_COLORS.iron,
       x: this.canvas.width / 2 - spacing * 2 + slot * spacing,
       y: 30,
       vx: (slot - 1.5) * 12,
@@ -151,10 +157,12 @@ export class Processor {
 
     this.units.forEach((unit) => {
       this.context.fillStyle = unit.color;
-      this.context.strokeStyle = "#ffffff";
+      this.context.strokeStyle = "rgba(255,255,255,0.7)";
       this.context.lineWidth = 2;
-      this.context.fillRect(unit.x, unit.y, unit.size, unit.size);
-      this.context.strokeRect(unit.x, unit.y, unit.size, unit.size);
+      this.context.save();
+      this.context.translate(unit.x + unit.size / 2, unit.y + unit.size / 2);
+      drawResourceShape(this.context, unit.type, unit.size);
+      this.context.restore();
     });
 
     this.sparks.forEach((spark) => {

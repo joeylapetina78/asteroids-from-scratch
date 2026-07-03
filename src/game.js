@@ -1,6 +1,6 @@
 import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
 import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=shape-fix-v1";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=burst-fix-2";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=resource-shapes-v1";
 import { Ship } from "./entities/Ship.js?v=starter-skiff-v1";
 import { createAsteroidChunks } from "./systems/asteroidField.js?v=chunk-streaming-v1";
 import { createCamera } from "./systems/camera.js";
@@ -59,6 +59,11 @@ const TOW_LINE_STIFFNESS = 2.8;
 const TOW_LINE_DAMPING = 0.965;
 const TOW_CUTTER_RANGE = 285;
 const TOW_CUTTER_COOLDOWN_SECONDS = 1.15;
+const PATROL_APPROACH_SPEED = 145;
+const PATROL_DEPART_SPEED = 180;
+const PATROL_HOLD_DISTANCE = 112;
+const PATROL_HOLD_SIDE_OFFSET = 104;
+const PATROL_DEPART_DISTANCE = 980;
 
 export class Game {
   constructor(
@@ -129,6 +134,7 @@ export class Game {
       seed: 0,
     };
     this.activeTow = null;
+    this.activePatrolIntercept = null;
   }
 
   start() {
@@ -351,6 +357,7 @@ export class Game {
     this.updateHunterEnvironmentalHits(activeLifeforms, activeAsteroids, deltaSeconds);
     this.updateHunterHits();
     this.updateNpcShips(activeAsteroids, deltaSeconds);
+    this.updatePatrolIntercept(deltaSeconds);
     this.updateEmergencyTow(deltaSeconds);
     this.updateNpcBulletHits();
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
@@ -641,13 +648,13 @@ export class Game {
     this.updateSiteReadout();
   }
 
-  reviewShipRegistryAtHub(site) {
+  reviewShipRegistryAtHub(site, options = {}) {
     if (site.type !== "hub") {
       return;
     }
 
     const report = createShipPaperworkInspectionReport(this.state, {
-      inspector: {
+      inspector: options.inspector ?? {
         type: "hub",
         id: site.id,
         name: site.name,
@@ -673,6 +680,158 @@ export class Game {
         { visible: true },
       );
     }
+  }
+
+  spawnPatrolIntercept(siteId, reason = "arrival-clearance") {
+    const site = this.worldSites.find((worldSite) => worldSite.id === siteId);
+
+    if (!site || this.activePatrolIntercept?.site?.id === site.id) {
+      return false;
+    }
+
+    const directionToShip = normalizeVector(this.ship.position.x - site.position.x, this.ship.position.y - site.position.y);
+    const side = {
+      x: -directionToShip.y,
+      y: directionToShip.x,
+    };
+    const startDistance = Math.max(site.interactionRadius + 260, 500);
+    const position = {
+      x: site.position.x + directionToShip.x * startDistance + side.x * 160,
+      y: site.position.y + directionToShip.y * startDistance + side.y * 160,
+    };
+
+    this.activePatrolIntercept = {
+      id: `patrol-${site.id}`,
+      name: `${site.name} Patrol`,
+      site,
+      reason,
+      phase: "approach",
+      position,
+      velocity: {
+        x: directionToShip.x * PATROL_APPROACH_SPEED,
+        y: directionToShip.y * PATROL_APPROACH_SPEED,
+      },
+      heading: Math.atan2(directionToShip.y, directionToShip.x),
+      pulse: 0,
+      hasArrived: false,
+      departTarget: null,
+    };
+
+    this.state.ledger.recordEvent(
+      "patrol.dispatched",
+      {
+        patrolId: this.activePatrolIntercept.id,
+        patrolName: this.activePatrolIntercept.name,
+        siteId: site.id,
+        siteName: site.name,
+        reason,
+      },
+      { visible: false },
+    );
+
+    return true;
+  }
+
+  dismissPatrolIntercept(siteId = null) {
+    const patrol = this.activePatrolIntercept;
+
+    if (!patrol || (siteId && patrol.site.id !== siteId) || patrol.phase === "depart") {
+      return false;
+    }
+
+    const awayFromShip = normalizeVector(patrol.position.x - this.ship.position.x, patrol.position.y - this.ship.position.y);
+    patrol.phase = "depart";
+    patrol.departTarget = {
+      x: patrol.position.x + awayFromShip.x * PATROL_DEPART_DISTANCE,
+      y: patrol.position.y + awayFromShip.y * PATROL_DEPART_DISTANCE,
+    };
+
+    this.state.ledger.recordEvent(
+      "patrol.dismissed",
+      {
+        patrolId: patrol.id,
+        patrolName: patrol.name,
+        siteId: patrol.site.id,
+        siteName: patrol.site.name,
+      },
+      { visible: false },
+    );
+
+    return true;
+  }
+
+  updatePatrolIntercept(deltaSeconds) {
+    const patrol = this.activePatrolIntercept;
+
+    if (!patrol) {
+      return;
+    }
+
+    patrol.pulse += deltaSeconds;
+
+    if (patrol.phase === "depart") {
+      const target = patrol.departTarget ?? {
+        x: patrol.site.position.x,
+        y: patrol.site.position.y,
+      };
+
+      this.steerPatrolIntercept(patrol, target, PATROL_DEPART_SPEED, deltaSeconds);
+
+      if (distance(patrol.position, this.ship.position) > PATROL_DEPART_DISTANCE * 0.8) {
+        this.activePatrolIntercept = null;
+      }
+
+      return;
+    }
+
+    const holdTarget = this.getPatrolHoldTarget();
+    this.steerPatrolIntercept(patrol, holdTarget, PATROL_APPROACH_SPEED, deltaSeconds);
+
+    if (patrol.hasArrived || distance(patrol.position, holdTarget) > PATROL_HOLD_DISTANCE) {
+      return;
+    }
+
+    patrol.hasArrived = true;
+    patrol.phase = "hold";
+    this.state.ledger.recordEvent(
+      "patrol.arrived",
+      {
+        patrolId: patrol.id,
+        patrolName: patrol.name,
+        siteId: patrol.site.id,
+        siteName: patrol.site.name,
+        reason: patrol.reason,
+      },
+      { visible: false },
+    );
+  }
+
+  getPatrolHoldTarget() {
+    const shipForward = normalizeVector(Math.cos(this.ship.angle), Math.sin(this.ship.angle));
+    const shipSide = {
+      x: -shipForward.y,
+      y: shipForward.x,
+    };
+
+    return {
+      x: this.ship.position.x + shipSide.x * PATROL_HOLD_SIDE_OFFSET - shipForward.x * 24,
+      y: this.ship.position.y + shipSide.y * PATROL_HOLD_SIDE_OFFSET - shipForward.y * 24,
+    };
+  }
+
+  steerPatrolIntercept(patrol, target, maxSpeed, deltaSeconds) {
+    const targetDirection = normalizeVector(target.x - patrol.position.x, target.y - patrol.position.y);
+    const desiredVelocity = {
+      x: targetDirection.x * maxSpeed,
+      y: targetDirection.y * maxSpeed,
+    };
+    const turn = Math.min(1, deltaSeconds * 2.4);
+
+    patrol.velocity.x += (desiredVelocity.x - patrol.velocity.x) * turn;
+    patrol.velocity.y += (desiredVelocity.y - patrol.velocity.y) * turn;
+    patrol.position.x += patrol.velocity.x * deltaSeconds;
+    patrol.position.y += patrol.velocity.y * deltaSeconds;
+    patrol.heading = lerpAngle(patrol.heading, Math.atan2(patrol.velocity.y, patrol.velocity.x), Math.min(1, deltaSeconds * 4.6));
   }
 
   breakDockingTether(site) {
@@ -2119,6 +2278,7 @@ export class Game {
         ship.draw(this.context, drawCamera);
       }
     });
+    this.drawPatrolIntercept(drawCamera);
     this.drawEmergencyTow(drawCamera);
     this.pickups.forEach((pickup) => {
       if (isVisible(pickup, this.canvas, drawCamera)) {
@@ -2133,6 +2293,55 @@ export class Game {
     this.ship.draw(this.context, drawCamera);
     this.drawDamageFlash();
     this.drawViewportTitle();
+  }
+
+  drawPatrolIntercept(camera = this.camera) {
+    if (!this.activePatrolIntercept) {
+      return;
+    }
+
+    const patrol = this.activePatrolIntercept;
+    const screenX = patrol.position.x - camera.x;
+    const screenY = patrol.position.y - camera.y;
+    const pulse = 0.45 + Math.sin(patrol.pulse * 7.2) * 0.18;
+
+    this.context.save();
+
+    if (patrol.phase !== "depart") {
+      const shipX = this.ship.position.x - camera.x;
+      const shipY = this.ship.position.y - camera.y;
+
+      this.context.strokeStyle = `rgba(126, 231, 255, ${pulse})`;
+      this.context.lineWidth = 1.5;
+      this.context.setLineDash([4, 8]);
+      this.context.beginPath();
+      this.context.moveTo(screenX, screenY);
+      this.context.lineTo(shipX, shipY);
+      this.context.stroke();
+      this.context.setLineDash([]);
+    }
+
+    this.context.translate(screenX, screenY);
+    this.context.rotate(patrol.heading);
+    this.context.strokeStyle = "#7ee7ff";
+    this.context.fillStyle = "rgba(126, 231, 255, 0.12)";
+    this.context.lineWidth = 2;
+    this.context.beginPath();
+    this.context.moveTo(24, 0);
+    this.context.lineTo(-10, -13);
+    this.context.lineTo(-18, 0);
+    this.context.lineTo(-10, 13);
+    this.context.closePath();
+    this.context.fill();
+    this.context.stroke();
+
+    this.context.strokeStyle = "rgba(255, 255, 255, 0.72)";
+    this.context.beginPath();
+    this.context.moveTo(-2, -8);
+    this.context.lineTo(11, 0);
+    this.context.lineTo(-2, 8);
+    this.context.stroke();
+    this.context.restore();
   }
 
   drawEmergencyTow(camera = this.camera) {

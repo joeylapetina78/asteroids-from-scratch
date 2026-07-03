@@ -1,22 +1,31 @@
 import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=burst-fix-2";
 import { createRandom, randomRange } from "../systems/random.js";
 
-const PICKUP_SIZE = 7;
 const PICKUP_RADIUS = 10;
 const PICKUP_DRAG = 0.985;
-const PICKUP_TYPES = {
-  fuel: "#ff7452",
-  crystal: "#73d2ff",
+
+export const RESOURCE_PICKUP_TYPES = {
+  iron:    { color: "#ff7452", size: 7 },
+  copper:  { color: "#49e1b8", size: 7 },
+  ice:     { color: "#b8eaff", size: 8 },
+  crystal: { color: "#de6fff", size: 7 },
+};
+
+// Kept for legacy callsites that pass "fuel" or "crystal" as type strings.
+const LEGACY_TYPE_MAP = {
+  fuel:    "iron",
+  crystal: "crystal",
 };
 
 export class ResourcePickup {
   constructor({ x, y, type, velocity }) {
     this.position = { x, y };
     this.velocity = velocity;
-    this.type = type;
-    this.color = PICKUP_TYPES[type];
+    this.type = LEGACY_TYPE_MAP[type] ?? type;
+    const def = RESOURCE_PICKUP_TYPES[this.type] ?? RESOURCE_PICKUP_TYPES.iron;
+    this.color = def.color;
     this.radius = PICKUP_RADIUS;
-    this.size = PICKUP_SIZE;
+    this.size = def.size;
   }
 
   update(deltaSeconds) {
@@ -33,10 +42,11 @@ export class ResourcePickup {
     context.save();
     context.translate(screenX, screenY);
     context.fillStyle = this.color;
-    context.strokeStyle = "#ffffff";
+    context.strokeStyle = "rgba(255,255,255,0.7)";
     context.lineWidth = 1;
-    context.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
-    context.strokeRect(-this.size / 2, -this.size / 2, this.size, this.size);
+
+    drawResourceShape(context, this.type, this.size);
+
     context.restore();
   }
 }
@@ -46,7 +56,7 @@ export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity
     return [];
   }
 
-  const pickupType = getPickupType(asteroid.resources);
+  const pickupType = getDominantPickupType(asteroid.resources);
 
   if (!pickupType) {
     return [];
@@ -77,17 +87,61 @@ export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity
   return pickups;
 }
 
-function getPickupType(resources) {
-  const dominantResource = Object.entries(resources)
+// Returns the dominant non-stone resource type, or null for pure stone rocks.
+function getDominantPickupType(resources) {
+  const best = Object.entries(resources)
     .filter(([resource]) => resource !== "stone")
-    .reduce((best, [resource, amount]) => (amount > best.amount ? { resource, amount } : best), {
-      resource: null,
-      amount: 0,
-    }).resource;
+    .reduce(
+      (best, [resource, amount]) => (amount > best.amount ? { resource, amount } : best),
+      { resource: null, amount: 0 },
+    );
 
-  if (!dominantResource) {
-    return null;
+  return best.resource;
+}
+
+// Shared shape drawing — called from ResourcePickup.draw and processor.js
+export function drawResourceShape(context, type, size) {
+  const h = size / 2;
+
+  if (type === "iron") {
+    // Blocky square — the original shape
+    context.fillRect(-h, -h, size, size);
+    context.strokeRect(-h, -h, size, size);
+
+  } else if (type === "copper") {
+    // Flat hexagon
+    context.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i - Math.PI / 6;
+      const x = Math.cos(angle) * h;
+      const y = Math.sin(angle) * h;
+      if (i === 0) context.moveTo(x, y); else context.lineTo(x, y);
+    }
+    context.closePath();
+    context.fill();
+    context.stroke();
+
+  } else if (type === "ice") {
+    // Smooth circle — volatile, rounded
+    context.beginPath();
+    context.arc(0, 0, h, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+
+  } else if (type === "crystal") {
+    // Diamond / rhombus
+    context.beginPath();
+    context.moveTo(0, -h * 1.3);
+    context.lineTo(h, 0);
+    context.lineTo(0, h * 1.3);
+    context.lineTo(-h, 0);
+    context.closePath();
+    context.fill();
+    context.stroke();
+
+  } else {
+    // Fallback: square
+    context.fillRect(-h, -h, size, size);
+    context.strokeRect(-h, -h, size, size);
   }
-
-  return dominantResource === "iron" ? "fuel" : "crystal";
 }
