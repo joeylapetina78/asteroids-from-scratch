@@ -6,12 +6,13 @@ import { createAsteroidChunks } from "./systems/asteroidField.js?v=chunk-streami
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=license-form-v1";
 import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=red-work-tuning-v1";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=soft-cargo-train";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=hub-patrol-foundation-v1";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=canvas-reset-v1";
 import { createResourceField } from "./systems/resourceField.js?v=resource-families-v1";
 import { createScanner } from "./systems/scanner.js?v=tether-alarm-v1";
 import { recordVisitedZone } from "./systems/legalRecords.js?v=legal-single-home-v1";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=paperwork-inspections-v1";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=hub-patrol-foundation-v1";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=hub-patrol-foundation-v1";
 import { getZoneProfile } from "./systems/worldZones.js?v=resource-families-v1";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=expanded-world-v1";
 import { createGameState } from "./state/gameState.js?v=credits-refactor-v2";
@@ -73,6 +74,9 @@ const PATROL_DEPART_SPEED = 180;
 const PATROL_HOLD_DISTANCE = 112;
 const PATROL_HOLD_SIDE_OFFSET = 104;
 const PATROL_DEPART_DISTANCE = 980;
+const HUB_SENSOR_RADIUS_MULTIPLIER = 3;
+const PATROL_SCAN_SECONDS = 1.35;
+const PATROL_TETHER_DAMPING = 0.92;
 
 export class Game {
   constructor(
@@ -129,6 +133,7 @@ export class Game {
     this.currentZoneId = null;
     this.hasRecordedPlayerThrust = false;
     this.tetherStrainCooldown = 0;
+    this.hubInspectionCache = new Set();
     this.lastShipMovementEventPosition = { ...this.ship.position };
     this.visibleStorySiteIds = new Set();
     this.nearbyStorySiteIds = new Set();
@@ -662,14 +667,13 @@ export class Game {
       return;
     }
 
-    const report = createShipPaperworkInspectionReport(this.state, {
-      inspector: options.inspector ?? {
-        type: "hub",
-        id: site.id,
-        name: site.name,
-      },
-      site,
+    const identity = options.identity ?? createControlledShipPublicIdentity(this.state);
+    const result = this.inspectPublicTrafficIdentity(identity, site, options.inspector ?? {
+      type: "hub",
+      id: site.id,
+      name: site.name,
     });
+    const report = result.paperworkReport ?? result;
 
     this.state.ledger.recordEvent(
       "ship.registryReviewed",
@@ -677,7 +681,7 @@ export class Game {
       { visible: false },
     );
 
-    if (report.unauthorizedZones.length > 0) {
+    if ((report.unauthorizedZones ?? []).length > 0) {
       this.state.ledger.recordEvent(
         "legal.zoneFlag",
         {
@@ -689,6 +693,52 @@ export class Game {
         { visible: true },
       );
     }
+  }
+
+  inspectPublicTrafficIdentity(identity, site, inspector) {
+    const result = inspectPublicIdentity(this.state, { identity, site, inspector });
+
+    if (site && identity) {
+      this.hubInspectionCache.add(getInspectionCacheKey(site, identity));
+    }
+
+    this.state.ledger.recordEvent(
+      "authority.inspectionCompleted",
+      {
+        status: result.status,
+        reasons: result.reasons,
+        inspector,
+        siteId: site?.id ?? null,
+        siteName: site?.name ?? null,
+        entityId: result.entityId,
+        identityKind: result.identityKind,
+        pilotEntityId: result.pilotEntityId,
+        pilotLicenseId: result.pilotLicenseId,
+        pilotName: result.pilotName,
+        shipVin: result.shipVin,
+        transponderStatus: result.transponderStatus,
+      },
+      { visible: false },
+    );
+
+    if (result.status === "flagged" || result.status === "failed") {
+      this.state.ledger.recordEvent(
+        "authority.inspectionFlagged",
+        {
+          status: result.status,
+          reasons: result.reasons,
+          siteId: site?.id ?? null,
+          siteName: site?.name ?? null,
+          entityId: result.entityId,
+          identityKind: result.identityKind,
+          pilotLicenseId: result.pilotLicenseId,
+          shipVin: result.shipVin,
+        },
+        { visible: true },
+      );
+    }
+
+    return result;
   }
 
   spawnPatrolIntercept(siteId, reason = "arrival-clearance") {
@@ -723,6 +773,8 @@ export class Game {
       heading: Math.atan2(directionToShip.y, directionToShip.x),
       pulse: 0,
       hasArrived: false,
+      scanTimer: 0,
+      hasScanned: false,
       departTarget: null,
     };
 
@@ -796,23 +848,44 @@ export class Game {
     const holdTarget = this.getPatrolHoldTarget();
     this.steerPatrolIntercept(patrol, holdTarget, PATROL_APPROACH_SPEED, deltaSeconds);
 
-    if (patrol.hasArrived || distance(patrol.position, holdTarget) > PATROL_HOLD_DISTANCE) {
+    if (distance(patrol.position, holdTarget) > PATROL_HOLD_DISTANCE) {
       return;
     }
 
-    patrol.hasArrived = true;
-    patrol.phase = "hold";
-    this.state.ledger.recordEvent(
-      "patrol.arrived",
-      {
-        patrolId: patrol.id,
-        patrolName: patrol.name,
-        siteId: patrol.site.id,
-        siteName: patrol.site.name,
-        reason: patrol.reason,
-      },
-      { visible: false },
-    );
+    if (!patrol.hasArrived) {
+      patrol.hasArrived = true;
+      patrol.phase = "hold";
+      this.state.ledger.recordEvent(
+        "patrol.arrived",
+        {
+          patrolId: patrol.id,
+          patrolName: patrol.name,
+          siteId: patrol.site.id,
+          siteName: patrol.site.name,
+          reason: patrol.reason,
+        },
+        { visible: false },
+      );
+    }
+
+    this.ship.velocity.x *= PATROL_TETHER_DAMPING;
+    this.ship.velocity.y *= PATROL_TETHER_DAMPING;
+    patrol.scanTimer += deltaSeconds;
+
+    if (patrol.hasScanned || patrol.scanTimer < PATROL_SCAN_SECONDS) {
+      return;
+    }
+
+    patrol.hasScanned = true;
+    const result = this.inspectPublicTrafficIdentity(createControlledShipPublicIdentity(this.state), patrol.site, {
+      type: "patrol",
+      id: patrol.id,
+      name: patrol.name,
+    });
+
+    if (result.status === "cleared") {
+      this.dismissPatrolIntercept(patrol.site.id);
+    }
   }
 
   getPatrolHoldTarget() {
@@ -1670,6 +1743,54 @@ export class Game {
         this.createNpcBurst(ship, ship.velocity);
       }
     });
+
+    this.updateHubTrafficSensors(activeNpcShips);
+  }
+
+  updateHubTrafficSensors(activeNpcShips) {
+    this.worldSites
+      .filter((site) => site.type === "hub")
+      .forEach((site) => {
+        const sensorRadius = getHubSensorRadius(site);
+
+        activeNpcShips.forEach((ship) => {
+          if (distance(ship.position, site.position) > sensorRadius) {
+            return;
+          }
+
+          const identity = createNpcShipPublicIdentity(ship);
+          const cacheKey = getInspectionCacheKey(site, identity);
+
+          if (this.hubInspectionCache.has(cacheKey)) {
+            return;
+          }
+
+          this.hubInspectionCache.add(cacheKey);
+          this.inspectPublicTrafficIdentity(identity, site, {
+            type: "patrol",
+            id: `${site.id}-traffic-patrol`,
+            name: `${site.name} Traffic Patrol`,
+          });
+        });
+
+        if (
+          !this.state.ui?.panels?.viewport?.available ||
+          this.dockedSite ||
+          this.activePatrolIntercept ||
+          distance(this.ship.position, site.position) > sensorRadius
+        ) {
+          return;
+        }
+
+        const identity = createControlledShipPublicIdentity(this.state);
+        const cacheKey = getInspectionCacheKey(site, identity);
+
+        if (this.hubInspectionCache.has(cacheKey)) {
+          return;
+        }
+
+        this.spawnPatrolIntercept(site.id, "hub-sensor-contact");
+      });
   }
 
   updateNpcBulletHits() {
@@ -2739,6 +2860,14 @@ function isInViewport(entity, canvas, camera, radius = entity.radius ?? 0) {
   const screenY = entity.position.y - camera.y;
 
   return screenX >= -radius && screenX <= canvas.width + radius && screenY >= -radius && screenY <= canvas.height + radius;
+}
+
+function getHubSensorRadius(site) {
+  return site.interactionRadius * HUB_SENSOR_RADIUS_MULTIPLIER;
+}
+
+function getInspectionCacheKey(site, identity) {
+  return `${site.id}:${identity.entityId ?? identity.shipVin ?? "unknown"}`;
 }
 
 function getEntityStoryId(entity) {

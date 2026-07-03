@@ -1,4 +1,4 @@
-import { NpcShip } from "../entities/NpcShip.js?v=soft-cargo-train";
+import { NpcShip } from "../entities/NpcShip.js?v=hub-patrol-foundation-v1";
 
 // For now, routes are authored from existing world sites. Later this can become
 // the same data layer that powers trade lanes, missions, patrols, and piracy.
@@ -32,6 +32,15 @@ function createRouteShip(id, name, route, seed, routeOffset) {
     y: start.y + side.y * routeOffset,
     seed,
     laneOffset: routeOffset,
+    publicIdentity: {
+      pilotEntityId: `person:${id}-operator`,
+      pilotName: `${name} Operator`,
+      pilotLicenseId: `HLC-${String(seed).padStart(3, "0")}-${id.toUpperCase()}`,
+      shipVin: `HAUL-${String(seed).padStart(2, "0")}-${id.toUpperCase()}`,
+      registeredHubIds: route.filter((site) => site.type === "hub").map((site) => site.id),
+      manifestStatus: "routine-cargo",
+      transponderStatus: "public",
+    },
   });
 }
 

@@ -18,7 +18,7 @@ const CARGO_CAR_DAMPING = 0.82;
 const HUB_TETHER_PADDING = 42;
 
 export class NpcShip {
-  constructor({ id, name, route, x, y, seed = 1, laneOffset = 0 }) {
+  constructor({ id, name, route, x, y, seed = 1, laneOffset = 0, publicIdentity = null }) {
     this.id = id;
     this.name = name;
     this.route = route;
@@ -49,6 +49,7 @@ export class NpcShip {
     this.lastWaypointDistance = distance(this.position, firstWaypoint);
     this.pendingEvents = [];
     this.activeHub = null;
+    this.publicIdentity = publicIdentity;
   }
 
   update(deltaSeconds, world) {
