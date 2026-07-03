@@ -2,7 +2,7 @@
 
 This document is the re-entry map for the Asteroids RPG prototype. The game is a custom browser Canvas project, not p5.js or a larger framework. The core idea is a space simulation where the player navigates an institutional world — banks, registries, mining authorities, employers, patrol organizations, factions — through documents, contracts, ships, and components. Mining is one profession within that world, not the definition of it.
 
-See [README.md](../README.md) for the design direction and run instructions.
+See [README.md](../README.md) for the design direction and run instructions. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status.
 
 ## How The Project Runs
 
@@ -47,6 +47,8 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/systems/hubServiceContracts.js](../src/systems/hubServiceContracts.js) | Chooses which contract a service should offer next (mission-first, prerequisites, repeatables, emergency finance). |
 | [src/systems/commsDirector.js](../src/systems/commsDirector.js) | Routes non-mission speech — hub authority, tow drivers, service NPCs, world NPCs — into the comms display with a priority queue. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. Central memory spine. |
+| [src/systems/accounts.js](../src/systems/accounts.js) | Cash account bridge. New credit changes go through this system while `state.credits` remains a compatibility mirror for current UI. |
+| [src/systems/obligations.js](../src/systems/obligations.js) | Loan/debt obligation records. Loan contracts create obligations, and the old debt summary is derived from them. |
 | [src/systems/contractRules.js](../src/systems/contractRules.js) | Maps ledger events to contract fulfillment checks. Seed for declarative contract terms. |
 | [src/systems/missionActions.js](../src/systems/missionActions.js) | Defines and runs the mission action vocabulary. Seed for a future mission editor. |
 | [src/systems/missionRules.js](../src/systems/missionRules.js) | Matches mission event rules: stat/signal conditions, cooldowns, flags, rotating responses. |
@@ -54,7 +56,10 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/systems/journeyDirector.js](../src/systems/journeyDirector.js) | Top-level story coordinator. Creates mission runners, injects callbacks, starts missions, handles acknowledgements. |
 | [src/systems/contentValidation.js](../src/systems/contentValidation.js) | Validates authored mission actions, beat references, contract requirements, hub services, and cross-file content references. |
 | [src/systems/componentRegistry.js](../src/systems/componentRegistry.js) | Central panel/component ID registry, startup visibility list, and panel-to-state-ID mapping. |
+| [src/systems/hulls.js](../src/systems/hulls.js) | Active hull record bridge. Tracks hull VIN, frame, status, and installed component IDs while current gameplay still reads `state.components`. |
 | [src/systems/legalRecords.js](../src/systems/legalRecords.js) | Access layer for pilot license, current ship legal summary, title/registration/lien records, and visited zones under `state.legal`. |
+| [src/systems/worldRecords.js](../src/systems/worldRecords.js) | Generic record layer for world entities, documents, and relationships. This is the bridge toward people, ships, companies, institutions, contracts, licenses, and liens sharing one relational shape. |
+| [src/systems/paperworkInspections.js](../src/systems/paperworkInspections.js) | Creates paperwork inspection reports from world records: VIN, pilot identity, ship documents, pilot documents, title, lien, registration, and clearance facts. Hubs are one possible inspector. |
 | [src/systems/contractManager.js](../src/systems/contractManager.js) | Contract lifecycle management. Listens to ledger events and updates contract records. |
 | [src/systems/shipPurchase.js](../src/systems/shipPurchase.js) | Handles ship offer purchase: credits, VIN transfer, component installation, event recording. |
 | [src/systems/saveManager.js](../src/systems/saveManager.js) | Lightweight browser-local playtest save/load. |
@@ -80,15 +85,20 @@ state = {
     attention,      // { targets } — UI highlight targets
   },
   hubServices,      // { unlocked, flags }
+  character,        // { controlledPersonEntityId, currentLicenseId, activeHullVin }
+  accounts,         // { currentAccountId, records } - cash account bridge
+  hulls,            // { activeHullVin, records } - VIN-centered hull/component records
+  obligations,      // { records } - loans/debts and future owed duties
   debt,             // { totalBorrowed, totalPaid, activePrincipal, activeBalance, highestDebt }
+  worldRecords,     // { entities, documents, relationships } - generic world facts
   legal,            // { pilotLicense, currentShip, pilotLicenses, shipTitles, registrations, liens, paperwork }
   ship,             // { frameId, name, shape, purchasedOfferId }
-  credits,          // number — top-level scalar
+  credits,          // compatibility mirror of current cash account balance
   components,       // ship hardware only: engine, miner, scanner, processor, cargoHold, docking, hull, collector
 }
 ```
 
-`state.components` contains only physical ship hardware. UI state lives under `state.ui`. Legal/document state lives under `state.legal`. Pilot money is `state.credits` — a top-level scalar, not a component. Panel availability is `state.ui.panels` — not a ship system.
+`state.components` contains only physical ship hardware. UI state lives under `state.ui`. Legal/document compatibility state lives under `state.legal`. The more general world model lives under `state.worldRecords`: entities, documents, and relationships. Pilot money now lives in `state.accounts`, with `state.credits` kept as a compatibility mirror for existing UI code. Panel availability is `state.ui.panels` — not a ship system.
 
 ## Mission Beat System
 
@@ -172,14 +182,16 @@ Driver name is derived from `TOW_DRIVER_NAMES` using a hash of `siteId.length + 
 
 ## Document And Authority Framework
 
-The current first pass lives in `state.legal` and `legalRecords.js`:
+The current compatibility pass lives in `state.legal` and `legalRecords.js`:
 
 - Pilot license (RTC–109–P provisional, issued by Reach Transit Commission)
 - Current ship legal summary (VIN, title holder, registration status)
 - Visited zone log (foundation for zone enforcement)
 - Paperwork records (filed documents by component ID)
 
-The intended direction is a general document framework where documents are issued by institutions, held by entities (people, ships, companies), apply to assets by VIN or ID, grant permissions, create obligations, expire, and can be inspected by hubs or patrols. The current `state.legal` shape is a first step toward that — legal state is already separated from ship hardware and pilot state.
+The intended direction is a general document framework where documents are issued by institutions, held by entities (people, ships, companies), apply to assets by VIN or ID, grant permissions, create obligations, expire, and can be inspected by hubs or patrols. `state.worldRecords` is the first shared record store for that shape. `state.legal` remains a compatibility summary for current UI/gameplay code, while pilot licenses and ship purchases now also write entity/document/relationship records.
+
+`paperworkInspections.js` is the first reader of that record layer. When a hub reviews a docked ship, it uses the same general inspection system that future patrols, employers, repo crews, companies, NPCs, or players can use. The report comes from both compatibility state and `worldRecords`: what ship VIN was presented, which pilot license is held, which documents apply to the ship, whether title is lien-held, and whether a flight registration exists. The interaction is still automatic for now, but the data shape is ready for future “click the VIN / click your license / present registration” flows.
 
 The RTC issues flight licenses. Rook Industries holds a mining permit (RI–7A3). The player's mining rights flow through Rook's permit. Zone violations are logged to `state.legal` and fire visible ledger events for future enforcement systems.
 
