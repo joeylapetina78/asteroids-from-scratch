@@ -40,6 +40,10 @@ export function createJourneyDirector({
 
   function startFreeMode() {
     showOnlyInitialComponents();
+    // Show all flight panels immediately — explorer skips the mission unlock sequence.
+    ["viewport", "hull", "docking", "engine", "scanner", "miner", "collector", "processor", "cargo"].forEach((id) => {
+      showComponent(id);
+    });
     journey.chapterId = "free";
     journey.chapterName = "Free Play";
     journey.episodeName = "Explorer Mode";

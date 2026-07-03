@@ -1,7 +1,7 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=beacon-locator-v1";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
-import { Game } from "./game.js?v=credits-refactor-v2";
+import { Game } from "./game.js?v=resource-families-v1";
 import { createContractManager } from "./systems/contractManager.js?v=credits-refactor-v2";
 import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=comms-director-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
@@ -15,7 +15,7 @@ import {
 import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=service-contracts-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
 import { syncActiveHullFromComponents } from "./systems/hulls.js?v=hulls-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=explorer-mode-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=resource-families-v1";
 import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=component-visibility-v1";
 import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=paperwork-v1";

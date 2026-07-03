@@ -1,5 +1,5 @@
 import { drawResourceShape } from "../entities/ResourcePickup.js?v=resource-families-v1";
-import { RESOURCE_COLOR, getResourceShape } from "../systems/resourceDefinitions.js?v=resource-families-v1";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=resource-families-v1";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;

@@ -5,15 +5,15 @@ import { RESOURCE_COLOR, getResourceShape } from "../systems/resourceDefinitions
 const PICKUP_RADIUS = 10;
 const PICKUP_DRAG = 0.985;
 
-// Named sizes per family so volatiles feel lighter and strange feel larger.
-const FAMILY_SIZE = {
-  volatile:   8,
-  structural: 7,
-  industrial: 7,
-  conductor:  7,
-  energy:     7,
-  advanced:   7,
-  strange:    9,
+// Named sizes per shape so volatiles (circle) feel lighter and strange (shard) feel larger.
+const SHAPE_SIZE = {
+  circle:   8,
+  square:   7,
+  triangle: 7,
+  hexagon:  7,
+  octagon:  7,
+  diamond:  7,
+  shard:    9,
 };
 
 // Map old or alternate type strings to current resource IDs.
@@ -33,7 +33,7 @@ export class ResourcePickup {
     this.color = RESOURCE_COLOR[this.type] ?? "#888888";
     this.radius = PICKUP_RADIUS;
     this.shape = getResourceShape(this.type);
-    this.size = FAMILY_SIZE[this.shape] ?? 7;
+    this.size = SHAPE_SIZE[this.shape] ?? 7;
   }
 
   update(deltaSeconds) {
