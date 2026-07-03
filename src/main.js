@@ -214,6 +214,7 @@ if (shouldResetSave() || initialDevStart) {
 
 const savedProfile = loadSavedProfile(state);
 const audio = createGameAudio();
+wireAudioUnlockGestures();
 const processor = new Processor(processorCanvas, processUnit);
 const cargoHold = new Processor(cargoCanvas, handleCargoUnitClick, { isClickable: true });
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio, updateLedgerDrivenSystems);
@@ -2226,6 +2227,12 @@ function wirePanelControlSounds() {
   );
 }
 
+function wireAudioUnlockGestures() {
+  const unlockOnce = () => audio.unlock();
+  document.addEventListener("pointerdown", unlockOnce, { once: true, capture: true });
+  document.addEventListener("keydown", unlockOnce, { once: true, capture: true });
+}
+
 function isDisabledControl(control) {
   if (control.disabled || control.getAttribute("aria-disabled") === "true") {
     return true;
@@ -3261,6 +3268,7 @@ function initLicenseApplication() {
 
   licenseForm.addEventListener("submit", (event) => {
     event.preventDefault();
+    audio.unlock();
     const firstName = licenseFirstName.value.trim();
     const lastName = licenseLastName.value.trim();
 
