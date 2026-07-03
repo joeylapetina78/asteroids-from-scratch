@@ -464,6 +464,53 @@ body {
   width: 240px;
 }
 
+.document-panel {
+  width: 260px;
+}
+
+.document-readout {
+  display: grid;
+  gap: 10px;
+}
+
+.document-readout > span {
+  color: #9aa4b8;
+  font-size: 0.78rem;
+}
+
+.document-readout p {
+  margin: 0;
+  color: #d8deec;
+  line-height: 1.35;
+}
+
+.document-readout dl {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+
+.document-readout dl div {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.9fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.document-readout dt {
+  color: #7f8aa3;
+  font-size: 0.74rem;
+}
+
+.document-readout dd {
+  margin: 0;
+  color: #f4f7fb;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
 .merchant-panel,
 .component-shop-panel {
   width: min(820px, calc(100vw - 72px));
@@ -777,6 +824,40 @@ body {
   background: linear-gradient(90deg, #ff7452, #ffd36b);
 }
 
+.contract-payment {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 8px;
+  border: 1px solid rgba(103, 215, 255, 0.24);
+  border-radius: 6px;
+  padding: 7px;
+  background: rgba(103, 215, 255, 0.06);
+}
+
+.contract-payment[hidden] {
+  display: none;
+}
+
+.contract-payment label {
+  display: grid;
+  gap: 4px;
+  color: #aeb8cc;
+  font-size: 0.76rem;
+}
+
+.contract-payment input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #273142;
+  border-radius: 6px;
+  padding: 7px 8px;
+  color: #f4f7fb;
+  background: #080b12;
+  font: inherit;
+  font-weight: 700;
+}
+
 .component-meter {
   display: grid;
   gap: 6px;
@@ -917,8 +998,15 @@ body {
   cursor: not-allowed;
 }
 
+.supply-cost-label {
+  font-size: 0.72rem;
+  color: #596275;
+  margin-top: 1px;
+}
+
 .supply-buy-button {
-  padding: 4px 9px;
+  width: 58px;
+  padding: 6px 0;
   background: #0f1520;
   border: 1px solid #2d3545;
   border-radius: 4px;
@@ -927,6 +1015,7 @@ body {
   font-size: 0.8rem;
   white-space: nowrap;
   flex-shrink: 0;
+  text-align: center;
 }
 
 .supply-buy-button:hover:not(:disabled),
@@ -938,6 +1027,18 @@ body {
 .supply-buy-button:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.supply-buy-button.is-pumping {
+  border-color: rgba(60, 220, 130, 0.65);
+  color: rgba(60, 220, 130, 0.9);
+  background: rgba(60, 220, 130, 0.06);
+  animation: pump-pulse 0.7s ease-in-out infinite;
+}
+
+@keyframes pump-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 .merchant-intro {
@@ -1398,15 +1499,12 @@ body {
 }
 
 #game,
+#processor,
 #cargo {
   width: 100%;
   display: block;
   border: 1px solid #333846;
   background: #07080c;
-}
-
-#processor {
-  display: none;
 }
 
 #game {
@@ -1429,6 +1527,7 @@ body {
   }
 }
 
+#processor,
 #cargo {
   aspect-ratio: 16 / 9;
 }
@@ -1786,6 +1885,58 @@ body {
   min-height: 520px;
   padding: 18px 24px 48px;
   overflow: auto;
+}
+
+.contract-file-stack {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 190px;
+}
+
+.contract-file-stack[hidden] {
+  display: none;
+}
+
+.contract-file-card {
+  display: grid;
+  gap: 4px;
+  width: 190px;
+  border: 1px solid rgba(115, 210, 255, 0.28);
+  border-radius: 7px 7px 4px 4px;
+  padding: 9px 10px;
+  background:
+    linear-gradient(180deg, rgba(10, 20, 28, 0.95), rgba(6, 9, 15, 0.98)),
+    #080b12;
+  color: #dce8fb;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  box-shadow: inset 0 1px 0 rgba(115, 210, 255, 0.12);
+}
+
+.contract-file-card:hover,
+.contract-file-card:focus-visible,
+.contract-file-card.is-current {
+  border-color: rgba(115, 210, 255, 0.78);
+  box-shadow: 0 0 18px rgba(115, 210, 255, 0.12), inset 0 1px 0 rgba(115, 210, 255, 0.2);
+}
+
+.contract-file-card strong {
+  font-size: 0.86rem;
+}
+
+.contract-file-card span,
+.contract-file-card em {
+  color: #93a1b8;
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+.contract-file-card em {
+  color: #ffd36b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .paperwork-drawer .component-panel {

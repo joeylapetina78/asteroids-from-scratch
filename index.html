@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=processor-fix-v1" />
+    <link rel="stylesheet" href="./src/styles.css?v=supply-pump-v1" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -264,29 +264,33 @@
                   <div class="supply-status-item">
                     <span>Hull</span>
                     <strong id="finley-hull">100%</strong>
+                    <span id="finley-repair-cost" class="supply-cost-label">0 cr</span>
                   </div>
-                  <button id="finley-repair" class="supply-buy-button" type="button" disabled>Repair <span id="finley-repair-cost">0 cr</span></button>
+                  <button id="finley-repair" class="supply-buy-button" type="button" disabled>Repair</button>
                 </div>
                 <div class="supply-buy-row">
                   <div class="supply-status-item">
                     <span>Fuel</span>
                     <strong id="finley-fuel">200</strong>
+                    <span id="finley-fuel-cost" class="supply-cost-label">0 cr</span>
                   </div>
-                  <button id="finley-fuel-btn" class="supply-buy-button" type="button" disabled>Fill <span id="finley-fuel-cost">0 cr</span></button>
+                  <button id="finley-fuel-btn" class="supply-buy-button" type="button" disabled>Pump</button>
                 </div>
                 <div class="supply-buy-row">
                   <div class="supply-status-item">
                     <span>Charges</span>
                     <strong id="finley-charges">100</strong>
+                    <span id="finley-charges-cost" class="supply-cost-label">0 cr</span>
                   </div>
-                  <button id="finley-charges-btn" class="supply-buy-button" type="button" disabled>Restock <span id="finley-charges-cost">0 cr</span></button>
+                  <button id="finley-charges-btn" class="supply-buy-button" type="button" disabled>Load</button>
                 </div>
                 <div class="supply-buy-row">
                   <div class="supply-status-item">
                     <span>Scan</span>
                     <strong id="finley-scan">0%</strong>
+                    <span id="finley-scan-cost" class="supply-cost-label">0 cr</span>
                   </div>
-                  <button id="finley-scan-btn" class="supply-buy-button" type="button" disabled>Refill <span id="finley-scan-cost">0 cr</span></button>
+                  <button id="finley-scan-btn" class="supply-buy-button" type="button" disabled>Fill</button>
                 </div>
               </div>
             </div>
@@ -438,6 +442,7 @@
         <span class="drawer-toggle-arrow" aria-hidden="true">▲</span>
       </button>
       <div class="drawer-shelf">
+        <div id="contract-file-stack" class="contract-file-stack" aria-label="Contract files"></div>
 
         <div class="component-panel license-panel is-component-locked" data-panel-id="license" aria-label="Pilot license">
           <div class="component-panel-title">
@@ -475,6 +480,20 @@
           </div>
         </div>
 
+        <div class="component-panel document-panel is-component-locked" data-panel-id="document" aria-label="Document reader">
+          <div class="component-panel-title">
+            <div>
+              <strong id="document-title">Document</strong>
+              <span id="document-status">no document</span>
+            </div>
+          </div>
+          <div class="document-readout" aria-live="polite">
+            <span id="document-type">Type: --</span>
+            <p id="document-summary">Select a document file from the paperwork drawer.</p>
+            <dl id="document-fields"></dl>
+          </div>
+        </div>
+
         <div class="component-panel contract-panel is-component-locked" data-panel-id="contract" aria-label="Contract component">
           <div class="component-panel-title">
             <div>
@@ -504,6 +523,13 @@
               <div class="contract-progress-bar" aria-hidden="true">
                 <span id="contract-progress-fill"></span>
               </div>
+            </div>
+            <div id="contract-payment" class="contract-payment" hidden>
+              <label for="contract-payment-amount">
+                Payment
+                <input id="contract-payment-amount" type="number" min="1" step="1" inputmode="numeric" />
+              </label>
+              <button id="contract-payment-max" class="contract-nav-button" type="button">Max</button>
             </div>
             <ul id="contract-clauses" class="contract-clauses"></ul>
           </div>

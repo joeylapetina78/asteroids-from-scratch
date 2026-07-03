@@ -87,6 +87,38 @@ export const npcDefinitions = {
     homeHubIds: ["yard-exchange"],
     organizations: ["Yard Exchange Back Corridor"],
   },
+  cress: {
+    id: "cress",
+    name: "Cress",
+    role: "supply counter operator",
+    voiceFrequency: 530,
+    homeHubIds: ["the-ledge"],
+    organizations: ["The Ledge Supply Shack"],
+  },
+  dov: {
+    id: "dov",
+    name: "Dov",
+    role: "supply counter operator",
+    voiceFrequency: 445,
+    homeHubIds: ["ore-station-one"],
+    organizations: ["Ore Station One Industrial Supply"],
+  },
+  pella: {
+    id: "pella",
+    name: "Pella",
+    role: "supply counter operator",
+    voiceFrequency: 570,
+    homeHubIds: ["coldwater-depot"],
+    organizations: ["Coldwater Depot Supply"],
+  },
+  taske: {
+    id: "taske",
+    name: "Dr. Taske",
+    role: "supply counter operator",
+    voiceFrequency: 620,
+    homeHubIds: ["deep-research"],
+    organizations: ["Deep Research Outpost"],
+  },
 };
 
 const npcsByDisplayName = new Map(

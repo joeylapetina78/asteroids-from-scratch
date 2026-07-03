@@ -44,12 +44,18 @@ export function createGameAudio() {
 
   function playPower(isPowered) {
     if (isPowered) {
-      tone({ frequency: 130, endFrequency: 245, duration: 0.2, type: "triangle", volume: 0.085 });
-      tone({ frequency: 480, duration: 0.06, delay: 0.15, type: "sine", volume: 0.045 });
+      // Startup: low hum rising to a mid-pitch, then a clear ready ping
+      tone({ frequency: 55, endFrequency: 110, duration: 0.55, type: "sawtooth", volume: 0.06 });
+      tone({ frequency: 130, endFrequency: 310, duration: 0.65, type: "triangle", volume: 0.09 });
+      tone({ frequency: 520, duration: 0.12, delay: 0.52, type: "sine", volume: 0.06 });
+      tone({ frequency: 780, duration: 0.07, delay: 0.62, type: "sine", volume: 0.04 });
       return;
     }
 
-    tone({ frequency: 230, endFrequency: 90, duration: 0.24, type: "triangle", volume: 0.075 });
+    // Shutdown: mid tone drops, then a low rumble fade
+    tone({ frequency: 280, endFrequency: 60, duration: 0.55, type: "triangle", volume: 0.085 });
+    tone({ frequency: 90, endFrequency: 35, duration: 0.7, delay: 0.1, type: "sawtooth", volume: 0.055 });
+    noiseBurst({ duration: 0.18, volume: 0.03 });
   }
 
   function playScanner() {

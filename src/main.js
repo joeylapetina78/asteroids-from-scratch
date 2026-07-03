@@ -43,7 +43,7 @@ const CARGO_UNIT_VALUES = {
   fuel: 30,
   crystal: 150,
 };
-const PAPERWORK_PANEL_IDS = ["license", "contract"];
+const PAPERWORK_PANEL_IDS = ["license", "document", "contract"];
 const TOW_DRIVER_NAMES = ["Mara Tow", "Jax Cable", "Nell Winch", "Orson Hook"];
 const YARD_EXCHANGE_CORE_SERVICES = [
   yardExchangeServices.rook,
@@ -66,6 +66,7 @@ const DEFAULT_PANEL_LAYOUT = {
   docking: { x: -300, y: 340, z: 100 },
   tow: { x: -300, y: 520, z: 125 },
   contract: { x: -300, y: 340, z: 95 },
+  document: { x: -40, y: 240, z: 96 },
   finley: { x: 70, y: 120, z: 115 },
   "component-shop": { x: 80, y: 140, z: 118 },
   roadmap: { x: 120, y: 100, z: 130 },
@@ -118,9 +119,13 @@ const creditCount = document.querySelector("#credit-count");
 const contractAcceptButton = document.querySelector("#contract-accept");
 const contractClauses = document.querySelector("#contract-clauses");
 const contractDestination = document.querySelector("#contract-destination");
+const contractFileStack = document.querySelector("#contract-file-stack");
 const contractIssuer = document.querySelector("#contract-issuer");
 const contractNavCount = document.querySelector("#contract-nav-count");
 const contractNextButton = document.querySelector("#contract-next");
+const contractPayment = document.querySelector("#contract-payment");
+const contractPaymentAmount = document.querySelector("#contract-payment-amount");
+const contractPaymentMax = document.querySelector("#contract-payment-max");
 const contractPrimaryLabel = document.querySelector("#contract-primary-label");
 const contractProgress = document.querySelector("#contract-progress");
 const contractProgressLabel = document.querySelector("#contract-progress-label");
@@ -143,6 +148,11 @@ const hullDockingLock = document.querySelector("#hull-docking-lock");
 const dockToggleButton = document.querySelector("#dock-toggle");
 const dockingDetail = document.querySelector("#docking-detail");
 const dockingTarget = document.querySelector("#docking-target");
+const documentFields = document.querySelector("#document-fields");
+const documentStatus = document.querySelector("#document-status");
+const documentSummary = document.querySelector("#document-summary");
+const documentTitle = document.querySelector("#document-title");
+const documentType = document.querySelector("#document-type");
 const hubDetail = document.querySelector("#hub-detail");
 const hubName = document.querySelector("#hub-name");
 const hubPanel = document.querySelector("[data-panel-id='hub']");
@@ -344,6 +354,8 @@ contractAcceptButton.addEventListener("click", () => {
   if (contract?.status === "fulfilled") {
     activeDepositContractId = null;
     contractManager.collectPayment(contract.id);
+  } else if (canPayLoanContract(contract)) {
+    contractManager.payLoan(contract.id, getRequestedContractPaymentAmount(contract));
   } else if (canDepositToContract(contract)) {
     activeDepositContractId = activeDepositContractId === contract.id ? null : contract.id;
     renderContract();
@@ -354,9 +366,34 @@ contractAcceptButton.addEventListener("click", () => {
   updateHudDisplay();
 });
 
+contractPaymentMax.addEventListener("click", () => {
+  const contract = contractManager.getCurrentContract();
+  const payment = getMaximumContractPaymentAmount(contract);
+
+  if (payment > 0) {
+    contractPaymentAmount.value = String(payment);
+  }
+});
+
 contractNextButton.addEventListener("click", () => {
   activeDepositContractId = null;
   contractManager.showNextContract();
+  updateHudDisplay();
+});
+
+contractFileStack?.addEventListener("click", (event) => {
+  const file = event.target.closest("[data-paper-file-kind]");
+
+  if (!file) {
+    return;
+  }
+
+  activeDepositContractId = null;
+  if (file.dataset.paperFileKind === "contract") {
+    pullContractToCenter(file.dataset.paperFileId);
+  } else {
+    pullDocumentToCenter(file.dataset.paperFileId);
+  }
   updateHudDisplay();
 });
 
@@ -367,21 +404,19 @@ finleySellToggle.addEventListener("click", () => {
 });
 
 finleyRepairButton.addEventListener("click", () => {
-  game.repairAtDock();
-  renderFinleyPanel();
-  updateHudDisplay();
+  toggleSupplyPump("repair");
 });
 
 finleyFuelButton.addEventListener("click", () => {
-  buyFuelFromFinley();
+  toggleSupplyPump("fuel");
 });
 
 finleyChargesButton.addEventListener("click", () => {
-  buyChargesFromFinley();
+  toggleSupplyPump("charges");
 });
 
 finleyScanButton.addEventListener("click", () => {
-  buyScanFromFinley();
+  toggleSupplyPump("scan");
 });
 
 hubServiceMenu.addEventListener("click", (event) => {
@@ -717,6 +752,7 @@ function updateHubDisplay(siteState) {
 
   if (!siteState.dockedSite) {
     isCargoSellModeActive = false;
+    stopSupplyPump();
     markYardExchangeReturnOpportunity();
   }
 
@@ -871,6 +907,111 @@ function pullContractToCenter(contractId) {
 
   positionPanelById("contract", { x: centerX, y: centerY });
   bringPanelToFront(contractPanel);
+}
+
+function pullDocumentToCenter(documentId) {
+  renderDocumentReader(documentId);
+
+  const hud = document.querySelector(".hud");
+  const documentPanel = document.querySelector("[data-panel-id='document']");
+
+  if (!hud || !documentPanel) {
+    return;
+  }
+
+  if (documentPanel.closest("#paperwork-drawer")) {
+    documentPanel.classList.remove("is-component-locked");
+    documentPanel.style.transform = "translate(0px, 0px)";
+    hud.appendChild(documentPanel);
+    updatePaperworkControlLabels();
+  }
+
+  const hudRect = hud.getBoundingClientRect();
+  const panelWidth = documentPanel.offsetWidth || 240;
+  const panelHeight = documentPanel.offsetHeight || 280;
+  const centerX = Math.round((hudRect.width / 2 - panelWidth / 2) / 20) * 20;
+  const centerY = Math.round((hudRect.height / 2 - panelHeight / 2) / 20) * 20;
+
+  positionPanelById("document", { x: centerX, y: centerY });
+  bringPanelToFront(documentPanel);
+}
+
+function renderDocumentReader(documentId) {
+  const record = state.worldRecords?.documents?.[documentId] ?? null;
+
+  if (!record) {
+    documentTitle.textContent = "Document";
+    documentStatus.textContent = "missing";
+    documentType.textContent = "Type: --";
+    documentSummary.textContent = "This document record is not available.";
+    documentFields.replaceChildren();
+    return;
+  }
+
+  documentTitle.textContent = record.title ?? record.id;
+  documentStatus.textContent = record.status ?? "record";
+  documentType.textContent = `Type: ${formatDocumentType(record.type)}`;
+  documentSummary.textContent = getDocumentSummary(record);
+  documentFields.replaceChildren(
+    ...getDocumentFieldPairs(record).map(([label, value]) => {
+      const row = document.createElement("div");
+      const dt = document.createElement("dt");
+      const dd = document.createElement("dd");
+
+      dt.textContent = label;
+      dd.textContent = value;
+      row.append(dt, dd);
+      return row;
+    }),
+  );
+}
+
+function formatDocumentType(type = "document") {
+  return type.replaceAll("-", " ");
+}
+
+function getDocumentSummary(record) {
+  if (record.type === "pilot-license") {
+    return "Identifies the pilot and grants provisional operating authority.";
+  }
+
+  if (record.type === "ship-title") {
+    return "Records who holds title or beneficial ownership for a hull.";
+  }
+
+  if (record.type === "ship-registration") {
+    return "Registers a ship VIN for operation under a issuing authority.";
+  }
+
+  if (record.type === "lien") {
+    return "Records a collateral claim that can be released when its obligation is paid.";
+  }
+
+  return "World document record.";
+}
+
+function getDocumentFieldPairs(record) {
+  const fields = [
+    ["Document ID", record.id],
+    ["Status", record.status ?? "record"],
+  ];
+
+  if (record.holderEntityId) fields.push(["Holder", getEntityLabel(record.holderEntityId)]);
+  if (record.beneficialOwnerEntityId) fields.push(["Beneficial Owner", getEntityLabel(record.beneficialOwnerEntityId)]);
+  if (record.issuerEntityId) fields.push(["Issuer", getEntityLabel(record.issuerEntityId)]);
+  if (record.assetEntityId) fields.push(["Applies To", getEntityLabel(record.assetEntityId)]);
+  if (record.sourceContractId) fields.push(["Source Contract", record.sourceContractId]);
+  if (record.contractId) fields.push(["Contract", record.contractId]);
+  if (record.collateralDocumentId) fields.push(["Collateral", record.collateralDocumentId]);
+  if (record.heldByContractId) fields.push(["Held By Contract", record.heldByContractId]);
+  if (record.grants?.length) fields.push(["Grants", record.grants.map((grant) => grant.permission).join(", ")]);
+
+  return fields;
+}
+
+function getEntityLabel(entityId) {
+  const entity = state.worldRecords?.entities?.[entityId];
+  return entity?.name ?? entity?.vin ?? entityId;
 }
 
 function renderHubServiceMenu(site) {
@@ -1282,6 +1423,8 @@ function updateWorldDebugDisplay(debug) {
 }
 
 function renderContract(contract = contractManager.getCurrentContract()) {
+  renderContractFileStack(contract);
+
   if (!contract) {
     contractTitle.textContent = "Contract";
     contractStatus.textContent = "no offer";
@@ -1294,6 +1437,7 @@ function renderContract(contract = contractManager.getCurrentContract()) {
     contractTertiaryLabel.textContent = "Reward";
     contractReward.textContent = "0 cr";
     contractProgress.hidden = true;
+    contractPayment.hidden = true;
     contractAcceptButton.disabled = true;
     contractAcceptButton.textContent = "Accept Contract";
     renderContractNavigation();
@@ -1308,6 +1452,7 @@ function renderContract(contract = contractManager.getCurrentContract()) {
   contractSummary.textContent = contract.summary;
   renderContractTerms(contract);
   renderContractProgress(contract);
+  renderContractPayment(contract);
   contractAcceptButton.disabled = !isContractButtonEnabled(contract);
   contractAcceptButton.textContent = getContractButtonLabel(contract);
   renderContractNavigation(contract);
@@ -1319,6 +1464,110 @@ function renderContract(contract = contractManager.getCurrentContract()) {
     }),
   );
   updatePaperworkControlLabels();
+}
+
+function renderContractFileStack(currentContract = contractManager.getCurrentContract()) {
+  if (!contractFileStack) {
+    return;
+  }
+
+  const files = getPaperworkFiles();
+
+  if (files.length === 0) {
+    contractFileStack.replaceChildren();
+    contractFileStack.hidden = true;
+    return;
+  }
+
+  contractFileStack.hidden = false;
+  contractFileStack.replaceChildren(
+    ...files.map((fileRecord) => {
+      const file = document.createElement("button");
+      const title = document.createElement("strong");
+      const meta = document.createElement("span");
+      const status = document.createElement("em");
+
+      file.type = "button";
+      file.className = "contract-file-card";
+      file.classList.toggle("is-current", fileRecord.kind === "contract" && currentContract?.id === fileRecord.id);
+      file.dataset.paperFileKind = fileRecord.kind;
+      file.dataset.paperFileId = fileRecord.id;
+
+      title.textContent = fileRecord.title;
+      meta.textContent = fileRecord.meta;
+      status.textContent = fileRecord.status;
+      file.append(title, meta, status);
+      return file;
+    }),
+  );
+}
+
+function getPaperworkFiles() {
+  const contractFiles = contractManager.getOpenContractIds().map((contractId) => {
+    const contract = state.contracts.records[contractId];
+    return {
+      kind: "contract",
+      id: contract.id,
+      title: contract.title,
+      meta: getContractFileMeta(contract),
+      status: getContractStatusLabel(contract.status),
+      sort: `1-${contract.offeredAt ?? 0}-${contract.id}`,
+    };
+  });
+
+  const documentFiles = Object.values(state.worldRecords?.documents ?? {})
+    .filter(isDocumentVisibleInDrawer)
+    .map((document) => ({
+      kind: "document",
+      id: document.id,
+      title: document.title ?? document.id,
+      meta: getDocumentFileMeta(document),
+      status: document.status ?? "record",
+      sort: `2-${document.issuedAt ?? 0}-${document.id}`,
+    }));
+
+  return [...contractFiles, ...documentFiles].sort((a, b) => a.sort.localeCompare(b.sort));
+}
+
+function isDocumentVisibleInDrawer(document) {
+  return Boolean(document?.id && document.type && document.status !== "archived");
+}
+
+function getDocumentFileMeta(document) {
+  if (document.type === "pilot-license") {
+    return "pilot authority";
+  }
+
+  if (document.type === "ship-title") {
+    return "ship title";
+  }
+
+  if (document.type === "ship-registration") {
+    return "ship registration";
+  }
+
+  if (document.type === "lien") {
+    return "collateral claim";
+  }
+
+  return document.type.replaceAll("-", " ");
+}
+
+function getContractFileMeta(contract) {
+  if (contract.type === "loan") {
+    const balance = contract.balance ?? 0;
+    return balance > 0 ? `${balance.toLocaleString()} cr owed` : "paid off";
+  }
+
+  if (contract.type === "resource-delivery") {
+    return `${contract.deliveredAmount ?? 0}/${contract.terms.amount ?? 0} ${contract.terms.resourceName}`;
+  }
+
+  if (contract.type === "delivery") {
+    return contract.terms.destinationName ?? contract.issuer;
+  }
+
+  return contract.issuer;
 }
 
 function renderContractTerms(contract) {
@@ -1388,6 +1637,28 @@ function renderContractProgress(contract) {
   contractProgress.hidden = true;
 }
 
+function renderContractPayment(contract) {
+  const payment = getMaximumContractPaymentAmount(contract);
+  const canShowPayment = canPayLoanContract(contract) || (contract?.type === "loan" && contract.status === "active" && (contract.balance ?? 0) > 0);
+
+  contractPayment.hidden = !canShowPayment;
+
+  if (!canShowPayment) {
+    contractPaymentAmount.value = "";
+    return;
+  }
+
+  contractPaymentAmount.max = String(payment);
+  contractPaymentAmount.placeholder = payment > 0 ? String(payment) : "0";
+  contractPaymentAmount.disabled = !canPayLoanContract(contract);
+  contractPaymentMax.disabled = !canPayLoanContract(contract);
+
+  const currentValue = Number(contractPaymentAmount.value);
+  if (!Number.isFinite(currentValue) || currentValue <= 0 || currentValue > payment) {
+    contractPaymentAmount.value = payment > 0 ? String(payment) : "";
+  }
+}
+
 function getContractStatusLabel(status) {
   if (status === "offered") {
     return "offer pending";
@@ -1421,6 +1692,14 @@ function getContractButtonLabel(contract) {
     return activeDepositContractId === contract.id ? "Depositing..." : "Deposit Cargo";
   }
 
+  if (canPayLoanContract(contract)) {
+    return "Make Payment";
+  }
+
+  if (contract.type === "loan" && contract.status === "active" && (contract.balance ?? 0) > 0) {
+    return getCredits(state) <= 0 ? "No Credits" : "Visit Finance";
+  }
+
   if (contract.type === "resource-delivery" && contract.status === "active") {
     return "Dock to Deposit";
   }
@@ -1440,6 +1719,7 @@ function isContractButtonEnabled(contract) {
   return (
     contract.status === "offered" ||
     contract.status === "fulfilled" ||
+    canPayLoanContract(contract) ||
     canDepositToContract(contract)
   );
 }
@@ -1463,6 +1743,38 @@ function canDepositToContract(contract) {
       dockedSite.id === contract.terms.destinationSiteId &&
       (contract.deliveredAmount ?? 0) < (contract.terms.amount ?? 0),
   );
+}
+
+function canPayLoanContract(contract) {
+  const dockedSite = currentSiteState?.dockedSite;
+  const service = dockedSite && activeHubServiceId ? getHubService(dockedSite.id, activeHubServiceId) : null;
+
+  return Boolean(
+    contract?.type === "loan" &&
+      contract.status === "active" &&
+      (contract.balance ?? 0) > 0 &&
+      service?.id === yardExchangeServices.finance &&
+      getCredits(state) > 0,
+  );
+}
+
+function getMaximumContractPaymentAmount(contract) {
+  if (!contract || contract.type !== "loan") {
+    return 0;
+  }
+
+  return Math.floor(Math.min(contract.balance ?? 0, Math.max(0, getCredits(state))));
+}
+
+function getRequestedContractPaymentAmount(contract) {
+  const requested = Math.floor(Number(contractPaymentAmount.value));
+  const maximum = getMaximumContractPaymentAmount(contract);
+
+  if (!Number.isFinite(requested) || requested <= 0) {
+    return maximum;
+  }
+
+  return Math.min(requested, maximum);
 }
 
 function updateCargoTargetDisplay() {
@@ -2023,81 +2335,169 @@ function renderFinleyPanel(siteState = currentSiteState) {
 
   finleyHull.textContent = `${Math.ceil(hull.integrity)}%`;
   finleyRepairCost.textContent = `${repairCost} cr`;
-  finleyRepairButton.disabled = !canRepair;
+  if (activePump?.type !== "repair") finleyRepairButton.disabled = !canRepair;
 
   finleyFuel.textContent = `${Math.floor(engine.fuel)} / ${engine.maxFuel}`;
   finleyFuelCost.textContent = `${fuelCost} cr`;
-  finleyFuelButton.firstChild.textContent = "Fill ";
-  finleyFuelButton.disabled = !canFuel;
+  if (activePump?.type !== "fuel") finleyFuelButton.disabled = !canFuel;
 
   finleyCharges.textContent = `${Math.floor(miner.ammo)} / ${miner.maxAmmo}`;
   finleyChargesCost.textContent = `${chargesCost} cr`;
-  finleyChargesButton.disabled = !canCharges;
+  if (activePump?.type !== "charges") finleyChargesButton.disabled = !canCharges;
 
   finleyScan.textContent = `${Math.floor(scanner.scanergy)} / ${scanner.maxScanergy}`;
   finleyScanCost.textContent = `${scanCost} cr`;
-  finleyScanButton.disabled = !canScan;
+  if (activePump?.type !== "scan") finleyScanButton.disabled = !canScan;
 }
 
-function buyFuelFromFinley() {
-  const site = currentSiteState?.dockedSite;
-  const service = site ? getHubService(site.id, activeHubServiceId) : null;
-  const prices = service?.supplyPrices ?? {};
-  const engine = state.components.engine;
-  const fuelNeeded = Math.max(0, engine.maxFuel - engine.fuel);
-  const cost = Math.ceil(fuelNeeded * (prices.fuelPerUnit ?? 2));
+let activePump = null; // { type, intervalId }
 
-  if (!site || fuelNeeded <= 0) {
+function toggleSupplyPump(type) {
+  if (activePump?.type === type) {
+    stopSupplyPump();
     return;
   }
 
-  if (!canSpendCredits(state, cost)) {
+  stopSupplyPump();
+
+  const intervals = { fuel: 140, scan: 180, charges: 420, repair: 480 };
+  const intervalId = setInterval(() => {
+    const did = pumpSupplyTick(type);
+
+    if (!did) {
+      stopSupplyPump();
+    }
+  }, intervals[type]);
+
+  activePump = { type, intervalId };
+  updatePumpButtonStates();
+}
+
+function stopSupplyPump() {
+  if (!activePump) {
     return;
   }
 
-  spendCredits(state, cost);
-  engine.fuel = engine.maxFuel;
-  state.ledger.recordEvent("ship.refueled", { siteId: site.id, siteName: site.name, cost, fuelAdded: fuelNeeded });
+  clearInterval(activePump.intervalId);
+  activePump = null;
+  updatePumpButtonStates();
   renderFinleyPanel();
   updateHudDisplay();
 }
 
-function buyChargesFromFinley() {
-  const site = currentSiteState?.dockedSite;
-  const service = site ? getHubService(site.id, activeHubServiceId) : null;
-  const prices = service?.supplyPrices ?? {};
-  const miner = state.components.miner;
-  const chargesNeeded = Math.max(0, miner.maxAmmo - miner.ammo);
-  const cost = Math.ceil(chargesNeeded * (prices.chargePerUnit ?? 3));
+function updatePumpButtonStates() {
+  const map = { fuel: finleyFuelButton, charges: finleyChargesButton, scan: finleyScanButton, repair: finleyRepairButton };
+  const labels = { fuel: "Pump", charges: "Load", scan: "Fill", repair: "Repair" };
 
-  if (chargesNeeded <= 0 || !canSpendCredits(state, cost)) {
-    return;
+  for (const [type, btn] of Object.entries(map)) {
+    const active = activePump?.type === type;
+    btn.classList.toggle("is-pumping", active);
+    btn.textContent = active ? "Stop" : labels[type];
   }
-
-  spendCredits(state, cost);
-  miner.ammo = miner.maxAmmo;
-  state.ledger.recordEvent("supply.chargesBought", { siteId: site.id, cost, chargesAdded: chargesNeeded });
-  renderFinleyPanel();
-  updateHudDisplay();
 }
 
-function buyScanFromFinley() {
+function pumpSupplyTick(type) {
   const site = currentSiteState?.dockedSite;
   const service = site ? getHubService(site.id, activeHubServiceId) : null;
   const prices = service?.supplyPrices ?? {};
-  const scanner = state.components.scanner;
-  const scanNeeded = Math.max(0, scanner.maxScanergy - scanner.scanergy);
-  const cost = Math.ceil(scanNeeded * (prices.scanergyPerUnit ?? 1));
 
-  if (scanNeeded <= 0 || !canSpendCredits(state, cost)) {
-    return;
+  if (type === "fuel") {
+    const engine = state.components.engine;
+    const chunk = 7 + Math.floor(Math.random() * 6); // 7–12 units
+    const space = engine.maxFuel - engine.fuel;
+
+    if (space <= 0) {
+      return false;
+    }
+
+    const added = Math.min(chunk, space);
+    const cost = Math.ceil(added * (prices.fuelPerUnit ?? 2));
+
+    if (!canSpendCredits(state, cost)) {
+      return false;
+    }
+
+    spendCredits(state, cost);
+    engine.fuel += added;
+    state.ledger.recordEvent("ship.refueled", { siteId: site.id, siteName: site.name, cost, fuelAdded: added }, { visible: false });
+    renderFinleyPanel();
+    updateHudDisplay();
+    return true;
   }
 
-  spendCredits(state, cost);
-  scanner.scanergy = scanner.maxScanergy;
-  state.ledger.recordEvent("supply.scanBought", { siteId: site.id, cost, scanAdded: scanNeeded });
-  renderFinleyPanel();
-  updateHudDisplay();
+  if (type === "scan") {
+    const scanner = state.components.scanner;
+    const chunk = 30 + Math.floor(Math.random() * 25); // 30–54 units
+    const space = scanner.maxScanergy - scanner.scanergy;
+
+    if (space <= 0) {
+      return false;
+    }
+
+    const added = Math.min(chunk, space);
+    const cost = Math.ceil(added * (prices.scanergyPerUnit ?? 1));
+
+    if (!canSpendCredits(state, cost)) {
+      return false;
+    }
+
+    spendCredits(state, cost);
+    scanner.scanergy += added;
+    state.ledger.recordEvent("supply.scanBought", { siteId: site.id, cost, scanAdded: added }, { visible: false });
+    renderFinleyPanel();
+    updateHudDisplay();
+    return true;
+  }
+
+  if (type === "charges") {
+    const miner = state.components.miner;
+    const space = miner.maxAmmo - miner.ammo;
+
+    if (space <= 0) {
+      return false;
+    }
+
+    const added = Math.min(20, space);
+    const cost = Math.ceil(added * (prices.chargePerUnit ?? 3));
+
+    if (!canSpendCredits(state, cost)) {
+      return false;
+    }
+
+    spendCredits(state, cost);
+    miner.ammo += added;
+    state.ledger.recordEvent("supply.chargesBought", { siteId: site.id, cost, chargesAdded: added }, { visible: false });
+    renderFinleyPanel();
+    updateHudDisplay();
+    return true;
+  }
+
+  if (type === "repair") {
+    const hull = state.components.hull;
+    const space = hull.maxIntegrity - hull.integrity;
+
+    if (space <= 0 || !currentSiteState?.canRepair) {
+      return false;
+    }
+
+    const chunk = 5 + Math.floor(Math.random() * 18); // 5–22 units
+    const added = Math.min(chunk, space);
+    const repairCostPerUnit = (currentSiteState?.repairCost ?? 0) / Math.max(1, space);
+    const cost = Math.ceil(added * repairCostPerUnit);
+
+    if (!canSpendCredits(state, cost)) {
+      return false;
+    }
+
+    spendCredits(state, cost);
+    hull.integrity += added;
+    state.ledger.recordEvent("ship.repaired", { siteId: site.id, cost, hullAdded: added }, { visible: false });
+    renderFinleyPanel();
+    updateHudDisplay();
+    return true;
+  }
+
+  return false;
 }
 
 function depositCargoUnit(type) {
@@ -2696,6 +3096,7 @@ function handleShipOfferClick(offer) {
     });
   }
 
+  renderContract();
   updateHudDisplay();
 }
 
@@ -2800,6 +3201,7 @@ function initLicenseApplication() {
   if (existingLicense.licenseId) {
     applyIssuedLicense(existingLicense);
     licenseApplication.classList.add("is-dismissed");
+    renderContract();
     return;
   }
 
@@ -2839,6 +3241,7 @@ function initLicenseApplication() {
     applyIssuedLicense(license);
     setComponentAvailable("license", true);
     licenseApplication.classList.add("is-dismissed");
+    renderContract();
     saveNow();
   });
 }

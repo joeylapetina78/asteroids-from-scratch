@@ -1,4 +1,4 @@
-import { getNpcName } from "../npcs.js?v=component-shop-v1";
+import { getNpcName } from "../npcs.js?v=supply-pump-v1";
 import { storySites, yardExchangeServices } from "../storyWorld.js?v=world-refs-v1";
 
 export const hubServiceDefinitions = {
@@ -103,6 +103,78 @@ export const hubServiceDefinitions = {
       defaultUnlocked: false,
       greeting:
         "Psst. You. The one with rock dust on the account. Come down the back corridor. I know what this place becomes.",
+    },
+  ],
+  "the-ledge": [
+    {
+      id: "ledge-supply",
+      npcId: "cress",
+      npcName: getNpcName("cress"),
+      organization: "The Ledge Supply Shack",
+      serviceType: "supply",
+      label: "Supply",
+      description: "Scrappy outpost supply. Prices are steep, but it's what they've got.",
+      defaultUnlocked: true,
+      greeting: "Cress here. Don't expect miracles, but I can get you moving again.",
+      supplyPrices: {
+        fuelPerUnit: 3,
+        chargePerUnit: 5,
+        scanergyPerUnit: 2,
+      },
+    },
+  ],
+  "ore-station-one": [
+    {
+      id: "ore-station-supply",
+      npcId: "dov",
+      npcName: getNpcName("dov"),
+      organization: "Ore Station One Industrial Supply",
+      serviceType: "supply",
+      label: "Supply",
+      description: "Industrial-grade fuel and charges. No frills.",
+      defaultUnlocked: true,
+      greeting: "Dov. Industrial supply. State what you need.",
+      supplyPrices: {
+        fuelPerUnit: 2,
+        chargePerUnit: 3,
+        scanergyPerUnit: 1,
+      },
+    },
+  ],
+  "coldwater-depot": [
+    {
+      id: "coldwater-supply",
+      npcId: "pella",
+      npcName: getNpcName("pella"),
+      organization: "Coldwater Depot Supply",
+      serviceType: "supply",
+      label: "Supply",
+      description: "Mid-route resupply. Honest prices, no waiting.",
+      defaultUnlocked: true,
+      greeting: "Pella at supply. Long run or short hop — either way I can top you off.",
+      supplyPrices: {
+        fuelPerUnit: 2,
+        chargePerUnit: 4,
+        scanergyPerUnit: 1,
+      },
+    },
+  ],
+  "deep-research": [
+    {
+      id: "deep-research-supply",
+      npcId: "taske",
+      npcName: getNpcName("taske"),
+      organization: "Deep Research Outpost",
+      serviceType: "supply",
+      label: "Supply",
+      description: "Research outpost supply. Scanergy is well-stocked; fuel is rationed.",
+      defaultUnlocked: true,
+      greeting: "Dr. Taske. We don't get many independents this far out. What do you need?",
+      supplyPrices: {
+        fuelPerUnit: 4,
+        chargePerUnit: 5,
+        scanergyPerUnit: 1,
+      },
     },
   ],
   [storySites.originHub.id]: [
