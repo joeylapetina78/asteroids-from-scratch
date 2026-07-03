@@ -595,9 +595,11 @@ function revealInstalledComponents() {
     return;
   }
 
-  if (shouldRestoreViewport(savedProfile)) {
-    setComponentAvailable("viewport", true);
+  if (!shouldRestoreViewport(savedProfile)) {
+    return;
   }
+
+  setComponentAvailable("viewport", true);
 
   Object.entries(COMPONENT_STATE_BY_PANEL_ID).forEach(([panelId, componentStateId]) => {
     if (state.components[componentStateId]?.installed) {
