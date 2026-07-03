@@ -102,13 +102,14 @@ export const chapterOneNewShipMission = {
       id: "read-loan-contract",
       objective: "Review Mako's financing contract.",
       helpText:
-        "Open the Starter Ship Financing contract, read the terms, and accept it to deposit 20,000 credits. This is debt, not free money.",
+        "Open the Starter Ship Financing file from your paperwork drawer, read the terms, and accept it to create a loan obligation. The credits go to the account tied to your provisional ID.",
       onEnter: [
+        { type: "offerContract", contractId: "mako-starter-ship-loan" },
         {
           type: "say",
           speaker: "Mr. Mako",
           text:
-            "Yes, hello. Yard Exchange Finance has a pre-approval for a 20,000-credit starter ship loan. Review the contract and accept it if the terms suit your situation.",
+            "Yes, hello. Yard Exchange Finance has a pre-approval for a 20,000-credit starter ship loan. The contract file is in your paperwork drawer. The account is tied to your provisional ID, and accepting creates a formal obligation with this office. Review the contract and accept it if the terms suit your situation.",
         },
       ],
       transitions: [
@@ -123,14 +124,14 @@ export const chapterOneNewShipMission = {
       id: "return-to-barvis",
       objective: "Return to Barvis at the Shipyard.",
       helpText:
-        "The loan is active and the money is in your account. Choose Shipyard again, then buy the Rook special starter mining ship.",
+        "The loan obligation is active and the money is in your ID-linked account. You can return to Finance later to make payments on that paperwork. Choose Shipyard again, then buy the Rook special starter mining ship.",
       onEnter: [
         { type: "hideComponent", componentId: "contract" },
         {
           type: "say",
           speaker: "Mr. Mako",
           text:
-            "Funds are deposited. Please return to Barvis at the Shipyard to complete the purchase.",
+            "Funds are deposited and the obligation is recorded. When you have credits later, Finance can take payments against that record. Please return to Barvis at the Shipyard to complete the purchase.",
         },
       ],
       transitions: [
@@ -152,7 +153,7 @@ export const chapterOneNewShipMission = {
           type: "say",
           speaker: "Barvis",
           text:
-            "Funding is in place. The Rook special is ready with a miner and cargo hold. Select that offer and we'll put the ship in your name.",
+            "Funding is in place. The Rook special is ready with a miner and cargo hold. Select that offer and we'll put the hull in your name, lien and all.",
         },
       ],
       transitions: [

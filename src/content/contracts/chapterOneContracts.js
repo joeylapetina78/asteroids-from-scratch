@@ -43,6 +43,11 @@ export const chapterOneContracts = [
       destinationSiteId: chapterOneRoute.destinationSite.id,
       destinationName: chapterOneRoute.destinationSite.name,
       requirePoweredDown: true,
+      requires: [
+        { type: "dockAt", siteId: chapterOneRoute.destinationSite.id },
+        { type: "shipVinAttached", vin: "YRDSKF-01-7A3" },
+        { type: "poweredDown" },
+      ],
     },
     reward: {
       credits: 1000,
@@ -65,14 +70,16 @@ export const chapterOneContracts = [
       interestHours: 12,
       maxInterest: 4500,
       dueLabel: "12 in-game hours",
+      fundingPurpose: "starter-ship-purchase",
     },
     reward: {
       credits: 20000,
     },
     clauses: [
-      "20,000 credits are deposited immediately on acceptance.",
+      "20,000 credits are deposited to the cash account tied to your provisional ID.",
+      "Accepting creates a loan obligation owed to Yard Exchange Finance Office.",
       "Interest accrues later up to a maximum of 4,500 credits.",
-      "Payment controls will be added to this contract record as financing comes online.",
+      "The financed hull title remains lien-held until the obligation is paid off.",
     ],
   },
   {
@@ -88,12 +95,14 @@ export const chapterOneContracts = [
       interestHours: 6,
       maxInterest: 1500,
       dueLabel: "6 in-game hours",
+      fundingPurpose: "emergency-fuel",
     },
     reward: {
       credits: 5000,
     },
     clauses: [
-      "5,000 credits are deposited immediately on acceptance.",
+      "5,000 credits are deposited to the cash account tied to your provisional ID.",
+      "Accepting creates a short emergency fuel obligation.",
       "This note exists for pilots who made it back alive but not solvent.",
       "Interest accrues later up to a maximum of 1,500 credits.",
       "Use Supply to buy fuel after the note funds.",

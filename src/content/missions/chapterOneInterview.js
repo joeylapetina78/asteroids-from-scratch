@@ -383,12 +383,12 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "dock-yard-exchange",
+          nextStepId: "yard-traffic-check",
         },
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "dock-yard-exchange",
+          nextStepId: "yard-traffic-check",
         },
         {
           eventType: "beaconLocator.used",
@@ -431,12 +431,12 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "dock-yard-exchange",
+          nextStepId: "yard-traffic-check",
         },
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "dock-yard-exchange",
+          nextStepId: "yard-traffic-check",
         },
         {
           eventType: "engine.powered",
@@ -460,12 +460,12 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "dock-yard-exchange",
+          nextStepId: "yard-traffic-check",
         },
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "dock-yard-exchange",
+          nextStepId: "yard-traffic-check",
         },
         {
           eventType: "ship.thrusted",
@@ -490,13 +490,67 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "dock-yard-exchange",
+          nextStepId: "yard-traffic-check",
         },
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          nextStepId: "dock-yard-exchange",
+          nextStepId: "yard-traffic-check",
         },
+      ],
+    },
+    {
+      id: "yard-traffic-check",
+      objective: "Transmit ship and pilot identification.",
+      helpText:
+        "Yard Exchange traffic control is checking the ship before docking. Your license identifies you; the Hull VIN identifies the ship. Rook Industries is the registered operator for this delivery skiff.",
+      onEnter: [
+        {
+          type: "spawnPatrolIntercept",
+          siteId: chapterOneRoute.destinationSite.id,
+          reason: "arrival-clearance",
+        },
+        {
+          type: "say",
+          speaker: "Yard Exchange Traffic",
+          text:
+            "Inbound skiff, hold your line. Transmit pilot authorization and ship VIN for registry review before docking clearance.",
+          acknowledgement: { label: "Transmit IDs" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "runInspection", siteId: chapterOneRoute.destinationSite.id, inspectionType: "arrival-clearance" },
+        { type: "goToStep", stepId: "yard-traffic-cleared" },
+      ],
+      transitions: [
+        {
+          eventType: "ship.registryReviewed",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          setFlag: "yardRegistryReviewed",
+        },
+      ],
+      onEnd: [
+        { type: "goToStep", stepId: "dock-yard-exchange" },
+      ],
+    },
+    {
+      id: "yard-traffic-cleared",
+      objective: "Proceed to docking.",
+      helpText:
+        "Yard Exchange reviewed the VIN, your provisional license, and the ship registration on file. Move close enough to dock, then power down for delivery.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Good. They have your provisional ID and the VIN. Registration checked out under Rook Industries, just like it should. Now get us close enough to dock.",
+          acknowledgement: { label: "Proceed to Docking" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "goToStep", stepId: "dock-yard-exchange" },
       ],
     },
     {
