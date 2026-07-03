@@ -1,8 +1,8 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=mission-beats-v4";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=tutorial-polish-v1";
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=mission-beats-v2";
 import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=mission-beats-v3";
 import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=component-visibility-v1";
-import { createMissionRunner } from "./missionRunner.js?v=mission-beats-v2";
+import { createMissionRunner } from "./missionRunner.js?v=tutorial-polish-v1";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -266,6 +266,7 @@ export function createJourneyDirector({
         spawnPatrolIntercept,
         startMission,
         requestAttention,
+        updatePaperworkControls: actions.updatePaperworkControls,
         setEnginePowerLock: (isLocked) => {
           state.components.engine.powerLocked = isLocked;
 

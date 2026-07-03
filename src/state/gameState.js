@@ -27,6 +27,9 @@ export function createGameState() {
       attention: {
         targets: {},
       },
+      paperwork: {
+        filingIntroduced: false,
+      },
     },
     hubServices: {
       unlocked: {},

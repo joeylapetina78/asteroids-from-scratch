@@ -47,6 +47,11 @@ export const MISSION_ACTION_DEFINITIONS = {
     required: ["targetId"],
     optional: ["mode"],
   },
+  setPaperworkFiling: {
+    label: "Set Paperwork Filing",
+    description: "Enable or disable the FILE/DESK controls on paperwork panels after the mechanic is introduced.",
+    required: ["isEnabled"],
+  },
   runInspection: {
     label: "Run Inspection",
     description: "Ask a shared inspection system to review paperwork for an entity, site, or authority.",
@@ -121,6 +126,10 @@ function runMissionAction(action, { state, actions, missionDefinition, goToStep 
     actions.unlockHubService(action.siteId, action.serviceId);
   } else if (action.type === "requestAttention") {
     actions.requestAttention(action);
+  } else if (action.type === "setPaperworkFiling") {
+    state.ui.paperwork ??= {};
+    state.ui.paperwork.filingIntroduced = action.isEnabled;
+    actions.updatePaperworkControls?.();
   } else if (action.type === "runInspection") {
     actions.runInspection(action.siteId, action);
   } else if (action.type === "spawnPatrolIntercept") {

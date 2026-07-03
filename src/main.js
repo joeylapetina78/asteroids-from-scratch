@@ -15,14 +15,14 @@ import {
 import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=service-contracts-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
 import { syncActiveHullFromComponents } from "./systems/hulls.js?v=hulls-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=drag-panels-v2";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=tutorial-polish-v1";
 import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=component-visibility-v1";
 import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=paperwork-v1";
 import { Processor } from "./systems/processor.js?v=processor-tumble-v2";
 import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=credits-refactor-v2";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=credits-refactor-v2";
-import { createGameState } from "./state/gameState.js?v=credits-refactor-v2";
+import { createGameState } from "./state/gameState.js?v=tutorial-polish-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -249,6 +249,7 @@ const journeyDirector = createJourneyDirector({
   showComponent: setComponentAvailable,
   unlockHubService,
   requestAttention,
+  updatePaperworkControls: updatePaperworkControlLabels,
   runInspection: (siteId) => {
     const site = game.worldSites.find((candidate) => candidate.id === siteId) ?? currentSiteState?.nearbySite ?? currentSiteState?.dockedSite ?? null;
     if (site) {
@@ -2035,6 +2036,7 @@ function updatePaperworkControlLabels() {
     }
 
     button.disabled = !canMovePaperPanel(panelId);
+    button.hidden = !state.ui.paperwork?.filingIntroduced;
     button.textContent = isInDrawer ? "Desk" : "File";
     button.title = button.disabled
       ? "Accept this contract before filing it"

@@ -1,4 +1,4 @@
-import { runMissionActions } from "./missionActions.js?v=mission-vocabulary-v1";
+import { runMissionActions } from "./missionActions.js?v=tutorial-polish-v1";
 import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=mission-vocabulary-v1";
 
 export function createMissionRunner({ missionDefinition, state, actions }) {

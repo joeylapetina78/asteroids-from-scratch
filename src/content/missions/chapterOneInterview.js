@@ -197,7 +197,7 @@ export const chapterOneInterviewMission = {
       },
     ],
   },
-  startBeatId: "show-hull",
+  startBeatId: "drag-panels",
   considerations: [
     {
       id: "license-panel-moved",
@@ -262,11 +262,14 @@ export const chapterOneInterviewMission = {
       helpText:
         "Drag panels by their title bars. Move the License panel and the Hull panel anywhere comfortable in the display area.",
       onEnter: [
+        { type: "showComponent", componentId: "license", componentName: "License" },
+        { type: "showComponent", componentId: "hull", componentName: "Hull" },
+        { type: "showComponent", componentId: "docking", componentName: "Docking Lock" },
         {
           type: "say",
           speaker: "Rook",
           text:
-            "People have preferences, who am I to stand in the way of them. Go ahead and drag the License and Hull panels around the display area. Get a feel for how it works.",
+            "All right, rookie. Here are our ship controls and displays. You can see the hull of this ship's at 100%. You better keep it that way, ya hear? You've got a provisional license for this starter route, so stay in bounds. People have preferences, who am I to stand in the way of them. Go ahead and drag the License and Hull panels around the display area. Get a feel for how it works.",
         },
       ],
       transitions: [
@@ -283,6 +286,7 @@ export const chapterOneInterviewMission = {
       helpText:
         "Click the FILE button on the License panel. It will move into the Paperwork drawer at the bottom, where you can retrieve paperwork anytime.",
       onEnter: [
+        { type: "setPaperworkFiling", isEnabled: true },
         {
           type: "say",
           speaker: "Rook",
@@ -309,11 +313,7 @@ export const chapterOneInterviewMission = {
           speaker: "Rook",
           text:
             "Before we fly, agree to the contract for this job. It just says when you deliver this ship to Yard Exchange, I'll pay you 500 credits. Simple terms, clean paper, real promise.",
-          acknowledgement: { label: "Read Contract" },
         },
-      ],
-      onAcknowledge: [
-        { type: "clearMessage" },
         { type: "offerContract", contractId: "rook-yard-exchange-delivery" },
       ],
       transitions: [
@@ -360,8 +360,8 @@ export const chapterOneInterviewMission = {
       onAcknowledge: [
         { type: "clearMessage" },
         { type: "setComponentValue", componentId: "scanner", key: "beaconMemoryIds", value: ["scrap-porch", "yard-exchange"] },
-        { type: "setComponentValue", componentId: "scanner", key: "activeBeaconId", value: "yard-exchange" },
-        { type: "setComponentValue", componentId: "scanner", key: "beaconLocatorUsed", value: false },
+        { type: "setComponentValue", componentId: "scanner", key: "activeBeaconId", value: "scrap-porch" },
+        { type: "setComponentValue", componentId: "scanner", key: "beaconLocatorUsed", value: true },
         { type: "showComponent", componentId: "scanner", componentName: "Beacon Locator" },
         { type: "goToStep", stepId: "try-scanner" },
       ],
@@ -370,13 +370,13 @@ export const chapterOneInterviewMission = {
       id: "try-scanner",
       objective: "Check the beacon locator.",
       helpText:
-        "Press Next Beacon if needed. The arrow and pale marker point toward the selected hub beacon. Yard Exchange is the destination.",
+        "The Beacon Locator starts on Scrap Porch, the hub you came from. Press Next Beacon until it tracks Yard Exchange, your destination.",
       onEnter: [
         {
           type: "say",
           speaker: "Rook",
           text:
-            "The locator already knows the beacons in this zone. Click it to cycle signals if you need to, then follow the Yard Exchange beacon. If you still get turned around, follow some space truckers.",
+            "The locator knows the hub beacons in this zone. Right now it is tuned to Scrap Porch, where we came from. Press Next Beacon until it tracks Yard Exchange. Once it is pointing at Yard Exchange, I'll get you the Engine panel so you can get going.",
         },
       ],
       transitions: [
@@ -392,6 +392,7 @@ export const chapterOneInterviewMission = {
         },
         {
           eventType: "beaconLocator.used",
+          payloadEquals: { siteId: "yard-exchange" },
           nextStepId: "show-engine",
         },
       ],
