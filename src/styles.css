@@ -1426,8 +1426,8 @@ body {
   }
 }
 
-.processor-panel {
-  padding-top: 0;
+.processor-panel #processor {
+  display: none;
 }
 
 #processor,
