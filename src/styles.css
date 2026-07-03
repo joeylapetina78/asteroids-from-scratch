@@ -1398,12 +1398,15 @@ body {
 }
 
 #game,
-#processor,
 #cargo {
   width: 100%;
   display: block;
   border: 1px solid #333846;
   background: #07080c;
+}
+
+#processor {
+  display: none;
 }
 
 #game {
@@ -1426,11 +1429,6 @@ body {
   }
 }
 
-.processor-panel #processor {
-  display: none;
-}
-
-#processor,
 #cargo {
   aspect-ratio: 16 / 9;
 }
