@@ -1427,7 +1427,7 @@ body {
 }
 
 .processor-panel {
-  padding-top: 132px;
+  padding-top: 0;
 }
 
 #processor,
@@ -1528,10 +1528,6 @@ body {
   .component-stack {
     margin-top: 16px;
     order: 2;
-  }
-
-  .processor-panel {
-    padding-top: 0;
   }
 
   .space-panel {

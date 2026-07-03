@@ -633,6 +633,7 @@ function setupExplorerStart() {
   Object.assign(state.components.processor, { installed: true });
   state.components.cargoHold.installed = true;
   state.components.docking.installed = true;
+  state.components.collector.installed = true;
 
   state.ship.frameId = "yard-skiff";
   state.ship.name = "Explorer";
@@ -659,6 +660,7 @@ function setupExplorerStart() {
   setComponentAvailable("docking", true);
   setComponentAvailable("contract", true);
   setComponentAvailable("processor", true);
+  setComponentAvailable("collector", true);
 }
 
 function setupDevRedWorkStart() {

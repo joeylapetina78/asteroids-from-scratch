@@ -1,4 +1,4 @@
-import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=family-shapes-v1";
+import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=shape-fix-v1";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated

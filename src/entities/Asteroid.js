@@ -171,12 +171,17 @@ function pickFragmentIndexes(fragmentCount, coloredFragmentCount, random) {
 //  copper   (conductor)  — hexagonal, regular angles, crystalline
 //  ice      (volatile)   — round, many sides, smooth comet-like
 //  crystal  (strange)    — spiky, dramatic alternating peaks and valleys
+//
+// angleJitter is a fraction of π radians applied per-vertex. Safe max is
+// roughly 1/pointCount (half the inter-point spacing). Exceeding it lets
+// points swap angular order, producing self-intersecting "vector splat"
+// shapes — useful for a future shattered/debris aesthetic, but not here.
 const FAMILY_SHAPES = {
-  stone:   { pointRange: [9, 13],  distRange: [0.68, 1.18], angleJitter: 0.30 },
-  iron:    { pointRange: [4,  7],  distRange: [0.70, 1.15], angleJitter: 0.10 },
-  copper:  { pointRange: [5,  7],  distRange: [0.82, 1.12], angleJitter: 0.07 },
-  ice:     { pointRange: [14, 19], distRange: [0.90, 1.06], angleJitter: 0.04 },
-  crystal: { pointRange: [7,  11], distRange: [0.28, 1.42], angleJitter: 0.20 },
+  stone:   { pointRange: [9, 13],  distRange: [0.68, 1.18], angleJitter: 0.06 },
+  iron:    { pointRange: [4,  7],  distRange: [0.70, 1.15], angleJitter: 0.08 },
+  copper:  { pointRange: [5,  7],  distRange: [0.82, 1.12], angleJitter: 0.05 },
+  ice:     { pointRange: [14, 19], distRange: [0.90, 1.06], angleJitter: 0.02 },
+  crystal: { pointRange: [7,  11], distRange: [0.28, 1.42], angleJitter: 0.06 },
 };
 
 function getDominantResource(resources) {
@@ -204,6 +209,8 @@ function createAsteroid({ x, y, radius, tier, color, resources, random }) {
 
     points.push({ angle, distance });
   }
+
+  points.sort((a, b) => a.angle - b.angle);
 
   return new Asteroid({
     x,
