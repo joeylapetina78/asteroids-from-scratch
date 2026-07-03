@@ -1,6 +1,8 @@
 import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=world-refs-v1";
 
 export const WORLD_SITES = [
+  // ── STORY HUBS ───────────────────────────────────────────────────────────────
+  // These are the Chapter 1 anchor points. Positions are story-fixed.
   {
     id: storySites.starterHub.id,
     name: storySites.starterHub.name,
@@ -29,6 +31,56 @@ export const WORLD_SITES = [
     interactionRadius: 190,
     capabilities: ["repair"],
     services: ["scrap-porch-supply"],
+  },
+
+  // ── INNER BELT OUTPOST ───────────────────────────────────────────────────────
+  // Positioned near Red Teeth. Reachable in the starter ship with some fuel.
+  {
+    id: "the-ledge",
+    name: "The Ledge",
+    beaconId: "beacon-the-ledge",
+    type: "hub",
+    position: { x: 16000, y: -9500 },
+    radius: 42,
+    interactionRadius: 180,
+    capabilities: ["repair"],
+    services: [],
+  },
+
+  // ── OUTER HUBS ───────────────────────────────────────────────────────────────
+  // These require a faster ship or serious fuel planning to reach.
+  {
+    id: "ore-station-one",
+    name: "Ore Station One",
+    beaconId: "beacon-ore-station-one",
+    type: "hub",
+    position: { x: 47000, y: -27000 },
+    radius: 52,
+    interactionRadius: 210,
+    capabilities: ["repair"],
+    services: [],
+  },
+  {
+    id: "coldwater-depot",
+    name: "Coldwater Depot",
+    beaconId: "beacon-coldwater-depot",
+    type: "hub",
+    position: { x: 82000, y: 52000 },
+    radius: 44,
+    interactionRadius: 185,
+    capabilities: ["repair"],
+    services: [],
+  },
+  {
+    id: "deep-research",
+    name: "Deep Research",
+    beaconId: "beacon-deep-research",
+    type: "hub",
+    position: { x: -82000, y: 58000 },
+    radius: 38,
+    interactionRadius: 175,
+    capabilities: ["repair"],
+    services: [],
   },
 ];
 

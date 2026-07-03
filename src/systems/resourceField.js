@@ -1,5 +1,5 @@
 import { createValueNoise } from "./valueNoise.js";
-import { getZoneProfile } from "./worldZones.js?v=world-zones";
+import { getZoneProfile } from "./worldZones.js?v=expanded-world-v1";
 
 // The resource field is the invisible geology layer. It combines deterministic
 // noise with the zone profile at a coordinate, then asteroidField turns those

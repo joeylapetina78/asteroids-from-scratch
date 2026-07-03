@@ -12,8 +12,8 @@ import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=tether-alarm-v1";
 import { recordVisitedZone } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=paperwork-inspections-v1";
-import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=beacon-locator-v1";
+import { getZoneProfile } from "./systems/worldZones.js?v=expanded-world-v1";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=expanded-world-v1";
 import { createGameState } from "./state/gameState.js?v=credits-refactor-v2";
 import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=accounts-v1";
 
