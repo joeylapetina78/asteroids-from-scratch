@@ -2,7 +2,7 @@
 
 This document is the re-entry map for the Asteroids RPG prototype. The game is a custom browser Canvas project, not p5.js or a larger framework. The core idea is a space simulation where the player navigates an institutional world — banks, registries, mining authorities, employers, patrol organizations, factions — through documents, contracts, ships, and components. Mining is one profession within that world, not the definition of it.
 
-See [README.md](../README.md) for the design direction and run instructions. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status.
+See [README.md](../README.md) for the design direction and run instructions. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status. See [docs/resource-design.md](resource-design.md) for the resource family taxonomy, scarcity model, and asteroid ecology design.
 
 ## How The Project Runs
 
