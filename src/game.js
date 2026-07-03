@@ -2,7 +2,7 @@ import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
 import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=burst-fix-2";
 import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=burst-fix-2";
 import { Ship } from "./entities/Ship.js?v=starter-skiff-v1";
-import { createAsteroidField } from "./systems/asteroidField.js?v=zone-aware";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=chunk-streaming-v1";
 import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=license-form-v1";
 import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=red-work-tuning-v1";
@@ -10,10 +10,12 @@ import { createNpcRouteShips } from "./systems/npcRoutes.js?v=soft-cargo-train";
 import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=draw-radius";
 import { createResourceField } from "./systems/resourceField.js?v=zone-aware";
 import { createScanner } from "./systems/scanner.js?v=tether-alarm-v1";
-import { getCurrentShipLegal, getPilotLicense, getPilotName, getUnauthorizedVisitedZones, recordVisitedZone } from "./systems/legalRecords.js?v=legal-single-home-v1";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=legal-single-home-v1";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=paperwork-inspections-v1";
 import { getZoneProfile } from "./systems/worldZones.js?v=world-zones";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=beacon-locator-v1";
 import { createGameState } from "./state/gameState.js?v=credits-refactor-v2";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=accounts-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -84,7 +86,9 @@ export class Game {
     this.ship = new Ship(0, 0, state.components.engine, state.ship);
     this.resourceField = createResourceField();
     this.worldSites = getWorldSites();
-    this.asteroids = createAsteroidField(canvas, this.resourceField);
+    this.chunkManager = createAsteroidChunks(canvas, this.resourceField);
+    const { added: initialAsteroids } = this.chunkManager.update(0, 0);
+    this.asteroids = initialAsteroids;
     this.lifeforms = createLifeField(this.asteroids);
     this.npcShips = createNpcRouteShips(this.worldSites);
     this.bullets = [];
@@ -321,6 +325,7 @@ export class Game {
     this.bullets.forEach((bullet) => bullet.update(deltaSeconds));
     this.updateAsteroidHits();
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
+    this.updateAsteroidChunks();
     this.asteroids.forEach((asteroid) => asteroid.update(deltaSeconds));
     this.updateHubDefenses(deltaSeconds);
     // Lifeforms are preserved off-screen, but only nearby ones are simulated.
@@ -641,40 +646,29 @@ export class Game {
       return;
     }
 
-    const hull = this.state.components.hull;
-    const legal = getCurrentShipLegal(this.state);
-    const registrations = legal.registrations ?? {};
-    const pilotLicense = getPilotLicense(this.state);
-    const unauthorizedZones = getUnauthorizedVisitedZones(this.state);
+    const report = createShipPaperworkInspectionReport(this.state, {
+      inspector: {
+        type: "hub",
+        id: site.id,
+        name: site.name,
+      },
+      site,
+    });
 
     this.state.ledger.recordEvent(
       "ship.registryReviewed",
-      {
-        siteId: site.id,
-        siteName: site.name,
-        shipName: this.state.ship.name,
-        pilotLicenseId: pilotLicense.licenseId ?? null,
-        pilotName: getPilotName(this.state, null),
-        vin: hull.vinPlateAttached ? hull.vin : null,
-        vinPlateAttached: hull.vinPlateAttached,
-        titleHolder: legal.titleHolder ?? null,
-        flightLicenseId: legal.flightLicenseId ?? null,
-        flightRegistrationStatus: registrations.flight?.status ?? "none",
-        miningRegistrationStatus: registrations.mining?.status ?? "none",
-        patrolRegistrationStatus: registrations.patrol?.status ?? "none",
-        unauthorizedZones,
-      },
+      report,
       { visible: false },
     );
 
-    if (unauthorizedZones.length > 0) {
+    if (report.unauthorizedZones.length > 0) {
       this.state.ledger.recordEvent(
         "legal.zoneFlag",
         {
           siteId: site.id,
           siteName: site.name,
-          unauthorizedZones,
-          pilotLicenseId: pilotLicense.licenseId ?? null,
+          unauthorizedZones: report.unauthorizedZones,
+          pilotLicenseId: report.pilotLicenseId,
         },
         { visible: true },
       );
@@ -742,11 +736,11 @@ export class Game {
     const repairCost = this.getRepairCost();
     const hullBeforeRepair = this.state.components.hull.integrity;
 
-    if (repairCost <= 0 || repairCost > this.state.credits) {
+    if (repairCost <= 0 || !canSpendCredits(this.state, repairCost)) {
       return;
     }
 
-    this.state.credits -= repairCost;
+    spendCredits(this.state, repairCost);
     this.state.components.hull.integrity = this.state.components.hull.maxIntegrity;
     this.state.ledger.recordEvent("ship.repaired", {
       siteId: site.id,
@@ -870,7 +864,7 @@ export class Game {
       nearestSiteDistance: nearest?.distance ?? 0,
       canRepair: Boolean(this.dockedSite?.capabilities.includes("repair")),
       repairCost: this.getRepairCost(),
-      credits: this.state.credits,
+      credits: getCredits(this.state),
       hullIntegrity: this.state.components.hull.integrity,
       hullMaxIntegrity: this.state.components.hull.maxIntegrity,
     });
@@ -1071,7 +1065,7 @@ export class Game {
     const towTarget = tow.dropoffPosition ?? getTowDropoffPosition(tow.site, this.ship.position);
 
     this.activeTow = null;
-    this.state.credits -= tow.cost;
+    debitCredits(this.state, tow.cost);
     this.state.components.engine.fuel = 0;
     this.state.components.hull.integrity = Math.max(this.state.components.hull.integrity, 10);
     this.shipDestroyed = false;
@@ -1398,6 +1392,14 @@ export class Game {
       },
       { visible: false },
     );
+  }
+
+  updateAsteroidChunks() {
+    const { added, removedSet } = this.chunkManager.update(this.ship.position.x, this.ship.position.y);
+
+    if (added.length > 0 || removedSet.size > 0) {
+      this.asteroids = [...this.asteroids.filter((a) => !removedSet.has(a)), ...added];
+    }
   }
 
   updateHubDefenses(deltaSeconds) {
