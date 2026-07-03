@@ -1,4 +1,4 @@
-import { drawResourceShape } from "../entities/ResourcePickup.js?v=resource-families-v1";
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=resource-visibility-v1";
 import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=resource-families-v1";
 
 const UNIT_SIZE = 22;
@@ -6,6 +6,10 @@ const GRAVITY = 780;
 const BOUNCE = 0.18;
 const FLOOR_FRICTION = 0.82;
 const SOLVER_STEPS = 4;
+const ANGULAR_DRAG = 0.93;
+const FLOOR_ANGULAR_DRAG = 0.72;
+const COLLISION_COMPRESSION = 0.9;
+const TRIANGLE_SLOPE_PUSH = 0.42;
 
 // Processor is a small square-unit physics canvas. It is used for both the
 // clickable processor and the non-clickable cargo hold, with behavior selected
@@ -41,6 +45,8 @@ export class Processor {
       y: 30,
       vx: (slot - 1.5) * 12,
       vy: 0,
+      angle: (Math.random() - 0.5) * 0.5,
+      angularVelocity: (Math.random() - 0.5) * 3.5,
       size: UNIT_SIZE,
     });
   }
@@ -89,6 +95,8 @@ export class Processor {
         y: unit.y,
         vx: unit.vx,
         vy: unit.vy,
+        angle: unit.angle ?? 0,
+        angularVelocity: unit.angularVelocity ?? 0,
       })),
     };
   }
@@ -106,6 +114,8 @@ export class Processor {
       y: unit.y,
       vx: unit.vx,
       vy: unit.vy,
+      angle: unit.angle ?? 0,
+      angularVelocity: unit.angularVelocity ?? 0,
       size: UNIT_SIZE,
     }));
   }
@@ -125,6 +135,8 @@ export class Processor {
       unit.vy += GRAVITY * deltaSeconds;
       unit.x += unit.vx * deltaSeconds;
       unit.y += unit.vy * deltaSeconds;
+      unit.angle += unit.angularVelocity * deltaSeconds;
+      unit.angularVelocity *= ANGULAR_DRAG;
       this.keepInsideBounds(unit);
     });
 
@@ -156,6 +168,7 @@ export class Processor {
       this.context.lineWidth = 2;
       this.context.save();
       this.context.translate(unit.x + unit.size / 2, unit.y + unit.size / 2);
+      this.context.rotate(unit.angle ?? 0);
       drawResourceShape(this.context, unit.shape, unit.size);
       this.context.restore();
     });
@@ -187,17 +200,20 @@ export class Processor {
     if (unit.x < 0) {
       unit.x = 0;
       unit.vx = Math.abs(unit.vx) * BOUNCE;
+      unit.angularVelocity += Math.abs(unit.vy) * 0.01;
     }
 
     if (unit.x + unit.size > this.canvas.width) {
       unit.x = this.canvas.width - unit.size;
       unit.vx = -Math.abs(unit.vx) * BOUNCE;
+      unit.angularVelocity -= Math.abs(unit.vy) * 0.01;
     }
 
     if (unit.y + unit.size > this.canvas.height) {
       unit.y = this.canvas.height - unit.size;
       unit.vy = -Math.abs(unit.vy) * BOUNCE;
       unit.vx *= FLOOR_FRICTION;
+      unit.angularVelocity = (unit.angularVelocity + unit.vx * 0.035) * FLOOR_ANGULAR_DRAG;
     }
   }
 
@@ -216,10 +232,16 @@ export class Processor {
     const firstCenterY = first.y + first.size / 2;
     const secondCenterX = second.x + second.size / 2;
     const secondCenterY = second.y + second.size / 2;
-    const overlapX = first.size / 2 + second.size / 2 - Math.abs(firstCenterX - secondCenterX);
-    const overlapY = first.size / 2 + second.size / 2 - Math.abs(firstCenterY - secondCenterY);
+    const firstCollisionHalf = getCollisionSize(first) / 2;
+    const secondCollisionHalf = getCollisionSize(second) / 2;
+    const overlapX = firstCollisionHalf + secondCollisionHalf - Math.abs(firstCenterX - secondCenterX);
+    const overlapY = firstCollisionHalf + secondCollisionHalf - Math.abs(firstCenterY - secondCenterY);
 
     if (overlapX <= 0 || overlapY <= 0) {
+      return;
+    }
+
+    if (this.resolveTriangleSlope(first, second, overlapX, overlapY)) {
       return;
     }
 
@@ -230,6 +252,8 @@ export class Processor {
       second.x -= push * direction;
       first.vx *= -BOUNCE;
       second.vx *= -BOUNCE;
+      first.angularVelocity += direction * Math.abs(second.vy) * 0.018;
+      second.angularVelocity -= direction * Math.abs(first.vy) * 0.018;
     } else {
       const push = overlapY / 2;
       const direction = firstCenterY < secondCenterY ? -1 : 1;
@@ -237,7 +261,42 @@ export class Processor {
       second.y -= push * direction;
       first.vy *= -BOUNCE;
       second.vy *= -BOUNCE;
+      const spin = (secondCenterX - firstCenterX) * 0.02;
+      first.angularVelocity -= spin;
+      second.angularVelocity += spin;
     }
+  }
+
+  resolveTriangleSlope(first, second, overlapX, overlapY) {
+    return this.resolveTriangleSupport(first, second, overlapX, overlapY)
+      || this.resolveTriangleSupport(second, first, overlapX, overlapY);
+  }
+
+  resolveTriangleSupport(support, rider, overlapX, overlapY) {
+    if (support.shape !== "triangle") {
+      return false;
+    }
+
+    const supportCenterX = support.x + support.size / 2;
+    const supportCenterY = support.y + support.size / 2;
+    const riderCenterX = rider.x + rider.size / 2;
+    const riderCenterY = rider.y + rider.size / 2;
+    const riderIsAbove = riderCenterY < supportCenterY + support.size * 0.2;
+
+    if (!riderIsAbove || overlapY > overlapX * 1.35) {
+      return false;
+    }
+
+    const side = riderCenterX < supportCenterX ? -1 : 1;
+    const slide = Math.max(1.2, overlapY * TRIANGLE_SLOPE_PUSH);
+    rider.x += slide * side;
+    rider.y -= overlapY * 0.2;
+    rider.vx += slide * side * 3.5;
+    rider.vy *= 0.35;
+    rider.angularVelocity += side * (0.8 + Math.abs(rider.vy) * 0.01);
+    support.angularVelocity -= side * 0.12;
+
+    return true;
   }
 
   handleClick(event) {
@@ -282,4 +341,8 @@ export class Processor {
       });
     }
   }
+}
+
+function getCollisionSize(unit) {
+  return unit.size * COLLISION_COMPRESSION;
 }

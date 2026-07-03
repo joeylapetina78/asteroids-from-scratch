@@ -7,13 +7,13 @@ const PICKUP_DRAG = 0.985;
 
 // Named sizes per shape so volatiles (circle) feel lighter and strange (shard) feel larger.
 const SHAPE_SIZE = {
-  circle:   8,
-  square:   7,
-  triangle: 7,
-  hexagon:  7,
-  octagon:  7,
-  diamond:  7,
-  shard:    9,
+  circle:   10,
+  square:   9,
+  triangle: 9,
+  hexagon:  9,
+  octagon:  9,
+  diamond:  9,
+  shard:    11,
 };
 
 // Map old or alternate type strings to current resource IDs.

@@ -1,6 +1,6 @@
 import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
 import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=shape-fix-v1";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=resource-families-v1";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=resource-visibility-v1";
 import { Ship } from "./entities/Ship.js?v=starter-skiff-v1";
 import { createAsteroidChunks } from "./systems/asteroidField.js?v=chunk-streaming-v1";
 import { createCamera } from "./systems/camera.js";
