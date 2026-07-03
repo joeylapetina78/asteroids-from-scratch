@@ -1,7 +1,7 @@
 import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
 import { shipOffers } from "./content/ships/shipOffers.js?v=beacon-locator-v1";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
-import { Game } from "./game.js?v=resource-families-v1";
+import { Game } from "./game.js?v=canvas-reset-v1";
 import { createContractManager } from "./systems/contractManager.js?v=credits-refactor-v2";
 import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=comms-director-v1";
 import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
@@ -1429,7 +1429,7 @@ function updateWorldDebugDisplay(debug) {
   worldDebugFields.influence.textContent = `${Math.round(zone.influence * 100)}%`;
   worldDebugFields.danger.textContent = `${Math.round(zone.danger * 100)}%`;
   worldDebugFields.density.textContent = `${zone.asteroidDensityMultiplier.toFixed(2)}x`;
-  worldDebugFields.oreBias.textContent = `R ${zone.redOreBias.toFixed(2)} / B ${zone.blueOreBias.toFixed(2)}`;
+  worldDebugFields.oreBias.textContent = formatZoneResourceBias(zone);
   worldDebugFields.lifeBias.textContent = `H ${zone.hunterBias.toFixed(2)} / A ${zone.ambientLifeBias.toFixed(2)}`;
   worldDebugFields.asteroids.textContent = String(debug.asteroidCount);
   worldDebugFields.hunters.textContent = `${debug.hunterCount} / ${debug.activeHunterCount} active`;
@@ -1437,6 +1437,23 @@ function updateWorldDebugDisplay(debug) {
   worldDebugFields.activeLifeforms.textContent = String(debug.activeLifeformCount);
   worldDebugFields.pickups.textContent = String(debug.pickupCount);
   updateEventLedgerDisplay();
+}
+
+function formatZoneResourceBias(zone) {
+  if (Number.isFinite(zone.redOreBias) || Number.isFinite(zone.blueOreBias)) {
+    return `R ${formatBias(zone.redOreBias)} / B ${formatBias(zone.blueOreBias)}`;
+  }
+
+  return [
+    `St ${formatBias(zone.structuralBias)}`,
+    `In ${formatBias(zone.industrialBias)}`,
+    `Vo ${formatBias(zone.volatileBias)}`,
+    `Cn ${formatBias(zone.conductorBias)}`,
+  ].join(" / ");
+}
+
+function formatBias(value) {
+  return Number.isFinite(value) ? value.toFixed(2) : "0.00";
 }
 
 function renderContract(contract = contractManager.getCurrentContract()) {

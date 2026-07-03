@@ -1,7 +1,22 @@
 export function clearScreen(context, canvas) {
+  resetCanvasState(context);
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.fillStyle = "#07080c";
   context.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function resetCanvasState(context) {
+  if (typeof context.resetTransform === "function") {
+    context.resetTransform();
+  } else {
+    context.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  context.globalAlpha = 1;
+  context.globalCompositeOperation = "source-over";
+  context.filter = "none";
+  context.lineDashOffset = 0;
+  context.setLineDash([]);
 }
 
 export function drawGrid(context, canvas, camera) {

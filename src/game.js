@@ -7,7 +7,7 @@ import { createCamera } from "./systems/camera.js";
 import { createInput } from "./systems/input.js?v=license-form-v1";
 import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=red-work-tuning-v1";
 import { createNpcRouteShips } from "./systems/npcRoutes.js?v=soft-cargo-train";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=draw-radius";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=canvas-reset-v1";
 import { createResourceField } from "./systems/resourceField.js?v=resource-families-v1";
 import { createScanner } from "./systems/scanner.js?v=tether-alarm-v1";
 import { recordVisitedZone } from "./systems/legalRecords.js?v=legal-single-home-v1";
