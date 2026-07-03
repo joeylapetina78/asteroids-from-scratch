@@ -15,7 +15,7 @@ import {
 import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=service-contracts-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
 import { syncActiveHullFromComponents } from "./systems/hulls.js?v=hulls-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=license-submit-fix-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=skip-prologue-after-license-v1";
 import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=component-visibility-v1";
 import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=paperwork-v1";
@@ -3293,6 +3293,7 @@ function initLicenseApplication() {
     applyIssuedLicense(license);
     setComponentAvailable("license", true);
     licenseApplication.classList.add("is-dismissed");
+    journeyDirector.acceptMission();
     renderContract();
     saveNow();
   });
