@@ -36,6 +36,15 @@ export function createJourneyDirector({
     onChange(journey);
   }
 
+  function startFreeMode() {
+    showOnlyInitialComponents();
+    journey.chapterId = "free";
+    journey.chapterName = "Free Play";
+    journey.episodeName = "Explorer Mode";
+    journey.mission = null;
+    onChange(journey);
+  }
+
   function acceptMission() {
     if (journey.mission?.status !== "offered") {
       return;
@@ -265,6 +274,7 @@ export function createJourneyDirector({
 
   return {
     start,
+    startFreeMode,
     startMission,
     sayAsNpc,
     update,

@@ -15,7 +15,7 @@ import {
 import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=service-contracts-v1";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
 import { syncActiveHullFromComponents } from "./systems/hulls.js?v=hulls-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=mission-beats-v3";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=explorer-mode-v1";
 import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=component-visibility-v1";
 import { getPilotLicense, issuePilotLicense, updateCurrentShipLegal } from "./systems/legalRecords.js?v=legal-single-home-v1";
 import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=paperwork-v1";
@@ -414,7 +414,11 @@ setInitialPaperworkLocations();
 makePanelsDraggable();
 setupPaperworkControls();
 wirePanelControlSounds();
-journeyDirector.start();
+if (initialDevStart === "explorer") {
+  journeyDirector.startFreeMode();
+} else {
+  journeyDirector.start();
+}
 applyDevStart(initialDevStart);
 revealInstalledComponents();
 renderContract();
@@ -584,6 +588,77 @@ function applyDevStart(devStartId) {
     journeyDirector.startMission("chapter-1-red-work");
     updateHudDisplay();
   }
+
+  if (devStartId === "explorer") {
+    setupExplorerStart();
+    updateHudDisplay();
+  }
+}
+
+function setupExplorerStart() {
+  // Slightly better ship than the yard skiff — more hull, faster, bigger tank.
+  // Not a story ship; just comfortable for open exploration.
+  Object.assign(state.components.engine, {
+    installed: true,
+    powered: false,
+    fuel: 350,
+    maxFuel: 350,
+    thrustPower: 160,
+    maxSpeed: 185,
+  });
+  Object.assign(state.components.hull, {
+    installed: true,
+    integrity: 140,
+    maxIntegrity: 140,
+  });
+  Object.assign(state.components.scanner, {
+    installed: true,
+    scanergy: 400,
+    targets: ["resources", "sites"],
+    beaconMemoryIds: [
+      "yard-exchange",
+      "scrap-porch",
+      "the-ledge",
+      "ore-station-one",
+      "coldwater-depot",
+      "deep-research",
+    ],
+    activeBeaconId: "yard-exchange",
+  });
+  Object.assign(state.components.miner, {
+    installed: true,
+    armed: false,
+    ammo: 200,
+  });
+  Object.assign(state.components.processor, { installed: true });
+  state.components.cargoHold.installed = true;
+  state.components.docking.installed = true;
+
+  state.ship.frameId = "yard-skiff";
+  state.ship.name = "Explorer";
+
+  issuePilotLicense(state, {
+    firstName: "Explorer",
+    lastName: "One",
+    licenseId: "RTC-EXPLORER-ONE",
+    status: "provisional",
+  });
+
+  // Unlock Rook contracts at Yard Exchange so they can take runs freely.
+  state.hubServices.unlocked[chapterOneRoute.destinationSite.id] = Array.from(
+    new Set([...(state.hubServices.unlocked[chapterOneRoute.destinationSite.id] ?? []), yardExchangeServices.rook, yardExchangeServices.supply]),
+  );
+  state.hubServices.flags.yardCoreSeenDocked = true;
+
+  setComponentAvailable("viewport", true);
+  setComponentAvailable("engine", true);
+  setComponentAvailable("hull", true);
+  setComponentAvailable("scanner", true);
+  setComponentAvailable("miner", true);
+  setComponentAvailable("cargo", true);
+  setComponentAvailable("docking", true);
+  setComponentAvailable("contract", true);
+  setComponentAvailable("processor", true);
 }
 
 function setupDevRedWorkStart() {
