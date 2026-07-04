@@ -1,3 +1,5 @@
+import { resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260703-2059-1d6effa";
+
 export function matchesEventRule(rule, event, { state }) {
   if (!rule.repeatable && rule.once && state.journey.flags[rule.setFlag ?? rule.id]) {
     return false;
@@ -80,6 +82,10 @@ function matchesPayload(expectedPayload, actualPayload) {
   return Object.entries(expectedPayload).every(([key, expectedValue]) => {
     if (typeof expectedValue === "string" && expectedValue.startsWith("not:")) {
       return actualPayload[key] !== expectedValue.slice(4);
+    }
+
+    if (key === "resourceType") {
+      return resourceTypesMatch(actualPayload[key], expectedValue);
     }
 
     return actualPayload[key] === expectedValue;

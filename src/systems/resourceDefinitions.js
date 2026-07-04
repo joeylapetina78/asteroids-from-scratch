@@ -52,6 +52,15 @@ export const RESOURCE_FAMILY = {};
 export const RESOURCE_COLOR = {};
 export const RESOURCE_COLOR_RGB = {};
 
+// Story/content can still use early prototype names while the world uses
+// canonical material IDs from the resource family table.
+export const LEGACY_RESOURCE_TYPE_MAP = {
+  fuel: "iron-nickel",
+  iron: "iron-nickel",
+  ice: "water-ice",
+  crystal: "crystal-matrix",
+};
+
 for (const [familyId, members] of Object.entries(FAMILY_MEMBERS)) {
   for (const member of members) {
     RESOURCE_FAMILY[member.id] = familyId;
@@ -63,7 +72,7 @@ for (const [familyId, members] of Object.entries(FAMILY_MEMBERS)) {
 RESOURCE_COLOR_RGB.stone = [170, 185, 210];
 
 export function getResourceFamily(resourceId) {
-  return RESOURCE_FAMILY[resourceId] ?? "structural";
+  return RESOURCE_FAMILY[normalizeResourceType(resourceId)] ?? "structural";
 }
 
 export function getResourceShape(resourceId) {
@@ -71,7 +80,15 @@ export function getResourceShape(resourceId) {
 }
 
 export function getResourceColor(resourceId) {
-  return RESOURCE_COLOR[resourceId] ?? "#888888";
+  return RESOURCE_COLOR[normalizeResourceType(resourceId)] ?? "#888888";
+}
+
+export function normalizeResourceType(resourceId) {
+  return LEGACY_RESOURCE_TYPE_MAP[resourceId] ?? resourceId;
+}
+
+export function resourceTypesMatch(first, second) {
+  return normalizeResourceType(first) === normalizeResourceType(second);
 }
 
 export function pickFamilyMember(familyId, selectorValue) {

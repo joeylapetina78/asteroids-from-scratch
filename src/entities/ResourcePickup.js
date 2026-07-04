@@ -1,6 +1,6 @@
-import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260703-2036-4e3b414";
+import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260703-2059-1d6effa";
 import { createRandom, randomRange } from "../systems/random.js";
-import { RESOURCE_COLOR, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260703-2036-4e3b414";
+import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260703-2059-1d6effa";
 
 const PICKUP_RADIUS = 10;
 const PICKUP_DRAG = 0.985;
@@ -16,20 +16,11 @@ const SHAPE_SIZE = {
   shard:    11,
 };
 
-// Map old or alternate type strings to current resource IDs.
-const LEGACY_TYPE_MAP = {
-  fuel:    "iron-nickel",
-  iron:    "iron-nickel",
-  copper:  "copper",
-  ice:     "water-ice",
-  crystal: "crystal-matrix",
-};
-
 export class ResourcePickup {
   constructor({ x, y, type, velocity }) {
     this.position = { x, y };
     this.velocity = velocity;
-    this.type = LEGACY_TYPE_MAP[type] ?? type;
+    this.type = normalizeResourceType(type);
     this.color = RESOURCE_COLOR[this.type] ?? "#888888";
     this.radius = PICKUP_RADIUS;
     this.shape = getResourceShape(this.type);

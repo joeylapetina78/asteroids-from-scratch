@@ -1,7 +1,8 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260703-2036-4e3b414";
-import { depositCredits, getCredits } from "./accounts.js?v=fresh-20260703-2036-4e3b414";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260703-2036-4e3b414";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260703-2036-4e3b414";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260703-2059-1d6effa";
+import { depositCredits, getCredits } from "./accounts.js?v=fresh-20260703-2059-1d6effa";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260703-2059-1d6effa";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260703-2059-1d6effa";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260703-2059-1d6effa";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -164,7 +165,7 @@ export function createContractManager({ state, onChange = () => {} }) {
       !contract ||
       contract.type !== "resource-delivery" ||
       contract.status !== "active" ||
-      contract.terms.resourceType !== resourceType ||
+      !resourceTypesMatch(contract.terms.resourceType, resourceType) ||
       contract.terms.destinationSiteId !== siteId
     ) {
       return false;
@@ -181,7 +182,8 @@ export function createContractManager({ state, onChange = () => {} }) {
       contractId: contract.id,
       contractTitle: contract.title,
       contractGroup: contract.group,
-      resourceType,
+      resourceType: normalizeResourceType(resourceType),
+      requestedResourceType: contract.terms.resourceType,
       resourceName: contract.terms.resourceName,
       unitsDeposited: 1,
       deliveredAmount: contract.deliveredAmount,
@@ -192,7 +194,8 @@ export function createContractManager({ state, onChange = () => {} }) {
     if (contract.deliveredAmount >= requiredAmount) {
       fulfillContract(contract, {
         destinationSiteId: contract.terms.destinationSiteId,
-        resourceType,
+        resourceType: normalizeResourceType(resourceType),
+        requestedResourceType: contract.terms.resourceType,
         resourceName: contract.terms.resourceName,
         unitsDelivered: requiredAmount,
       });

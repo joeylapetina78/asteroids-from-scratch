@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // bump-cache.js
+// Run after browser-facing JS/CSS/HTML edits: npm run bump:cache
 // Replaces every ?v= query string in JS imports, CSS links, and HTML script tags
 // with a single fresh version tag derived from the current git hash + timestamp.
 //
-// Run after any edit session: node bump-cache.js
 // Then reload the browser — every module URL is new, so nothing is served from cache.
 
 import { execSync } from "child_process";

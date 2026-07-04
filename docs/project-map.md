@@ -2,7 +2,7 @@
 
 This document is the re-entry map for the Asteroids RPG prototype. The game is a custom browser Canvas project, not p5.js or a larger framework. The core idea is a space simulation where the player navigates an institutional world — banks, registries, mining authorities, employers, patrol organizations, factions — through documents, contracts, ships, and components. Mining is one profession within that world, not the definition of it.
 
-See [README.md](../README.md) for the design direction and run instructions. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status. See [docs/resource-design.md](resource-design.md) for the resource family taxonomy, scarcity model, and asteroid ecology design.
+See [README.md](../README.md) for the design direction and run instructions. See [docs/agent-map.md](agent-map.md) for the short future-agent re-entry map. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status. See [docs/resource-design.md](resource-design.md) for the resource family taxonomy, scarcity model, and asteroid ecology design.
 
 ## How The Project Runs
 
@@ -59,6 +59,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/systems/hulls.js](../src/systems/hulls.js) | Active hull record bridge. Tracks hull VIN, frame, status, and installed component IDs while current gameplay still reads `state.components`. |
 | [src/systems/legalRecords.js](../src/systems/legalRecords.js) | Access layer for pilot license, current ship legal summary, title/registration/lien records, and visited zones under `state.legal`. |
 | [src/systems/worldRecords.js](../src/systems/worldRecords.js) | Generic record layer for world entities, documents, and relationships. This is the bridge toward people, ships, companies, institutions, contracts, licenses, and liens sharing one relational shape. |
+| [src/systems/worldTerrain.js](../src/systems/worldTerrain.js) | Chunk terrain/flight-feel layer. Converts zone/resource context into asteroid placement archetypes such as open drift, clusters, walls, streams, giant gardens, and sparse dead space. |
 | [src/systems/paperworkInspections.js](../src/systems/paperworkInspections.js) | Creates paperwork inspection reports from world records: VIN, pilot identity, ship documents, pilot documents, title, lien, registration, and clearance facts. Hubs are one possible inspector. |
 | [src/systems/contractManager.js](../src/systems/contractManager.js) | Contract lifecycle management. Listens to ledger events and updates contract records. |
 | [src/systems/shipPurchase.js](../src/systems/shipPurchase.js) | Handles ship offer purchase: credits, VIN transfer, component installation, event recording. |
@@ -277,10 +278,11 @@ Each animation frame in `game.js`:
 ### Resource Field / Asteroid Field / Life Field
 
 `resourceField.js` — deterministic profiles from value noise + zone modifiers.
-`asteroidField.js` — startup asteroid population from resource field samples.
+`worldTerrain.js` — deterministic chunk terrain profiles for flight feel and rock arrangement.
+`asteroidField.js` — streamed deterministic asteroid chunks from resource and terrain samples.
 `lifeField.js` — lifeforms anchored near asteroids, weighted by zone profile.
 
-No chunk streaming yet. All entities are generated at startup and preserved.
+Asteroids are chunk-streamed around the ship. Dynamic fragments remain live until normal gameplay removes them.
 
 ### Processor And Cargo Hold
 
