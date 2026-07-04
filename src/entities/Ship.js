@@ -27,6 +27,36 @@ const SHIP_FRAMES = {
     ],
     cockpit: null,
   },
+  explorer: {
+    points: [
+      { x: 25, y: 0 },
+      { x: 13, y: -7 },
+      { x: 5, y: -15 },
+      { x: -5, y: -11 },
+      { x: -19, y: -17 },
+      { x: -15, y: -5 },
+      { x: -25, y: 0 },
+      { x: -15, y: 5 },
+      { x: -19, y: 17 },
+      { x: -5, y: 11 },
+      { x: 5, y: 15 },
+      { x: 13, y: 7 },
+    ],
+    cockpit: { x: 4, y: 0, radius: 4.5 },
+    details: {
+      lines: [
+        [{ x: 13, y: -7 }, { x: 21, y: -13 }],
+        [{ x: 13, y: 7 }, { x: 21, y: 13 }],
+        [{ x: -8, y: -10 }, { x: -13, y: -2 }],
+        [{ x: -8, y: 10 }, { x: -13, y: 2 }],
+        [{ x: -18, y: 0 }, { x: -26, y: 0 }],
+      ],
+      arcs: [
+        { x: 28, y: 0, radius: 5, start: -0.75, end: 0.75 },
+        { x: 30, y: 0, radius: 8, start: -0.55, end: 0.55 },
+      ],
+    },
+  },
 };
 
 export class Ship {
@@ -148,6 +178,8 @@ export class Ship {
     context.fill();
     context.stroke();
 
+    this.drawFrameDetails(context, frame);
+
     if (!frame.cockpit) {
       return;
     }
@@ -158,6 +190,32 @@ export class Ship {
     context.beginPath();
     context.arc(frame.cockpit.x, frame.cockpit.y, frame.cockpit.radius, 0, Math.PI * 2);
     context.stroke();
+    context.restore();
+  }
+
+  drawFrameDetails(context, frame) {
+    if (!frame.details) {
+      return;
+    }
+
+    context.save();
+    context.globalAlpha = this.engine.powered ? 0.75 : 0.28;
+    context.strokeStyle = this.engine.powered ? "#9ee8ff" : "#68717f";
+    context.lineWidth = 1.35;
+
+    frame.details.lines?.forEach(([from, to]) => {
+      context.beginPath();
+      context.moveTo(from.x, from.y);
+      context.lineTo(to.x, to.y);
+      context.stroke();
+    });
+
+    frame.details.arcs?.forEach((arc) => {
+      context.beginPath();
+      context.arc(arc.x, arc.y, arc.radius, arc.start, arc.end);
+      context.stroke();
+    });
+
     context.restore();
   }
 

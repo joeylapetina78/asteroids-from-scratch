@@ -1,8 +1,8 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260703-2207-aa09758";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260703-2223-8e8c574";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;
-const THRUST_TICK_SECONDS = 0.12;
+const THRUST_TICK_SECONDS = 0.08;
 
 export function createGameAudio() {
   let context = null;
@@ -44,18 +44,18 @@ export function createGameAudio() {
 
   function playPower(isPowered) {
     if (isPowered) {
-      // Startup: low hum rising to a mid-pitch, then a clear ready ping
-      tone({ frequency: 55, endFrequency: 110, duration: 0.55, type: "sawtooth", volume: 0.06 });
-      tone({ frequency: 130, endFrequency: 310, duration: 0.65, type: "triangle", volume: 0.09 });
-      tone({ frequency: 520, duration: 0.12, delay: 0.52, type: "sine", volume: 0.06 });
-      tone({ frequency: 780, duration: 0.07, delay: 0.62, type: "sine", volume: 0.04 });
+      // Short rev-up: this should feel like an old drive catching, not a constant idle.
+      tone({ frequency: 62, endFrequency: 150, duration: 0.3, type: "sawtooth", volume: 0.065 });
+      tone({ frequency: 130, endFrequency: 330, duration: 0.34, delay: 0.03, type: "triangle", volume: 0.075 });
+      brownNoiseBurst({ duration: 0.18, volume: 0.026, delay: 0.04 });
+      tone({ frequency: 620, duration: 0.055, delay: 0.31, type: "sine", volume: 0.045 });
       return;
     }
 
-    // Shutdown: mid tone drops, then a low rumble fade
-    tone({ frequency: 280, endFrequency: 60, duration: 0.55, type: "triangle", volume: 0.085 });
-    tone({ frequency: 90, endFrequency: 35, duration: 0.7, delay: 0.1, type: "sawtooth", volume: 0.055 });
-    noiseBurst({ duration: 0.18, volume: 0.03 });
+    // Short rev-down: the drive winds out and falls quiet.
+    tone({ frequency: 300, endFrequency: 78, duration: 0.3, type: "triangle", volume: 0.075 });
+    tone({ frequency: 120, endFrequency: 42, duration: 0.38, delay: 0.04, type: "sawtooth", volume: 0.045 });
+    brownNoiseBurst({ duration: 0.18, volume: 0.022, delay: 0.12 });
   }
 
   function playScanner() {
@@ -145,8 +145,7 @@ export function createGameAudio() {
 
     if (powered && thrusting && now >= nextThrustAt) {
       nextThrustAt = now + THRUST_TICK_SECONDS;
-      noiseBurst({ duration: 0.09, volume: 0.038 });
-      tone({ frequency: 170, endFrequency: 115, duration: 0.018, type: "square", volume: 0.024 });
+      brownNoiseBurst({ duration: 0.14, volume: 0.043 });
     }
   }
 
@@ -176,7 +175,7 @@ export function createGameAudio() {
     oscillator.stop(start + duration + 0.025);
   }
 
-  function noiseBurst({ duration, volume }) {
+  function noiseBurst({ duration, volume, delay = 0 }) {
     if (!isReady()) {
       return;
     }
@@ -191,12 +190,46 @@ export function createGameAudio() {
 
     const source = context.createBufferSource();
     const gain = context.createGain();
-    const now = context.currentTime;
+    const now = context.currentTime + delay;
 
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
     source.buffer = buffer;
     source.connect(gain);
+    gain.connect(master);
+    source.start(now);
+    source.stop(now + duration + 0.02);
+  }
+
+  function brownNoiseBurst({ duration, volume, delay = 0 }) {
+    if (!isReady()) {
+      return;
+    }
+
+    const sampleRate = context.sampleRate;
+    const buffer = context.createBuffer(1, Math.max(1, Math.floor(sampleRate * duration)), sampleRate);
+    const data = buffer.getChannelData(0);
+    let last = 0;
+
+    for (let index = 0; index < data.length; index += 1) {
+      const white = Math.random() * 2 - 1;
+      last = (last + 0.025 * white) / 1.025;
+      const envelope = 1 - index / data.length;
+      data[index] = last * 3.6 * envelope;
+    }
+
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    const filter = context.createBiquadFilter();
+    const now = context.currentTime + delay;
+
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(520, now);
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    source.buffer = buffer;
+    source.connect(filter);
+    filter.connect(gain);
     gain.connect(master);
     source.start(now);
     source.stop(now + duration + 0.02);
