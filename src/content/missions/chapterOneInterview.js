@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260703-2126-64199f2";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260703-2148-b32c45a";
 
 const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
@@ -510,13 +510,6 @@ export const chapterOneInterviewMission = {
           setFlag: "yardVinPresentedChatter",
           once: true,
           requiresCondition: ({ state }) => !state.journey.flags["yardLicensePresented"],
-          actions: [
-            {
-              type: "say",
-              speaker: "Yard Exchange Traffic",
-              text: "VIN received. Now show pilot authorization.",
-            },
-          ],
         },
         {
           id: "yd-license-presented-first",
@@ -525,13 +518,6 @@ export const chapterOneInterviewMission = {
           setFlag: "yardLicensePresentedChatter",
           once: true,
           requiresCondition: ({ state }) => !state.journey.flags["yardVinPresented"],
-          actions: [
-            {
-              type: "say",
-              speaker: "Yard Exchange Traffic",
-              text: "Authorization received. Now show the ship VIN.",
-            },
-          ],
         },
       ],
       transitions: [

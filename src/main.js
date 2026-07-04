@@ -1,28 +1,28 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260703-2126-64199f2";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260703-2126-64199f2";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260703-2126-64199f2";
-import { Game } from "./game.js?v=fresh-20260703-2126-64199f2";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260703-2126-64199f2";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260703-2126-64199f2";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260703-2126-64199f2";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260703-2126-64199f2";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260703-2148-b32c45a";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260703-2148-b32c45a";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260703-2148-b32c45a";
+import { Game } from "./game.js?v=fresh-20260703-2148-b32c45a";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260703-2148-b32c45a";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260703-2148-b32c45a";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260703-2148-b32c45a";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260703-2148-b32c45a";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260703-2126-64199f2";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260703-2126-64199f2";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260703-2126-64199f2";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260703-2126-64199f2";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260703-2126-64199f2";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260703-2126-64199f2";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260703-2126-64199f2";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260703-2126-64199f2";
-import { Processor } from "./systems/processor.js?v=fresh-20260703-2126-64199f2";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260703-2126-64199f2";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260703-2126-64199f2";
-import { createGameState } from "./state/gameState.js?v=fresh-20260703-2126-64199f2";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260703-2148-b32c45a";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260703-2148-b32c45a";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260703-2148-b32c45a";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260703-2148-b32c45a";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260703-2148-b32c45a";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260703-2148-b32c45a";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260703-2148-b32c45a";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260703-2148-b32c45a";
+import { Processor } from "./systems/processor.js?v=fresh-20260703-2148-b32c45a";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260703-2148-b32c45a";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260703-2148-b32c45a";
+import { createGameState } from "./state/gameState.js?v=fresh-20260703-2148-b32c45a";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -1426,16 +1426,21 @@ function updateHubAuthorityMessages() {
         requireIdle: true,
       });
     } else if (event.type === "authority.documentPresented") {
+      const siteId = event.payload.siteId;
       const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
-      const label = event.payload.documentKind === "ship-vin" ? "VIN received" : "pilot license received";
-      markHubIdentityDocumentPresented(event.payload.siteId, event.payload.documentKind);
+      const isVin = event.payload.documentKind === "ship-vin";
+      const pending = pendingHubIdentityPresentations.get(siteId);
+      markHubIdentityDocumentPresented(siteId, event.payload.documentKind);
 
-      commsDirector.say({
-        source: COMMS_SOURCES.hubAuthority,
-        speaker,
-        text: `${label}. Stand by while registry compares the record.`,
-        requireIdle: true,
-      });
+      // Only speak if this presentation was part of an open identity review.
+      if (pending) {
+        const needsOther = isVin ? !pending.has("pilot-license") : !pending.has("ship-vin");
+        const text = isVin
+          ? needsOther ? "VIN received. Now show pilot authorization." : "VIN received. Stand by."
+          : needsOther ? "Authorization received. Now show the ship VIN." : "Authorization received. Stand by.";
+
+        commsDirector.say({ source: COMMS_SOURCES.hubAuthority, speaker, text });
+      }
     } else if (event.type === "site.nearby" && event.payload.siteType === "hub") {
       const vin = state.components.hull.vinPlateAttached ? state.components.hull.vin : "unverified VIN";
       const license = getPilotLicense(state).licenseId ?? "no active license";
@@ -1502,7 +1507,6 @@ function markHubIdentityDocumentPresented(siteId, documentKind) {
     source: COMMS_SOURCES.hubAuthority,
     speaker: `${site.name} Traffic`,
     text: "Identity confirmed. Registry entry opened. You are cleared for routine docking at this hub.",
-    requireIdle: true,
   });
 }
 
