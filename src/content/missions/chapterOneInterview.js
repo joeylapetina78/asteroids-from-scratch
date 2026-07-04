@@ -1,9 +1,9 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=world-refs-v1";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260703-2036-4e3b414";
 
 const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
     id: "docked-scrap-porch",
-    fromBeat: "show-scanner",
+    fromBeat: "first-thrust",
     eventType: "site.docked",
     payloadEquals: { siteId: storySites.originHub.id },
     setFlag: "dockedWrongHub",
@@ -18,7 +18,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   },
   {
     id: "first-hauler-seen",
-    fromBeat: "show-scanner",
+    fromBeat: "first-thrust",
     eventType: "npc.enteredViewport",
     setFlag: "firstHaulerSeen",
     once: true,
@@ -32,7 +32,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   },
   {
     id: "near-hauler",
-    fromBeat: "show-scanner",
+    fromBeat: "first-thrust",
     eventType: "ship.nearObject",
     payloadEquals: { targetType: "npc" },
     setFlag: "nearHauler",
@@ -47,7 +47,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   },
   {
     id: "near-rock",
-    fromBeat: "show-scanner",
+    fromBeat: "first-thrust",
     eventType: "ship.nearObject",
     payloadEquals: { targetType: "asteroid" },
     repeatable: true,
@@ -73,7 +73,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   },
   {
     id: "hit-rock",
-    fromBeat: "show-scanner",
+    fromBeat: "first-thrust",
     eventType: "ship.collision",
     payloadEquals: { targetType: "asteroid" },
     repeatable: true,
@@ -99,7 +99,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   },
   {
     id: "hit-hauler",
-    fromBeat: "show-scanner",
+    fromBeat: "first-thrust",
     eventType: "ship.collision",
     payloadEquals: { targetType: "npc" },
     setFlag: "hitHauler",
@@ -114,7 +114,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   },
   {
     id: "left-starter-drift",
-    fromBeat: "show-scanner",
+    fromBeat: "first-thrust",
     eventType: "zone.entered",
     payloadEquals: { zoneId: `not:${storyZones.starterRoute.id}` },
     repeatable: true,
@@ -164,7 +164,7 @@ export const chapterOneInterviewMission = {
   completion: {
     speaker: "Rook",
     objective: "Assessment complete.",
-    helpText: "Mission complete. You made it to Yard Exchange.",
+    helpText: "Open the Yard Exchange service panel and choose Shipyard. That opens Barvis's ship sale window.",
     acknowledgement: {
       label: "Thanks, Will Do",
       action: "startMission",
@@ -276,28 +276,6 @@ export const chapterOneInterviewMission = {
         {
           eventType: "component.dragged",
           requiresFlags: ["licensePanelMoved", "hullPanelMoved"],
-          nextStepId: "file-license",
-        },
-      ],
-    },
-    {
-      id: "file-license",
-      objective: "File your provisional license.",
-      helpText:
-        "Click the FILE button on the License panel. It will move into the Paperwork drawer at the bottom, where you can retrieve paperwork anytime.",
-      onEnter: [
-        { type: "setPaperworkFiling", isEnabled: true },
-        {
-          type: "say",
-          speaker: "Rook",
-          text:
-            "Good. Now file that license away. Press FILE on the License panel and it will drop into the Paperwork drawer at the bottom. You will not need to wave it around, but it says you are provisionally authorized under my authority for this First Reach run only. No wandering into other zones.",
-        },
-      ],
-      transitions: [
-        {
-          eventType: "component.filed",
-          payloadEquals: { componentId: "license", destination: "drawer" },
           nextStepId: "offer-contract",
         },
       ],
@@ -320,27 +298,33 @@ export const chapterOneInterviewMission = {
         {
           eventType: "contract.accepted",
           payloadEquals: { contractId: "rook-yard-exchange-delivery" },
-          nextStepId: "show-viewport",
+          nextStepId: "file-contract",
         },
       ],
     },
     {
-      id: "show-viewport",
-      objective: "Get your bearings.",
-      helpText: "Press Add Viewport to bring up the big space view where the ship, rocks, and hubs appear.",
+      id: "file-contract",
+      objective: "File the Assessment Delivery contract.",
+      helpText:
+        "Click the FILE button on the Contract panel. It will move into the Paperwork drawer at the bottom, where you can pull it up anytime.",
       onEnter: [
+        { type: "setPaperworkFiling", isEnabled: true },
         {
           type: "say",
           speaker: "Rook",
           text:
-            "Good. Paper's clean. Now let's bring in your viewport so you can see the ship, the hub, and all the ways this job can get expensive.",
-          acknowledgement: { label: "Add Viewport" },
+            "Good, you're on the contract. File it away — press FILE on the Contract panel and it drops into your Paperwork drawer. We'll pull it up when we get to Yard Exchange. File it and I'll bring up your viewport.",
         },
       ],
-      onAcknowledge: [
-        { type: "clearMessage" },
-        { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
-        { type: "goToStep", stepId: "show-scanner" },
+      transitions: [
+        {
+          eventType: "component.filed",
+          payloadEquals: { componentId: "contract", destination: "drawer" },
+          actions: [
+            { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
+            { type: "goToStep", stepId: "show-scanner" },
+          ],
+        },
       ],
     },
     {
@@ -518,6 +502,38 @@ export const chapterOneInterviewMission = {
             "Inbound skiff, hold your line. Present ship VIN and pilot authorization for first-time registry review before docking clearance.",
         },
       ],
+      considerations: [
+        {
+          id: "yd-vin-presented-first",
+          eventType: "authority.documentPresented",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id, documentKind: "ship-vin" },
+          setFlag: "yardVinPresentedChatter",
+          once: true,
+          requiresCondition: ({ state }) => !state.journey.flags["yardLicensePresented"],
+          actions: [
+            {
+              type: "say",
+              speaker: "Yard Exchange Traffic",
+              text: "VIN received. Now show pilot authorization.",
+            },
+          ],
+        },
+        {
+          id: "yd-license-presented-first",
+          eventType: "authority.documentPresented",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id, documentKind: "pilot-license" },
+          setFlag: "yardLicensePresentedChatter",
+          once: true,
+          requiresCondition: ({ state }) => !state.journey.flags["yardVinPresented"],
+          actions: [
+            {
+              type: "say",
+              speaker: "Yard Exchange Traffic",
+              text: "Authorization received. Now show the ship VIN.",
+            },
+          ],
+        },
+      ],
       transitions: [
         {
           eventType: "authority.documentPresented",
@@ -525,7 +541,7 @@ export const chapterOneInterviewMission = {
           requiresFlags: ["yardVinPresented"],
           actions: [
             { type: "runInspection", siteId: chapterOneRoute.destinationSite.id, inspectionType: "arrival-clearance" },
-            { type: "goToStep", stepId: "yard-traffic-cleared" },
+            { type: "goToStep", stepId: "dock-yard-exchange" },
           ],
         },
         {
@@ -534,7 +550,7 @@ export const chapterOneInterviewMission = {
           requiresFlags: ["yardLicensePresented"],
           actions: [
             { type: "runInspection", siteId: chapterOneRoute.destinationSite.id, inspectionType: "arrival-clearance" },
-            { type: "goToStep", stepId: "yard-traffic-cleared" },
+            { type: "goToStep", stepId: "dock-yard-exchange" },
           ],
         },
         {
@@ -550,25 +566,6 @@ export const chapterOneInterviewMission = {
       ],
     },
     {
-      id: "yard-traffic-cleared",
-      objective: "Proceed to docking.",
-      helpText:
-        "Yard Exchange reviewed the VIN, your provisional license, and the ship registration on file. Move close enough to dock, then power down for delivery.",
-      onEnter: [
-        {
-          type: "say",
-          speaker: "Rook",
-          text:
-            "Good. They have your provisional ID and the VIN. Registration checked out under Rook Industries, just like it should. Now get us close enough to dock.",
-          acknowledgement: { label: "Proceed to Docking" },
-        },
-      ],
-      onAcknowledge: [
-        { type: "clearMessage" },
-        { type: "goToStep", stepId: "dock-yard-exchange" },
-      ],
-    },
-    {
       id: "dock-yard-exchange",
       objective: "Dock and power down at Yard Exchange.",
       helpText:
@@ -577,7 +574,8 @@ export const chapterOneInterviewMission = {
         {
           type: "say",
           speaker: "Rook",
-          text: "There it is. Your docking lock is on the Hull panel, right under the VIN. Get close enough, then use that to tether us in.",
+          text:
+            "Good. Registration checked out under Rook Industries, just like it should. Your docking lock is on the Hull panel, right under the VIN. Get close enough, then use that to tether us in.",
         },
       ],
       transitions: [

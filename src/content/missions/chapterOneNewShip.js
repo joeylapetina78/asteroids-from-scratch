@@ -1,4 +1,4 @@
-import { chapterOneRoute, yardExchangeServices } from "../storyWorld.js?v=world-refs-v1";
+import { chapterOneRoute, yardExchangeServices } from "../storyWorld.js?v=fresh-20260703-2036-4e3b414";
 
 export const chapterOneNewShipMission = {
   id: "chapter-1-new-ship",
@@ -43,6 +43,7 @@ export const chapterOneNewShipMission = {
       helpText:
         "While docked at Yard Exchange, open the Yard Exchange service panel and choose Shipyard. That opens Barvis's ship sale window.",
       onEnter: [
+        { type: "clearMessage" },
         { type: "unlockHubService", siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.shipyard },
       ],
       transitions: [

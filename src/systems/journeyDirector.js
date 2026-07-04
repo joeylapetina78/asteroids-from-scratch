@@ -1,8 +1,8 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=tutorial-polish-v1";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=mission-beats-v2";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=mission-beats-v3";
-import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=component-visibility-v1";
-import { createMissionRunner } from "./missionRunner.js?v=tutorial-polish-v1";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260703-2036-4e3b414";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260703-2036-4e3b414";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260703-2036-4e3b414";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260703-2036-4e3b414";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260703-2036-4e3b414";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -45,6 +45,7 @@ export function createJourneyDirector({
     ["viewport", "hull", "docking", "engine", "scanner", "miner", "collector", "processor", "cargo"].forEach((id) => {
       showComponent(id);
     });
+    game?.enableHubPatrol();
     journey.chapterId = "free";
     journey.chapterName = "Free Play";
     journey.episodeName = "Explorer Mode";
@@ -265,6 +266,7 @@ export function createJourneyDirector({
         runInspection,
         say,
         spawnPatrolIntercept,
+        enableHubPatrol: () => game?.enableHubPatrol(),
         startMission,
         requestAttention,
         updatePaperworkControls,

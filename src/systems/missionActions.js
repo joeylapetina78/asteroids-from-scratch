@@ -134,6 +134,8 @@ function runMissionAction(action, { state, actions, missionDefinition, goToStep 
     actions.runInspection(action.siteId, action);
   } else if (action.type === "spawnPatrolIntercept") {
     actions.spawnPatrolIntercept(action.siteId, action.reason);
+  } else if (action.type === "enableHubPatrol") {
+    actions.enableHubPatrol();
   } else if (action.type === "setEnginePowerLock") {
     actions.setEnginePowerLock(action.isLocked);
   } else if (action.type === "goToStep") {

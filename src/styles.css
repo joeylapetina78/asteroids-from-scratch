@@ -339,7 +339,7 @@ body {
   padding: 46px 18px 18px 16px;
   background: rgba(5, 7, 11, 0.98);
   align-content: start;
-  grid-template-rows: auto auto minmax(0, 1fr) 156px auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   box-shadow:
     12px 0 38px rgba(0, 0, 0, 0.42),
     0 0 18px rgba(0, 189, 255, 0.08);
@@ -566,6 +566,22 @@ body {
 .identity-click-target:focus-visible {
   color: #8feaff;
   text-shadow: 0 0 10px rgba(143, 234, 255, 0.62);
+}
+
+.identity-click-target.needs-id-attention {
+  animation: id-attention-pulse 1.4s ease-in-out infinite;
+  color: #8feaff;
+}
+
+@keyframes id-attention-pulse {
+  0%, 100% {
+    color: #8feaff;
+    text-shadow: 0 0 6px rgba(143, 234, 255, 0.5);
+  }
+  50% {
+    color: #c8f4ff;
+    text-shadow: 0 0 16px rgba(143, 234, 255, 0.95), 0 0 32px rgba(143, 234, 255, 0.4);
+  }
 }
 
 .world-panel {
@@ -1394,13 +1410,10 @@ body {
 
 .journey-help {
   order: 4;
-  align-self: stretch;
   margin-top: 0;
   border-top: 1px solid rgba(115, 210, 255, 0.22);
   padding-top: 12px;
   color: #c8d3e6;
-  max-height: none;
-  overflow: hidden auto;
 }
 
 .journey-help summary {
@@ -1415,6 +1428,12 @@ body {
   color: #c8d3e6;
   font-size: 0.95rem;
   line-height: 1.45;
+}
+
+.journey-panel .journey-button[hidden] {
+  display: block;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .journey-panel .journey-button {

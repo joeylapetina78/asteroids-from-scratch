@@ -1,4 +1,4 @@
-import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=world-refs-v1";
+import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260703-2036-4e3b414";
 
 export const WORLD_SITES = [
   // ── STORY HUBS ───────────────────────────────────────────────────────────────

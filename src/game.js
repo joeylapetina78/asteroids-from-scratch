@@ -1,23 +1,23 @@
-import { Bullet } from "./entities/Bullet.js?v=fuel-crystals";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=shape-fix-v1";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=resource-visibility-v1";
-import { Ship } from "./entities/Ship.js?v=starter-skiff-v1";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=chunk-streaming-v1";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260703-2036-4e3b414";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260703-2036-4e3b414";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260703-2036-4e3b414";
+import { Ship } from "./entities/Ship.js?v=fresh-20260703-2036-4e3b414";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=terrain-archetypes-v1";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=license-form-v1";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=red-work-tuning-v1";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=hub-first-contact-v1";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=canvas-reset-v1";
-import { createResourceField } from "./systems/resourceField.js?v=resource-families-v1";
-import { createScanner } from "./systems/scanner.js?v=tether-alarm-v1";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=legal-single-home-v1";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=hub-first-contact-v1";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=hub-first-contact-v1";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=hub-first-contact-v1";
-import { getZoneProfile } from "./systems/worldZones.js?v=resource-families-v1";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=expanded-world-v1";
-import { createGameState } from "./state/gameState.js?v=credits-refactor-v2";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=accounts-v1";
+import { createInput } from "./systems/input.js?v=fresh-20260703-2036-4e3b414";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260703-2036-4e3b414";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260703-2036-4e3b414";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260703-2036-4e3b414";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260703-2036-4e3b414";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260703-2036-4e3b414";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260703-2036-4e3b414";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260703-2036-4e3b414";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260703-2036-4e3b414";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260703-2036-4e3b414";
+import { getZoneProfile } from "./systems/worldZones.js?v=fresh-20260703-2036-4e3b414";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260703-2036-4e3b414";
+import { createGameState } from "./state/gameState.js?v=fresh-20260703-2036-4e3b414";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260703-2036-4e3b414";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -73,11 +73,13 @@ const TOW_CUTTER_COOLDOWN_SECONDS = 1.15;
 const PATROL_APPROACH_SPEED = 145;
 const PATROL_DEPART_SPEED = 180;
 const PATROL_HOLD_DISTANCE = 112;
-const PATROL_HOLD_SIDE_OFFSET = 104;
 const PATROL_DEPART_DISTANCE = 980;
-const HUB_SENSOR_RADIUS_MULTIPLIER = 3;
+const PATROL_ORBIT_SPEED = 0.4;
+const PATROL_ORBIT_RADIUS = 112;
+const PATROL_TRANSIT_RADIUS_FACTOR = 1.6;
+const HUB_SENSOR_RADIUS_MULTIPLIER = 2;
 const PATROL_SCAN_SECONDS = 1.35;
-const PATROL_TETHER_DAMPING = 0.92;
+const PATROL_TETHER_DAMPING = 0.88;
 
 export class Game {
   constructor(
@@ -135,6 +137,7 @@ export class Game {
     this.hasRecordedPlayerThrust = false;
     this.tetherStrainCooldown = 0;
     this.hubInspectionCache = new Set();
+    this.hubPatrolEnabled = false;
     this.lastShipMovementEventPosition = { ...this.ship.position };
     this.visibleStorySiteIds = new Set();
     this.nearbyStorySiteIds = new Set();
@@ -147,6 +150,10 @@ export class Game {
       duration: 0,
       magnitude: 0,
       seed: 0,
+    };
+    this.frameErrorLog = {
+      update: false,
+      draw: false,
     };
     this.activeTow = null;
     this.activePatrolIntercept = null;
@@ -304,11 +311,31 @@ export class Game {
     const deltaSeconds = Math.min((time - this.lastFrameTime) / 1000, 0.05);
     this.lastFrameTime = time;
 
-    this.update(deltaSeconds);
-    this.onLogicUpdate(this.state);
-    this.draw();
+    try {
+      this.update(deltaSeconds);
+      this.onLogicUpdate(this.state);
+      this.frameErrorLog.update = false;
+    } catch (error) {
+      this.reportFrameError("update", error);
+    }
+
+    try {
+      this.draw();
+      this.frameErrorLog.draw = false;
+    } catch (error) {
+      this.reportFrameError("draw", error);
+    }
 
     requestAnimationFrame((nextTime) => this.frame(nextTime));
+  }
+
+  reportFrameError(phase, error) {
+    if (this.frameErrorLog[phase]) {
+      return;
+    }
+
+    this.frameErrorLog[phase] = true;
+    console.error(`Game ${phase} failed; keeping animation loop alive.`, error);
   }
 
   update(deltaSeconds) {
@@ -800,6 +827,10 @@ export class Game {
     };
   }
 
+  enableHubPatrol() {
+    this.hubPatrolEnabled = true;
+  }
+
   spawnPatrolIntercept(siteId, reason = "arrival-clearance") {
     const site = this.worldSites.find((worldSite) => worldSite.id === siteId);
 
@@ -823,7 +854,7 @@ export class Game {
       name: `${site.name} Patrol`,
       site,
       reason,
-      phase: "approach",
+      phase: reason === "arrival-clearance" ? "transit" : "approach",
       position,
       velocity: {
         x: directionToShip.x * PATROL_APPROACH_SPEED,
@@ -834,6 +865,7 @@ export class Game {
       hasArrived: false,
       scanTimer: 0,
       hasScanned: false,
+      orbitAngle: null,
       requiresManualClearance: reason === "arrival-clearance",
       departTarget: null,
     };
@@ -905,7 +937,28 @@ export class Game {
       return;
     }
 
-    const holdTarget = this.getPatrolHoldTarget();
+    if (patrol.phase === "transit") {
+      const transitTarget = this.getPatrolTransitTarget(patrol);
+      this.steerPatrolIntercept(patrol, transitTarget, PATROL_APPROACH_SPEED, deltaSeconds);
+
+      if (distance(this.ship.position, patrol.site.position) <= patrol.site.interactionRadius * PATROL_TRANSIT_RADIUS_FACTOR) {
+        patrol.phase = "approach";
+        patrol.orbitAngle = Math.atan2(patrol.position.y - this.ship.position.y, patrol.position.x - this.ship.position.x);
+      }
+
+      return;
+    }
+
+    if (patrol.orbitAngle === null) {
+      patrol.orbitAngle = Math.atan2(patrol.position.y - this.ship.position.y, patrol.position.x - this.ship.position.x);
+    }
+
+    patrol.orbitAngle += PATROL_ORBIT_SPEED * deltaSeconds;
+    const holdTarget = {
+      x: this.ship.position.x + Math.cos(patrol.orbitAngle) * PATROL_ORBIT_RADIUS,
+      y: this.ship.position.y + Math.sin(patrol.orbitAngle) * PATROL_ORBIT_RADIUS,
+    };
+
     this.steerPatrolIntercept(patrol, holdTarget, PATROL_APPROACH_SPEED, deltaSeconds);
 
     if (distance(patrol.position, holdTarget) > PATROL_HOLD_DISTANCE) {
@@ -948,16 +1001,15 @@ export class Game {
     }
   }
 
-  getPatrolHoldTarget() {
-    const shipForward = normalizeVector(Math.cos(this.ship.angle), Math.sin(this.ship.angle));
-    const shipSide = {
-      x: -shipForward.y,
-      y: shipForward.x,
-    };
+  getPatrolTransitTarget(patrol) {
+    const directionToShip = normalizeVector(
+      this.ship.position.x - patrol.site.position.x,
+      this.ship.position.y - patrol.site.position.y,
+    );
 
     return {
-      x: this.ship.position.x + shipSide.x * PATROL_HOLD_SIDE_OFFSET - shipForward.x * 24,
-      y: this.ship.position.y + shipSide.y * PATROL_HOLD_SIDE_OFFSET - shipForward.y * 24,
+      x: patrol.site.position.x + directionToShip.x * patrol.site.interactionRadius * 1.15,
+      y: patrol.site.position.y + directionToShip.y * patrol.site.interactionRadius * 1.15,
     };
   }
 
@@ -1834,6 +1886,7 @@ export class Game {
         });
 
         if (
+          !this.hubPatrolEnabled ||
           !this.state.ui?.panels?.viewport?.available ||
           this.dockedSite ||
           this.activePatrolIntercept ||

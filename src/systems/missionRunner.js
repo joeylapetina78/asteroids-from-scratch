@@ -1,5 +1,5 @@
-import { runMissionActions } from "./missionActions.js?v=tutorial-polish-v1";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=mission-vocabulary-v1";
+import { runMissionActions } from "./missionActions.js?v=fresh-20260703-2036-4e3b414";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260703-2036-4e3b414";
 
 export function createMissionRunner({ missionDefinition, state, actions }) {
   const beatDefs = missionDefinition.beats ?? missionDefinition.steps;
@@ -120,7 +120,9 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     const step = stepsById.get(stepId);
 
     if (!step) {
-      throw new Error(`Unknown mission step: ${stepId}`);
+      console.warn(`Mission step not found: ${stepId} — resetting to start`);
+      goToStep(missionDefinition.startBeatId ?? missionDefinition.startStepId);
+      return;
     }
 
     const previousStepId = state.journey.currentStepId;

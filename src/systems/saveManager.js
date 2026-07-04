@@ -1,6 +1,6 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=accounts-v1";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=hulls-v1";
-import { ensureObligations } from "./obligations.js?v=obligations-v1";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260703-2036-4e3b414";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260703-2036-4e3b414";
+import { ensureObligations } from "./obligations.js?v=fresh-20260703-2036-4e3b414";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 
@@ -48,6 +48,11 @@ export function loadSavedProfile(state) {
     mergePlainObject(state.hulls, save.hulls);
     ensureHulls(state);
     mergePlainObject(state.journey, save.journey);
+    const RESET_TO_DRAG_PANELS = new Set(["file-license", "offer-contract", "show-viewport", "yard-traffic-cleared"]);
+    if (state.journey.mission?.id === "chapter-1-yard-exchange" && RESET_TO_DRAG_PANELS.has(state.journey.currentStepId)) {
+      state.journey.currentStepId = "drag-panels";
+      state.journey.flags = {};
+    }
     mergePlainObject(state.legal, save.legal);
     mergePlainObject(state.obligations, save.obligations);
     ensureObligations(state);

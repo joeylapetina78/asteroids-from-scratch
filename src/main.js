@@ -1,28 +1,28 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=ship-market-v2";
-import { shipOffers } from "./content/ships/shipOffers.js?v=beacon-locator-v1";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=world-refs-v1";
-import { Game } from "./game.js?v=hub-first-contact-v1";
-import { createContractManager } from "./systems/contractManager.js?v=credits-refactor-v2";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=comms-director-v1";
-import { createGameAudio } from "./systems/audio.js?v=louder-comms-v1";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=accounts-v1";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260703-2036-4e3b414";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260703-2036-4e3b414";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260703-2036-4e3b414";
+import { Game } from "./game.js?v=terrain-archetypes-v1";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260703-2036-4e3b414";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260703-2036-4e3b414";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260703-2036-4e3b414";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260703-2036-4e3b414";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=service-behaviors-v1";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=service-contracts-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=world-refs-v1";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=hulls-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=skip-prologue-after-license-v1";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=component-visibility-v1";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=legal-single-home-v1";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=paperwork-v1";
-import { Processor } from "./systems/processor.js?v=processor-tumble-v2";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=credits-refactor-v2";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=credits-refactor-v2";
-import { createGameState } from "./state/gameState.js?v=tutorial-polish-v1";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260703-2036-4e3b414";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260703-2036-4e3b414";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260703-2036-4e3b414";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260703-2036-4e3b414";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260703-2036-4e3b414";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260703-2036-4e3b414";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260703-2036-4e3b414";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260703-2036-4e3b414";
+import { Processor } from "./systems/processor.js?v=fresh-20260703-2036-4e3b414";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260703-2036-4e3b414";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260703-2036-4e3b414";
+import { createGameState } from "./state/gameState.js?v=fresh-20260703-2036-4e3b414";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -644,7 +644,7 @@ function shouldRestoreViewport(save) {
     return true;
   }
 
-  return Boolean(currentStepId && !["show-hull", "drag-panels", "file-license"].includes(currentStepId));
+  return Boolean(currentStepId && !["show-hull", "drag-panels", "file-contract"].includes(currentStepId));
 }
 
 function applyDevStart(devStartId) {
@@ -2150,6 +2150,10 @@ function renderJourney(journey = state.journey) {
   journeyHelpText.textContent = journey.mission?.helpText ?? "Read the current objective and follow the next prompt.";
   journeyAcceptButton.hidden = !journey.pendingAcknowledgement && journey.mission?.status !== "offered";
   journeyAcceptButton.textContent = journey.pendingAcknowledgement?.label ?? journey.mission?.actionLabel ?? "Accept Job";
+
+  const isTrafficCheck = journey.currentStepId === "yard-traffic-check";
+  hullVin.classList.toggle("needs-id-attention", isTrafficCheck && !journey.flags?.yardVinPresented);
+  licenseIdDisplay.classList.toggle("needs-id-attention", isTrafficCheck && !journey.flags?.yardLicensePresented);
   journeyPanel?.classList.toggle("is-journey-open", isOpen);
   journeyPanel?.classList.toggle("is-journey-speaking", Boolean(latestMessage));
   journeyPanel?.setAttribute("data-speaker", normalizeSpeakerKey(speaker));
@@ -2301,11 +2305,15 @@ function wirePanelControlSounds() {
 }
 
 function presentIdentityDocument(documentKind, payload = {}) {
-  const site = currentSiteState?.nearbySite?.type === "hub"
+  // Prefer a hub the player is physically within interaction range of, but
+  // fall back to the active patrol's site — the patrol spawns at sensor range
+  // (3× interaction radius) so the player may not be within nearbySite range yet.
+  const hubSite = currentSiteState?.nearbySite?.type === "hub"
     ? currentSiteState.nearbySite
     : currentSiteState?.dockedSite?.type === "hub"
       ? currentSiteState.dockedSite
       : null;
+  const site = hubSite ?? game.activePatrolIntercept?.site ?? null;
 
   state.ledger.recordEvent(
     "authority.documentPresented",

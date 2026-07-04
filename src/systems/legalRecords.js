@@ -1,5 +1,5 @@
-import { setCurrentAccountOwner } from "./accounts.js?v=accounts-v1";
-import { ensureInstitution, ensurePerson, ensureShipAsset, issueWorldDocument, upsertWorldRelationship, WORLD_RECORD_RELATIONSHIPS } from "./worldRecords.js?v=world-records-v1";
+import { setCurrentAccountOwner } from "./accounts.js?v=fresh-20260703-2036-4e3b414";
+import { ensureInstitution, ensurePerson, ensureShipAsset, issueWorldDocument, upsertWorldRelationship, WORLD_RECORD_RELATIONSHIPS } from "./worldRecords.js?v=fresh-20260703-2036-4e3b414";
 
 const REACH_TRANSIT_COMMISSION_ID = "institution:reach-transit-commission";
 const ROOK_INDUSTRIES_ID = "institution:rook-industries";

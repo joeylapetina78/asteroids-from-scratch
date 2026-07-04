@@ -1,9 +1,9 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=beacon-locator-v1";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=component-visibility-v1";
-import { createInitialAccounts } from "../systems/accounts.js?v=accounts-v1";
-import { createInitialHulls } from "../systems/hulls.js?v=hulls-v1";
-import { createInitialObligations } from "../systems/obligations.js?v=obligations-v1";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=world-records-v1";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260703-2036-4e3b414";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260703-2036-4e3b414";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260703-2036-4e3b414";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260703-2036-4e3b414";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260703-2036-4e3b414";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260703-2036-4e3b414";
 
 export function createGameState() {
   return {
