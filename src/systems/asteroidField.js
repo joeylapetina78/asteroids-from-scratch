@@ -1,6 +1,6 @@
-import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260704-0136-fb347f5";
+import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260704-0155-737ee43";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260704-0136-fb347f5";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260704-0155-737ee43";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same
@@ -28,8 +28,16 @@ export function createAsteroidChunks(canvas, resourceField) {
     const centerY = cy * chunkSize;
     const profile = resourceField.getProfile(centerX, centerY);
     const terrain = getChunkTerrainProfile(centerX, centerY);
-    const asteroidCount = getAsteroidCount(profile.density * terrain.densityMultiplier, random, terrain.resourceMultiplier);
-    const commonCount = getCommonAsteroidCount(profile.density * terrain.densityMultiplier, profile.commonRockBias, random, terrain.commonMultiplier);
+    const asteroidCount = clampCount(
+      getAsteroidCount(profile.density * terrain.densityMultiplier, random, terrain.resourceMultiplier, terrain.minResourceCount ?? 0),
+      terrain.minResourceCount ?? 0,
+      terrain.maxResourceCount ?? Infinity,
+    );
+    const commonCount = clampCount(
+      getCommonAsteroidCount(profile.density * terrain.densityMultiplier, profile.commonRockBias, random, terrain.commonMultiplier, terrain.minCommonCount ?? 1),
+      terrain.minCommonCount ?? 1,
+      terrain.maxCommonCount ?? Infinity,
+    );
     const clusters = createTerrainClusters(centerX, centerY, chunkSize, terrain, random);
 
     for (let i = 0; i < asteroidCount; i++) {
@@ -91,9 +99,9 @@ export function createAsteroidChunks(canvas, resourceField) {
   return { update };
 }
 
-function getAsteroidCount(density, random, multiplier = 1) {
+function getAsteroidCount(density, random, multiplier = 1, minimum = 0) {
   const baseCount = getBaseAsteroidCount(density, random);
-  return Math.max(0, Math.round(baseCount * multiplier));
+  return Math.max(minimum, Math.round(baseCount * multiplier));
 }
 
 function getBaseAsteroidCount(density, random) {
@@ -112,18 +120,24 @@ function getBaseAsteroidCount(density, random) {
   return 3 + Math.floor(random() * 3);
 }
 
-function getCommonAsteroidCount(density, commonRockBias, random, multiplier = 1) {
+function getCommonAsteroidCount(density, commonRockBias, random, multiplier = 1, minimum = 1) {
   const baseCount = 3 + Math.floor(random() * 4);
   const densityBonus = Math.floor(density * 7);
   const biasedCount = (baseCount + densityBonus) * commonRockBias * multiplier;
 
-  return Math.max(1, Math.round(biasedCount));
+  return Math.max(minimum, Math.round(biasedCount));
+}
+
+function clampCount(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, value));
 }
 
 function createTerrainClusters(centerX, centerY, chunkSize, terrain, random) {
+  const spread = terrain.clusterSpread ?? 0.28;
+
   return Array.from({ length: terrain.clusterCount }, () => ({
-    x: centerX + randomRange(random, -chunkSize * 0.28, chunkSize * 0.28),
-    y: centerY + randomRange(random, -chunkSize * 0.28, chunkSize * 0.28),
+    x: centerX + randomRange(random, -chunkSize * spread, chunkSize * spread),
+    y: centerY + randomRange(random, -chunkSize * spread, chunkSize * spread),
   }));
 }
 
@@ -141,6 +155,24 @@ function getTerrainPosition({ centerX, centerY, chunkSize, terrain, clusters, ra
     const along = (progress - 0.5) * chunkSize * 0.92 + randomRange(random, -chunkSize * 0.06, chunkSize * 0.06);
     const curve = Math.sin(progress * Math.PI * 2 + terrain.phase) * chunkSize * (terrain.id === "stone-wall" ? 0.14 : 0.06);
     const across = curve + randomRange(random, -chunkSize * terrain.spread, chunkSize * terrain.spread) * terrain.jitter;
+    const axis = { x: Math.cos(terrain.orientation), y: Math.sin(terrain.orientation) };
+    const normal = { x: -axis.y, y: axis.x };
+
+    return {
+      x: centerX + axis.x * along + normal.x * across,
+      y: centerY + axis.y * along + normal.y * across,
+    };
+  }
+
+  if (terrain.id === "maze-corridor") {
+    const pairIndex = Math.floor(index / 2);
+    const pairCount = Math.max(1, Math.ceil(count / 2));
+    const progress = pairCount <= 1 ? 0.5 : pairIndex / (pairCount - 1);
+    const side = index % 2 === 0 ? -1 : 1;
+    const along = (progress - 0.5) * chunkSize * 1.08 + randomRange(random, -chunkSize * 0.045, chunkSize * 0.045);
+    const curve = Math.sin(progress * Math.PI * 2 + terrain.phase) * chunkSize * 0.12;
+    const laneHalfWidth = chunkSize * 0.18;
+    const across = curve + side * laneHalfWidth + randomRange(random, -chunkSize * terrain.spread, chunkSize * terrain.spread) * terrain.jitter;
     const axis = { x: Math.cos(terrain.orientation), y: Math.sin(terrain.orientation) };
     const normal = { x: -axis.y, y: axis.x };
 

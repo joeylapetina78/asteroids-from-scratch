@@ -1,6 +1,6 @@
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260704-0136-fb347f5";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260704-0155-737ee43";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260704-0136-fb347f5";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260704-0155-737ee43";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.

@@ -46,7 +46,7 @@ export const WORLD_ZONES = [
     center: { x: 0, y: 0 },
     radius: 2500,
     falloff: 2000,
-    tags: ["starter", "safe", "ambient-life", "stony"],
+    tags: ["starter", "safe", "ambient-life", "stony", "open-drift"],
     profile: {
       asteroidDensityMultiplier: 0.85,
       commonRockBias:  1.35,
@@ -69,7 +69,7 @@ export const WORLD_ZONES = [
     center: { x: 4500, y: -2500 },
     radius: 2500,
     falloff: 2000,
-    tags: ["structural", "dense-rocks", "hunters", "metallic"],
+    tags: ["structural", "dense-rocks", "hunters", "metallic", "maze-corridor"],
     profile: {
       asteroidDensityMultiplier: 1.45,
       commonRockBias:  0.8,
@@ -92,7 +92,7 @@ export const WORLD_ZONES = [
     center: { x: -3000, y: -4000 },
     radius: 2000,
     falloff: 1500,
-    tags: ["conductor", "teal-rocks", "medium-density"],
+    tags: ["conductor", "teal-rocks", "medium-density", "cluster-pocket"],
     profile: {
       asteroidDensityMultiplier: 1.1,
       commonRockBias:  0.9,
@@ -115,7 +115,7 @@ export const WORLD_ZONES = [
     center: { x: -4500, y: 2000 },
     radius: 1800,
     falloff: 1500,
-    tags: ["volatile", "blue-rocks", "ambient-life"],
+    tags: ["volatile", "blue-rocks", "ambient-life", "open-drift"],
     profile: {
       asteroidDensityMultiplier: 0.9,
       commonRockBias:  1.1,
@@ -138,7 +138,7 @@ export const WORLD_ZONES = [
     center: { x: -7000, y: 3500 },
     radius: 3500,
     falloff: 2500,
-    tags: ["scrap", "common-rocks", "ambient-life"],
+    tags: ["scrap", "common-rocks", "ambient-life", "debris-stream"],
     profile: {
       asteroidDensityMultiplier: 1.05,
       commonRockBias:  1.5,
@@ -163,7 +163,7 @@ export const WORLD_ZONES = [
     center: { x: -14000, y: -20000 },
     radius: 4000,
     falloff: 4000,
-    tags: ["strange", "rare-pocket", "scanner-interest"],
+    tags: ["strange", "rare-pocket", "scanner-interest", "cluster-pocket"],
     profile: {
       asteroidDensityMultiplier: 0.75,
       commonRockBias:  0.6,
@@ -186,7 +186,7 @@ export const WORLD_ZONES = [
     center: { x: 16000, y: -9000 },
     radius: 5000,
     falloff: 4000,
-    tags: ["structural", "metallic", "dense-rocks", "industrial"],
+    tags: ["structural", "metallic", "dense-rocks", "industrial", "stone-wall"],
     profile: {
       asteroidDensityMultiplier: 1.5,
       commonRockBias:  0.7,
@@ -209,7 +209,7 @@ export const WORLD_ZONES = [
     center: { x: 20000, y: 55000 },
     radius: 6000,
     falloff: 8000,
-    tags: ["sparse", "low-resource", "low-life", "navigation-hazard"],
+    tags: ["sparse", "low-resource", "low-life", "navigation-hazard", "sparse-dead"],
     profile: {
       asteroidDensityMultiplier: 0.3,
       commonRockBias:  0.5,
@@ -234,7 +234,7 @@ export const WORLD_ZONES = [
     center: { x: 38000, y: -22000 },
     radius: 12000,
     falloff: 8000,
-    tags: ["metallic", "dense-rocks", "industrial", "corporate-claims"],
+    tags: ["metallic", "dense-rocks", "industrial", "corporate-claims", "maze-corridor", "stone-wall"],
     profile: {
       asteroidDensityMultiplier: 1.7,
       commonRockBias:  0.65,
@@ -257,7 +257,7 @@ export const WORLD_ZONES = [
     center: { x: -48000, y: -35000 },
     radius: 16000,
     falloff: 12000,
-    tags: ["carbonaceous", "ancient", "ambient-life", "volatile-rich", "strange-life"],
+    tags: ["carbonaceous", "ancient", "ambient-life", "volatile-rich", "strange-life", "giant-garden"],
     profile: {
       asteroidDensityMultiplier: 1.1,
       commonRockBias:  1.7,
@@ -280,7 +280,7 @@ export const WORLD_ZONES = [
     center: { x: 68000, y: 48000 },
     radius: 18000,
     falloff: 13000,
-    tags: ["volatile", "water-ice", "cold", "sparse", "strategic"],
+    tags: ["volatile", "water-ice", "cold", "sparse", "strategic", "open-drift", "sparse-dead"],
     profile: {
       asteroidDensityMultiplier: 0.55,
       commonRockBias:  0.75,
@@ -303,7 +303,7 @@ export const WORLD_ZONES = [
     center: { x: -70000, y: 55000 },
     radius: 7000,
     falloff: 10000,
-    tags: ["anomaly", "strange", "story", "dangerous"],
+    tags: ["anomaly", "strange", "story", "dangerous", "cluster-pocket", "maze-corridor"],
     profile: {
       asteroidDensityMultiplier: 0.9,
       commonRockBias:  0.45,
