@@ -29,11 +29,14 @@ Asteroids RPG is a world-centric institutional space sim. The player controls on
 
 World generation is layered:
 
-1. Zone profile: authored organic region influence.
-2. Resource profile: material likelihood.
-3. Terrain profile: flight feel and rock layout.
-4. Danger profile: hunters, patrol risk, strange life.
-5. Civilization profile: hubs, mines, haulers, demand, contracts later.
+1. System profile: large frontier identity, mostly future/lore for now.
+2. Region profile: ecology, resource families, economy, factions, organizations, contracts, patrol pressure, mystery.
+3. Zone profile: immediate navigation experience, such as open drift, dense maze, needle field, giant boulders, rubble cloud, or debris stream.
+4. Resource profile: material likelihood and local concentration.
+5. Terrain profile: chunk-level asteroid placement, clustering, size, drift, tunnels, and flight feel.
+6. Danger/civilization profiles: hunters, patrol risk, hubs, mines, haulers, demand, contracts later.
+
+`docs/world-structure.md` is the current world-generation north star. It separates Region from Zone: regions are economic/ecological identity, zones are navigation promises. Current code still mixes those ideas in `src/systems/worldZones.js`; split carefully over time.
 
 `src/systems/worldTerrain.js` is the first terrain layer. It chooses chunk archetypes such as open drift, cluster pocket, stone wall, debris stream, giant garden, and sparse dead. `src/systems/asteroidField.js` uses that terrain to place rocks differently without replacing the resource system.
 

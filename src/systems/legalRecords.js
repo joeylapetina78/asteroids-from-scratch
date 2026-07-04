@@ -1,5 +1,5 @@
-import { setCurrentAccountOwner } from "./accounts.js?v=fresh-20260703-2158-e64ecf8";
-import { ensureInstitution, ensurePerson, ensureShipAsset, issueWorldDocument, upsertWorldRelationship, WORLD_RECORD_RELATIONSHIPS } from "./worldRecords.js?v=fresh-20260703-2158-e64ecf8";
+import { setCurrentAccountOwner } from "./accounts.js?v=fresh-20260703-2207-aa09758";
+import { ensureInstitution, ensurePerson, ensureShipAsset, issueWorldDocument, upsertWorldRelationship, WORLD_RECORD_RELATIONSHIPS } from "./worldRecords.js?v=fresh-20260703-2207-aa09758";
 
 const REACH_TRANSIT_COMMISSION_ID = "institution:reach-transit-commission";
 const ROOK_INDUSTRIES_ID = "institution:rook-industries";
@@ -14,7 +14,7 @@ export function getPilotName(state, fallback = "Pilot") {
   return license.firstName ? `${license.firstName} ${license.lastName}` : fallback;
 }
 
-export function issuePilotLicense(state, { firstName, lastName, licenseId, status = "provisional", authorizedZones = null }) {
+export function issuePilotLicense(state, { firstName, lastName, licenseId, status = "provisional", authorizedZones = null, canonical = false }) {
   const license = getPilotLicense(state);
 
   license.firstName = firstName;
@@ -32,13 +32,14 @@ export function issuePilotLicense(state, { firstName, lastName, licenseId, statu
     firstName,
     lastName,
     status,
+    canonical,
     authorizedZones: [...license.authorizedZones],
     issuedAt: license.issuedAt,
   };
   state.character.controlledPersonEntityId = `person:${licenseId}`;
   state.character.currentLicenseId = licenseId;
   setCurrentAccountOwner(state, state.character.controlledPersonEntityId);
-  registerPilotLicenseWorldRecords(state, { firstName, lastName, licenseId, status, authorizedZones, issuedAt: license.issuedAt });
+  registerPilotLicenseWorldRecords(state, { firstName, lastName, licenseId, status, authorizedZones, issuedAt: license.issuedAt, canonical });
 
   return license;
 }
@@ -139,7 +140,7 @@ export function registerStarterDeliveryShipRecords(state) {
   return { shipEntityId: shipEntity.id, titleId, registrationId };
 }
 
-function registerPilotLicenseWorldRecords(state, { firstName, lastName, licenseId, status, authorizedZones, issuedAt }) {
+function registerPilotLicenseWorldRecords(state, { firstName, lastName, licenseId, status, authorizedZones, issuedAt, canonical = false }) {
   const holderName = `${firstName} ${lastName}`;
   const holderEntityId = `person:${licenseId}`;
 
@@ -159,6 +160,7 @@ function registerPilotLicenseWorldRecords(state, { firstName, lastName, licenseI
       type: "pilot-license",
       title: "Provisional Flight Authorization",
       status,
+      canonical,
       holderEntityId,
       issuerEntityId: REACH_TRANSIT_COMMISSION_ID,
       grants: [

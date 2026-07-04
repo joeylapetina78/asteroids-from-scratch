@@ -2,7 +2,7 @@
 
 This document is the re-entry map for the Asteroids RPG prototype. The game is a custom browser Canvas project, not p5.js or a larger framework. The core idea is a space simulation where the player navigates an institutional world — banks, registries, mining authorities, employers, patrol organizations, factions — through documents, contracts, ships, and components. Mining is one profession within that world, not the definition of it.
 
-See [README.md](../README.md) for the design direction and run instructions. See [docs/agent-map.md](agent-map.md) for the short future-agent re-entry map. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status. See [docs/resource-design.md](resource-design.md) for the resource family taxonomy, scarcity model, and asteroid ecology design.
+See [README.md](../README.md) for the design direction and run instructions. See [docs/agent-map.md](agent-map.md) for the short future-agent re-entry map. See [docs/world-structure.md](world-structure.md) for the Region/Zone split. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status. See [docs/resource-design.md](resource-design.md) for the resource family taxonomy, scarcity model, and asteroid ecology design.
 
 ## How The Project Runs
 
@@ -274,6 +274,8 @@ Each animation frame in `game.js`:
 ### World Zones
 
 [src/systems/worldZones.js](../src/systems/worldZones.js) — organic overlapping circular zones: Starter Drift, Red Teeth, Blue Glint, Scrap Wake, Dead Strip, Open Space fallback. `getZoneProfile(x, y)` blends nearby zones with smooth falloff.
+
+Important direction: this file currently mixes Region-like and Zone-like responsibilities. See [docs/world-structure.md](world-structure.md). Future code should split economy/ecology/resource identity into a region layer and keep zone/navigation profiles focused on flight experience.
 
 ### Resource Field / Asteroid Field / Life Field
 

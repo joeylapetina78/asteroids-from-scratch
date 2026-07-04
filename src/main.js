@@ -1,28 +1,28 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260703-2158-e64ecf8";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260703-2158-e64ecf8";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260703-2158-e64ecf8";
-import { Game } from "./game.js?v=fresh-20260703-2158-e64ecf8";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260703-2158-e64ecf8";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260703-2158-e64ecf8";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260703-2158-e64ecf8";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260703-2158-e64ecf8";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260703-2207-aa09758";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260703-2207-aa09758";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260703-2207-aa09758";
+import { Game } from "./game.js?v=fresh-20260703-2207-aa09758";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260703-2207-aa09758";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260703-2207-aa09758";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260703-2207-aa09758";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260703-2207-aa09758";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260703-2158-e64ecf8";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260703-2158-e64ecf8";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260703-2158-e64ecf8";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260703-2158-e64ecf8";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260703-2158-e64ecf8";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260703-2158-e64ecf8";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260703-2158-e64ecf8";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260703-2158-e64ecf8";
-import { Processor } from "./systems/processor.js?v=fresh-20260703-2158-e64ecf8";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260703-2158-e64ecf8";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260703-2158-e64ecf8";
-import { createGameState } from "./state/gameState.js?v=fresh-20260703-2158-e64ecf8";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260703-2207-aa09758";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260703-2207-aa09758";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260703-2207-aa09758";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260703-2207-aa09758";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260703-2207-aa09758";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260703-2207-aa09758";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260703-2207-aa09758";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260703-2207-aa09758";
+import { Processor } from "./systems/processor.js?v=fresh-20260703-2207-aa09758";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260703-2207-aa09758";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260703-2207-aa09758";
+import { createGameState } from "./state/gameState.js?v=fresh-20260703-2207-aa09758";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -315,10 +315,12 @@ hullVin.addEventListener("click", () => {
 });
 
 licenseIdDisplay.addEventListener("click", () => {
-  const license = getPilotLicense(state);
+  const licenseId = licenseIdDisplay.dataset.licenseId || null;
+  const licenseRecord = licenseId ? (state.legal.pilotLicenses[licenseId] ?? null) : null;
   presentIdentityDocument("pilot-license", {
-    pilotLicenseId: license.licenseId ?? null,
-    pilotName: license.firstName ? `${license.firstName} ${license.lastName}` : null,
+    pilotLicenseId: licenseId,
+    pilotName: licenseRecord ? `${licenseRecord.firstName} ${licenseRecord.lastName}` : null,
+    canonical: licenseRecord?.canonical ?? false,
   });
 });
 
@@ -712,6 +714,7 @@ function setupExplorerStart() {
     lastName: "One",
     licenseId: "RTC-EXPLORER-ONE",
     status: "provisional",
+    canonical: true,
   });
 
   // Unlock Rook contracts at Yard Exchange so they can take runs freely.
@@ -1408,14 +1411,16 @@ function updateHubAuthorityMessages() {
       const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
       const siteId = event.payload.siteId;
       // Pre-populate with any documents the player already presented before the patrol finished scanning.
-      const alreadyPresented = new Set(
-        state.ledger.getEventsAfterId(0, { includeHidden: true })
-          .filter((e) => e.type === "authority.documentPresented" && e.payload.siteId === siteId && e.id < event.id)
-          .map((e) => e.payload.documentKind),
-      );
-      pendingHubIdentityPresentations.set(siteId, alreadyPresented);
-      if (alreadyPresented.has("ship-vin") && alreadyPresented.has("pilot-license")) {
-        markHubIdentityDocumentPresented(siteId, "ship-vin");
+      const pastEvents = state.ledger.getEventsAfterId(0, { includeHidden: true })
+        .filter((e) => e.type === "authority.documentPresented" && e.payload.siteId === siteId && e.id < event.id);
+      const record = { kinds: new Set(pastEvents.map((e) => e.payload.documentKind)), licenseId: null, licenseCanonical: false, vin: null };
+      pastEvents.forEach((e) => {
+        if (e.payload.documentKind === "pilot-license") { record.licenseId = e.payload.pilotLicenseId ?? null; record.licenseCanonical = e.payload.canonical ?? false; }
+        if (e.payload.documentKind === "ship-vin") { record.vin = e.payload.shipVin ?? null; }
+      });
+      pendingHubIdentityPresentations.set(siteId, record);
+      if (record.kinds.has("ship-vin") && record.kinds.has("pilot-license")) {
+        markHubIdentityDocumentPresented(siteId, "ship-vin", {});
       }
 
       commsDirector.say({
@@ -1430,11 +1435,11 @@ function updateHubAuthorityMessages() {
       const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
       const isVin = event.payload.documentKind === "ship-vin";
       const pending = pendingHubIdentityPresentations.get(siteId);
-      markHubIdentityDocumentPresented(siteId, event.payload.documentKind);
+      markHubIdentityDocumentPresented(siteId, event.payload.documentKind, event.payload);
 
       // Only speak if this presentation was part of an open identity review.
       if (pending) {
-        const needsOther = isVin ? !pending.has("pilot-license") : !pending.has("ship-vin");
+        const needsOther = isVin ? !pending.kinds.has("pilot-license") : !pending.kinds.has("ship-vin");
         const text = isVin
           ? needsOther ? "VIN received. Now show pilot authorization." : "VIN received. Stand by."
           : needsOther ? "Authorization received. Now show the ship VIN." : "Authorization received. Stand by.";
@@ -1475,15 +1480,23 @@ function updateHubAuthorityMessages() {
   });
 }
 
-function markHubIdentityDocumentPresented(siteId, documentKind) {
+function markHubIdentityDocumentPresented(siteId, documentKind, payload = {}) {
   if (!siteId || !pendingHubIdentityPresentations.has(siteId)) {
     return;
   }
 
-  const presented = pendingHubIdentityPresentations.get(siteId);
-  presented.add(documentKind);
+  const record = pendingHubIdentityPresentations.get(siteId);
+  record.kinds.add(documentKind);
 
-  if (!presented.has("ship-vin") || !presented.has("pilot-license")) {
+  if (documentKind === "pilot-license" && payload.pilotLicenseId) {
+    record.licenseId = payload.pilotLicenseId;
+    record.licenseCanonical = payload.canonical ?? false;
+  }
+  if (documentKind === "ship-vin" && payload.shipVin) {
+    record.vin = payload.shipVin;
+  }
+
+  if (!record.kinds.has("ship-vin") || !record.kinds.has("pilot-license")) {
     return;
   }
 
@@ -1503,15 +1516,20 @@ function markHubIdentityDocumentPresented(siteId, documentKind) {
   });
   game.dismissPatrolIntercept(site.id);
 
+  const canonicalLicenseId = getPilotLicense(state).licenseId ?? null;
+  const canonicalVin = state.components.hull.vinPlateAttached ? state.components.hull.vin : null;
+
   state.ledger.recordEvent(
     "authority.identityCleared",
     {
       siteId: site.id,
       siteName: site.name,
-      presentedVin: presented.has("ship-vin"),
-      presentedLicense: presented.has("pilot-license"),
-      pilotLicenseId: getPilotLicense(state).licenseId ?? null,
-      shipVin: state.components.hull.vinPlateAttached ? state.components.hull.vin : null,
+      presentedLicenseId: record.licenseId,
+      presentedVin: record.vin,
+      canonicalLicenseId,
+      canonicalVin,
+      licenseIsCanonical: record.licenseId === canonicalLicenseId,
+      vinIsCanonical: record.vin === canonicalVin,
     },
     { visible: false },
   );
@@ -3418,6 +3436,7 @@ function initLicenseApplication() {
       lastName,
       licenseId,
       status: "provisional",
+      canonical: true,
     });
     updateCurrentShipLegal(state, { flightLicenseId: licenseId });
 
@@ -3441,6 +3460,7 @@ function applyIssuedLicense(pilot) {
   const fullName = `${pilot.firstName} ${pilot.lastName}`;
   licensePilotName.textContent = fullName;
   licenseIdDisplay.textContent = pilot.licenseId;
+  licenseIdDisplay.dataset.licenseId = pilot.licenseId ?? "";
   const pilotNameEl = document.querySelector("#pilot-name");
   if (pilotNameEl) {
     pilotNameEl.textContent = fullName;
