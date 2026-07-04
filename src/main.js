@@ -1,29 +1,29 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260704-0026-1ff9bed";
-import { normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260704-0026-1ff9bed";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260704-0026-1ff9bed";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260704-0026-1ff9bed";
-import { Game } from "./game.js?v=fresh-20260704-0026-1ff9bed";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260704-0026-1ff9bed";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260704-0026-1ff9bed";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260704-0026-1ff9bed";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260704-0026-1ff9bed";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260704-0035-76983e3";
+import { normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260704-0035-76983e3";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260704-0035-76983e3";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260704-0035-76983e3";
+import { Game } from "./game.js?v=fresh-20260704-0035-76983e3";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260704-0035-76983e3";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260704-0035-76983e3";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260704-0035-76983e3";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260704-0035-76983e3";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260704-0026-1ff9bed";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260704-0026-1ff9bed";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260704-0026-1ff9bed";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260704-0026-1ff9bed";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260704-0026-1ff9bed";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260704-0026-1ff9bed";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260704-0026-1ff9bed";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260704-0026-1ff9bed";
-import { Processor } from "./systems/processor.js?v=fresh-20260704-0026-1ff9bed";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260704-0026-1ff9bed";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260704-0026-1ff9bed";
-import { createGameState } from "./state/gameState.js?v=fresh-20260704-0026-1ff9bed";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260704-0035-76983e3";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260704-0035-76983e3";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260704-0035-76983e3";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260704-0035-76983e3";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260704-0035-76983e3";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260704-0035-76983e3";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260704-0035-76983e3";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260704-0035-76983e3";
+import { Processor } from "./systems/processor.js?v=fresh-20260704-0035-76983e3";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260704-0035-76983e3";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260704-0035-76983e3";
+import { createGameState } from "./state/gameState.js?v=fresh-20260704-0035-76983e3";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -572,7 +572,8 @@ function updateHudDisplay() {
   updateBeaconLocatorDisplay();
   tractorFieldStatus.textContent = state.components.collector.isActive ? "Pulling" : "Idle";
   tractorFieldButton.setAttribute("aria-pressed", String(state.components.collector.isActive));
-  hullCount.textContent = `${Math.ceil(state.components.hull.integrity)}%`;
+  const hullPct = Math.ceil((state.components.hull.integrity / state.components.hull.maxIntegrity) * 100);
+  hullCount.textContent = `${hullPct}%`;
   hullFill.style.width = `${getMeterPercent(state.components.hull.integrity, state.components.hull.maxIntegrity)}%`;
   hullVin.textContent = state.components.hull.vinPlateAttached ? state.components.hull.vin : "UNVERIFIED";
   minerArmed.checked = state.components.miner.armed;
@@ -2621,7 +2622,7 @@ function renderFinleyPanel(siteState = currentSiteState) {
   finleySellToggle.textContent = isCargoSellModeActive ? "Close Window" : "Open Window";
   finleySellToggle.classList.toggle("is-open", isCargoSellModeActive);
 
-  finleyHull.textContent = `${Math.ceil(hull.integrity)}%`;
+  finleyHull.textContent = `${Math.ceil((hull.integrity / hull.maxIntegrity) * 100)}%`;
   finleyRepairCost.textContent = `${repairCost} cr`;
   if (activePump?.type !== "repair") finleyRepairButton.disabled = !canRepair;
 
