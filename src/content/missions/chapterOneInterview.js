@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260703-2316-6619a4f";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260703-2323-09eeb14";
 
 const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
