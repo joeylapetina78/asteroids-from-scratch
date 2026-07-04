@@ -1,28 +1,28 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260703-2331-c066ca2";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260703-2331-c066ca2";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260703-2331-c066ca2";
-import { Game } from "./game.js?v=fresh-20260703-2331-c066ca2";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260703-2331-c066ca2";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260703-2331-c066ca2";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260703-2331-c066ca2";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260703-2331-c066ca2";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260704-0001-b96f4ee";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260704-0001-b96f4ee";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260704-0001-b96f4ee";
+import { Game } from "./game.js?v=fresh-20260704-0001-b96f4ee";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260704-0001-b96f4ee";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260704-0001-b96f4ee";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260704-0001-b96f4ee";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260704-0001-b96f4ee";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260703-2331-c066ca2";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260703-2331-c066ca2";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260703-2331-c066ca2";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260703-2331-c066ca2";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260703-2331-c066ca2";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260703-2331-c066ca2";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260703-2331-c066ca2";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260703-2331-c066ca2";
-import { Processor } from "./systems/processor.js?v=fresh-20260703-2331-c066ca2";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260703-2331-c066ca2";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260703-2331-c066ca2";
-import { createGameState } from "./state/gameState.js?v=fresh-20260703-2331-c066ca2";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260704-0001-b96f4ee";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260704-0001-b96f4ee";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260704-0001-b96f4ee";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260704-0001-b96f4ee";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260704-0001-b96f4ee";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260704-0001-b96f4ee";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260704-0001-b96f4ee";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260704-0001-b96f4ee";
+import { Processor } from "./systems/processor.js?v=fresh-20260704-0001-b96f4ee";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260704-0001-b96f4ee";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260704-0001-b96f4ee";
+import { createGameState } from "./state/gameState.js?v=fresh-20260704-0001-b96f4ee";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -183,6 +183,9 @@ const towCostDisplay = document.querySelector("#tow-cost");
 const tractorFieldButton = document.querySelector("#tractor-field-button");
 const tractorFieldStatus = document.querySelector("#tractor-field-status");
 const viewportRegion = document.querySelector("#viewport-region");
+const zoomInButton = document.querySelector("#zoom-in");
+const zoomOutButton = document.querySelector("#zoom-out");
+const zoomLabel = document.querySelector("#zoom-label");
 const worldDebugFields = {
   position: document.querySelector("#debug-position"),
   zone: document.querySelector("#debug-zone"),
@@ -689,7 +692,24 @@ function applyDevStart(devStartId) {
 function applyViewportLayout(layout) {
   state.ui.viewportLayout = layout;
   document.body.classList.toggle("is-viewport-fullscreen", layout === "fullscreen-background");
+  updateZoomLabel();
 }
+
+function updateZoomLabel() {
+  if (!zoomLabel) return;
+  const zoom = state.ui?.viewportZoom ?? 0.5;
+  zoomLabel.textContent = Math.round(zoom * 100) + "%";
+}
+
+function adjustZoom(delta) {
+  const current = state.ui?.viewportZoom ?? 0.5;
+  const next = Math.min(2, Math.max(0.25, Math.round((current + delta) * 20) / 20));
+  state.ui.viewportZoom = next;
+  updateZoomLabel();
+}
+
+zoomInButton?.addEventListener("click", () => adjustZoom(0.05));
+zoomOutButton?.addEventListener("click", () => adjustZoom(-0.05));
 
 function setupExplorerStart() {
   // Slightly better ship than the yard skiff — more hull, faster, bigger tank.
