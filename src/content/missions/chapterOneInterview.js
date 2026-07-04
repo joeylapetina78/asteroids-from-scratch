@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260703-2223-8e8c574";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260703-2240-d6ee28e";
 
 const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
@@ -240,6 +240,7 @@ export const chapterOneInterviewMission = {
       helpText:
         "This communicator rail shows mission dialogue, plain instructions, and your credits. The Hull panel shows ship health, VIN, and the Docking Lock. Your license is paperwork you can file in the drawer.",
       onEnter: [
+        { type: "setPaperworkFiling", isEnabled: false },
         { type: "showComponent", componentId: "license", componentName: "License" },
         { type: "showComponent", componentId: "hull", componentName: "Hull" },
         { type: "showComponent", componentId: "docking", componentName: "Docking Lock" },

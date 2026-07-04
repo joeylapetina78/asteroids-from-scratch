@@ -1,9 +1,9 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260703-2223-8e8c574";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260703-2223-8e8c574";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260703-2223-8e8c574";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260703-2223-8e8c574";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260703-2223-8e8c574";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260703-2223-8e8c574";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260703-2240-d6ee28e";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260703-2240-d6ee28e";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260703-2240-d6ee28e";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260703-2240-d6ee28e";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260703-2240-d6ee28e";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260703-2240-d6ee28e";
 
 export function createGameState() {
   return {
@@ -28,7 +28,7 @@ export function createGameState() {
         targets: {},
       },
       paperwork: {
-        filingIntroduced: false,
+        filingIntroduced: true,
       },
     },
     hubServices: {
