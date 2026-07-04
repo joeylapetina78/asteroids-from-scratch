@@ -1,5 +1,5 @@
-import { getPilotLicense, getPilotName } from "./legalRecords.js?v=fresh-20260703-2059-1d6effa";
-import { getShipAssetId } from "./worldRecords.js?v=fresh-20260703-2059-1d6effa";
+import { getPilotLicense, getPilotName } from "./legalRecords.js?v=fresh-20260703-2126-64199f2";
+import { getShipAssetId } from "./worldRecords.js?v=fresh-20260703-2126-64199f2";
 
 export const PUBLIC_IDENTITY_KIND = Object.freeze({
   CONTROLLED_SHIP: "controlled-ship",

@@ -1,8 +1,8 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260703-2059-1d6effa";
-import { depositCredits, getCredits } from "./accounts.js?v=fresh-20260703-2059-1d6effa";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260703-2059-1d6effa";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260703-2059-1d6effa";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260703-2059-1d6effa";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260703-2126-64199f2";
+import { depositCredits, getCredits } from "./accounts.js?v=fresh-20260703-2126-64199f2";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260703-2126-64199f2";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260703-2126-64199f2";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260703-2126-64199f2";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
