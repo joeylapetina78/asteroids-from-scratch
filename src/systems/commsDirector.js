@@ -64,6 +64,10 @@ export function createCommsDirector({ state, journeyDirector }) {
     return deliver(nextMessage);
   }
 
+  function clearActiveMessage() {
+    journeyDirector.clearMessage?.();
+  }
+
   function clearPendingAcknowledgement(action = null) {
     return journeyDirector.clearPendingAcknowledgement?.(action) ?? false;
   }
@@ -124,6 +128,7 @@ export function createCommsDirector({ state, journeyDirector }) {
   }
 
   return {
+    clearActiveMessage,
     clearPendingAcknowledgement,
     hasActiveMessage,
     say,

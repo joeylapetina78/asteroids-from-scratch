@@ -1,8 +1,8 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260703-2223-8e8c574";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260703-2223-8e8c574";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260703-2223-8e8c574";
-import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260703-2223-8e8c574";
-import { createMissionRunner } from "./missionRunner.js?v=fresh-20260703-2223-8e8c574";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260703-2244-0692603";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260703-2244-0692603";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260703-2244-0692603";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260703-2244-0692603";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260703-2244-0692603";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -293,6 +293,7 @@ export function createJourneyDirector({
     acceptMission,
     acknowledge,
     pressJourneyButton,
+    clearMessage,
     clearPendingAcknowledgement,
   };
 }
