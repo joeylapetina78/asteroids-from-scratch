@@ -2068,9 +2068,9 @@ body.is-viewport-fullscreen .component-stack .processor-panel,
 body.is-viewport-fullscreen .component-stack .cargo-panel {
   display: block;
   pointer-events: auto;
-  background: rgba(18, 22, 30, 0.88);
-  backdrop-filter: blur(4px);
-  border: 1px solid #2a3040;
+  background: rgba(18, 22, 30, var(--panel-alpha, 0.75));
+  backdrop-filter: blur(2px);
+  border: 1px solid rgba(42, 48, 64, calc(var(--panel-alpha, 0.75) * 0.6));
   border-radius: 6px;
 }
 
@@ -2109,6 +2109,10 @@ body.is-viewport-fullscreen .zoom-panel {
   display: flex;
 }
 
+body.is-viewport-fullscreen #alpha-panel {
+  bottom: 96px;
+}
+
 .zoom-panel button {
   background: none;
   border: 1px solid #3a4458;
@@ -2129,6 +2133,12 @@ body.is-viewport-fullscreen .zoom-panel {
   min-width: 36px;
   text-align: center;
   font-variant-numeric: tabular-nums;
+}
+
+body.is-viewport-fullscreen .hud .component-panel {
+  border-color: rgba(51, 56, 70, calc(var(--panel-alpha, 0.75) * 0.6));
+  background: rgba(12, 14, 19, var(--panel-alpha, 0.75));
+  backdrop-filter: blur(2px);
 }
 
 body.is-viewport-fullscreen .viewport-panel .component-panel-title {

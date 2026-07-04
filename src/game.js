@@ -1,23 +1,23 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260703-2331-c066ca2";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260703-2331-c066ca2";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260703-2331-c066ca2";
-import { Ship } from "./entities/Ship.js?v=fresh-20260703-2331-c066ca2";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260703-2331-c066ca2";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260704-0136-fb347f5";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260704-0136-fb347f5";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260704-0136-fb347f5";
+import { Ship } from "./entities/Ship.js?v=fresh-20260704-0136-fb347f5";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260704-0136-fb347f5";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260703-2331-c066ca2";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260703-2331-c066ca2";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260703-2331-c066ca2";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260703-2331-c066ca2";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260703-2331-c066ca2";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260703-2331-c066ca2";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260703-2331-c066ca2";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260703-2331-c066ca2";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260703-2331-c066ca2";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260703-2331-c066ca2";
-import { getZoneProfile } from "./systems/worldZones.js?v=fresh-20260703-2331-c066ca2";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260703-2331-c066ca2";
-import { createGameState } from "./state/gameState.js?v=fresh-20260703-2331-c066ca2";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260703-2331-c066ca2";
+import { createInput } from "./systems/input.js?v=fresh-20260704-0136-fb347f5";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260704-0136-fb347f5";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260704-0136-fb347f5";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260704-0136-fb347f5";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260704-0136-fb347f5";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260704-0136-fb347f5";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260704-0136-fb347f5";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260704-0136-fb347f5";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260704-0136-fb347f5";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260704-0136-fb347f5";
+import { getZoneProfile } from "./systems/worldZones.js?v=fresh-20260704-0136-fb347f5";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260704-0136-fb347f5";
+import { createGameState } from "./state/gameState.js?v=fresh-20260704-0136-fb347f5";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260704-0136-fb347f5";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -2546,7 +2546,9 @@ export class Game {
   }
 
   getViewportDrawScale() {
-    return this.state.ui?.viewportLayout === "fullscreen-background" ? 0.5 : 1;
+    return this.state.ui?.viewportLayout === "fullscreen-background"
+      ? (this.state.ui?.viewportZoom ?? 0.5)
+      : 1;
   }
 
   getDrawCamera(camera, scale) {

@@ -1,29 +1,29 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260704-0049-cf73f92";
-import { normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260704-0049-cf73f92";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260704-0049-cf73f92";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260704-0049-cf73f92";
-import { Game } from "./game.js?v=fresh-20260704-0049-cf73f92";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260704-0049-cf73f92";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260704-0049-cf73f92";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260704-0049-cf73f92";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260704-0049-cf73f92";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260704-0136-fb347f5";
+import { normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260704-0136-fb347f5";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260704-0136-fb347f5";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260704-0136-fb347f5";
+import { Game } from "./game.js?v=fresh-20260704-0136-fb347f5";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260704-0136-fb347f5";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260704-0136-fb347f5";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260704-0136-fb347f5";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260704-0136-fb347f5";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260704-0049-cf73f92";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260704-0049-cf73f92";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260704-0049-cf73f92";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260704-0049-cf73f92";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260704-0049-cf73f92";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260704-0049-cf73f92";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260704-0049-cf73f92";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260704-0049-cf73f92";
-import { Processor } from "./systems/processor.js?v=fresh-20260704-0049-cf73f92";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260704-0049-cf73f92";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260704-0049-cf73f92";
-import { createGameState } from "./state/gameState.js?v=fresh-20260704-0049-cf73f92";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260704-0136-fb347f5";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260704-0136-fb347f5";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260704-0136-fb347f5";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260704-0136-fb347f5";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260704-0136-fb347f5";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260704-0136-fb347f5";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260704-0136-fb347f5";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260704-0136-fb347f5";
+import { Processor } from "./systems/processor.js?v=fresh-20260704-0136-fb347f5";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260704-0136-fb347f5";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260704-0136-fb347f5";
+import { createGameState } from "./state/gameState.js?v=fresh-20260704-0136-fb347f5";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -213,6 +213,10 @@ const viewportRegion = document.querySelector("#viewport-region");
 const zoomInButton = document.querySelector("#zoom-in");
 const zoomOutButton = document.querySelector("#zoom-out");
 const zoomLabel = document.querySelector("#zoom-label");
+const alphaUpButton = document.querySelector("#alpha-up");
+const alphaDownButton = document.querySelector("#alpha-down");
+const alphaLabel = document.querySelector("#alpha-label");
+let panelAlpha = 0.75;
 const worldDebugFields = {
   position: document.querySelector("#debug-position"),
   zone: document.querySelector("#debug-zone"),
@@ -519,6 +523,13 @@ if (initialDevStart === "explorer" || initialDevStart === "panorama") {
 } else {
   journeyDirector.start();
 }
+const PANORAMA_PANEL_OVERRIDES = {
+  engine:    { x: 1200, y: 20,  z: 70 },
+  hull:      { x: 1200, y: 240, z: 50 },
+  docking:   { x: 1200, y: 440, z: 100 },
+  miner:     { x: 1200, y: 640, z: 60 },
+  collector: { x: 1200, y: 800, z: 60 },
+};
 if (state.ui.viewportLayout === "fullscreen-background") {
   applyViewportLayout("fullscreen-background");
 }
@@ -719,12 +730,6 @@ function applyDevStart(devStartId) {
   }
 }
 
-const PANORAMA_PANEL_OVERRIDES = {
-  engine:  { x: 1200, y: 20,  z: 70 },
-  hull:    { x: 1200, y: 240, z: 50 },
-  docking: { x: 1200, y: 440, z: 100 },
-};
-
 function applyViewportLayout(layout) {
   state.ui.viewportLayout = layout;
   document.body.classList.toggle("is-viewport-fullscreen", layout === "fullscreen-background");
@@ -752,6 +757,20 @@ function adjustZoom(delta) {
 
 zoomInButton?.addEventListener("click", () => adjustZoom(0.05));
 zoomOutButton?.addEventListener("click", () => adjustZoom(-0.05));
+
+function updateAlphaLabel() {
+  if (alphaLabel) alphaLabel.textContent = Math.round(panelAlpha * 100) + "%";
+  document.body.style.setProperty("--panel-alpha", panelAlpha);
+}
+
+function adjustAlpha(delta) {
+  panelAlpha = Math.min(1, Math.max(0, Math.round((panelAlpha + delta) * 20) / 20));
+  updateAlphaLabel();
+}
+
+alphaUpButton?.addEventListener("click", () => adjustAlpha(0.05));
+alphaDownButton?.addEventListener("click", () => adjustAlpha(-0.05));
+updateAlphaLabel();
 
 function setupExplorerStart() {
   // Slightly better ship than the yard skiff — more hull, faster, bigger tank.
@@ -815,6 +834,8 @@ function setupExplorerStart() {
     new Set([...(state.hubServices.unlocked[chapterOneRoute.destinationSite.id] ?? []), yardExchangeServices.rook, yardExchangeServices.supply]),
   );
   state.hubServices.flags.yardCoreSeenDocked = true;
+
+  depositCredits(state, 1000);
 
   setComponentAvailable("viewport", true);
   setComponentAvailable("engine", true);

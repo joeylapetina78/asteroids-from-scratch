@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260704-0012-28656f8" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260704-0136-fb347f5" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -96,12 +96,12 @@
                   <span id="journey-status">The Interview</span>
                 </div>
               </div>
+              <div class="journey-log" id="journey-log" aria-live="polite"></div>
               <div class="journey-portrait" aria-hidden="true">
                 <pre id="journey-portrait-art"> /\
 |  |
  \/</pre>
               </div>
-              <div class="journey-log" id="journey-log" aria-live="polite"></div>
               <div class="journey-profile" aria-label="Pilot profile">
                 <span>Pilot</span>
                 <strong id="pilot-name">Rookie</strong>
@@ -116,7 +116,6 @@
                   <span id="journey-help-text">Read the current objective and follow the next prompt.</span>
                 </details>
                 <button id="journey-accept" class="journey-button" type="button">Accept Job</button>
-                <a id="journey-panorama-link" class="journey-panorama-link" href="?devStart=panorama">Open Space — skip missions</a>
               </div>
             </div>
 
@@ -434,6 +433,11 @@
             <canvas id="game" width="960" height="540" aria-label="Asteroids game canvas"></canvas>
           </section>
 
+          <div class="zoom-panel" id="alpha-panel" aria-label="Panel opacity control">
+            <button id="alpha-down" type="button" aria-label="Decrease panel opacity">−</button>
+            <span class="zoom-label" id="alpha-label">75%</span>
+            <button id="alpha-up" type="button" aria-label="Increase panel opacity">+</button>
+          </div>
           <div class="zoom-panel" id="zoom-panel" aria-label="Zoom control">
             <button id="zoom-out" type="button" aria-label="Zoom out">−</button>
             <span class="zoom-label" id="zoom-label">50%</span>
@@ -551,6 +555,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260704-0012-28656f8"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260704-0136-fb347f5"></script>
   </body>
 </html>
