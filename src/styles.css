@@ -2045,7 +2045,33 @@ body.is-viewport-fullscreen .play-layout {
 }
 
 body.is-viewport-fullscreen .component-stack {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 260px;
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  z-index: 700;
+  pointer-events: none;
+}
+
+body.is-viewport-fullscreen .component-stack > * {
   display: none;
+}
+
+body.is-viewport-fullscreen .component-stack .processor-panel,
+body.is-viewport-fullscreen .component-stack .cargo-panel {
+  display: block;
+  pointer-events: auto;
+  background: rgba(18, 22, 30, 0.88);
+  backdrop-filter: blur(4px);
+  border: 1px solid #2a3040;
+  border-radius: 6px;
 }
 
 body.is-viewport-fullscreen .space-panel {
@@ -2065,9 +2091,9 @@ body.is-viewport-fullscreen .viewport-panel {
 .zoom-panel {
   display: none;
   position: fixed;
-  bottom: 16px;
+  bottom: 52px;
   right: 16px;
-  z-index: 100;
+  z-index: 700;
   background: rgba(18, 22, 30, 0.85);
   border: 1px solid #2a3040;
   border-radius: 6px;
