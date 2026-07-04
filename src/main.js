@@ -1,28 +1,29 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260704-0012-28656f8";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260704-0012-28656f8";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260704-0012-28656f8";
-import { Game } from "./game.js?v=fresh-20260704-0012-28656f8";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260704-0012-28656f8";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260704-0012-28656f8";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260704-0012-28656f8";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260704-0012-28656f8";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260704-0026-1ff9bed";
+import { normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260704-0026-1ff9bed";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260704-0026-1ff9bed";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260704-0026-1ff9bed";
+import { Game } from "./game.js?v=fresh-20260704-0026-1ff9bed";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260704-0026-1ff9bed";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260704-0026-1ff9bed";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260704-0026-1ff9bed";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260704-0026-1ff9bed";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260704-0012-28656f8";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260704-0012-28656f8";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260704-0012-28656f8";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260704-0012-28656f8";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260704-0012-28656f8";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260704-0012-28656f8";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260704-0012-28656f8";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260704-0012-28656f8";
-import { Processor } from "./systems/processor.js?v=fresh-20260704-0012-28656f8";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260704-0012-28656f8";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260704-0012-28656f8";
-import { createGameState } from "./state/gameState.js?v=fresh-20260704-0012-28656f8";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260704-0026-1ff9bed";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260704-0026-1ff9bed";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260704-0026-1ff9bed";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260704-0026-1ff9bed";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260704-0026-1ff9bed";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260704-0026-1ff9bed";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260704-0026-1ff9bed";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260704-0026-1ff9bed";
+import { Processor } from "./systems/processor.js?v=fresh-20260704-0026-1ff9bed";
+import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260704-0026-1ff9bed";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260704-0026-1ff9bed";
+import { createGameState } from "./state/gameState.js?v=fresh-20260704-0026-1ff9bed";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -39,9 +40,35 @@ const DESK_PANEL_MIN_Z_INDEX = 30;
 const DESK_PANEL_MAX_Z_INDEX = 520;
 const PROCESS_OUTPUT_AMOUNT = 50;
 const CRYSTAL_VALUE_MULTIPLIER = 5;
-const CARGO_UNIT_VALUES = {
-  fuel: 30,
-  crystal: 150,
+const CARGO_UNIT_BASE_VALUES = {
+  // volatile
+  "water-ice":     30,
+  "methane-ice":   50,
+  "hydrogen":      80,
+  // structural
+  "iron-nickel":   20,
+  "aluminum":      35,
+  "titanium":      60,
+  // industrial
+  "silicate":      15,
+  "carbonaceous":  25,
+  // conductor
+  "copper":        50,
+  "cobalt":        80,
+  "silver":       120,
+  // energy
+  "uranium":       90,
+  "thorium":      160,
+  // advanced
+  "lithium":      130,
+  "rare-earth":   220,
+  "platinum":     300,
+  // strange
+  "crystal-matrix": 200,
+  "anomaly-shard":  450,
+  // legacy aliases
+  fuel:   20,
+  crystal: 200,
 };
 const PAPERWORK_PANEL_IDS = ["license", "document", "contract"];
 const TOW_DRIVER_NAMES = ["Mara Tow", "Jax Cable", "Nell Winch", "Orson Hook"];
@@ -2531,8 +2558,20 @@ function handleCargoUnitClick(type) {
   return depositCargoUnit(type);
 }
 
+function getOreUnitValue(type) {
+  const service = currentSiteState?.dockedSite && activeHubServiceId
+    ? getHubService(currentSiteState.dockedSite.id, activeHubServiceId)
+    : null;
+  const normalized = normalizeResourceType(type);
+  return service?.oreValues?.[normalized]
+    ?? service?.oreValues?.[type]
+    ?? CARGO_UNIT_BASE_VALUES[normalized]
+    ?? CARGO_UNIT_BASE_VALUES[type]
+    ?? 0;
+}
+
 function sellCargoUnit(type) {
-  const unitValue = CARGO_UNIT_VALUES[type] ?? 0;
+  const unitValue = getOreUnitValue(type);
 
   if (!isCargoSellModeActive || !currentSiteState?.dockedSite || unitValue <= 0) {
     return false;
@@ -2828,7 +2867,7 @@ function getCargoHoldValue() {
   const counts = cargoHold.getUnitCounts();
 
   return Object.entries(counts).reduce(
-    (total, [type, count]) => total + (CARGO_UNIT_VALUES[type] ?? 0) * count,
+    (total, [type, count]) => total + getOreUnitValue(type) * count,
     0,
   );
 }
