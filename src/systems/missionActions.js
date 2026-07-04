@@ -90,6 +90,11 @@ export const MISSION_ACTION_DEFINITIONS = {
     required: [],
     optional: ["reason"],
   },
+  setViewportLayout: {
+    label: "Set Viewport Layout",
+    description: "Change how the viewport panel is displayed. 'fullscreen-background' fills the entire page; 'default' restores normal layout.",
+    required: ["layout"],
+  },
 };
 
 export const MISSION_ACTION_TYPES = Object.keys(MISSION_ACTION_DEFINITIONS);
@@ -147,5 +152,7 @@ function runMissionAction(action, { state, actions, missionDefinition, goToStep 
     actions.startMission(action.missionId);
   } else if (action.type === "spawnHunterNearShip") {
     actions.spawnHunterNearShip(action.reason);
+  } else if (action.type === "setViewportLayout") {
+    actions.setViewportLayout?.(action.layout);
   }
 }
