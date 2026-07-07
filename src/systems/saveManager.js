@@ -1,6 +1,6 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260704-0155-737ee43";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260704-0155-737ee43";
-import { ensureObligations } from "./obligations.js?v=fresh-20260704-0155-737ee43";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260706-2034-ea0751b";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260706-2034-ea0751b";
+import { ensureObligations } from "./obligations.js?v=fresh-20260706-2034-ea0751b";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 
@@ -14,6 +14,15 @@ export function getDevStart(search = window.location.search) {
 
 export function clearSavedProfile() {
   localStorage.removeItem(SAVE_KEY);
+}
+
+export function peekSavedDevStartId() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    return raw ? (JSON.parse(raw)?.devStartId ?? null) : null;
+  } catch {
+    return null;
+  }
 }
 
 export function loadSavedProfile(state) {
@@ -76,6 +85,7 @@ export function saveProfile({ state, game, cargoHold }) {
   const save = {
     version: 1,
     savedAt: Date.now(),
+    devStartId: state._devStartId ?? null,
     credits: state.credits,
     accounts: cloneJsonSafe(state.accounts),
     components: cloneJsonSafe(state.components),

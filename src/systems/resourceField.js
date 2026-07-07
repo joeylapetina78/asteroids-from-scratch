@@ -1,6 +1,6 @@
 import { createValueNoise } from "./valueNoise.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260704-0155-737ee43";
-import { RESOURCE_COLOR_RGB, pickFamilyMember } from "./resourceDefinitions.js?v=fresh-20260704-0155-737ee43";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260706-2034-ea0751b";
+import { RESOURCE_COLOR_RGB, pickFamilyMember } from "./resourceDefinitions.js?v=fresh-20260706-2034-ea0751b";
 
 export function createResourceField(seed = 1337) {
   const noise = createValueNoise(seed);
@@ -25,7 +25,7 @@ export function createResourceField(seed = 1337) {
       const volatile   = pickFamilyMember("volatile",   noise(x + 33100, y - 27000, 900));
       const structural = pickFamilyMember("structural",  noise(x - 28000, y + 41000, 900));
       const industrial = pickFamilyMember("industrial",  noise(x + 17500, y + 23000, 700));
-      const conductor  = pickFamilyMember("conductor",   noise(x - 44000, y - 18000, 850));
+      const conductor  = zoneProfile.conductorMember ?? pickFamilyMember("conductor",   noise(x - 44000, y - 18000, 850));
       const energy     = pickFamilyMember("energy",      noise(x + 52000, y - 31000, 600));
       const advanced   = pickFamilyMember("advanced",    noise(x - 61000, y + 14000, 750));
       const strange    = pickFamilyMember("strange",     noise(x + 38000, y + 67000, 500));

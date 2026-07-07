@@ -917,10 +917,12 @@ body {
 
 .component-meter-track span {
   display: block;
-  width: 0%;
+  width: 100%;
   height: 100%;
   border-radius: inherit;
-  transition: width 140ms ease-out;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 140ms ease-out;
 }
 
 .meter-fuel .component-meter-track span {
@@ -2069,7 +2071,6 @@ body.is-viewport-fullscreen .component-stack .cargo-panel {
   display: block;
   pointer-events: auto;
   background: rgba(18, 22, 30, var(--panel-alpha, 0.75));
-  backdrop-filter: blur(2px);
   border: 1px solid rgba(42, 48, 64, calc(var(--panel-alpha, 0.75) * 0.6));
   border-radius: 6px;
 }
@@ -2102,7 +2103,6 @@ body.is-viewport-fullscreen .viewport-panel {
   align-items: center;
   font-size: 0.8rem;
   color: #8fa0bc;
-  backdrop-filter: blur(4px);
 }
 
 body.is-viewport-fullscreen .zoom-panel {
@@ -2138,7 +2138,6 @@ body.is-viewport-fullscreen #alpha-panel {
 body.is-viewport-fullscreen .hud .component-panel {
   border-color: rgba(51, 56, 70, calc(var(--panel-alpha, 0.75) * 0.6));
   background: rgba(12, 14, 19, var(--panel-alpha, 0.75));
-  backdrop-filter: blur(2px);
 }
 
 body.is-viewport-fullscreen .viewport-panel .component-panel-title {

@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260704-0155-737ee43";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260706-2034-ea0751b";
 
 const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
@@ -344,10 +344,10 @@ export const chapterOneInterviewMission = {
       ],
       onAcknowledge: [
         { type: "clearMessage" },
-        { type: "setComponentValue", componentId: "scanner", key: "beaconMemoryIds", value: ["scrap-porch", "yard-exchange"] },
-        { type: "setComponentValue", componentId: "scanner", key: "activeBeaconId", value: "scrap-porch" },
-        { type: "setComponentValue", componentId: "scanner", key: "beaconLocatorUsed", value: true },
-        { type: "showComponent", componentId: "scanner", componentName: "Beacon Locator" },
+        { type: "setComponentValue", componentId: "beaconLocator", key: "beaconMemoryIds", value: ["scrap-porch", "yard-exchange"] },
+        { type: "setComponentValue", componentId: "beaconLocator", key: "activeBeaconId", value: "scrap-porch" },
+        { type: "setComponentValue", componentId: "beaconLocator", key: "beaconLocatorUsed", value: true },
+        { type: "showComponent", componentId: "beacon-locator", componentName: "Beacon Locator" },
         { type: "goToStep", stepId: "try-scanner" },
       ],
     },

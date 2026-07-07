@@ -1,33 +1,40 @@
-import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260704-0155-737ee43";
+import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260706-2034-ea0751b";
 
 const RESOURCE_CONTRACTS = [
   {
     id: "rook-red-resource-run-5",
-    resourceType: "fuel",
-    resourceName: "red resources",
-    title: "Red Resource Run",
+    resourceType: "iron-nickel",
+    resourceName: "red ore",
+    title: "Red Ore Run",
     amount: 5,
+    summary: (dest) => `Deliver 5 red ore to ${dest}. Red Teeth and the surrounding belt are the best source.`,
   },
   {
     id: "rook-red-resource-run-10",
-    resourceType: "fuel",
-    resourceName: "red resources",
-    title: "Heavy Red Resource Run",
+    resourceType: "iron-nickel",
+    resourceName: "red ore",
+    title: "Heavy Red Ore Run",
     amount: 10,
+    prerequisites: ["rook-red-resource-run-5"],
+    summary: (dest) => `Deliver 10 red ore to ${dest}. Stock up from the dense belt past Red Teeth.`,
   },
   {
-    id: "rook-blue-resource-run-5",
-    resourceType: "crystal",
-    resourceName: "blue crystals",
-    title: "Blue Crystal Run",
+    id: "rook-copper-run-5",
+    resourceType: "copper",
+    resourceName: "copper ore",
+    title: "Copper Drift Run",
     amount: 5,
+    prerequisites: ["rook-red-resource-run-10"],
+    summary: (dest) => `Deliver 5 copper ore to ${dest}. Head northwest into Copper Drift — it's closer than it looks.`,
   },
   {
-    id: "rook-blue-resource-run-10",
-    resourceType: "crystal",
-    resourceName: "blue crystals",
-    title: "Heavy Blue Crystal Run",
+    id: "rook-copper-run-10",
+    resourceType: "copper",
+    resourceName: "copper ore",
+    title: "Heavy Copper Drift Run",
     amount: 10,
+    prerequisites: ["rook-copper-run-5"],
+    summary: (dest) => `Deliver 10 copper ore to ${dest}. Copper Drift is northwest — teal rocks, medium density field.`,
   },
 ];
 
@@ -115,7 +122,7 @@ export const chapterOneContracts = [
     repeatable: true,
     title: contract.title,
     issuer: "Rook",
-    summary: `Deliver ${contract.amount} ${contract.resourceName} to ${storySites.starterHub.name}.`,
+    summary: contract.summary ? contract.summary(storySites.starterHub.name) : `Deliver ${contract.amount} ${contract.resourceName} to ${storySites.starterHub.name}.`,
     terms: {
       resourceType: contract.resourceType,
       resourceName: contract.resourceName,
@@ -128,7 +135,7 @@ export const chapterOneContracts = [
       credits: contract.amount * 200,
     },
     clauses: [
-      `Terms are satisfied when ${contract.amount} ${contract.resourceName} are delivered from cargo at ${storySites.starterHub.name}.`,
+      `Terms are satisfied when ${contract.amount} units of ${contract.resourceName} are delivered from cargo at ${storySites.starterHub.name}.`,
       "Payment releases when the completed contract is confirmed.",
       "Resources must be in the cargo hold, not loose in space.",
       "Return to Rook Industries for the next available job.",

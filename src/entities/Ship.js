@@ -8,15 +8,18 @@ const SPACE_DRAG = 0.995;
 const SHIP_FRAMES = {
   "yard-skiff": {
     points: [
-      { x: 18, y: -3 },
-      { x: 8, y: -11 },
-      { x: -13, y: -13 },
-      { x: -20, y: -4 },
-      { x: -15, y: 9 },
-      { x: 4, y: 13 },
-      { x: 19, y: 5 },
+      { x: 22, y: 0 },
+      { x: -11, y: -13 },
+      { x: -7, y: 0 },
+      { x: -11, y: 13 },
     ],
-    cockpit: { x: 3, y: 0, radius: 4 },
+    cockpit: null,
+    details: {
+      lines: [
+        [{ x: -1, y: -7 }, { x: 11, y: 0 }],
+        [{ x: -1, y: 7 }, { x: 11, y: 0 }],
+      ],
+    },
   },
   dart: {
     points: [
@@ -150,9 +153,9 @@ export class Ship {
     context.translate(screenX, screenY);
     context.rotate(this.angle);
 
-    context.lineWidth = 2;
-    context.strokeStyle = this.engine.powered ? "#f5f7fb" : "#555b66";
-    context.fillStyle = this.engine.powered ? "#f5f7fb" : "#20242b";
+    context.lineWidth = 2.5;
+    context.strokeStyle = this.engine.powered ? "#00e8a0" : "#2a3d45";
+    context.fillStyle = this.engine.powered ? "rgba(0, 232, 160, 0.06)" : "rgba(0, 0, 0, 0)";
 
     this.drawFrame(context);
 
@@ -185,8 +188,8 @@ export class Ship {
     }
 
     context.save();
-    context.globalAlpha = this.engine.powered ? 0.85 : 0.35;
-    context.strokeStyle = this.engine.powered ? "#cfeaff" : "#6e7480";
+    context.globalAlpha = this.engine.powered ? 0.9 : 0.3;
+    context.strokeStyle = this.engine.powered ? "#80ffdd" : "#3a4d55";
     context.beginPath();
     context.arc(frame.cockpit.x, frame.cockpit.y, frame.cockpit.radius, 0, Math.PI * 2);
     context.stroke();

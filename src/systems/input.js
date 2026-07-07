@@ -24,6 +24,18 @@ export function createInput() {
     pressedKeys.delete(event.code);
   });
 
+  window.addEventListener("blur", () => {
+    pressedKeys.clear();
+    justPressedKeys.clear();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      pressedKeys.clear();
+      justPressedKeys.clear();
+    }
+  });
+
   return {
     isDown(code) {
       return pressedKeys.has(code);

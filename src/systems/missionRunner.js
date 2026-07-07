@@ -1,5 +1,5 @@
-import { runMissionActions } from "./missionActions.js?v=fresh-20260704-0155-737ee43";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260704-0155-737ee43";
+import { runMissionActions } from "./missionActions.js?v=fresh-20260706-2034-ea0751b";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260706-2034-ea0751b";
 
 export function createMissionRunner({ missionDefinition, state, actions }) {
   const beatDefs = missionDefinition.beats ?? missionDefinition.steps;
@@ -16,6 +16,7 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
       episodeName: prologue.episodeName,
     });
     state.journey.flags = {};
+    state.journey.globalFlags ??= {};
     state.journey.currentStepId = null;
     state.journey.completedStepIds = [];
     state.journey.messages = [];
@@ -157,10 +158,13 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     return stepsById.get(state.journey.currentStepId);
   }
 
+  let destroyed = false;
+
   return {
     accept,
     acknowledge,
-    handleEvent,
+    handleEvent: (event) => (destroyed ? false : handleEvent(event)),
     startOffer,
+    destroy: () => { destroyed = true; },
   };
 }

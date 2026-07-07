@@ -1,29 +1,30 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260704-0155-737ee43";
-import { normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260704-0155-737ee43";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260704-0155-737ee43";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260704-0155-737ee43";
-import { Game } from "./game.js?v=fresh-20260704-0155-737ee43";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260704-0155-737ee43";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260704-0155-737ee43";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260704-0155-737ee43";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260704-0155-737ee43";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260706-2034-ea0751b";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260706-2034-ea0751b";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260706-2034-ea0751b";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260706-2034-ea0751b";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260706-2034-ea0751b";
+import { Game } from "./game.js?v=fresh-20260706-2034-ea0751b";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260706-2034-ea0751b";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260706-2034-ea0751b";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260706-2034-ea0751b";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260706-2034-ea0751b";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260704-0155-737ee43";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260704-0155-737ee43";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260704-0155-737ee43";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260704-0155-737ee43";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260704-0155-737ee43";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260704-0155-737ee43";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260704-0155-737ee43";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260704-0155-737ee43";
-import { Processor } from "./systems/processor.js?v=fresh-20260704-0155-737ee43";
-import { clearSavedProfile, getDevStart, loadSavedProfile, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260704-0155-737ee43";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260704-0155-737ee43";
-import { createGameState } from "./state/gameState.js?v=fresh-20260704-0155-737ee43";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260706-2034-ea0751b";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260706-2034-ea0751b";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260706-2034-ea0751b";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260706-2034-ea0751b";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260706-2034-ea0751b";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260706-2034-ea0751b";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260706-2034-ea0751b";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260706-2034-ea0751b";
+import { Processor } from "./systems/processor.js?v=fresh-20260706-2034-ea0751b";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260706-2034-ea0751b";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260706-2034-ea0751b";
+import { createGameState } from "./state/gameState.js?v=fresh-20260706-2034-ea0751b";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -89,7 +90,8 @@ const DEFAULT_PANEL_LAYOUT = {
   license: { x: 980, y: 20, z: 95 },
   journey: { x: 980, y: 20, z: JOURNEY_PANEL_Z_INDEX },
   engine: { x: -300, y: 20, z: 70 },
-  scanner: { x: 980, y: 300, z: 90 },
+  "beacon-locator": { x: 980, y: 300, z: 90 },
+  scanner: { x: 980, y: 430, z: 88 },
   docking: { x: -300, y: 340, z: 100 },
   tow: { x: -300, y: 520, z: 125 },
   contract: { x: -300, y: 340, z: 95 },
@@ -103,8 +105,8 @@ const DEFAULT_PANEL_LAYOUT = {
   hull: { x: -300, y: 580, z: 50 },
   world: { x: 980, y: 20, z: 40 },
   hub: { x: -300, y: 340, z: 110 },
-  processor: { x: 0, y: 0, z: 1 },
-  cargo: { x: 0, y: 0, z: 1 },
+  processor: { x: 0, y: 0, z: 48 },
+  cargo: { x: 0, y: 0, z: 46 },
 };
 const licenseApplication = document.querySelector("#license-application");
 const licenseForm = document.querySelector("#license-form");
@@ -200,6 +202,8 @@ const powerButton = document.querySelector("#ship-power");
 const processorCanvas = document.querySelector("#processor");
 const processorOutputPanel = document.querySelector(".processor-outputs");
 const scanButton = document.querySelector("#ship-scan");
+const scanTrigger = document.querySelector("#scan-trigger");
+const beaconTracking = document.querySelector("#beacon-tracking");
 const scanergyCount = document.querySelector("#scanergy-count");
 const beaconDirectionArrow = document.querySelector("#beacon-direction-arrow");
 const shipOffersPanel = document.querySelector("#ship-offers");
@@ -216,7 +220,7 @@ const zoomLabel = document.querySelector("#zoom-label");
 const alphaUpButton = document.querySelector("#alpha-up");
 const alphaDownButton = document.querySelector("#alpha-down");
 const alphaLabel = document.querySelector("#alpha-label");
-let panelAlpha = 0.75;
+let panelAlpha = 0;
 const worldDebugFields = {
   position: document.querySelector("#debug-position"),
   zone: document.querySelector("#debug-zone"),
@@ -239,10 +243,21 @@ const worldDebugFields = {
   repairCredits: document.querySelector("#debug-repair-credits"),
   eventLog: document.querySelector("#event-log"),
 };
+const _hud = {
+  credits: null,
+  fuel: null,
+  fuelFraction: null,
+  ammo: null,
+  tractorActive: null,
+  hullPct: null,
+  hullFraction: null,
+  hullVin: null,
+  minerArmed: null,
+};
 const state = createGameState();
 const initialDevStart = getDevStart();
 
-if (shouldResetSave() || initialDevStart) {
+if (shouldResetSave() || initialDevStart || peekSavedDevStartId()) {
   clearSavedProfile();
 }
 
@@ -403,7 +418,12 @@ tractorFieldButton.addEventListener("pointercancel", () => setTractorFieldActive
 tractorFieldButton.addEventListener("lostpointercapture", () => setTractorFieldActive(false));
 
 scanButton.addEventListener("click", () => {
-  game.scanForCrystals();
+  game.cycleBeacon();
+});
+
+scanTrigger?.addEventListener("click", () => {
+  game.triggerResourceScan();
+  updateHudDisplay();
 });
 
 journeyAcceptButton.addEventListener("click", () => {
@@ -523,12 +543,19 @@ if (initialDevStart === "explorer" || initialDevStart === "panorama") {
 } else {
   journeyDirector.start();
 }
+const PANORAMA_LAYOUT_VERSION = "centered-panorama-v3";
 const PANORAMA_PANEL_OVERRIDES = {
-  engine:    { x: 1200, y: 20,  z: 70 },
-  hull:      { x: 1200, y: 240, z: 50 },
-  docking:   { x: 1200, y: 440, z: 100 },
-  miner:     { x: 1200, y: 640, z: 60 },
-  collector: { x: 1200, y: 800, z: 60 },
+  engine:           { x: 520, y: 100, z: 70 },
+  hull:             { x: 760, y: 100, z: 50 },
+  docking:          { x: 760, y: 330, z: 100 },
+  "beacon-locator": { x: 1000, y: 330, z: 90 },
+  scanner:          { x: 1000, y: 560, z: 88 },
+  miner:            { x: 520, y: 330, z: 60 },
+  collector:        { x: 760, y: 560, z: 60 },
+  processor:        { x: 520, y: 500, z: 48 },
+  cargo:            { x: 500, y: 180, z: 46 },
+  license:          { x: 1000, y: 100, z: 95 },
+  contract:         { x: 1240, y: 180, z: 95 },
 };
 if (state.ui.viewportLayout === "fullscreen-background") {
   applyViewportLayout("fullscreen-background");
@@ -566,39 +593,92 @@ function updateHudDisplay() {
   updateCargoTargetDisplay();
 
   const currentCredits = getCredits(state);
+  const creditsFloor = Math.floor(currentCredits);
+  if (creditsFloor !== _hud.credits) {
+    _hud.credits = creditsFloor;
+    creditCount.textContent = String(creditsFloor);
+    licenseCreditsDisplay.textContent = `${creditsFloor} cr`;
+    merchantCredits.textContent = `${creditsFloor} cr`;
+  }
 
-  creditCount.textContent = String(Math.floor(currentCredits));
-  licenseCreditsDisplay.textContent = `${Math.floor(currentCredits)} cr`;
   const currentFuel = state.components.engine.fuel;
+  const fuelFloor = Math.floor(currentFuel);
+  const fuelFraction = getMeterFraction(currentFuel, state.components.engine.maxFuel);
   const isStranded = state.components.engine.installed && !currentSiteState?.dockedSite &&
     !game.isTowActive() &&
     !state.ledger.getSignal("actor.controlLocked") &&
     (currentFuel <= 0 || state.components.hull.integrity <= 0);
 
-  fuelCount.textContent = String(Math.floor(currentFuel));
-  fuelFill.style.width = `${getMeterPercent(currentFuel, state.components.engine.maxFuel)}%`;
+  if (fuelFloor !== _hud.fuel) {
+    _hud.fuel = fuelFloor;
+    fuelCount.textContent = String(fuelFloor);
+  }
+  if (fuelFraction !== _hud.fuelFraction) {
+    _hud.fuelFraction = fuelFraction;
+    fuelFill.style.transform = `scaleX(${fuelFraction})`;
+  }
+
   setTowAvailable(isStranded);
   updateTowEstimateDisplay();
-  ammoCount.textContent = String(Math.floor(state.components.miner.ammo));
+
+  const ammoFloor = Math.floor(state.components.miner.ammo);
+  if (ammoFloor !== _hud.ammo) {
+    _hud.ammo = ammoFloor;
+    ammoCount.textContent = String(ammoFloor);
+  }
+
   updateBeaconLocatorDisplay();
-  tractorFieldStatus.textContent = state.components.collector.isActive ? "Pulling" : "Idle";
-  tractorFieldButton.setAttribute("aria-pressed", String(state.components.collector.isActive));
+
+  const tractorActive = state.components.collector.isActive;
+  if (tractorActive !== _hud.tractorActive) {
+    _hud.tractorActive = tractorActive;
+    tractorFieldStatus.textContent = tractorActive ? "Pulling" : "Idle";
+    tractorFieldButton.setAttribute("aria-pressed", String(tractorActive));
+  }
+
   const hullPct = Math.ceil((state.components.hull.integrity / state.components.hull.maxIntegrity) * 100);
-  hullCount.textContent = `${hullPct}%`;
-  hullFill.style.width = `${getMeterPercent(state.components.hull.integrity, state.components.hull.maxIntegrity)}%`;
-  hullVin.textContent = state.components.hull.vinPlateAttached ? state.components.hull.vin : "UNVERIFIED";
-  minerArmed.checked = state.components.miner.armed;
-  merchantCredits.textContent = `${Math.floor(currentCredits)} cr`;
+  const hullFraction = getMeterFraction(state.components.hull.integrity, state.components.hull.maxIntegrity);
+  if (hullPct !== _hud.hullPct) {
+    _hud.hullPct = hullPct;
+    hullCount.textContent = `${hullPct}%`;
+  }
+  if (hullFraction !== _hud.hullFraction) {
+    _hud.hullFraction = hullFraction;
+    hullFill.style.transform = `scaleX(${hullFraction})`;
+  }
+
+  const vinText = state.components.hull.vinPlateAttached ? state.components.hull.vin : "UNVERIFIED";
+  if (vinText !== _hud.hullVin) {
+    _hud.hullVin = vinText;
+    hullVin.textContent = vinText;
+  }
+
+  if (state.components.miner.armed !== _hud.minerArmed) {
+    _hud.minerArmed = state.components.miner.armed;
+    minerArmed.checked = state.components.miner.armed;
+  }
+
   updateWarningPanels();
   scheduleSave();
 }
 
 function updateBeaconLocatorDisplay() {
-  const locator = state.components.scanner;
+  const locator = state.components.beaconLocator;
+  const scanner = state.components.scanner;
   const activeSite = game.worldSites.find((site) => site.id === locator.activeBeaconId);
 
-  scanergyCount.textContent = activeSite?.name ?? "None";
-  scanButton.disabled = !locator.installed || (locator.beaconMemoryIds?.length ?? 0) === 0;
+  if (beaconTracking) {
+    beaconTracking.textContent = activeSite?.name ?? "None";
+  }
+  if (scanButton) {
+    scanButton.disabled = !locator.installed || (locator.beaconMemoryIds?.length ?? 0) === 0;
+  }
+  if (scanergyCount) {
+    scanergyCount.textContent = String(Math.floor(scanner.scanergy));
+  }
+  if (scanTrigger) {
+    scanTrigger.disabled = !scanner.installed || scanner.scanergy < 50;
+  }
 
   if (!beaconDirectionArrow || !activeSite) {
     return;
@@ -650,6 +730,14 @@ function getMeterPercent(value, maxValue) {
   return Math.max(0, Math.min(100, (value / maxValue) * 100));
 }
 
+function getMeterFraction(value, maxValue) {
+  if (maxValue <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(1, value / maxValue));
+}
+
 function scheduleSave() {
   if (saveTimer) {
     return;
@@ -685,6 +773,13 @@ function revealInstalledComponents() {
   Object.entries(state.ui.panels).forEach(([panelId, panelState]) => {
     if (panelState?.available) {
       setComponentAvailable(panelId, true);
+      // If a ship-system panel was available at save time, ensure the component
+      // state agrees — panel visibility and installed state can drift apart when
+      // a devStart session reveals panels without running the purchase flow.
+      const componentStateId = COMPONENT_STATE_BY_PANEL_ID[panelId];
+      if (componentStateId && state.components[componentStateId]) {
+        state.components[componentStateId].installed = true;
+      }
     }
   });
 }
@@ -710,6 +805,8 @@ function applyDevStart(devStartId) {
     return;
   }
 
+  state._devStartId = devStartId;
+
   if (devStartId === "red-work") {
     setupDevRedWorkStart();
     journeyDirector.startMission("chapter-1-red-work");
@@ -734,22 +831,34 @@ function applyViewportLayout(layout) {
   state.ui.viewportLayout = layout;
   document.body.classList.toggle("is-viewport-fullscreen", layout === "fullscreen-background");
   updateZoomLabel();
+  updateAlphaLabel();
 
   if (layout === "fullscreen-background") {
+    const savedLayout = loadPanelLayout();
     Object.entries(PANORAMA_PANEL_OVERRIDES).forEach(([panelId, pos]) => {
-      positionPanelById(panelId, pos);
+      const saved = savedLayout.panels?.[panelId];
+      if (!saved || saved.panoramaLayoutVersion !== PANORAMA_LAYOUT_VERSION) {
+        positionPanelById(panelId, pos);
+        const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
+        if (panel) {
+          savePanelLayout(panel, pos, {
+            panoramaPlaced: true,
+            panoramaLayoutVersion: PANORAMA_LAYOUT_VERSION,
+          });
+        }
+      }
     });
   }
 }
 
 function updateZoomLabel() {
   if (!zoomLabel) return;
-  const zoom = state.ui?.viewportZoom ?? 0.5;
+  const zoom = state.ui?.viewportZoom ?? 1.0;
   zoomLabel.textContent = Math.round(zoom * 100) + "%";
 }
 
 function adjustZoom(delta) {
-  const current = state.ui?.viewportZoom ?? 0.5;
+  const current = state.ui?.viewportZoom ?? 1.0;
   const next = Math.min(2, Math.max(0.25, Math.round((current + delta) * 20) / 20));
   state.ui.viewportZoom = next;
   updateZoomLabel();
@@ -793,10 +902,8 @@ function setupExplorerStart() {
     integrity: 140,
     maxIntegrity: 140,
   });
-  Object.assign(state.components.scanner, {
+  Object.assign(state.components.beaconLocator, {
     installed: true,
-    scanergy: 400,
-    targets: ["resources", "sites"],
     beaconMemoryIds: [
       "yard-exchange",
       "scrap-porch",
@@ -806,6 +913,11 @@ function setupExplorerStart() {
       "deep-research",
     ],
     activeBeaconId: "yard-exchange",
+  });
+  Object.assign(state.components.scanner, {
+    installed: true,
+    scanergy: 400,
+    targets: ["resources"],
   });
   Object.assign(state.components.miner, {
     installed: true,
@@ -840,6 +952,7 @@ function setupExplorerStart() {
   setComponentAvailable("viewport", true);
   setComponentAvailable("engine", true);
   setComponentAvailable("hull", true);
+  setComponentAvailable("beacon-locator", true);
   setComponentAvailable("scanner", true);
   setComponentAvailable("miner", true);
   setComponentAvailable("cargo", true);
@@ -862,10 +975,15 @@ function setupDevRedWorkStart() {
     installed: true,
     integrity: state.components.hull.maxIntegrity,
   });
-  Object.assign(state.components.scanner, {
+  Object.assign(state.components.beaconLocator, {
     installed: true,
-    scanergy: Math.max(state.components.scanner.scanergy, 300),
-    targets: ["resources", "sites"],
+    beaconMemoryIds: ["yard-exchange", "scrap-porch"],
+    activeBeaconId: "yard-exchange",
+  });
+  Object.assign(state.components.scanner, {
+    installed: false,
+    scanergy: 0,
+    targets: ["resources"],
   });
   Object.assign(state.components.miner, {
     installed: true,
@@ -884,7 +1002,7 @@ function setupDevRedWorkStart() {
   setComponentAvailable("viewport", true);
   setComponentAvailable("engine", true);
   setComponentAvailable("hull", true);
-  setComponentAvailable("scanner", true);
+  setComponentAvailable("beacon-locator", true);
   setComponentAvailable("miner", true);
   setComponentAvailable("cargo", true);
   setComponentAvailable("docking", true);
@@ -1435,7 +1553,6 @@ function updateLedgerDrivenSystems() {
   updateHubAuthorityMessages();
   updateTowChatter();
   updateDockingInspection();
-  commsDirector.update();
 }
 
 function updateDockingInspection() {
@@ -1841,6 +1958,26 @@ function getContractFileMeta(contract) {
   return contract.issuer;
 }
 
+function createResourceBadge(resourceType) {
+  const size = 18;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  canvas.style.cssText = "display:inline-block;vertical-align:middle;margin-right:5px;";
+  const ctx = canvas.getContext("2d");
+  const color = getResourceColor(normalizeResourceType(resourceType));
+  const shape = getResourceShape(resourceType);
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  ctx.translate(size / 2, size / 2);
+  ctx.strokeStyle = color;
+  ctx.fillStyle = `rgba(${r},${g},${b},0.3)`;
+  ctx.lineWidth = 1.5;
+  drawResourceShape(ctx, shape, size * 0.78);
+  return canvas;
+}
+
 function renderContractTerms(contract) {
   if (contract.type === "loan") {
     contractPrimaryLabel.textContent = "Principal";
@@ -1854,7 +1991,7 @@ function renderContractTerms(contract) {
 
   if (contract.type === "resource-delivery") {
     contractPrimaryLabel.textContent = "Resource";
-    contractVin.textContent = `${contract.terms.amount} ${contract.terms.resourceName}`;
+    contractVin.replaceChildren(createResourceBadge(contract.terms.resourceType), `${contract.terms.amount} ${contract.terms.resourceName}`);
     contractSecondaryLabel.textContent = "Destination";
     contractDestination.textContent = contract.terms.destinationName;
     contractTertiaryLabel.textContent = "Reward";
@@ -3374,8 +3511,15 @@ function buyComponentOffer(offer, service = null) {
 
   spendCredits(state, offer.price);
   component.installed = true;
-  syncActiveHullFromComponents(state);
   setComponentAvailable(offer.componentId, true);
+
+  if (offer.componentId === "processor") {
+    // Cargo hold becomes the processor's output destination. Ensure the panel
+    // is visible and in-bounds — it may have been off-screen from a prior layout.
+    setComponentAvailable("cargo", true);
+    positionPanelById("cargo", { x: 0, y: 0 });
+  }
+
   state.ledger.recordEvent(
     "component.purchased",
     {
@@ -3511,7 +3655,7 @@ function clampDeskPanelZIndex(zIndex) {
   return Math.min(DESK_PANEL_MAX_Z_INDEX, Math.max(DESK_PANEL_MIN_Z_INDEX, zIndex));
 }
 
-function savePanelLayout(panel, offset = null) {
+function savePanelLayout(panel, offset = null, options = {}) {
   const panelId = panel.dataset.panelId;
 
   if (!panelId) {
@@ -3529,6 +3673,8 @@ function savePanelLayout(panel, offset = null) {
       y: offset?.y ?? previousPanel.y ?? 0,
       z: zIndex,
       inDrawer: Boolean(panel.closest("#paperwork-drawer")),
+      ...(options.panoramaPlaced ? { panoramaPlaced: true } : {}),
+      ...(options.panoramaLayoutVersion ? { panoramaLayoutVersion: options.panoramaLayoutVersion } : {}),
     },
   };
 

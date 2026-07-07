@@ -1,8 +1,8 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260704-0155-737ee43";
-import { depositCredits, getCredits } from "./accounts.js?v=fresh-20260704-0155-737ee43";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260704-0155-737ee43";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260704-0155-737ee43";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260704-0155-737ee43";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260706-2034-ea0751b";
+import { depositCredits, getCredits } from "./accounts.js?v=fresh-20260706-2034-ea0751b";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260706-2034-ea0751b";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260706-2034-ea0751b";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260706-2034-ea0751b";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -11,6 +11,15 @@ export function createContractManager({ state, onChange = () => {} }) {
 
   function offerContract(contractId, offerSource = null) {
     const definition = getContractDefinition(contractId);
+    const unmetPrereqs = (definition.prerequisites ?? []).filter(
+      (prereqId) => state.contracts.records[prereqId]?.status !== "paid",
+    );
+
+    if (unmetPrereqs.length > 0) {
+      console.warn(`[contractManager] Cannot offer ${contractId}: prerequisites not met: ${unmetPrereqs.join(", ")}`);
+      return;
+    }
+
     const existingContract = state.contracts.records[contractId];
 
     if (existingContract?.status === "offered") {

@@ -1,23 +1,24 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260704-0155-737ee43";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260704-0155-737ee43";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260704-0155-737ee43";
-import { Ship } from "./entities/Ship.js?v=fresh-20260704-0155-737ee43";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260704-0155-737ee43";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260706-2034-ea0751b";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260706-2034-ea0751b";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260706-2034-ea0751b";
+import { Ship } from "./entities/Ship.js?v=fresh-20260706-2034-ea0751b";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260706-2034-ea0751b";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260704-0155-737ee43";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260704-0155-737ee43";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260704-0155-737ee43";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260704-0155-737ee43";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260704-0155-737ee43";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260704-0155-737ee43";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260704-0155-737ee43";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260704-0155-737ee43";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260704-0155-737ee43";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260704-0155-737ee43";
-import { getZoneProfile } from "./systems/worldZones.js?v=fresh-20260704-0155-737ee43";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260704-0155-737ee43";
-import { createGameState } from "./state/gameState.js?v=fresh-20260704-0155-737ee43";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260704-0155-737ee43";
+import { createInput } from "./systems/input.js?v=fresh-20260706-2034-ea0751b";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260706-2034-ea0751b";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260706-2034-ea0751b";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260706-2034-ea0751b";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260706-2034-ea0751b";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260706-2034-ea0751b";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260706-2034-ea0751b";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260706-2034-ea0751b";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260706-2034-ea0751b";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260706-2034-ea0751b";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260706-2034-ea0751b";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260706-2034-ea0751b";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260706-2034-ea0751b";
+import { createGameState } from "./state/gameState.js?v=fresh-20260706-2034-ea0751b";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260706-2034-ea0751b";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -94,6 +95,7 @@ export class Game {
   ) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
+    document.addEventListener("contextmenu", (e) => e.preventDefault());
     this.state = state;
     this.onHudChange = onHudChange;
     this.onResourceCollected = onResourceCollected;
@@ -101,11 +103,17 @@ export class Game {
     this.onSiteChange = onSiteChange;
     this.audio = audio;
     this.onLogicUpdate = onLogicUpdate;
+    this.logicAccumulator = 0;
     this.input = createInput();
     this.camera = createCamera(canvas);
     this.scanner = createScanner(canvas);
     this.ship = new Ship(0, 0, state.components.engine, state.ship);
     this.resourceField = createResourceField();
+    this.claimField = createClaimField();
+    this._claimCanvas = null;
+    this._claimCtx = null;
+    this._claimImageData = null;
+    this._claimCamKey = null;
     this.worldSites = getWorldSites();
     this.chunkManager = createAsteroidChunks(canvas, this.resourceField);
     const { added: initialAsteroids } = this.chunkManager.update(0, 0);
@@ -268,36 +276,36 @@ export class Game {
     }
   }
 
-  scanForCrystals() {
-    const scanner = this.state.components.scanner;
+  cycleBeacon() {
+    const locator = this.state.components.beaconLocator;
 
-    if (this.shipDestroyed || !scanner.installed) {
+    if (this.shipDestroyed || !locator.installed) {
       return;
     }
 
-    const rememberedHubIds = (scanner.beaconMemoryIds ?? [])
+    const rememberedHubIds = (locator.beaconMemoryIds ?? [])
       .filter((siteId) => this.worldSites.some((site) => site.id === siteId && site.type === "hub"));
 
     if (rememberedHubIds.length === 0) {
       return;
     }
 
-    if (scanner.beaconLocatorUsed) {
-      const currentIndex = Math.max(0, rememberedHubIds.indexOf(scanner.activeBeaconId));
+    if (locator.beaconLocatorUsed) {
+      const currentIndex = Math.max(0, rememberedHubIds.indexOf(locator.activeBeaconId));
       const nextIndex = (currentIndex + 1) % rememberedHubIds.length;
-      scanner.activeBeaconId = rememberedHubIds[nextIndex];
-    } else if (!rememberedHubIds.includes(scanner.activeBeaconId)) {
-      scanner.activeBeaconId = rememberedHubIds[0];
+      locator.activeBeaconId = rememberedHubIds[nextIndex];
+    } else if (!rememberedHubIds.includes(locator.activeBeaconId)) {
+      locator.activeBeaconId = rememberedHubIds[0];
     }
 
-    scanner.beaconLocatorUsed = true;
-    const activeSite = this.worldSites.find((site) => site.id === scanner.activeBeaconId) ?? null;
+    locator.beaconLocatorUsed = true;
+    const activeSite = this.worldSites.find((site) => site.id === locator.activeBeaconId) ?? null;
     this.audio?.playScanner();
     this.state.ledger.recordEvent(
       "beaconLocator.used",
       {
-        beaconId: activeSite?.beaconId ?? scanner.activeBeaconId,
-        siteId: activeSite?.id ?? scanner.activeBeaconId,
+        beaconId: activeSite?.beaconId ?? locator.activeBeaconId,
+        siteId: activeSite?.id ?? locator.activeBeaconId,
         siteName: activeSite?.name ?? "Unknown beacon",
         x: Math.round(this.ship.position.x),
         y: Math.round(this.ship.position.y),
@@ -307,13 +315,31 @@ export class Game {
     this.onHudChange(this.state);
   }
 
+  triggerResourceScan() {
+    const scannerState = this.state.components.scanner;
+    const SCAN_COST = 50;
+
+    if (this.shipDestroyed || !scannerState.installed || scannerState.scanergy < SCAN_COST) {
+      return;
+    }
+
+    scannerState.scanergy = Math.max(0, scannerState.scanergy - SCAN_COST);
+    this.scanner.scan(this.ship, this.asteroids, this.worldSites, { targets: scannerState.targets ?? ["resources"] });
+    this.onHudChange(this.state);
+  }
+
   frame(time) {
     const deltaSeconds = Math.min((time - this.lastFrameTime) / 1000, 0.05);
     this.lastFrameTime = time;
 
+    this.logicAccumulator += deltaSeconds;
+
     try {
       this.update(deltaSeconds);
-      this.onLogicUpdate(this.state);
+      if (this.logicAccumulator >= 0.05) {
+        this.onLogicUpdate(this.state);
+        this.logicAccumulator = 0;
+      }
       this.frameErrorLog.update = false;
     } catch (error) {
       this.reportFrameError("update", error);
@@ -2505,6 +2531,7 @@ export class Game {
     const drawCanvas = this.getDrawCanvas(drawScale);
 
     clearScreen(this.context, this.canvas);
+    this.drawClaimField(drawCamera, drawScale);
 
     this.context.save();
     this.context.scale(drawScale, drawScale);
@@ -2545,9 +2572,54 @@ export class Game {
     this.drawViewportTitle();
   }
 
+  drawClaimField(camera, drawScale) {
+    if (this.state.ui?.viewportLayout !== "fullscreen-background") {
+      return;
+    }
+
+    const ctx = this.context;
+    const cw = this.canvas.width;
+    const ch = this.canvas.height;
+    const bounds = {
+      minX: camera.x,
+      minY: camera.y,
+      maxX: camera.x + cw / drawScale,
+      maxY: camera.y + ch / drawScale,
+    };
+    const network = this.claimField.getPlotNetwork(bounds);
+
+    ctx.save();
+    ctx.globalAlpha = 0.58;
+    ctx.strokeStyle = "rgba(126, 162, 178, 0.72)";
+    ctx.lineWidth = 1.1;
+    ctx.setLineDash([16, 10]);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    network.edges.forEach((edge) => {
+      ctx.beginPath();
+      ctx.moveTo((edge.a.x - camera.x) * drawScale, (edge.a.y - camera.y) * drawScale);
+      ctx.lineTo((edge.b.x - camera.x) * drawScale, (edge.b.y - camera.y) * drawScale);
+      ctx.stroke();
+    });
+
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 0.62;
+    ctx.fillStyle = "rgba(130, 184, 204, 0.82)";
+    network.vertices.forEach((vertex) => {
+      const x = (vertex.x - camera.x) * drawScale;
+      const y = (vertex.y - camera.y) * drawScale;
+      ctx.beginPath();
+      ctx.arc(x, y, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.restore();
+  }
+
   getViewportDrawScale() {
     return this.state.ui?.viewportLayout === "fullscreen-background"
-      ? (this.state.ui?.viewportZoom ?? 0.5)
+      ? (this.state.ui?.viewportZoom ?? 1.0)
       : 1;
   }
 
@@ -2560,7 +2632,7 @@ export class Game {
     const baseCameraY = camera.centerY - this.canvas.height / 2;
     const shakeX = camera.x - baseCameraX;
     const shakeY = camera.y - baseCameraY;
-    const targetScreenX = this.canvas.width * 0.6;
+    const targetScreenX = this.canvas.width * 0.5;
     const targetScreenY = this.canvas.height * 0.5;
 
     return {
@@ -2609,7 +2681,29 @@ export class Game {
 
     this.context.translate(screenX, screenY);
     this.context.rotate(patrol.heading);
+
+    // Swept wings behind the main body
     this.context.strokeStyle = "#7ee7ff";
+    this.context.fillStyle = "rgba(126, 231, 255, 0.07)";
+    this.context.lineWidth = 1.5;
+    this.context.beginPath();
+    this.context.moveTo(-6, -13);
+    this.context.lineTo(-22, -26);
+    this.context.lineTo(-28, -18);
+    this.context.lineTo(-15, -13);
+    this.context.closePath();
+    this.context.fill();
+    this.context.stroke();
+    this.context.beginPath();
+    this.context.moveTo(-6, 13);
+    this.context.lineTo(-22, 26);
+    this.context.lineTo(-28, 18);
+    this.context.lineTo(-15, 13);
+    this.context.closePath();
+    this.context.fill();
+    this.context.stroke();
+
+    // Main hull
     this.context.fillStyle = "rgba(126, 231, 255, 0.12)";
     this.context.lineWidth = 2;
     this.context.beginPath();
@@ -2621,12 +2715,24 @@ export class Game {
     this.context.fill();
     this.context.stroke();
 
+    // Inner V cockpit detail
     this.context.strokeStyle = "rgba(255, 255, 255, 0.72)";
+    this.context.lineWidth = 1.5;
     this.context.beginPath();
     this.context.moveTo(-2, -8);
     this.context.lineTo(11, 0);
     this.context.lineTo(-2, 8);
     this.context.stroke();
+
+    // Engine glow dots at wing tips
+    this.context.fillStyle = `rgba(126, 231, 255, ${0.5 + Math.sin(patrol.pulse * 6) * 0.2})`;
+    this.context.beginPath();
+    this.context.arc(-25, -21, 2.5, 0, Math.PI * 2);
+    this.context.fill();
+    this.context.beginPath();
+    this.context.arc(-25, 21, 2.5, 0, Math.PI * 2);
+    this.context.fill();
+
     this.context.restore();
   }
 

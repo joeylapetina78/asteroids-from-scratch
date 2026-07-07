@@ -2,7 +2,7 @@
 
 This document is the re-entry map for the Asteroids RPG prototype. The game is a custom browser Canvas project, not p5.js or a larger framework. The core idea is a space simulation where the player navigates an institutional world — banks, registries, mining authorities, employers, patrol organizations, factions — through documents, contracts, ships, and components. Mining is one profession within that world, not the definition of it.
 
-See [README.md](../README.md) for the design direction and run instructions. See [docs/agent-map.md](agent-map.md) for the short future-agent re-entry map. See [docs/world-structure.md](world-structure.md) for the Region/Zone split. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status. See [docs/resource-design.md](resource-design.md) for the resource family taxonomy, scarcity model, and asteroid ecology design.
+See [README.md](../README.md) for the design direction and run instructions. See [docs/agent-map.md](agent-map.md) for the short future-agent re-entry map. See [docs/world-structure.md](world-structure.md) for the Region/Zone split. See [docs/authority-model.md](authority-model.md) for the Place/Actor/Power/Right/Action authority spine. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status. See [docs/resource-design.md](resource-design.md) for the resource family taxonomy, scarcity model, and asteroid ecology design.
 
 ## How The Project Runs
 
@@ -58,7 +58,12 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/systems/componentRegistry.js](../src/systems/componentRegistry.js) | Central panel/component ID registry, startup visibility list, and panel-to-state-ID mapping. |
 | [src/systems/hulls.js](../src/systems/hulls.js) | Active hull record bridge. Tracks hull VIN, frame, status, and installed component IDs while current gameplay still reads `state.components`. |
 | [src/systems/legalRecords.js](../src/systems/legalRecords.js) | Access layer for pilot license, current ship legal summary, title/registration/lien records, and visited zones under `state.legal`. |
-| [src/systems/worldRecords.js](../src/systems/worldRecords.js) | Generic record layer for world entities, documents, and relationships. This is the bridge toward people, ships, companies, institutions, contracts, licenses, and liens sharing one relational shape. |
+| [src/systems/worldRecords.js](../src/systems/worldRecords.js) | Generic record layer for world entities, documents, places, authority grants, registries, and relationships. |
+| [src/systems/authorityModel.js](../src/systems/authorityModel.js) | Shared vocabulary for top-level powers, right types, place types, action mappings, and active-record checks. |
+| [src/systems/placeRegistry.js](../src/systems/placeRegistry.js) | Generic place records and parent/child lineage checks for universe, system, region, zone, plot, claim, jurisdiction, corridor, and hub. |
+| [src/systems/authorityRegistry.js](../src/systems/authorityRegistry.js) | Authority grants: who holds what power, where it applies, who granted it, and what limits constrain it. |
+| [src/systems/ruleChecker.js](../src/systems/ruleChecker.js) | Reusable permission query: can an actor do this action in this place with this document/asset/resource? |
+| [src/systems/authoritySeeds.js](../src/systems/authoritySeeds.js) | Seeds initial place records and region-level authority grants from authored region data. |
 | [src/systems/worldTerrain.js](../src/systems/worldTerrain.js) | Chunk terrain/flight-feel layer. Converts zone/resource context into asteroid placement archetypes such as open drift, clusters, walls, streams, giant gardens, and sparse dead space. |
 | [src/systems/paperworkInspections.js](../src/systems/paperworkInspections.js) | Creates paperwork inspection reports from world records: VIN, pilot identity, ship documents, pilot documents, title, lien, registration, and clearance facts. Hubs are one possible inspector. |
 | [src/systems/contractManager.js](../src/systems/contractManager.js) | Contract lifecycle management. Listens to ledger events and updates contract records. |
@@ -90,8 +95,7 @@ state = {
   accounts,         // { currentAccountId, records } - cash account bridge
   hulls,            // { activeHullVin, records } - VIN-centered hull/component records
   obligations,      // { records } - loans/debts and future owed duties
-  debt,             // { totalBorrowed, totalPaid, activePrincipal, activeBalance, highestDebt }
-  worldRecords,     // { entities, documents, relationships } - generic world facts
+  worldRecords,     // { entities, documents, places, authorityGrants, registries, relationships } - generic world facts
   legal,            // { pilotLicense, currentShip, pilotLicenses, shipTitles, registrations, liens, paperwork }
   ship,             // { frameId, name, shape, purchasedOfferId }
   credits,          // compatibility mirror of current cash account balance
@@ -99,7 +103,7 @@ state = {
 }
 ```
 
-`state.components` contains only physical ship hardware. UI state lives under `state.ui`. Legal/document compatibility state lives under `state.legal`. The more general world model lives under `state.worldRecords`: entities, documents, and relationships. Pilot money now lives in `state.accounts`, with `state.credits` kept as a compatibility mirror for existing UI code. Panel availability is `state.ui.panels` — not a ship system.
+`state.components` contains only physical ship hardware. UI state lives under `state.ui`. Legal/document compatibility state lives under `state.legal`. The more general world model lives under `state.worldRecords`: entities, documents, places, authority grants, registries, and relationships. Pilot money now lives in `state.accounts`, with `state.credits` kept as a compatibility mirror for existing UI code. Panel availability is `state.ui.panels` — not a ship system.
 
 ## Mission Beat System
 
@@ -196,6 +200,8 @@ The intended direction is a general document framework where documents are issue
 
 The RTC issues flight licenses. Rook Industries holds a mining permit (RI–7A3). The player's mining rights flow through Rook's permit. Zone violations are logged to `state.legal` and fire visible ledger events for future enforcement systems.
 
+The next authority layer lives in `state.worldRecords.places` and `state.worldRecords.authorityGrants`. It uses the vocabulary in [docs/authority-model.md](authority-model.md): Place, Actor, Power, Right, and Action. `authoritySeeds.js` currently turns `worldRegions.js` region rights into first-class authority grants. The rule checker is not yet the mandatory gate for contracts, docking, mining, or patrols, but new systems should prefer asking `canActorDoAction()` over adding player-only flags.
+
 ## Contract System
 
 `contractManager.js` listens to ledger events and updates contract records. Fulfillment logic lives in `contractRules.js` (first step toward declarative contract predicates). Contract lifecycle: offered → accepted → fulfilled → paid.
@@ -275,7 +281,13 @@ Each animation frame in `game.js`:
 
 [src/systems/worldZones.js](../src/systems/worldZones.js) — organic overlapping circular zones: Starter Drift, Red Teeth, Blue Glint, Scrap Wake, Dead Strip, Open Space fallback. `getZoneProfile(x, y)` blends nearby zones with smooth falloff.
 
-Important direction: this file currently mixes Region-like and Zone-like responsibilities. See [docs/world-structure.md](world-structure.md). Future code should split economy/ecology/resource identity into a region layer and keep zone/navigation profiles focused on flight experience.
+Important direction: this file currently mixes some Region-like and Zone-like responsibilities. See [docs/world-structure.md](world-structure.md). New code should prefer `worldRegions.js` for economy/ecology/resource identity and keep zone/navigation profiles focused on flight experience.
+
+### World Regions / Plots
+
+[src/systems/worldRegions.js](../src/systems/worldRegions.js) â€” first region layer. Regions define geology, economy, institutions, resource identity, faction pressure, and default rights by type: transit, mining, patrol, salvage, construction, trade, and enforcement.
+
+[src/systems/claimField.js](../src/systems/claimField.js) â€” deterministic plot/claim scaffold. It can draw a panorama map overlay and can return a lightweight plot record for a world coordinate. Plots currently inherit region rights/resource identity plus zone navigation context, but they do not yet drive contracts, resources, or patrol law.
 
 ### Resource Field / Asteroid Field / Life Field
 

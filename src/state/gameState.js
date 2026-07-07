@@ -1,12 +1,13 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260704-0155-737ee43";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260704-0155-737ee43";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260704-0155-737ee43";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260704-0155-737ee43";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260704-0155-737ee43";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260704-0155-737ee43";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260706-2034-ea0751b";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260706-2034-ea0751b";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260706-2034-ea0751b";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260706-2034-ea0751b";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260706-2034-ea0751b";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260706-2034-ea0751b";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260706-2034-ea0751b";
 
 export function createGameState() {
-  return {
+  const state = {
     ledger: createEventLedger(),
     journey: {
       chapterId: "prologue",
@@ -15,6 +16,7 @@ export function createGameState() {
       messages: [],
       mission: null,
       flags: {},
+      globalFlags: {},
       pendingAcknowledgement: null,
       nextMessageId: 1,
     },
@@ -31,7 +33,7 @@ export function createGameState() {
         filingIntroduced: true,
       },
       viewportLayout: "default",
-      viewportZoom: 0.5,
+      viewportZoom: 1.0,
     },
     hubServices: {
       unlocked: {},
@@ -125,14 +127,17 @@ export function createGameState() {
         ammo: 100,
         maxAmmo: 200,
       },
+      beaconLocator: {
+        installed: false,
+        beaconMemoryIds: ["scrap-porch", "yard-exchange"],
+        activeBeaconId: "yard-exchange",
+        beaconLocatorUsed: false,
+      },
       scanner: {
         installed: false,
         scanergy: 0,
         maxScanergy: 400,
-        targets: ["resources", "sites"],
-        beaconMemoryIds: ["scrap-porch", "yard-exchange"],
-        activeBeaconId: "yard-exchange",
-        beaconLocatorUsed: false,
+        targets: ["resources"],
       },
       processor: {
         installed: false,
@@ -157,6 +162,9 @@ export function createGameState() {
       },
     },
   };
+
+  seedAuthorityFoundation(state);
+  return state;
 }
 
 function createInitialPanelAvailability() {

@@ -1,4 +1,4 @@
-import { resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260704-0155-737ee43";
+import { resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260706-2034-ea0751b";
 
 export function matchesEventRule(rule, event, { state }) {
   if (!rule.repeatable && rule.once && state.journey.flags[rule.setFlag ?? rule.id]) {
@@ -17,11 +17,11 @@ export function matchesEventRule(rule, event, { state }) {
     return false;
   }
 
-  if (rule.requiresFlag && !state.journey.flags[rule.requiresFlag]) {
+  if (rule.requiresFlag && !state.journey.flags[rule.requiresFlag] && !state.journey.globalFlags?.[rule.requiresFlag]) {
     return false;
   }
 
-  if (rule.requiresFlags?.some((flag) => !state.journey.flags[flag])) {
+  if (rule.requiresFlags?.some((flag) => !state.journey.flags[flag] && !state.journey.globalFlags?.[flag])) {
     return false;
   }
 
@@ -39,6 +39,11 @@ export function matchesEventRule(rule, event, { state }) {
 export function applyRuleMarkers(rule, { state }) {
   if (rule.setFlag) {
     state.journey.flags[rule.setFlag] = true;
+  }
+
+  if (rule.setGlobalFlag) {
+    state.journey.globalFlags ??= {};
+    state.journey.globalFlags[rule.setGlobalFlag] = true;
   }
 
   if (rule.repeatable || rule.responses?.length || rule.maxRuns !== undefined) {

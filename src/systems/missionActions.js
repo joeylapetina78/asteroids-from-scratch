@@ -90,6 +90,11 @@ export const MISSION_ACTION_DEFINITIONS = {
     required: [],
     optional: ["reason"],
   },
+  setGlobalFlag: {
+    label: "Set Global Flag",
+    description: "Set a flag that persists across missions in journey.globalFlags.",
+    required: ["flag"],
+  },
   setViewportLayout: {
     label: "Set Viewport Layout",
     description: "Change how the viewport panel is displayed. 'fullscreen-background' fills the entire page; 'default' restores normal layout.",
@@ -152,6 +157,9 @@ function runMissionAction(action, { state, actions, missionDefinition, goToStep 
     actions.startMission(action.missionId);
   } else if (action.type === "spawnHunterNearShip") {
     actions.spawnHunterNearShip(action.reason);
+  } else if (action.type === "setGlobalFlag") {
+    state.journey.globalFlags ??= {};
+    state.journey.globalFlags[action.flag] = true;
   } else if (action.type === "setViewportLayout") {
     actions.setViewportLayout?.(action.layout);
   }

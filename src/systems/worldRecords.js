@@ -14,6 +14,8 @@ export function ensureWorldRecords(state) {
 
   state.worldRecords.entities ??= {};
   state.worldRecords.documents ??= {};
+  state.worldRecords.places ??= {};
+  state.worldRecords.authorityGrants ??= {};
   state.worldRecords.registries ??= {};
   state.worldRecords.relationships ??= {};
 
@@ -24,6 +26,8 @@ export function createEmptyWorldRecords() {
   return {
     entities: {},
     documents: {},
+    places: {},
+    authorityGrants: {},
     registries: {},
     relationships: {},
   };

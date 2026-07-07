@@ -1,6 +1,6 @@
-import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260704-0155-737ee43";
+import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260706-2034-ea0751b";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260704-0155-737ee43";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260706-2034-ea0751b";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same
@@ -106,23 +106,23 @@ function getAsteroidCount(density, random, multiplier = 1, minimum = 0) {
 
 function getBaseAsteroidCount(density, random) {
   if (density < 0.3) {
-    return random() < 0.35 ? 1 : 0;
+    return random() < 0.55 ? 1 : 0;
   }
 
   if (density < 0.55) {
-    return random() < 0.75 ? 1 : 2;
+    return 1 + Math.floor(random() * 3);
   }
 
   if (density < 0.78) {
-    return 2 + Math.floor(random() * 2);
+    return 3 + Math.floor(random() * 3);
   }
 
-  return 3 + Math.floor(random() * 3);
+  return 5 + Math.floor(random() * 5);
 }
 
 function getCommonAsteroidCount(density, commonRockBias, random, multiplier = 1, minimum = 1) {
-  const baseCount = 3 + Math.floor(random() * 4);
-  const densityBonus = Math.floor(density * 7);
+  const baseCount = 6 + Math.floor(random() * 7);
+  const densityBonus = Math.floor(density * 12);
   const biasedCount = (baseCount + densityBonus) * commonRockBias * multiplier;
 
   return Math.max(minimum, Math.round(biasedCount));

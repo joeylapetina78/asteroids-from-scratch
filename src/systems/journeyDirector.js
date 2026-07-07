@@ -1,8 +1,8 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260704-0155-737ee43";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260704-0155-737ee43";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260704-0155-737ee43";
-import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260704-0155-737ee43";
-import { createMissionRunner } from "./missionRunner.js?v=fresh-20260704-0155-737ee43";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260706-2034-ea0751b";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260706-2034-ea0751b";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260706-2034-ea0751b";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260706-2034-ea0751b";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260706-2034-ea0751b";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -42,7 +42,7 @@ export function createJourneyDirector({
   function startFreeMode() {
     showOnlyInitialComponents();
     // Show all flight panels immediately — explorer skips the mission unlock sequence.
-    ["viewport", "hull", "docking", "engine", "scanner", "miner", "collector", "processor", "cargo"].forEach((id) => {
+    ["viewport", "hull", "docking", "engine", "beacon-locator", "scanner", "miner", "collector", "processor", "cargo"].forEach((id) => {
       showComponent(id);
     });
     game?.enableHubPatrol();
@@ -133,7 +133,12 @@ export function createJourneyDirector({
       { visible: true },
     );
     if (completion) {
-      say(completion.speaker ?? "Journey", grade?.line ?? completion.line ?? "Mission complete.", completion.acknowledgement);
+      const line = grade?.line ?? completion.line ?? null;
+
+      if (line) {
+        say(completion.speaker ?? "Journey", line, completion.acknowledgement);
+      }
+
       return;
     }
 
@@ -156,6 +161,7 @@ export function createJourneyDirector({
       throw new Error(`Unknown mission: ${missionId}`);
     }
 
+    activeMission.destroy?.();
     activeMission = createMission(missionDefinition);
     activeMission.startOffer();
 
@@ -216,6 +222,16 @@ export function createJourneyDirector({
         journey.messages = [];
         onChange(journey);
       }, durationMs);
+    }
+
+    if (acknowledgement?.action === "startMission" && typeof globalThis.setTimeout === "function") {
+      const pendingRef = acknowledgement;
+
+      globalThis.setTimeout(() => {
+        if (journey.pendingAcknowledgement === pendingRef) {
+          acknowledge();
+        }
+      }, 45000);
     }
   }
 

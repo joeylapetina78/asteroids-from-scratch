@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260704-0155-737ee43";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260704-0155-737ee43";
+import { getNpcName } from "../npcs.js?v=fresh-20260706-2034-ea0751b";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260706-2034-ea0751b";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
@@ -14,13 +14,13 @@ export const hubServiceDefinitions = {
       contractIds: [
         "rook-red-resource-run-5",
         "rook-red-resource-run-10",
-        "rook-blue-resource-run-5",
-        "rook-blue-resource-run-10",
+        "rook-copper-run-5",
+        "rook-copper-run-10",
       ],
       contractPrerequisites: {
         "rook-red-resource-run-10": ["rook-red-resource-run-5"],
-        "rook-blue-resource-run-5": ["rook-red-resource-run-10"],
-        "rook-blue-resource-run-10": ["rook-blue-resource-run-5"],
+        "rook-copper-run-5": ["rook-red-resource-run-10"],
+        "rook-copper-run-10": ["rook-copper-run-5"],
       },
       defaultUnlocked: false,
       greeting: "Got work if you want it. Check what's in the contract tray and let me know.",
@@ -109,6 +109,26 @@ export const hubServiceDefinitions = {
           description:
             "A hungry little sweep field. Hold the panel button to pull loose resource squares into the ship.",
           tags: ["Resource recovery", "Uses scanergy", "Hold to pull"],
+        },
+        {
+          id: "scanner-mk1",
+          componentId: "scanner",
+          componentName: "Scanner",
+          price: 400,
+          title: "Scanner Mk I",
+          description:
+            "Pulses a forward cone every few seconds and marks nearby resource-bearing rocks on your display.",
+          tags: ["Resource detection", "Auto-pulses", "Forward cone"],
+        },
+        {
+          id: "processor-mk1",
+          componentId: "processor",
+          componentName: "Processor",
+          price: 600,
+          title: "Processor Mk I",
+          description:
+            "Converts collected resources into fuel, charges, or scanergy as they arrive. Set output in the panel.",
+          tags: ["Converts resources", "Passive output", "Configurable"],
         },
       ],
     },

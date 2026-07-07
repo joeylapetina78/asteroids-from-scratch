@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=fresh-20260704-0155-737ee43";
+import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=fresh-20260706-2034-ea0751b";
 
 export const chapterOneRedWorkMission = {
   id: "chapter-1-red-work",
@@ -24,13 +24,9 @@ export const chapterOneRedWorkMission = {
   title: "First Red Run",
   successCriteria: "Complete one resource delivery contract for Rook.",
   completion: {
-    speaker: "Rook",
     objective: "Red resource contract complete.",
     helpText:
       "The first red run is complete. Rook can offer more repeatable resource work from here.",
-    line:
-      "That's the stuff. Red comes in, credits go out. I also told Nara Coil at Modworks you might be worth selling to. She's got a tractor field rig if you want to make pickup work less annoying. One more thing — there's an outpost called The Ledge, east-northeast past Red Teeth. Small place, nothing fancy, but it's a fuel stop if you're pushing further out. Worth knowing it's there.",
-    acknowledgement: { label: "Got It" },
   },
   startBeatId: "offer-red-contract",
   considerations: [
@@ -219,8 +215,33 @@ export const chapterOneRedWorkMission = {
           payloadEquals: { contractGroup: "rook-resource-run" },
           actions: [
             { type: "unlockHubService", siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.modworks },
-            { type: "completeMission" },
           ],
+          nextStepId: "rook-wrap-up",
+        },
+      ],
+    },
+    {
+      id: "rook-wrap-up",
+      objective: "Red resource contract complete.",
+      helpText:
+        "Visit Modworks to see what Nara Coil has, or undock to keep exploring.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "That's the stuff. Red comes in, credits go out. I also told Nara Coil at Modworks you might be worth selling to. She's got a tractor field rig if you want to make pickup work less annoying. One more thing — there's an outpost called The Ledge, east-northeast past Red Teeth. Small place, nothing fancy, but it's a fuel stop if you're pushing further out. Worth knowing it's there.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "hub.serviceOpened",
+          payloadEquals: { serviceId: yardExchangeServices.modworks },
+          actions: [{ type: "completeMission" }],
+        },
+        {
+          eventType: "site.undocked",
+          actions: [{ type: "completeMission" }],
         },
       ],
     },

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260704-0155-737ee43" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260706-2034-ea0751b" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -149,7 +149,7 @@
               </div>
             </div>
 
-            <div class="component-panel scanner-panel" data-panel-id="scanner" aria-label="Beacon locator component">
+            <div class="component-panel beacon-locator-panel" data-panel-id="beacon-locator" aria-label="Beacon locator component">
               <div class="component-panel-title">
                 <div>
                   <strong>Beacon Locator</strong>
@@ -160,10 +160,25 @@
                 Next Beacon
               </button>
               <div class="system-readout" aria-live="polite">
-                <span>Tracking: <strong id="scanergy-count">None</strong></span>
+                <span>Tracking: <strong id="beacon-tracking">None</strong></span>
                 <div class="beacon-compass" aria-hidden="true">
                   <span id="beacon-direction-arrow"></span>
                 </div>
+              </div>
+            </div>
+
+            <div class="component-panel scanner-panel" data-panel-id="scanner" aria-label="Scanner component">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Scanner</strong>
+                  <span>resource detection</span>
+                </div>
+              </div>
+              <button id="scan-trigger" class="scan-button" type="button">
+                Scan
+              </button>
+              <div class="system-readout" aria-live="polite">
+                <span>Scanergy: <strong id="scanergy-count">0</strong></span>
               </div>
             </div>
 
@@ -555,6 +570,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260704-0155-737ee43"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260706-2034-ea0751b"></script>
   </body>
 </html>
