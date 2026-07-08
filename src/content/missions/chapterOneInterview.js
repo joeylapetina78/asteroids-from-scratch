@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260706-2034-ea0751b";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260707-flash4";
 
 const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
@@ -237,6 +237,9 @@ export const chapterOneInterviewMission = {
     {
       id: "show-hull",
       objective: "Get your bearings.",
+      tasks: [
+        { label: "Review the ship controls", flag: "reviewedShipControls" },
+      ],
       helpText:
         "This communicator rail shows mission dialogue, plain instructions, and your credits. The Hull panel shows ship health, VIN, and the Docking Lock. Your license is paperwork you can file in the drawer.",
       onEnter: [
@@ -253,6 +256,7 @@ export const chapterOneInterviewMission = {
         },
       ],
       onAcknowledge: [
+        { type: "setFlag", flag: "reviewedShipControls" },
         { type: "clearMessage" },
         { type: "goToStep", stepId: "drag-panels" },
       ],
@@ -262,6 +266,10 @@ export const chapterOneInterviewMission = {
       objective: "Move the License and Hull panels.",
       helpText:
         "Drag panels by their title bars. Move the License panel and the Hull panel anywhere comfortable in the display area.",
+      tasks: [
+        { label: "Move the License panel", flag: "licensePanelMoved" },
+        { label: "Move the Hull panel", flag: "hullPanelMoved" },
+      ],
       onEnter: [
         { type: "showComponent", componentId: "license", componentName: "License" },
         { type: "showComponent", componentId: "hull", componentName: "Hull" },
@@ -277,6 +285,7 @@ export const chapterOneInterviewMission = {
         {
           eventType: "component.dragged",
           requiresFlags: ["licensePanelMoved", "hullPanelMoved"],
+          delayMs: 1200,
           nextStepId: "offer-contract",
         },
       ],
@@ -284,6 +293,9 @@ export const chapterOneInterviewMission = {
     {
       id: "offer-contract",
       objective: "Review Rook's delivery contract.",
+      tasks: [
+        { label: "Accept the delivery contract", flag: "offerContractAccepted" },
+      ],
       helpText:
         "Use the Contract panel to accept the delivery terms. The job pays when this VIN docks at Yard Exchange and the ship is powered down.",
       onEnter: [
@@ -299,6 +311,8 @@ export const chapterOneInterviewMission = {
         {
           eventType: "contract.accepted",
           payloadEquals: { contractId: "rook-yard-exchange-delivery" },
+          setFlag: "offerContractAccepted",
+          delayMs: 1200,
           nextStepId: "file-contract",
         },
       ],
@@ -306,6 +320,9 @@ export const chapterOneInterviewMission = {
     {
       id: "file-contract",
       objective: "File the Assessment Delivery contract.",
+      tasks: [
+        { label: "File the contract into the drawer", flag: "contractFiled" },
+      ],
       helpText:
         "Click the FILE button on the Contract panel. It will move into the Paperwork drawer at the bottom, where you can pull it up anytime.",
       onEnter: [
@@ -321,19 +338,22 @@ export const chapterOneInterviewMission = {
         {
           eventType: "component.filed",
           payloadEquals: { componentId: "contract", destination: "drawer" },
-          actions: [
-            { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
-            { type: "goToStep", stepId: "show-scanner" },
-          ],
+          setFlag: "contractFiled",
+          delayMs: 1200,
+          nextStepId: "show-scanner",
         },
       ],
     },
     {
       id: "show-scanner",
       objective: "Get your bearings.",
+      tasks: [
+        { label: "Add the Beacon Locator to controls", flag: "beaconLocatorAdded" },
+      ],
       helpText:
         "Press Add Beacon Locator. It does not need power. It points toward hub beacons remembered by the ship.",
       onEnter: [
+        { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
         {
           type: "say",
           speaker: "Rook",
@@ -343,6 +363,7 @@ export const chapterOneInterviewMission = {
         },
       ],
       onAcknowledge: [
+        { type: "setFlag", flag: "beaconLocatorAdded" },
         { type: "clearMessage" },
         { type: "setComponentValue", componentId: "beaconLocator", key: "beaconMemoryIds", value: ["scrap-porch", "yard-exchange"] },
         { type: "setComponentValue", componentId: "beaconLocator", key: "activeBeaconId", value: "scrap-porch" },
@@ -354,6 +375,9 @@ export const chapterOneInterviewMission = {
     {
       id: "try-scanner",
       objective: "Check the beacon locator.",
+      tasks: [
+        { label: "Tune beacon to Yard Exchange", flag: "beaconTunedToYard" },
+      ],
       helpText:
         "The Beacon Locator starts on Scrap Porch, the hub you came from. Press Next Beacon until it tracks Yard Exchange, your destination.",
       onEnter: [
@@ -378,6 +402,8 @@ export const chapterOneInterviewMission = {
         {
           eventType: "beaconLocator.used",
           payloadEquals: { siteId: "yard-exchange" },
+          setFlag: "beaconTunedToYard",
+          delayMs: 1200,
           nextStepId: "show-engine",
         },
       ],
@@ -385,6 +411,9 @@ export const chapterOneInterviewMission = {
     {
       id: "show-engine",
       objective: "Get the engine online.",
+      tasks: [
+        { label: "Add the Engine panel to controls", flag: "enginePanelAdded" },
+      ],
       helpText:
         "Press Add Engine to bring up the Engine panel. Power Ship turns the ship on. W thrusts, A/D rotate, and S brakes.",
       onEnter: [
@@ -396,6 +425,7 @@ export const chapterOneInterviewMission = {
         },
       ],
       onAcknowledge: [
+        { type: "setFlag", flag: "enginePanelAdded" },
         { type: "clearMessage" },
         { type: "showComponent", componentId: "engine", componentName: "Engine" },
         { type: "goToStep", stepId: "power-on" },
@@ -404,6 +434,9 @@ export const chapterOneInterviewMission = {
     {
       id: "power-on",
       objective: "Power the ship.",
+      tasks: [
+        { label: "Power the ship on", flag: "shipPoweredOn" },
+      ],
       helpText:
         "Use the Engine panel and click Power Ship. W thrusts, A/D rotate, and S brakes after the ship is powered.",
       onEnter: [
@@ -426,6 +459,8 @@ export const chapterOneInterviewMission = {
         },
         {
           eventType: "engine.powered",
+          setFlag: "shipPoweredOn",
+          delayMs: 1200,
           nextStepId: "first-thrust",
         },
       ],
@@ -433,6 +468,9 @@ export const chapterOneInterviewMission = {
     {
       id: "first-thrust",
       objective: "Head for Yard Exchange.",
+      tasks: [
+        { label: "Thrust toward Yard Exchange", flag: "firstThrust" },
+      ],
       helpText:
         "Press W to thrust, A/D to rotate, and S to brake. Keep the ship inside the cleared Starter Drift route and head for Yard Exchange.",
       onEnter: [
@@ -456,6 +494,7 @@ export const chapterOneInterviewMission = {
         {
           eventType: "ship.thrusted",
           setFlag: "firstThrust",
+          delayMs: 800,
           nextStepId: "find-yard-exchange",
         },
       ],
@@ -463,6 +502,9 @@ export const chapterOneInterviewMission = {
     {
       id: "find-yard-exchange",
       objective: "Find Yard Exchange.",
+      tasks: [
+        { label: "Fly to Yard Exchange", flag: "yardExchangeInView" },
+      ],
       helpText:
         "Fly toward Yard Exchange. The Beacon Locator points to remembered hub beacons. Yard Exchange looks like a large circle or ring.",
       onEnter: [
@@ -476,11 +518,15 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          setFlag: "yardExchangeInView",
+          delayMs: 800,
           nextStepId: "yard-traffic-check",
         },
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          setFlag: "yardExchangeInView",
+          delayMs: 800,
           nextStepId: "yard-traffic-check",
         },
       ],
@@ -488,6 +534,10 @@ export const chapterOneInterviewMission = {
     {
       id: "yard-traffic-check",
       objective: "Present ship and pilot identification.",
+      tasks: [
+        { label: "Present ship VIN", flag: "yardVinPresented" },
+        { label: "Present pilot license", flag: "yardLicensePresented" },
+      ],
       helpText:
         "Yard Exchange traffic control does not know this ship yet. Click the VIN on the Hull panel, then click the Ref number on your License paperwork to present both IDs.",
       onEnter: [
@@ -526,19 +576,23 @@ export const chapterOneInterviewMission = {
           eventType: "authority.documentPresented",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id, documentKind: "pilot-license" },
           requiresFlags: ["yardVinPresented"],
+          setFlag: "yardLicensePresented",
+          delayMs: 1200,
           actions: [
             { type: "runInspection", siteId: chapterOneRoute.destinationSite.id, inspectionType: "arrival-clearance" },
-            { type: "goToStep", stepId: "dock-yard-exchange" },
           ],
+          nextStepId: "dock-yard-exchange",
         },
         {
           eventType: "authority.documentPresented",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id, documentKind: "ship-vin" },
           requiresFlags: ["yardLicensePresented"],
+          setFlag: "yardVinPresented",
+          delayMs: 1200,
           actions: [
             { type: "runInspection", siteId: chapterOneRoute.destinationSite.id, inspectionType: "arrival-clearance" },
-            { type: "goToStep", stepId: "dock-yard-exchange" },
           ],
+          nextStepId: "dock-yard-exchange",
         },
         {
           eventType: "authority.documentPresented",
@@ -555,6 +609,10 @@ export const chapterOneInterviewMission = {
     {
       id: "dock-yard-exchange",
       objective: "Dock and power down at Yard Exchange.",
+      tasks: [
+        { label: "Dock at Yard Exchange", flag: "dockedYardExchange" },
+        { label: "Power ship down", flag: "shipPoweredDown" },
+      ],
       helpText:
         "Dock at Yard Exchange, then power the ship down. The contract will not accept delivery until this VIN is docked and the ship is off.",
       onEnter: [
@@ -565,10 +623,25 @@ export const chapterOneInterviewMission = {
             "Good. Registration checked out under Rook Industries, just like it should. Your docking lock is on the Hull panel, right under the VIN. Get close enough, then use that to tether us in.",
         },
       ],
+      considerations: [
+        {
+          id: "ship-powered-down-at-yard",
+          eventType: "engine.poweredDown",
+          setFlag: "shipPoweredDown",
+          once: true,
+        },
+      ],
       transitions: [
+        {
+          eventType: "site.docked",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          setFlag: "dockedYardExchange",
+          once: true,
+        },
         {
           eventType: "contract.fulfilled",
           payloadEquals: { contractId: "rook-yard-exchange-delivery" },
+          delayMs: 1400,
           nextStepId: "complete-delivery-contract",
         },
         {
@@ -581,6 +654,9 @@ export const chapterOneInterviewMission = {
     {
       id: "complete-delivery-contract",
       objective: "Complete the delivery contract.",
+      tasks: [
+        { label: "Collect your 500 cr payout", flag: "deliveryContractPaid" },
+      ],
       helpText: "The delivery terms are satisfied. Use the Contract panel and press Complete Contract to receive the 500-credit payout.",
       onEnter: [
         { type: "setEnginePowerLock", isLocked: true },
@@ -594,6 +670,7 @@ export const chapterOneInterviewMission = {
         {
           eventType: "contract.paid",
           payloadEquals: { contractId: "rook-yard-exchange-delivery" },
+          setFlag: "deliveryContractPaid",
           actions: [{ type: "completeMission" }],
         },
       ],

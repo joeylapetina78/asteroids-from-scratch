@@ -15,12 +15,14 @@ Asteroids RPG is a world-centric institutional space sim. The player controls on
 - `src/systems/**` is reusable game logic. Prefer adding logic here instead of burying it in mission scripts or DOM handlers.
 - `docs/project-map.md` is the deeper map.
 - `docs/systems-direction.md` is the philosophy and architecture direction.
+- `docs/authority-model.md` is the Place / Actor / Power / Right / Action authority model.
 
 ## Important Invariants
 
 - Mission scripts should introduce systems; they should not be the only place a system works.
 - Contracts should use shared contract/payment/document systems, not one-off mission payouts.
 - Documents, accounts, obligations, registrations, titles, and licenses should be records and relationships.
+- Authority questions should use Place / Actor / Power / Right / Action. Prefer `canActorDoAction()` over adding player-only flags.
 - Hubs, patrols, NPCs, and the player should inspect or present paperwork through the same authority/document systems.
 - `state.components` is ship hardware. UI panels are not ship hardware.
 - The viewport should keep drawing even if a subsystem throws; `game.js` logs frame errors and keeps the loop alive.

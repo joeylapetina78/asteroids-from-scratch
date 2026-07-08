@@ -1,5 +1,5 @@
-import { runMissionActions } from "./missionActions.js?v=fresh-20260706-2034-ea0751b";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260706-2034-ea0751b";
+import { runMissionActions } from "./missionActions.js?v=fresh-20260707-flash4";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260707-flash4";
 
 export function createMissionRunner({ missionDefinition, state, actions }) {
   const beatDefs = missionDefinition.beats ?? missionDefinition.steps;
@@ -109,7 +109,16 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     runActions(transitionActions);
 
     if (transition.nextStepId) {
-      goToStep(transition.nextStepId);
+      if (transition.delayMs) {
+        setTimeout(() => {
+          if (!destroyed) {
+            goToStep(transition.nextStepId);
+            actions.onChange?.();
+          }
+        }, transition.delayMs);
+      } else {
+        goToStep(transition.nextStepId);
+      }
     } else {
       runActions(step.onEnd ?? []);
     }
@@ -137,6 +146,7 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
       ...state.journey.mission,
       objective: step.objective,
       helpText: step.helpText,
+      tasks: step.tasks ?? [],
     });
     runActions(step.onEnter ?? []);
   }

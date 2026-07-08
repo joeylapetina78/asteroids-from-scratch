@@ -1,10 +1,10 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260706-2034-ea0751b";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260706-2034-ea0751b";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260706-2034-ea0751b";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260706-2034-ea0751b";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260706-2034-ea0751b";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260706-2034-ea0751b";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260706-2034-ea0751b";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260707-flash4";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260707-flash4";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260707-flash4";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260707-flash4";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260707-flash4";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260707-flash4";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260707-flash4";
 
 export function createGameState() {
   const state = {
@@ -34,6 +34,8 @@ export function createGameState() {
       },
       viewportLayout: "default",
       viewportZoom: 1.0,
+      mapAlpha: 0.40,
+      mapGlow: 0.20,
     },
     hubServices: {
       unlocked: {},

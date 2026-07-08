@@ -1,8 +1,8 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260706-2034-ea0751b";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260706-2034-ea0751b";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260706-2034-ea0751b";
-import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260706-2034-ea0751b";
-import { createMissionRunner } from "./missionRunner.js?v=fresh-20260706-2034-ea0751b";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260707-flash4";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260707-flash4";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260707-flash4";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260707-flash4";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260707-flash4";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -296,6 +296,7 @@ export function createJourneyDirector({
         showComponent: unlockComponent,
         spawnHunterNearShip: (reason) => game?.spawnHunterNearShip(reason),
         unlockHubService,
+        onChange: () => onChange(journey),
       },
     });
   }

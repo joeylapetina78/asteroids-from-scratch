@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260706-2034-ea0751b" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260707-flash4" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -51,6 +51,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
+      <span class="build-tag">build: 20260707-flash4</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -111,7 +112,8 @@
               <div class="journey-mission">
                 <strong id="journey-mission-title">Assessment Run</strong>
                 <span id="journey-mission-objective">Awaiting instructions.</span>
-                <details class="journey-help">
+                <div id="current-objectives" hidden></div>
+                <details class="journey-help" open>
                   <summary>Need help?</summary>
                   <span id="journey-help-text">Read the current objective and follow the next prompt.</span>
                 </details>
@@ -453,6 +455,16 @@
             <span class="zoom-label" id="alpha-label">75%</span>
             <button id="alpha-up" type="button" aria-label="Increase panel opacity">+</button>
           </div>
+          <div class="zoom-panel" id="map-alpha-panel" aria-label="Map tile alpha control">
+            <button id="map-alpha-down" type="button" aria-label="Decrease map alpha">−</button>
+            <span class="zoom-label" id="map-alpha-label">Tile</span>
+            <button id="map-alpha-up" type="button" aria-label="Increase map alpha">+</button>
+          </div>
+          <div class="zoom-panel" id="map-glow-panel" aria-label="Map ore glow control">
+            <button id="map-glow-down" type="button" aria-label="Decrease ore glow">−</button>
+            <span class="zoom-label" id="map-glow-label">Ore</span>
+            <button id="map-glow-up" type="button" aria-label="Increase ore glow">+</button>
+          </div>
           <div class="zoom-panel" id="zoom-panel" aria-label="Zoom control">
             <button id="zoom-out" type="button" aria-label="Zoom out">−</button>
             <span class="zoom-label" id="zoom-label">50%</span>
@@ -570,6 +582,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260706-2034-ea0751b"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260707-flash4"></script>
   </body>
 </html>

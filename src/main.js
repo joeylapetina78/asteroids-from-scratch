@@ -1,30 +1,30 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260706-2034-ea0751b";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260706-2034-ea0751b";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260706-2034-ea0751b";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260706-2034-ea0751b";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260706-2034-ea0751b";
-import { Game } from "./game.js?v=fresh-20260706-2034-ea0751b";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260706-2034-ea0751b";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260706-2034-ea0751b";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260706-2034-ea0751b";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260706-2034-ea0751b";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260707-flash4";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260707-flash4";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260707-flash4";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260707-flash4";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260707-flash4";
+import { Game } from "./game.js?v=fresh-20260707-flash4";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260707-flash4";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260707-flash4";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260707-flash4";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260707-flash4";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260706-2034-ea0751b";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260706-2034-ea0751b";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260706-2034-ea0751b";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260706-2034-ea0751b";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260706-2034-ea0751b";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260706-2034-ea0751b";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260706-2034-ea0751b";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260706-2034-ea0751b";
-import { Processor } from "./systems/processor.js?v=fresh-20260706-2034-ea0751b";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260706-2034-ea0751b";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260706-2034-ea0751b";
-import { createGameState } from "./state/gameState.js?v=fresh-20260706-2034-ea0751b";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260707-flash4";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260707-flash4";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260707-flash4";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260707-flash4";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260707-flash4";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260707-flash4";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260707-flash4";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260707-flash4";
+import { Processor } from "./systems/processor.js?v=fresh-20260707-flash4";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260707-flash4";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260707-flash4";
+import { createGameState } from "./state/gameState.js?v=fresh-20260707-flash4";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -273,6 +273,7 @@ const contractManager = createContractManager({
     renderContract(contract);
     syncContractPanelVisibility();
     updateHudDisplay();
+    renderObjectives(state);
 
     if (contract?.status === "fulfilled" && !fulfilledContractPanelPulls.has(contract.id)) {
       fulfilledContractPanelPulls.add(contract.id);
@@ -880,6 +881,35 @@ function adjustAlpha(delta) {
 alphaUpButton?.addEventListener("click", () => adjustAlpha(0.05));
 alphaDownButton?.addEventListener("click", () => adjustAlpha(-0.05));
 updateAlphaLabel();
+
+const mapAlphaUp = document.querySelector("#map-alpha-up");
+const mapAlphaDown = document.querySelector("#map-alpha-down");
+const mapAlphaLabel = document.querySelector("#map-alpha-label");
+const mapGlowUp = document.querySelector("#map-glow-up");
+const mapGlowDown = document.querySelector("#map-glow-down");
+const mapGlowLabel = document.querySelector("#map-glow-label");
+
+function updateMapAlphaLabel() {
+  if (mapAlphaLabel) mapAlphaLabel.textContent = Math.round((state.ui?.mapAlpha ?? 0.40) * 100) + "%";
+}
+function adjustMapAlpha(delta) {
+  state.ui.mapAlpha = Math.min(1, Math.max(0, Math.round(((state.ui?.mapAlpha ?? 0.40) + delta) * 20) / 20));
+  updateMapAlphaLabel();
+}
+mapAlphaUp?.addEventListener("click", () => adjustMapAlpha(0.05));
+mapAlphaDown?.addEventListener("click", () => adjustMapAlpha(-0.05));
+updateMapAlphaLabel();
+
+function updateMapGlowLabel() {
+  if (mapGlowLabel) mapGlowLabel.textContent = Math.round((state.ui?.mapGlow ?? 0.20) * 100) + "%";
+}
+function adjustMapGlow(delta) {
+  state.ui.mapGlow = Math.min(1, Math.max(0, Math.round(((state.ui?.mapGlow ?? 0.20) + delta) * 20) / 20));
+  updateMapGlowLabel();
+}
+mapGlowUp?.addEventListener("click", () => adjustMapGlow(0.05));
+mapGlowDown?.addEventListener("click", () => adjustMapGlow(-0.05));
+updateMapGlowLabel();
 
 function setupExplorerStart() {
   // Slightly better ship than the yard skiff — more hull, faster, bigger tank.
@@ -2483,6 +2513,70 @@ function renderJourney(journey = state.journey) {
     }),
   );
   playJourneyUpdate();
+  renderObjectives(state);
+}
+
+function renderObjectives(state) {
+  const el = document.getElementById("current-objectives");
+  if (!el) return;
+
+  const mission = state.journey?.mission;
+  const flags = state.journey?.flags ?? {};
+  const contracts = Object.values(state.contracts?.records ?? {});
+  const obligations = Object.values(state.obligations?.records ?? {});
+
+  // Track which flags have already played their flash so we only animate once
+  const flashed = new Set(JSON.parse(el.dataset.flashedFlags ?? "[]"));
+
+  const sections = [];
+
+  const tasks = mission?.tasks ?? [];
+  if (tasks.length > 0 && mission?.status === "active") {
+    const items = tasks.map((task) => {
+      const done = Boolean(flags[task.flag]);
+      const justDone = done && !flashed.has(task.flag);
+      if (justDone) flashed.add(task.flag);
+      return `<li class="obj-task${done ? " obj-done" : ""}${justDone ? " obj-flash" : ""}"><span class="obj-check">${done ? "☑" : "☐"}</span><span>${task.label}</span></li>`;
+    }).join("");
+    sections.push(`<p class="obj-section-label">Tasks</p><ul class="obj-list">${items}</ul>`);
+  }
+
+  const activeContracts = contracts.filter((c) => c.status === "active" || c.status === "fulfilled");
+  if (activeContracts.length > 0) {
+    const items = activeContracts.map((c) => {
+      let label;
+      if (c.status === "fulfilled") {
+        label = `Collect payment from ${c.issuer ?? "contractor"}`;
+      } else if (c.type === "resource-delivery") {
+        const delivered = c.deliveredAmount ?? 0;
+        const required = c.terms?.amount ?? 0;
+        const resource = c.terms?.resourceName ?? c.terms?.resourceType ?? "cargo";
+        label = `Deliver ${delivered}/${required} ${resource}`;
+      } else {
+        label = c.summary ?? c.title ?? c.id;
+      }
+      return `<li class="obj-task"><span class="obj-check">☐</span><span>${label}</span></li>`;
+    }).join("");
+    sections.push(`<p class="obj-section-label">Contracts</p><ul class="obj-list">${items}</ul>`);
+  }
+
+  const activeObligations = obligations.filter((o) => o.status === "active" && (o.balance ?? 0) > 0);
+  if (activeObligations.length > 0) {
+    const items = activeObligations.map((o) => {
+      return `<li class="obj-task"><span class="obj-check">☐</span><span>${o.title}: ${Math.ceil(o.balance).toLocaleString()} cr</span></li>`;
+    }).join("");
+    sections.push(`<p class="obj-section-label">Obligations</p><ul class="obj-list">${items}</ul>`);
+  }
+
+  if (sections.length === 0) {
+    el.hidden = true;
+    el.dataset.flashedFlags = "[]";
+    return;
+  }
+
+  el.hidden = false;
+  el.innerHTML = sections.join("");
+  el.dataset.flashedFlags = JSON.stringify([...flashed]);
 }
 
 function normalizeSpeakerKey(speaker = "") {

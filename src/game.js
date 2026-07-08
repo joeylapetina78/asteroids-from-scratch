@@ -1,24 +1,24 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260706-2034-ea0751b";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260706-2034-ea0751b";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260706-2034-ea0751b";
-import { Ship } from "./entities/Ship.js?v=fresh-20260706-2034-ea0751b";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260706-2034-ea0751b";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260707-flash4";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260707-flash4";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260707-flash4";
+import { Ship } from "./entities/Ship.js?v=fresh-20260707-flash4";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260707-flash4";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260706-2034-ea0751b";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260706-2034-ea0751b";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260706-2034-ea0751b";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260706-2034-ea0751b";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260706-2034-ea0751b";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260706-2034-ea0751b";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260706-2034-ea0751b";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260706-2034-ea0751b";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260706-2034-ea0751b";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260706-2034-ea0751b";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260706-2034-ea0751b";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260706-2034-ea0751b";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260706-2034-ea0751b";
-import { createGameState } from "./state/gameState.js?v=fresh-20260706-2034-ea0751b";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260706-2034-ea0751b";
+import { createInput } from "./systems/input.js?v=fresh-20260707-flash4";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260707-flash4";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260707-flash4";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260707-flash4";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260707-flash4";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260707-flash4";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260707-flash4";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260707-flash4";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260707-flash4";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260707-flash4";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260707-flash4";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260707-flash4";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260707-flash4";
+import { createGameState } from "./state/gameState.js?v=fresh-20260707-flash4";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260707-flash4";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -2589,6 +2589,44 @@ export class Game {
     const network = this.claimField.getPlotNetwork(bounds);
 
     ctx.save();
+
+    // ── Hex fills: ore density drives brightness, zone color drives hue ──────
+    // Dark empty space stays near-invisible; rich ore pockets glow neon.
+    network.plots.forEach((plot) => {
+      const claim = this.claimField.getClaimAt(plot.center.x, plot.center.y);
+      const intensity = claim.resourceIntensity;
+      if (intensity < 0.06) return;
+
+      const oreGlow = this.state.ui?.mapGlow ?? 0.20;
+      const exponent = 0.3 + oreGlow * 1.2; // 0.3 flat → 1.5 high-contrast
+      const glow = Math.pow(intensity, exponent);
+      const [cr, cg, cb] = claim.color;
+
+      // Very dense patches push toward white-hot.
+      const heat = Math.max(0, (intensity - 0.72) / 0.28);
+      const r = Math.min(255, Math.round(cr * glow + 255 * heat * 0.4));
+      const g = Math.min(255, Math.round(cg * glow + 255 * heat * 0.4));
+      const b = Math.min(255, Math.round(cb * glow + 255 * heat * 0.4));
+      const tileAlpha = this.state.ui?.mapAlpha ?? 0.40;
+      const a = Math.min(1, (0.07 + glow * 0.33) * tileAlpha * 2.5).toFixed(2);
+
+      ctx.beginPath();
+      ctx.moveTo(
+        (plot.vertices[0].x - camera.x) * drawScale,
+        (plot.vertices[0].y - camera.y) * drawScale,
+      );
+      for (let i = 1; i < plot.vertices.length; i++) {
+        ctx.lineTo(
+          (plot.vertices[i].x - camera.x) * drawScale,
+          (plot.vertices[i].y - camera.y) * drawScale,
+        );
+      }
+      ctx.closePath();
+      ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
+      ctx.fill();
+    });
+
+    // ── Dashed edges and vertex dots (unchanged from Codex) ──────────────────
     ctx.globalAlpha = 0.58;
     ctx.strokeStyle = "rgba(126, 162, 178, 0.72)";
     ctx.lineWidth = 1.1;

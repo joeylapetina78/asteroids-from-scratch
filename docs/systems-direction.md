@@ -66,7 +66,9 @@ Examples: pilot license, mining license, ship registration, title, lien, loan co
 
 The question becomes: *does this entity have the right document to do this action, in this place, with this asset, right now?*
 
-> **Current status:** Partial. The provisional pilot license (RTC Form RTC–109–P) exists as a record in `state.legal.pilotLicense`. Ship title and registration records exist in `state.legal`. The loan contract (`mako-starter-ship-loan`) creates a debt obligation. `legalRecords.js` provides access helpers. `paperworkInspections.js` creates inspection reports from world records. The structure is in place but documents are still mostly one-off records rather than instances of a shared document schema. Expiration, revocation, forgery, and transfer are not yet implemented.
+The shared authority vocabulary is Place, Actor, Power, Right, and Action. The five top-level powers are Define Place, Own Property, Authorize Work, Conduct Commerce, and Enforce Rules. These should be enough to express mining rights, transit rights, docking rights, title, liens, loans, patrol authority, towing authority, salvage rights, and future legal/criminal systems.
+
+> **Current status:** Partial. The provisional pilot license (RTC Form RTC–109–P) exists as a record in `state.legal.pilotLicense`. Ship title and registration records exist in `state.legal`. The loan contract (`mako-starter-ship-loan`) creates a debt obligation. `legalRecords.js` provides access helpers. `paperworkInspections.js` creates inspection reports from world records. `authorityModel.js`, `placeRegistry.js`, `authorityRegistry.js`, `authoritySeeds.js`, and `ruleChecker.js` now provide the first reusable Place/Actor/Power/Right/Action foundation. The structure is in place but documents are still mostly one-off records rather than instances of a shared document schema. Expiration, revocation, forgery, and transfer are not yet implemented.
 
 ---
 

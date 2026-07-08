@@ -90,6 +90,11 @@ export const MISSION_ACTION_DEFINITIONS = {
     required: [],
     optional: ["reason"],
   },
+  setFlag: {
+    label: "Set Flag",
+    description: "Set a flag in the current mission's journey.flags.",
+    required: ["flag"],
+  },
   setGlobalFlag: {
     label: "Set Global Flag",
     description: "Set a flag that persists across missions in journey.globalFlags.",
@@ -157,6 +162,9 @@ function runMissionAction(action, { state, actions, missionDefinition, goToStep 
     actions.startMission(action.missionId);
   } else if (action.type === "spawnHunterNearShip") {
     actions.spawnHunterNearShip(action.reason);
+  } else if (action.type === "setFlag") {
+    state.journey.flags ??= {};
+    state.journey.flags[action.flag] = true;
   } else if (action.type === "setGlobalFlag") {
     state.journey.globalFlags ??= {};
     state.journey.globalFlags[action.flag] = true;

@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=fresh-20260706-2034-ea0751b";
+import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=fresh-20260707-flash4";
 
 export const chapterOneRedWorkMission = {
   id: "chapter-1-red-work",
@@ -178,6 +178,9 @@ export const chapterOneRedWorkMission = {
     {
       id: "offer-red-contract",
       objective: "Review Rook's red resource contract.",
+      tasks: [
+        { label: "Accept Rook's resource contract", flag: "redContractAccepted" },
+      ],
       helpText:
         "Open Rook Industries from the Yard Exchange service panel. Read the offered contract, then accept it to start the mining job.",
       onEnter: [
@@ -192,6 +195,8 @@ export const chapterOneRedWorkMission = {
         {
           eventType: "contract.accepted",
           payloadEquals: { contractGroup: "rook-resource-run" },
+          setFlag: "redContractAccepted",
+          delayMs: 1200,
           nextStepId: "mine-red-resources",
         },
       ],
@@ -199,6 +204,11 @@ export const chapterOneRedWorkMission = {
     {
       id: "mine-red-resources",
       objective: "Mine the contracted resources and return to Yard Exchange.",
+      tasks: [
+        { label: "Mine a resource", flag: "explained-mined-resource" },
+        { label: "Collect resource into cargo", flag: "explained-collected-resource" },
+        { label: "Deliver and collect payment", flag: "redContractPaid" },
+      ],
       helpText:
         "Check the Contract panel for the exact resource type and amount. Turn on Blaster armed in the Miner panel, press Space to fire charges at matching rocks, fly over loose squares to collect cargo, dock at Yard Exchange, choose Deposit Cargo on the contract, then click matching cargo squares.",
       onEnter: [
@@ -213,6 +223,7 @@ export const chapterOneRedWorkMission = {
         {
           eventType: "contract.paid",
           payloadEquals: { contractGroup: "rook-resource-run" },
+          setFlag: "redContractPaid",
           actions: [
             { type: "unlockHubService", siteId: chapterOneRoute.destinationSite.id, serviceId: yardExchangeServices.modworks },
           ],
@@ -223,6 +234,9 @@ export const chapterOneRedWorkMission = {
     {
       id: "rook-wrap-up",
       objective: "Red resource contract complete.",
+      tasks: [
+        { label: "Visit Modworks or undock to continue", flag: "rookWrapUpDone" },
+      ],
       helpText:
         "Visit Modworks to see what Nara Coil has, or undock to keep exploring.",
       onEnter: [
@@ -237,10 +251,12 @@ export const chapterOneRedWorkMission = {
         {
           eventType: "hub.serviceOpened",
           payloadEquals: { serviceId: yardExchangeServices.modworks },
+          setFlag: "rookWrapUpDone",
           actions: [{ type: "completeMission" }],
         },
         {
           eventType: "site.undocked",
+          setFlag: "rookWrapUpDone",
           actions: [{ type: "completeMission" }],
         },
       ],
