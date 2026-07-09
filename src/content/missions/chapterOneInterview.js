@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260707-flash4";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260708-patrol1";
 
 const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
@@ -542,15 +542,10 @@ export const chapterOneInterviewMission = {
         "Yard Exchange traffic control does not know this ship yet. Click the VIN on the Hull panel, then click the Ref number on your License paperwork to present both IDs.",
       onEnter: [
         {
-          type: "spawnPatrolIntercept",
-          siteId: chapterOneRoute.destinationSite.id,
-          reason: "arrival-clearance",
-        },
-        {
           type: "say",
-          speaker: "Yard Exchange Traffic",
+          speaker: "Rook",
           text:
-            "Inbound skiff, hold your line. Present ship VIN and pilot authorization for first-time registry review before docking clearance.",
+            "Looks like Yard Exchange patrol is flagging you for a first-time arrival check. You'll need to show your VIN and pilot license before they let you through.",
         },
       ],
       considerations: [

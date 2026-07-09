@@ -1,30 +1,30 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260707-flash4";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260707-flash4";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260707-flash4";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260707-flash4";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260707-flash4";
-import { Game } from "./game.js?v=fresh-20260707-flash4";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260707-flash4";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260707-flash4";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260707-flash4";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260707-flash4";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260708-patrol1";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260708-patrol1";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol1";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260708-patrol1";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260708-patrol1";
+import { Game } from "./game.js?v=fresh-20260708-patrol1";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260708-patrol1";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260708-patrol1";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260708-patrol1";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol1";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260707-flash4";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260707-flash4";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260707-flash4";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260707-flash4";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260707-flash4";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260707-flash4";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260707-flash4";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260707-flash4";
-import { Processor } from "./systems/processor.js?v=fresh-20260707-flash4";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260707-flash4";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260707-flash4";
-import { createGameState } from "./state/gameState.js?v=fresh-20260707-flash4";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260708-patrol1";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260708-patrol1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260708-patrol1";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260708-patrol1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260708-patrol1";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260708-patrol1";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260708-patrol1";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260708-patrol1";
+import { Processor } from "./systems/processor.js?v=fresh-20260708-patrol1";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260708-patrol1";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260708-patrol1";
+import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -1707,6 +1707,27 @@ function updateHubAuthorityMessages() {
 
         commsDirector.say({ source: COMMS_SOURCES.hubAuthority, speaker, text });
       }
+    } else if (event.type === "authority.inspectionFlagged") {
+      const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
+      const reasons = event.payload.reasons ?? [];
+      let text = "Contact flagged. Docking clearance is denied. This contact has been logged.";
+
+      if (reasons.includes("missing-vin") && reasons.includes("missing-pilot-license")) {
+        text = "No valid VIN or pilot authorization on record. Docking clearance is denied. This contact has been logged.";
+      } else if (reasons.includes("missing-vin")) {
+        text = "No valid VIN on record for this contact. Docking clearance is denied. This contact has been logged.";
+      } else if (reasons.includes("missing-pilot-license")) {
+        text = "No pilot authorization on record for this contact. Docking clearance is denied.";
+      } else if (reasons.includes("unauthorized-zone-history")) {
+        text = "Zone violation flag on this contact. Docking clearance is temporarily restricted. This contact has been logged.";
+      }
+
+      commsDirector.say({
+        source: COMMS_SOURCES.hubAuthority,
+        speaker,
+        text,
+        requireIdle: false,
+      });
     } else if (event.type === "patrol.dismissed") {
       commsDirector.clearActiveMessage();
     } else if (event.type === "site.nearby" && event.payload.siteType === "hub") {

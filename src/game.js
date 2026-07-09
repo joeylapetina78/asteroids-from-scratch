@@ -1,24 +1,24 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260707-flash4";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260707-flash4";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260707-flash4";
-import { Ship } from "./entities/Ship.js?v=fresh-20260707-flash4";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260707-flash4";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260708-patrol1";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260708-patrol1";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol1";
+import { Ship } from "./entities/Ship.js?v=fresh-20260708-patrol1";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260708-patrol1";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260707-flash4";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260707-flash4";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260707-flash4";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260707-flash4";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260707-flash4";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260707-flash4";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260707-flash4";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260707-flash4";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260707-flash4";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260707-flash4";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260707-flash4";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260707-flash4";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260707-flash4";
-import { createGameState } from "./state/gameState.js?v=fresh-20260707-flash4";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260707-flash4";
+import { createInput } from "./systems/input.js?v=fresh-20260708-patrol1";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260708-patrol1";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260708-patrol1";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260708-patrol1";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260708-patrol1";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260708-patrol1";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260708-patrol1";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260708-patrol1";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260708-patrol1";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260708-patrol1";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260708-patrol1";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260708-patrol1";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260708-patrol1";
+import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol1";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -72,6 +72,8 @@ const TOW_LINE_DAMPING = 0.965;
 const TOW_CUTTER_RANGE = 285;
 const TOW_CUTTER_COOLDOWN_SECONDS = 1.15;
 const PATROL_APPROACH_SPEED = 145;
+const PATROL_DRIFT_SPEED = 58;
+const PATROL_RETURN_SPEED = 88;
 const PATROL_DEPART_SPEED = 180;
 const PATROL_HOLD_DISTANCE = 112;
 const PATROL_DEPART_DISTANCE = 980;
@@ -81,6 +83,15 @@ const PATROL_TRANSIT_RADIUS_FACTOR = 1.6;
 const HUB_SENSOR_RADIUS_MULTIPLIER = 2;
 const PATROL_SCAN_SECONDS = 1.35;
 const PATROL_TETHER_DAMPING = 0.88;
+const PATROL_WAYPOINT_COUNT = 6;
+const PATROL_WAYPOINT_RADIUS_FACTOR = 1.25;
+const PATROL_WAYPOINT_REACH_DIST = 72;
+const PATROL_WAYPOINT_DWELL_SECONDS = 1.8;
+const PATROL_PASSIVE_SCAN_RANGE = 180;
+const PATROL_PASSIVE_SCAN_INTERVAL = 2.2;
+const PATROL_FLAGGED_DISMISS_SECONDS = 3.2;
+const SCAN_RING_MAX_RADIUS = 110;
+const SCAN_RING_DURATION = 1.4;
 
 export class Game {
   constructor(
@@ -145,7 +156,8 @@ export class Game {
     this.hasRecordedPlayerThrust = false;
     this.tetherStrainCooldown = 0;
     this.hubInspectionCache = new Set();
-    this.hubPatrolEnabled = false;
+    this.hubPatrolEnabled = true;
+    this.scanRings = [];
     this.lastShipMovementEventPosition = { ...this.ship.position };
     this.visibleStorySiteIds = new Set();
     this.nearbyStorySiteIds = new Set();
@@ -426,6 +438,7 @@ export class Game {
     this.updateHunterHits();
     this.updateNpcShips(activeAsteroids, deltaSeconds);
     this.updatePatrolIntercept(deltaSeconds);
+    this.updateScanRings(deltaSeconds);
     this.updateEmergencyTow(deltaSeconds);
     this.updateNpcBulletHits();
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
@@ -857,18 +870,121 @@ export class Game {
     this.hubPatrolEnabled = true;
   }
 
-  spawnPatrolIntercept(siteId, reason = "arrival-clearance") {
+  generatePatrolWaypoints(site) {
+    const seed = site.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    const count = PATROL_WAYPOINT_COUNT;
+    const baseRadius = site.interactionRadius * PATROL_WAYPOINT_RADIUS_FACTOR;
+    const waypoints = [];
+
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + seed * 0.017;
+      const r = baseRadius * (0.88 + ((seed + i * 37) % 12) * 0.018);
+      waypoints.push({
+        x: site.position.x + Math.cos(angle) * r,
+        y: site.position.y + Math.sin(angle) * r,
+      });
+    }
+
+    return waypoints;
+  }
+
+  nearestWaypointIndex(patrol) {
+    let minDist = Infinity;
+    let idx = 0;
+
+    patrol.waypoints.forEach((wp, i) => {
+      const d = distance(patrol.position, wp);
+      if (d < minDist) {
+        minDist = d;
+        idx = i;
+      }
+    });
+
+    return idx;
+  }
+
+  createHubPatrol(siteId) {
     const site = this.worldSites.find((worldSite) => worldSite.id === siteId);
 
-    if (!site || this.activePatrolIntercept?.site?.id === site.id) {
+    if (!site || this.activePatrolIntercept) {
       return false;
     }
 
-    const directionToShip = normalizeVector(this.ship.position.x - site.position.x, this.ship.position.y - site.position.y);
-    const side = {
-      x: -directionToShip.y,
-      y: directionToShip.x,
+    const waypoints = this.generatePatrolWaypoints(site);
+    const seed = site.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    const startIdx = seed % waypoints.length;
+    const startWp = waypoints[startIdx];
+
+    this.activePatrolIntercept = {
+      id: `patrol-${site.id}`,
+      name: `${site.name} Patrol`,
+      site,
+      reason: "ambient",
+      phase: "drift",
+      position: { x: startWp.x, y: startWp.y },
+      velocity: { x: 0, y: 0 },
+      heading: 0,
+      pulse: 0,
+      hasArrived: false,
+      scanTimer: 0,
+      hasScanned: false,
+      orbitAngle: null,
+      requiresManualClearance: false,
+      departTarget: null,
+      waypoints,
+      waypointIndex: startIdx,
+      waypointDwellTimer: 0,
+      passiveScanTimer: 0,
+      flaggedDismissTimer: 0,
     };
+
+    this.state.ledger.recordEvent(
+      "patrol.dispatched",
+      {
+        patrolId: this.activePatrolIntercept.id,
+        patrolName: this.activePatrolIntercept.name,
+        siteId: site.id,
+        siteName: site.name,
+        reason: "ambient",
+      },
+      { visible: false },
+    );
+
+    return true;
+  }
+
+  spawnPatrolIntercept(siteId, reason = "arrival-clearance") {
+    const site = this.worldSites.find((worldSite) => worldSite.id === siteId);
+
+    if (!site) {
+      return false;
+    }
+
+    // If patrol already exists for this hub, force it into intercept mode.
+    if (this.activePatrolIntercept?.site?.id === site.id) {
+      const patrol = this.activePatrolIntercept;
+
+      if (patrol.phase === "drift" || patrol.phase === "return") {
+        patrol.phase = "transit";
+        patrol.reason = reason;
+        patrol.requiresManualClearance = reason === "arrival-clearance";
+        patrol.hasArrived = false;
+        patrol.scanTimer = 0;
+        patrol.hasScanned = false;
+        patrol.orbitAngle = null;
+      }
+
+      return true;
+    }
+
+    if (this.activePatrolIntercept) {
+      return false;
+    }
+
+    // No patrol yet — create one directly in transit mode.
+    const waypoints = this.generatePatrolWaypoints(site);
+    const directionToShip = normalizeVector(this.ship.position.x - site.position.x, this.ship.position.y - site.position.y);
+    const side = { x: -directionToShip.y, y: directionToShip.x };
     const startDistance = Math.max(site.interactionRadius + 260, 500);
     const position = {
       x: site.position.x + directionToShip.x * startDistance + side.x * 160,
@@ -880,7 +996,7 @@ export class Game {
       name: `${site.name} Patrol`,
       site,
       reason,
-      phase: reason === "arrival-clearance" ? "transit" : "approach",
+      phase: "transit",
       position,
       velocity: {
         x: directionToShip.x * PATROL_APPROACH_SPEED,
@@ -894,6 +1010,11 @@ export class Game {
       orbitAngle: null,
       requiresManualClearance: reason === "arrival-clearance",
       departTarget: null,
+      waypoints,
+      waypointIndex: 0,
+      waypointDwellTimer: 0,
+      passiveScanTimer: 0,
+      flaggedDismissTimer: 0,
     };
 
     this.state.ledger.recordEvent(
@@ -914,16 +1035,18 @@ export class Game {
   dismissPatrolIntercept(siteId = null) {
     const patrol = this.activePatrolIntercept;
 
-    if (!patrol || (siteId && patrol.site.id !== siteId) || patrol.phase === "depart") {
+    if (!patrol || (siteId && patrol.site.id !== siteId) || patrol.phase === "depart" || patrol.phase === "return") {
       return false;
     }
 
-    const awayFromShip = normalizeVector(patrol.position.x - this.ship.position.x, patrol.position.y - this.ship.position.y);
-    patrol.phase = "depart";
-    patrol.departTarget = {
-      x: patrol.position.x + awayFromShip.x * PATROL_DEPART_DISTANCE,
-      y: patrol.position.y + awayFromShip.y * PATROL_DEPART_DISTANCE,
-    };
+    // Return to drift rather than departing — patrol belongs to the hub.
+    patrol.phase = "return";
+    patrol.waypointIndex = this.nearestWaypointIndex(patrol);
+    patrol.hasScanned = false;
+    patrol.scanTimer = 0;
+    patrol.flaggedDismissTimer = 0;
+    patrol.hasArrived = false;
+    patrol.orbitAngle = null;
 
     this.state.ledger.recordEvent(
       "patrol.dismissed",
@@ -939,6 +1062,42 @@ export class Game {
     return true;
   }
 
+  departHubPatrol(siteId) {
+    const patrol = this.activePatrolIntercept;
+
+    if (!patrol || patrol.site.id !== siteId || patrol.phase === "depart") {
+      return false;
+    }
+
+    const awayFromShip = normalizeVector(patrol.position.x - this.ship.position.x, patrol.position.y - this.ship.position.y);
+    patrol.phase = "depart";
+    patrol.departTarget = {
+      x: patrol.position.x + awayFromShip.x * PATROL_DEPART_DISTANCE,
+      y: patrol.position.y + awayFromShip.y * PATROL_DEPART_DISTANCE,
+    };
+
+    return true;
+  }
+
+  fireScanPulse() {
+    this.scanRings.push({
+      x: this.ship.position.x,
+      y: this.ship.position.y,
+      timer: 0,
+    });
+
+    if (this.scanRings.length > 4) {
+      this.scanRings.shift();
+    }
+  }
+
+  updateScanRings(deltaSeconds) {
+    this.scanRings = this.scanRings.filter((ring) => {
+      ring.timer += deltaSeconds;
+      return ring.timer < SCAN_RING_DURATION;
+    });
+  }
+
   updatePatrolIntercept(deltaSeconds) {
     const patrol = this.activePatrolIntercept;
 
@@ -948,12 +1107,9 @@ export class Game {
 
     patrol.pulse += deltaSeconds;
 
+    // ── DEPART ──────────────────────────────────────────────────────────────
     if (patrol.phase === "depart") {
-      const target = patrol.departTarget ?? {
-        x: patrol.site.position.x,
-        y: patrol.site.position.y,
-      };
-
+      const target = patrol.departTarget ?? { x: patrol.site.position.x, y: patrol.site.position.y };
       this.steerPatrolIntercept(patrol, target, PATROL_DEPART_SPEED, deltaSeconds);
 
       if (distance(patrol.position, this.ship.position) > PATROL_DEPART_DISTANCE * 0.8) {
@@ -963,6 +1119,68 @@ export class Game {
       return;
     }
 
+    // ── RETURN TO DRIFT ─────────────────────────────────────────────────────
+    if (patrol.phase === "return") {
+      const wp = patrol.waypoints[patrol.waypointIndex];
+      this.steerPatrolIntercept(patrol, wp, PATROL_RETURN_SPEED, deltaSeconds);
+
+      if (distance(patrol.position, wp) < PATROL_WAYPOINT_REACH_DIST) {
+        patrol.phase = "drift";
+        patrol.waypointDwellTimer = 0;
+      }
+
+      return;
+    }
+
+    // ── DRIFT ───────────────────────────────────────────────────────────────
+    if (patrol.phase === "drift") {
+      const wp = patrol.waypoints[patrol.waypointIndex];
+      this.steerPatrolIntercept(patrol, wp, PATROL_DRIFT_SPEED, deltaSeconds);
+
+      // Passive scan ping when patrol passes near player.
+      patrol.passiveScanTimer += deltaSeconds;
+      if (patrol.passiveScanTimer >= PATROL_PASSIVE_SCAN_INTERVAL) {
+        patrol.passiveScanTimer = 0;
+
+        if (distance(patrol.position, this.ship.position) < PATROL_PASSIVE_SCAN_RANGE) {
+          this.fireScanPulse();
+        }
+      }
+
+      // Check if player has entered intercept range and is not yet cleared.
+      if (!this.dockedSite) {
+        const playerDistFromHub = distance(this.ship.position, patrol.site.position);
+
+        if (playerDistFromHub <= patrol.site.interactionRadius * PATROL_TRANSIT_RADIUS_FACTOR) {
+          const identity = createControlledShipPublicIdentity(this.state);
+          const cacheKey = getInspectionCacheKey(patrol.site, identity);
+
+          if (!this.hubInspectionCache.has(cacheKey)) {
+            patrol.phase = "transit";
+            patrol.requiresManualClearance = false;
+            patrol.hasArrived = false;
+            patrol.scanTimer = 0;
+            patrol.hasScanned = false;
+            patrol.orbitAngle = null;
+            return;
+          }
+        }
+      }
+
+      // Advance to next waypoint.
+      if (distance(patrol.position, wp) < PATROL_WAYPOINT_REACH_DIST) {
+        patrol.waypointDwellTimer += deltaSeconds;
+
+        if (patrol.waypointDwellTimer >= PATROL_WAYPOINT_DWELL_SECONDS) {
+          patrol.waypointIndex = (patrol.waypointIndex + 1) % patrol.waypoints.length;
+          patrol.waypointDwellTimer = 0;
+        }
+      }
+
+      return;
+    }
+
+    // ── TRANSIT ─────────────────────────────────────────────────────────────
     if (patrol.phase === "transit") {
       const transitTarget = this.getPatrolTransitTarget(patrol);
       this.steerPatrolIntercept(patrol, transitTarget, PATROL_APPROACH_SPEED, deltaSeconds);
@@ -975,6 +1193,7 @@ export class Game {
       return;
     }
 
+    // ── APPROACH / HOLD (intercept) ─────────────────────────────────────────
     if (patrol.orbitAngle === null) {
       patrol.orbitAngle = Math.atan2(patrol.position.y - this.ship.position.y, patrol.position.x - this.ship.position.x);
     }
@@ -1007,15 +1226,39 @@ export class Game {
       );
     }
 
+    // Tether damping during hold.
     this.ship.velocity.x *= PATROL_TETHER_DAMPING;
     this.ship.velocity.y *= PATROL_TETHER_DAMPING;
+
+    // Count down flagged dismiss timer.
+    if (patrol.hasScanned && patrol.flaggedDismissTimer > 0) {
+      patrol.flaggedDismissTimer -= deltaSeconds;
+
+      if (patrol.flaggedDismissTimer <= 0) {
+        patrol.phase = "return";
+        patrol.waypointIndex = this.nearestWaypointIndex(patrol);
+        patrol.hasScanned = false;
+        patrol.scanTimer = 0;
+        patrol.hasArrived = false;
+        patrol.orbitAngle = null;
+      }
+
+      return;
+    }
+
+    if (patrol.hasScanned) {
+      return;
+    }
+
     patrol.scanTimer += deltaSeconds;
 
-    if (patrol.hasScanned || patrol.scanTimer < PATROL_SCAN_SECONDS) {
+    if (patrol.scanTimer < PATROL_SCAN_SECONDS) {
       return;
     }
 
     patrol.hasScanned = true;
+    this.fireScanPulse();
+
     const result = this.inspectPublicTrafficIdentity(createControlledShipPublicIdentity(this.state), patrol.site, {
       type: "patrol",
       id: patrol.id,
@@ -1023,8 +1266,16 @@ export class Game {
     });
 
     if (result.status === "cleared" && !patrol.requiresManualClearance) {
-      this.dismissPatrolIntercept(patrol.site.id);
+      patrol.phase = "return";
+      patrol.waypointIndex = this.nearestWaypointIndex(patrol);
+      patrol.hasScanned = false;
+      patrol.scanTimer = 0;
+      patrol.hasArrived = false;
+      patrol.orbitAngle = null;
+    } else if (result.status === "flagged" || result.status === "failed") {
+      patrol.flaggedDismissTimer = PATROL_FLAGGED_DISMISS_SECONDS;
     }
+    // needs-presentation: stay in hold, wait for manual clearance via dismissPatrolIntercept.
   }
 
   getPatrolTransitTarget(patrol) {
@@ -1890,7 +2141,10 @@ export class Game {
       .filter((site) => site.type === "hub")
       .forEach((site) => {
         const sensorRadius = getHubSensorRadius(site);
+        const playerDist = distance(this.ship.position, site.position);
+        const playerInRange = playerDist <= sensorRadius;
 
+        // Inspect NPC ships passing through hub sensor range.
         activeNpcShips.forEach((ship) => {
           if (distance(ship.position, site.position) > sensorRadius) {
             return;
@@ -1911,24 +2165,24 @@ export class Game {
           });
         });
 
-        if (
-          !this.hubPatrolEnabled ||
-          !this.state.ui?.panels?.viewport?.available ||
-          this.dockedSite ||
-          this.activePatrolIntercept ||
-          distance(this.ship.position, site.position) > sensorRadius
-        ) {
+        const isPatrolForThisHub = this.activePatrolIntercept?.site?.id === site.id;
+
+        if (!playerInRange) {
+          // Player left range — depart any patrol belonging to this hub.
+          if (isPatrolForThisHub) {
+            this.departHubPatrol(site.id);
+          }
           return;
         }
 
-        const identity = createControlledShipPublicIdentity(this.state);
-        const cacheKey = getInspectionCacheKey(site, identity);
-
-        if (this.hubInspectionCache.has(cacheKey)) {
+        if (!this.hubPatrolEnabled || !this.state.ui?.panels?.viewport?.available || this.dockedSite) {
           return;
         }
 
-        this.spawnPatrolIntercept(site.id, "hub-sensor-contact");
+        // Create hub patrol if none exists.
+        if (!this.activePatrolIntercept) {
+          this.createHubPatrol(site.id);
+        }
       });
   }
 
@@ -2554,6 +2808,7 @@ export class Game {
       }
     });
     this.drawPatrolIntercept(drawCamera);
+    this.drawScanRings(drawCamera);
     this.drawEmergencyTow(drawCamera);
     this.pickups.forEach((pickup) => {
       if (isVisible(pickup, drawCanvas, drawCamera)) {
@@ -2691,6 +2946,24 @@ export class Game {
     };
   }
 
+  drawScanRings(camera = this.camera) {
+    this.scanRings.forEach((ring) => {
+      const t = ring.timer / SCAN_RING_DURATION;
+      const radius = t * SCAN_RING_MAX_RADIUS;
+      const alpha = (1 - t) * 0.65;
+      const screenX = ring.x - camera.x;
+      const screenY = ring.y - camera.y;
+
+      this.context.save();
+      this.context.strokeStyle = `rgba(126, 231, 255, ${alpha})`;
+      this.context.lineWidth = 1.5;
+      this.context.beginPath();
+      this.context.arc(screenX, screenY, Math.max(1, radius), 0, Math.PI * 2);
+      this.context.stroke();
+      this.context.restore();
+    });
+  }
+
   drawPatrolIntercept(camera = this.camera) {
     if (!this.activePatrolIntercept) {
       return;
@@ -2700,10 +2973,12 @@ export class Game {
     const screenX = patrol.position.x - camera.x;
     const screenY = patrol.position.y - camera.y;
     const pulse = 0.45 + Math.sin(patrol.pulse * 7.2) * 0.18;
+    const isIntercepting = patrol.phase === "transit" || patrol.phase === "approach" || patrol.phase === "hold";
 
     this.context.save();
 
-    if (patrol.phase !== "depart") {
+    // Dashed line to player only while actively intercepting.
+    if (isIntercepting) {
       const shipX = this.ship.position.x - camera.x;
       const shipY = this.ship.position.y - camera.y;
 
