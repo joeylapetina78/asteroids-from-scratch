@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260708-patrol4";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260708-patrol7";
 
 const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
@@ -142,6 +142,8 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
 export const chapterOneInterviewMission = {
   id: "chapter-1-yard-exchange",
   targetSiteId: chapterOneRoute.destinationSite.id,
+  // Scrap Porch is the player's starting dock — patrol should not intercept them there during this mission.
+  patrolExemptSiteIds: [storySites.originHub.id],
   prologue: {
     chapterId: "prologue",
     chapterName: "Prologue",
