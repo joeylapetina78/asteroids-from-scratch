@@ -1,30 +1,30 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260708-patrol4";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260708-patrol4";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol4";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260708-patrol4";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260708-patrol4";
-import { Game } from "./game.js?v=fresh-20260708-patrol4";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260708-patrol4";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260708-patrol4";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260708-patrol4";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol4";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260708-patrol5";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260708-patrol5";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol5";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260708-patrol5";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260708-patrol5";
+import { Game } from "./game.js?v=fresh-20260708-patrol5";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260708-patrol5";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260708-patrol5";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260708-patrol5";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol5";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260708-patrol4";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260708-patrol4";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260708-patrol4";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260708-patrol4";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260708-patrol4";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260708-patrol4";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260708-patrol4";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260708-patrol4";
-import { Processor } from "./systems/processor.js?v=fresh-20260708-patrol4";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260708-patrol4";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260708-patrol4";
-import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol4";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260708-patrol5";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260708-patrol5";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260708-patrol5";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260708-patrol5";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260708-patrol5";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260708-patrol5";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260708-patrol5";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260708-patrol5";
+import { Processor } from "./systems/processor.js?v=fresh-20260708-patrol5";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260708-patrol5";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260708-patrol5";
+import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol5";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -343,6 +343,10 @@ const COMPONENT_WARNING_RULES = [
   { panelId: "miner", cautionAt: 50, criticalAt: 20, getValue: () => state.components.miner.ammo },
   { panelId: "hull", cautionAt: 55, criticalAt: 30, getValue: () => state.components.hull.integrity },
 ];
+
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
 function updateShipPowerDisplay() {
   const engine = state.components.engine;
@@ -1710,16 +1714,38 @@ function updateHubAuthorityMessages() {
     } else if (event.type === "authority.inspectionFlagged") {
       const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
       const reasons = event.payload.reasons ?? [];
-      let text = "Contact flagged. Docking clearance is denied. This contact has been logged.";
+      let text;
 
       if (reasons.includes("missing-vin") && reasons.includes("missing-pilot-license")) {
-        text = "No valid VIN or pilot authorization on record. Docking clearance is denied. This contact has been logged.";
+        text = pick([
+          "No valid VIN or pilot authorization on record. Docking clearance is denied. This contact has been logged.",
+          "Contact has no registered VIN and no pilot license on file. Clearance denied. Entry logged.",
+          "Neither ship identity nor pilot credentials found. Docking is not authorized. This incident is on record.",
+        ]);
       } else if (reasons.includes("missing-vin")) {
-        text = "No valid VIN on record for this contact. Docking clearance is denied. This contact has been logged.";
+        text = pick([
+          "No valid VIN on record for this contact. Docking clearance is denied. This contact has been logged.",
+          "Ship VIN not found in registry. Clearance denied. Contact has been flagged.",
+          "Unregistered hull. No VIN match found. Docking not approved — contact logged for review.",
+        ]);
       } else if (reasons.includes("missing-pilot-license")) {
-        text = "No pilot authorization on record for this contact. Docking clearance is denied.";
+        text = pick([
+          "No pilot authorization on record for this contact. Docking clearance is denied.",
+          "Pilot credentials not found. Authorization to dock is denied.",
+          "No active pilot license on file for this contact. Clearance is not approved.",
+        ]);
       } else if (reasons.includes("unauthorized-zone-history")) {
-        text = "Zone violation flag on this contact. Docking clearance is temporarily restricted. This contact has been logged.";
+        text = pick([
+          "Zone violation flag on this contact. Docking clearance is temporarily restricted. This contact has been logged.",
+          "This contact carries an unauthorized zone entry. Clearance is suspended pending review.",
+          "Zone access record flagged. Docking not approved until the violation is resolved.",
+        ]);
+      } else {
+        text = pick([
+          "Contact flagged. Docking clearance is denied. This contact has been logged.",
+          "Inspection flag raised on this contact. Clearance is not approved.",
+          "Registry check returned a flag. Docking denied — contact has been recorded.",
+        ]);
       }
 
       commsDirector.say({
@@ -1733,15 +1759,47 @@ function updateHubAuthorityMessages() {
       commsDirector.say({
         source: COMMS_SOURCES.hubAuthority,
         speaker,
-        text: "Uncleared contact, stand by. Present ship VIN and pilot authorization before docking clearance will be approved.",
+        text: pick([
+          "Uncleared contact, stand by. Present ship VIN and pilot authorization before docking clearance will be approved.",
+          "Hold position. This contact has not been cleared. Show VIN and pilot authorization before docking will be permitted.",
+          "Unregistered approach detected. Stand by for inspection. VIN and pilot credentials required before entry is approved.",
+        ]),
         requireIdle: true,
+      });
+    } else if (event.type === "patrol.arrived") {
+      const speaker = `${event.payload.patrolName ?? "Patrol"}`;
+      commsDirector.say({
+        source: COMMS_SOURCES.hubAuthority,
+        speaker,
+        text: pick([
+          "Hold position. Running identity check now.",
+          "Stay on your heading. Scanning.",
+          "Don't move. Checking your registry entry.",
+        ]),
+        requireIdle: false,
+      });
+    } else if (event.type === "patrol.cleared") {
+      const speaker = `${event.payload.patrolName ?? "Patrol"}`;
+      commsDirector.say({
+        source: COMMS_SOURCES.hubAuthority,
+        speaker,
+        text: pick([
+          "Documents check out. You're cleared — carry on.",
+          "Registry confirmed. Docking is approved. Move along.",
+          "All clear. You're good to dock.",
+        ]),
+        requireIdle: false,
       });
     } else if (event.type === "patrol.dockingBlocked") {
       const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
       commsDirector.say({
         source: COMMS_SOURCES.hubAuthority,
         speaker,
-        text: "Clearance check in progress. Docking is not approved until review is complete.",
+        text: pick([
+          "Clearance check in progress. Docking is not approved until review is complete.",
+          "Stand down on docking. Your clearance review is not finished.",
+          "Docking denied. Inspection is still active — wait for the all clear.",
+        ]),
         requireIdle: false,
       });
     } else if (event.type === "patrol.dismissed") {
