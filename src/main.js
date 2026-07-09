@@ -1,30 +1,30 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260708-patrol7";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260708-patrol7";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol7";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260708-patrol7";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260708-patrol7";
-import { Game } from "./game.js?v=fresh-20260708-patrol7";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260708-patrol7";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260708-patrol7";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260708-patrol7";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol7";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260708-patrol9";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260708-patrol9";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol9";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260708-patrol9";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260708-patrol9";
+import { Game } from "./game.js?v=fresh-20260708-patrol9";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260708-patrol9";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260708-patrol9";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260708-patrol9";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol9";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260708-patrol7";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260708-patrol7";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260708-patrol7";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260708-patrol7";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260708-patrol7";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260708-patrol7";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260708-patrol7";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260708-patrol7";
-import { Processor } from "./systems/processor.js?v=fresh-20260708-patrol7";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260708-patrol7";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260708-patrol7";
-import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol7";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260708-patrol9";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260708-patrol9";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260708-patrol9";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260708-patrol9";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260708-patrol9";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260708-patrol9";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260708-patrol9";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260708-patrol9";
+import { Processor } from "./systems/processor.js?v=fresh-20260708-patrol9";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260708-patrol9";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260708-patrol9";
+import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol9";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -326,6 +326,7 @@ let contractPulledFromDrawer = false;
 let renderedLedgerVersion = -1;
 let lastAudioEventId = 0;
 let journeyTypeTimers = [];
+let _renderedMessageId = null;
 let currentSiteState = null;
 let activeDepositContractId = null;
 let activeHubServiceId = null;
@@ -2595,23 +2596,27 @@ function renderJourney(journey = state.journey) {
     journeyPortraitArt.textContent = getSpeakerPortrait(speaker);
   }
 
-  clearJourneyTypeTimers();
-  journeyLog.replaceChildren(
-    ...journey.messages.slice(-1).map((message) => {
-      const line = document.createElement("div");
-      const speaker = document.createElement("strong");
-      const text = document.createElement("span");
+  const currentMessageId = latestMessage?.id ?? null;
+  if (currentMessageId !== _renderedMessageId) {
+    _renderedMessageId = currentMessageId;
+    clearJourneyTypeTimers();
+    journeyLog.replaceChildren(
+      ...journey.messages.slice(-1).map((message) => {
+        const line = document.createElement("div");
+        const speaker = document.createElement("strong");
+        const text = document.createElement("span");
 
-      line.className = "journey-line";
-      speaker.textContent = message.speaker;
-      text.className = "journey-line-text";
-      text.dataset.speaker = message.speaker;
-      typeJourneyText(text, message.text);
-      line.append(speaker, text);
-      return line;
-    }),
-  );
-  playJourneyUpdate();
+        line.className = "journey-line";
+        speaker.textContent = message.speaker;
+        text.className = "journey-line-text";
+        text.dataset.speaker = message.speaker;
+        typeJourneyText(text, message.text);
+        line.append(speaker, text);
+        return line;
+      }),
+    );
+    playJourneyUpdate();
+  }
   renderObjectives(state);
 }
 
