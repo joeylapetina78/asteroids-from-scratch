@@ -99,7 +99,7 @@ export function createCommsDirector({ state, journeyDirector }) {
   }
 
   function deliver(message) {
-    const didSpeak = journeyDirector.sayAsNpc(message.speaker, message.text, message.acknowledgement);
+    const didSpeak = journeyDirector.sayAsNpc(message.speaker, message.text, message.acknowledgement, { priority: message.priority });
 
     if (didSpeak) {
       state.ledger.recordEvent(

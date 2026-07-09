@@ -1,8 +1,8 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260708-patrol4";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260708-patrol4";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260708-patrol4";
-import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260708-patrol4";
-import { createMissionRunner } from "./missionRunner.js?v=fresh-20260708-patrol4";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260708-patrol6";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260708-patrol6";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260708-patrol6";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260708-patrol6";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260708-patrol6";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -199,11 +199,13 @@ export function createJourneyDirector({
   function say(speaker, text, acknowledgement = null, options = {}) {
     const messageId = journey.nextMessageId;
     const durationMs = options.durationMs ?? null;
+    const priority = options.priority ?? 0;
 
     journey.messages.push({
       id: messageId,
       speaker,
       text,
+      priority,
       time: Date.now(),
       expiresAt: durationMs ? Date.now() + durationMs : null,
     });
@@ -235,13 +237,20 @@ export function createJourneyDirector({
     }
   }
 
-  function sayAsNpc(speaker, text, acknowledgement = null) {
+  function sayAsNpc(speaker, text, acknowledgement = null, { priority = 0 } = {}) {
     if (journey.pendingAcknowledgement) {
+      return false;
+    }
+
+    // Don't overwrite a higher-priority active message with a lower-priority one.
+    const currentPriority = journey.messages[0]?.priority ?? -1;
+    if (journey.messages.length > 0 && priority <= currentPriority) {
       return false;
     }
 
     say(speaker, text, acknowledgement, {
       durationMs: acknowledgement ? null : NPC_MESSAGE_DURATION_MS,
+      priority,
     });
     onChange(journey);
     return true;
@@ -280,7 +289,7 @@ export function createJourneyDirector({
         hideComponent: (componentId) => showComponent(componentId, false),
         recordEvent: (...args) => state.ledger.recordEvent(...args),
         runInspection,
-        say,
+        say: (speaker, text, acknowledgement) => sayAsNpc(speaker, text, acknowledgement, { priority: 0 }),
         spawnPatrolIntercept,
         enableHubPatrol: () => game?.enableHubPatrol(),
         startMission,

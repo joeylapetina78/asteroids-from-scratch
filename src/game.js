@@ -1,24 +1,24 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260708-patrol5";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260708-patrol5";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol5";
-import { Ship } from "./entities/Ship.js?v=fresh-20260708-patrol5";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260708-patrol5";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260708-patrol6";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260708-patrol6";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol6";
+import { Ship } from "./entities/Ship.js?v=fresh-20260708-patrol6";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260708-patrol6";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260708-patrol5";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260708-patrol5";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260708-patrol5";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260708-patrol5";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260708-patrol5";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260708-patrol5";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260708-patrol5";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260708-patrol5";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260708-patrol5";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260708-patrol5";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260708-patrol5";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260708-patrol5";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260708-patrol5";
-import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol5";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol5";
+import { createInput } from "./systems/input.js?v=fresh-20260708-patrol6";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260708-patrol6";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260708-patrol6";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260708-patrol6";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260708-patrol6";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260708-patrol6";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260708-patrol6";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260708-patrol6";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260708-patrol6";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260708-patrol6";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260708-patrol6";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260708-patrol6";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260708-patrol6";
+import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol6";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol6";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -1377,6 +1377,7 @@ export class Game {
       patrol.hasArrived = false;
       patrol.orbitAngle = null;
     } else if (result.status === "flagged" || result.status === "failed") {
+      patrol.flaggedReasons = result.reasons ?? [];
       patrol.flaggedDismissTimer = PATROL_FLAGGED_DISMISS_SECONDS;
     }
     // needs-presentation: stay in hold, wait for manual clearance via dismissPatrolIntercept.

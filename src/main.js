@@ -1,30 +1,30 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260708-patrol5";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260708-patrol5";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol5";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260708-patrol5";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260708-patrol5";
-import { Game } from "./game.js?v=fresh-20260708-patrol5";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260708-patrol5";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260708-patrol5";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260708-patrol5";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol5";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260708-patrol6";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260708-patrol6";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol6";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260708-patrol6";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260708-patrol6";
+import { Game } from "./game.js?v=fresh-20260708-patrol6";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260708-patrol6";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260708-patrol6";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260708-patrol6";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol6";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260708-patrol5";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260708-patrol5";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260708-patrol5";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260708-patrol5";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260708-patrol5";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260708-patrol5";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260708-patrol5";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260708-patrol5";
-import { Processor } from "./systems/processor.js?v=fresh-20260708-patrol5";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260708-patrol5";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260708-patrol5";
-import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol5";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260708-patrol6";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260708-patrol6";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260708-patrol6";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260708-patrol6";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260708-patrol6";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260708-patrol6";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260708-patrol6";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260708-patrol6";
+import { Processor } from "./systems/processor.js?v=fresh-20260708-patrol6";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260708-patrol6";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260708-patrol6";
+import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol6";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -2624,6 +2624,30 @@ function renderObjectives(state) {
   const flashed = new Set(JSON.parse(el.dataset.flashedFlags ?? "[]"));
 
   const sections = [];
+
+  // ── PATROL CHECK ─────────────────────────────────────────────────────────────
+  const patrol = game?.activePatrolIntercept;
+  if (patrol && (patrol.phase === "standoff" || patrol.phase === "approach" || patrol.phase === "hold")) {
+    const siteName = patrol.site?.name ?? "Hub";
+    const flagged = patrol.hasScanned && patrol.flaggedDismissTimer > 0;
+    const reasons = patrol.flaggedReasons ?? [];
+
+    let taskItems;
+    if (flagged) {
+      const docTasks = [];
+      if (reasons.includes("missing-vin")) docTasks.push("Attach ship VIN plate");
+      if (reasons.includes("missing-pilot-license")) docTasks.push("Obtain a pilot license");
+      if (reasons.includes("unauthorized-zone-history")) docTasks.push("Resolve zone violation on record");
+      if (docTasks.length === 0) docTasks.push("Resolve documentation issue");
+      taskItems = docTasks.map((label) => `<li class="obj-task"><span class="obj-check">☐</span><span>${label}</span></li>`).join("");
+    } else if (patrol.hasScanned) {
+      taskItems = `<li class="obj-task"><span class="obj-check">☐</span><span>Present ship VIN</span></li><li class="obj-task"><span class="obj-check">☐</span><span>Present pilot authorization</span></li>`;
+    } else {
+      taskItems = `<li class="obj-task"><span class="obj-check">☐</span><span>Hold position — identity check in progress</span></li>`;
+    }
+
+    sections.push(`<p class="obj-section-label">Patrol Check — ${siteName}</p><ul class="obj-list">${taskItems}</ul>`);
+  }
 
   const tasks = mission?.tasks ?? [];
   if (tasks.length > 0 && mission?.status === "active") {
