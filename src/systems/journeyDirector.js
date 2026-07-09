@@ -1,8 +1,8 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260708-patrol6";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260708-patrol6";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260708-patrol6";
-import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260708-patrol6";
-import { createMissionRunner } from "./missionRunner.js?v=fresh-20260708-patrol6";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260708-patrol8";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260708-patrol8";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260708-patrol8";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260708-patrol8";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260708-patrol8";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -242,9 +242,10 @@ export function createJourneyDirector({
       return false;
     }
 
-    // Don't overwrite a higher-priority active message with a lower-priority one.
+    // Don't overwrite a strictly higher-priority active message with a lower-priority one.
+    // Same-priority messages (e.g. mission beat advancing its own dialogue) always replace each other.
     const currentPriority = journey.messages[0]?.priority ?? -1;
-    if (journey.messages.length > 0 && priority <= currentPriority) {
+    if (journey.messages.length > 0 && priority < currentPriority) {
       return false;
     }
 
