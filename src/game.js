@@ -1,24 +1,24 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260708-patrol2";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260708-patrol2";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol2";
-import { Ship } from "./entities/Ship.js?v=fresh-20260708-patrol2";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260708-patrol2";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260708-patrol3";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260708-patrol3";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol3";
+import { Ship } from "./entities/Ship.js?v=fresh-20260708-patrol3";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260708-patrol3";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260708-patrol2";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260708-patrol2";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260708-patrol2";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260708-patrol2";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260708-patrol2";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260708-patrol2";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260708-patrol2";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260708-patrol2";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260708-patrol2";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260708-patrol2";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260708-patrol2";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260708-patrol2";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260708-patrol2";
-import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol2";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol2";
+import { createInput } from "./systems/input.js?v=fresh-20260708-patrol3";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260708-patrol3";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260708-patrol3";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260708-patrol3";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260708-patrol3";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260708-patrol3";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260708-patrol3";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260708-patrol3";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260708-patrol3";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260708-patrol3";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260708-patrol3";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260708-patrol3";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260708-patrol3";
+import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol3";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol3";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -1164,13 +1164,13 @@ export class Game {
           const cacheKey = getInspectionCacheKey(patrol.site, identity);
 
           if (!this.hubInspectionCache.has(cacheKey)) {
-            patrol.phase = "transit";
+            // Jump directly to orbiting distance — patrol has short-range intercept capability.
+            this.jumpPatrolToInterceptPosition(patrol);
             patrol.flybyTarget = null;
             patrol.requiresManualClearance = false;
             patrol.hasArrived = false;
             patrol.scanTimer = 0;
             patrol.hasScanned = false;
-            patrol.orbitAngle = null;
             return;
           }
         }
@@ -1217,15 +1217,15 @@ export class Game {
         return;
       }
 
-      // Use the target's current position if it's a live ship, else the recorded position.
-      const targetPos = target.ship ? target.ship.position : target.position;
-      this.steerPatrolIntercept(patrol, targetPos, PATROL_DRIFT_SPEED * 1.6, deltaSeconds);
+      // Always steer toward the snapshot position — never chase a live ship.
+      const targetPos = target.position;
+      this.steerPatrolIntercept(patrol, targetPos, PATROL_DRIFT_SPEED * 1.8, deltaSeconds);
 
       if (!patrol.flybyHasScanned && distance(patrol.position, targetPos) < PATROL_FLYBY_SCAN_DIST) {
         patrol.flybyHasScanned = true;
         this.fireScanPulse();
 
-        if (target.ship) {
+        if (target.ship?.isAlive) {
           const identity = createNpcShipPublicIdentity(target.ship);
           const cacheKey = getInspectionCacheKey(patrol.site, identity);
 
@@ -1240,8 +1240,8 @@ export class Game {
         }
       }
 
-      // Continue past the target and return to drift after passing through.
-      if (patrol.flybyHasScanned && distance(patrol.position, targetPos) > PATROL_FLYBY_SCAN_DIST * 2) {
+      // Leave immediately after scanning — don't linger on the target.
+      if (patrol.flybyHasScanned) {
         patrol.flybyTarget = null;
         patrol.phase = "return";
         patrol.waypointIndex = this.nearestWaypointIndex(patrol);
@@ -1251,6 +1251,9 @@ export class Game {
     }
 
     // ── TRANSIT ─────────────────────────────────────────────────────────────
+    // Transit is only used for mission-scripted intercepts (spawnPatrolIntercept
+    // from a beat). Hub-triggered intercepts use jumpPatrolToInterceptPosition
+    // instead and skip transit entirely, going straight to approach/hold.
     if (patrol.phase === "transit") {
       const transitTarget = this.getPatrolTransitTarget(patrol);
       this.steerPatrolIntercept(patrol, transitTarget, PATROL_APPROACH_SPEED, deltaSeconds);
@@ -1346,6 +1349,28 @@ export class Game {
       patrol.flaggedDismissTimer = PATROL_FLAGGED_DISMISS_SECONDS;
     }
     // needs-presentation: stay in hold, wait for manual clearance via dismissPatrolIntercept.
+  }
+
+  jumpPatrolToInterceptPosition(patrol) {
+    // Place patrol just outside orbiting range, offset slightly to one side
+    // so it approaches from an angle rather than head-on.
+    const dx = this.ship.position.x - patrol.site.position.x;
+    const dy = this.ship.position.y - patrol.site.position.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const toShip = { x: dx / len, y: dy / len };
+    const side = { x: -toShip.y, y: toShip.x };
+    const jumpDist = PATROL_ORBIT_RADIUS * 2.2;
+
+    patrol.position.x = this.ship.position.x + toShip.x * jumpDist + side.x * (PATROL_ORBIT_RADIUS * 0.8);
+    patrol.position.y = this.ship.position.y + toShip.y * jumpDist + side.y * (PATROL_ORBIT_RADIUS * 0.8);
+    patrol.velocity.x = -toShip.x * PATROL_APPROACH_SPEED;
+    patrol.velocity.y = -toShip.y * PATROL_APPROACH_SPEED;
+    patrol.heading = Math.atan2(-toShip.y, -toShip.x);
+    patrol.orbitAngle = Math.atan2(patrol.position.y - this.ship.position.y, patrol.position.x - this.ship.position.x);
+    patrol.phase = "approach";
+
+    // Flash ring at jump-in point so the player sees the arrival.
+    this.scanRings.push({ x: patrol.position.x, y: patrol.position.y, timer: 0 });
   }
 
   findPatrolFlybyTarget(patrol) {
