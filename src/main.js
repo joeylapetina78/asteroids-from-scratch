@@ -1,30 +1,30 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260708-patrol10";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260708-patrol10";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol10";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260708-patrol10";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260708-patrol10";
-import { Game } from "./game.js?v=fresh-20260708-patrol10";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260708-patrol10";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260708-patrol10";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260708-patrol10";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol10";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260708-patrol11";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260708-patrol11";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol11";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260708-patrol11";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260708-patrol11";
+import { Game } from "./game.js?v=fresh-20260708-patrol11";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260708-patrol11";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260708-patrol11";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260708-patrol11";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol11";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260708-patrol10";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260708-patrol10";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260708-patrol10";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260708-patrol10";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260708-patrol10";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260708-patrol10";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260708-patrol10";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260708-patrol10";
-import { Processor } from "./systems/processor.js?v=fresh-20260708-patrol10";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260708-patrol10";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260708-patrol10";
-import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol10";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260708-patrol11";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260708-patrol11";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260708-patrol11";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260708-patrol11";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260708-patrol11";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260708-patrol11";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260708-patrol11";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260708-patrol11";
+import { Processor } from "./systems/processor.js?v=fresh-20260708-patrol11";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260708-patrol11";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260708-patrol11";
+import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol11";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -1711,10 +1711,11 @@ function updateHubAuthorityMessages() {
       if (pending) {
         const needsOther = isVin ? !pending.kinds.has("pilot-license") : !pending.kinds.has("ship-vin");
         const text = isVin
-          ? needsOther ? "VIN received. Now show pilot authorization." : "VIN received. Stand by."
-          : needsOther ? "Authorization received. Now show the ship VIN." : "Authorization received. Stand by.";
+          ? needsOther ? pick(["VIN received. Now show pilot authorization.", "Got the VIN. Show your pilot license to complete the check.", "Ship identity confirmed. Now present pilot authorization."]) : "VIN received. Stand by."
+          : needsOther ? pick(["Authorization received. Now show the ship VIN.", "Pilot credentials on file. Show the ship VIN to complete the check.", "License confirmed. We still need the ship VIN."]) : "Authorization received. Stand by.";
 
-        commsDirector.say({ source: COMMS_SOURCES.hubAuthority, speaker, text });
+        // Priority 76 — must cut through the identityRequested message (priority 75)
+        commsDirector.say({ source: COMMS_SOURCES.hubAuthority, speaker, text, priority: 76 });
       }
     } else if (event.type === "authority.inspectionFlagged") {
       const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
@@ -2650,7 +2651,12 @@ function renderObjectives(state) {
       if (docTasks.length === 0) docTasks.push("Resolve documentation issue");
       taskItems = docTasks.map((label) => `<li class="obj-task"><span class="obj-check">☐</span><span>${label}</span></li>`).join("");
     } else if (patrol.hasScanned) {
-      taskItems = `<li class="obj-task"><span class="obj-check">☐</span><span>Present ship VIN</span></li><li class="obj-task"><span class="obj-check">☐</span><span>Present pilot authorization</span></li>`;
+      const presented = pendingHubIdentityPresentations.get(patrol.site?.id)?.kinds ?? new Set();
+      const vinDone = presented.has("ship-vin");
+      const licDone = presented.has("pilot-license");
+      const vinItem = `<li class="obj-task${vinDone ? " obj-done obj-flash" : ""}"><span class="obj-check">${vinDone ? "☑" : "☐"}</span><span>Present ship VIN</span></li>`;
+      const licItem = `<li class="obj-task${licDone ? " obj-done obj-flash" : ""}"><span class="obj-check">${licDone ? "☑" : "☐"}</span><span>Present pilot authorization</span></li>`;
+      taskItems = vinItem + licItem;
     } else {
       taskItems = `<li class="obj-task"><span class="obj-check">☐</span><span>Hold position — identity check in progress</span></li>`;
     }
