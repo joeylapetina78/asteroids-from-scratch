@@ -1,4 +1,4 @@
-import { resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260708-patrol3";
+import { resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260708-patrol4";
 
 export function matchesEventRule(rule, event, { state }) {
   if (!rule.repeatable && rule.once && state.journey.flags[rule.setFlag ?? rule.id]) {

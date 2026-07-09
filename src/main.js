@@ -1,30 +1,30 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260708-patrol3";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260708-patrol3";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol3";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260708-patrol3";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260708-patrol3";
-import { Game } from "./game.js?v=fresh-20260708-patrol3";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260708-patrol3";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260708-patrol3";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260708-patrol3";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol3";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260708-patrol4";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260708-patrol4";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol4";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260708-patrol4";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260708-patrol4";
+import { Game } from "./game.js?v=fresh-20260708-patrol4";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260708-patrol4";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260708-patrol4";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260708-patrol4";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol4";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260708-patrol3";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260708-patrol3";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260708-patrol3";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260708-patrol3";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260708-patrol3";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260708-patrol3";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260708-patrol3";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260708-patrol3";
-import { Processor } from "./systems/processor.js?v=fresh-20260708-patrol3";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260708-patrol3";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260708-patrol3";
-import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol3";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260708-patrol4";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260708-patrol4";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260708-patrol4";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260708-patrol4";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260708-patrol4";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260708-patrol4";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260708-patrol4";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260708-patrol4";
+import { Processor } from "./systems/processor.js?v=fresh-20260708-patrol4";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260708-patrol4";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260708-patrol4";
+import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol4";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -1726,6 +1726,22 @@ function updateHubAuthorityMessages() {
         source: COMMS_SOURCES.hubAuthority,
         speaker,
         text,
+        requireIdle: false,
+      });
+    } else if (event.type === "patrol.standoff") {
+      const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
+      commsDirector.say({
+        source: COMMS_SOURCES.hubAuthority,
+        speaker,
+        text: "Uncleared contact, stand by. Present ship VIN and pilot authorization before docking clearance will be approved.",
+        requireIdle: true,
+      });
+    } else if (event.type === "patrol.dockingBlocked") {
+      const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
+      commsDirector.say({
+        source: COMMS_SOURCES.hubAuthority,
+        speaker,
+        text: "Clearance check in progress. Docking is not approved until review is complete.",
         requireIdle: false,
       });
     } else if (event.type === "patrol.dismissed") {

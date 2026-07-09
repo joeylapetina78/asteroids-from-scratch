@@ -1,24 +1,24 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260708-patrol3";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260708-patrol3";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol3";
-import { Ship } from "./entities/Ship.js?v=fresh-20260708-patrol3";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260708-patrol3";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260708-patrol4";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260708-patrol4";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol4";
+import { Ship } from "./entities/Ship.js?v=fresh-20260708-patrol4";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260708-patrol4";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260708-patrol3";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260708-patrol3";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260708-patrol3";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260708-patrol3";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260708-patrol3";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260708-patrol3";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260708-patrol3";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260708-patrol3";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260708-patrol3";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260708-patrol3";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260708-patrol3";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260708-patrol3";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260708-patrol3";
-import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol3";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol3";
+import { createInput } from "./systems/input.js?v=fresh-20260708-patrol4";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260708-patrol4";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260708-patrol4";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260708-patrol4";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260708-patrol4";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260708-patrol4";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260708-patrol4";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260708-patrol4";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260708-patrol4";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260708-patrol4";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260708-patrol4";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260708-patrol4";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260708-patrol4";
+import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol4";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol4";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -1250,10 +1250,36 @@ export class Game {
       return;
     }
 
+    // ── STANDOFF ────────────────────────────────────────────────────────────
+    // Patrol holds the approach line aimed at the player. Tether is active.
+    // After a short dwell the patrol begins orbiting (approach phase).
+    if (patrol.phase === "standoff") {
+      // Tether player immediately — they cannot flee during standoff.
+      this.ship.velocity.x *= PATROL_TETHER_DAMPING;
+      this.ship.velocity.y *= PATROL_TETHER_DAMPING;
+
+      // Hold fixed position on the standoff angle — aimed straight at player.
+      const holdTarget = {
+        x: this.ship.position.x + Math.cos(patrol.standoffOrbitAngle) * PATROL_ORBIT_RADIUS * 1.8,
+        y: this.ship.position.y + Math.sin(patrol.standoffOrbitAngle) * PATROL_ORBIT_RADIUS * 1.8,
+      };
+      this.steerPatrolIntercept(patrol, holdTarget, PATROL_APPROACH_SPEED, deltaSeconds);
+
+      patrol.standoffTimer += deltaSeconds;
+      // After 1.8 seconds, start orbiting.
+      if (patrol.standoffTimer >= 1.8) {
+        patrol.phase = "approach";
+        patrol.orbitAngle = patrol.standoffOrbitAngle;
+        patrol.hasArrived = false;
+      }
+
+      return;
+    }
+
     // ── TRANSIT ─────────────────────────────────────────────────────────────
     // Transit is only used for mission-scripted intercepts (spawnPatrolIntercept
     // from a beat). Hub-triggered intercepts use jumpPatrolToInterceptPosition
-    // instead and skip transit entirely, going straight to approach/hold.
+    // instead and skip transit entirely, going straight to standoff.
     if (patrol.phase === "transit") {
       const transitTarget = this.getPatrolTransitTarget(patrol);
       this.steerPatrolIntercept(patrol, transitTarget, PATROL_APPROACH_SPEED, deltaSeconds);
@@ -1352,25 +1378,34 @@ export class Game {
   }
 
   jumpPatrolToInterceptPosition(patrol) {
-    // Place patrol just outside orbiting range, offset slightly to one side
-    // so it approaches from an angle rather than head-on.
+    // Jump to the approach trajectory — directly on the line from hub to player,
+    // at orbit radius distance, aimed straight at the ship. Tether applies immediately.
     const dx = this.ship.position.x - patrol.site.position.x;
     const dy = this.ship.position.y - patrol.site.position.y;
     const len = Math.hypot(dx, dy) || 1;
     const toShip = { x: dx / len, y: dy / len };
-    const side = { x: -toShip.y, y: toShip.x };
-    const jumpDist = PATROL_ORBIT_RADIUS * 2.2;
+    const jumpDist = PATROL_ORBIT_RADIUS * 2.0;
 
-    patrol.position.x = this.ship.position.x + toShip.x * jumpDist + side.x * (PATROL_ORBIT_RADIUS * 0.8);
-    patrol.position.y = this.ship.position.y + toShip.y * jumpDist + side.y * (PATROL_ORBIT_RADIUS * 0.8);
-    patrol.velocity.x = -toShip.x * PATROL_APPROACH_SPEED;
-    patrol.velocity.y = -toShip.y * PATROL_APPROACH_SPEED;
+    patrol.position.x = this.ship.position.x + toShip.x * jumpDist;
+    patrol.position.y = this.ship.position.y + toShip.y * jumpDist;
+    patrol.velocity.x = -toShip.x * 20;
+    patrol.velocity.y = -toShip.y * 20;
     patrol.heading = Math.atan2(-toShip.y, -toShip.x);
+    // Lock the orbit angle on the approach trajectory — patrol holds this line in standoff.
     patrol.orbitAngle = Math.atan2(patrol.position.y - this.ship.position.y, patrol.position.x - this.ship.position.x);
-    patrol.phase = "approach";
+    patrol.standoffOrbitAngle = patrol.orbitAngle;
+    patrol.standoffTimer = 0;
+    patrol.phase = "standoff";
 
-    // Flash ring at jump-in point so the player sees the arrival.
+    // Flash ring at jump-in point.
     this.scanRings.push({ x: patrol.position.x, y: patrol.position.y, timer: 0 });
+
+    // Fire "stand by" comms immediately.
+    this.state.ledger.recordEvent(
+      "patrol.standoff",
+      { patrolId: patrol.id, patrolName: patrol.name, siteId: patrol.site.id, siteName: patrol.site.name },
+      { visible: false },
+    );
   }
 
   findPatrolFlybyTarget(patrol) {
@@ -1473,6 +1508,22 @@ export class Game {
   toggleDock() {
     if (!this.state.components.docking.installed || (!this.nearbySite && !this.dockedSite)) {
       return;
+    }
+
+    // Block docking at a hub while its patrol has an active intercept in progress.
+    if (!this.dockedSite && this.nearbySite) {
+      const patrol = this.activePatrolIntercept;
+      const intercepting = patrol?.site?.id === this.nearbySite.id &&
+        (patrol.phase === "standoff" || patrol.phase === "approach" || patrol.phase === "hold");
+
+      if (intercepting) {
+        this.state.ledger.recordEvent(
+          "patrol.dockingBlocked",
+          { siteId: this.nearbySite.id, siteName: this.nearbySite.name },
+          { visible: false },
+        );
+        return;
+      }
     }
 
     this.setDockedSite(this.dockedSite ? null : this.nearbySite);
@@ -3097,7 +3148,7 @@ export class Game {
     const screenX = patrol.position.x - camera.x;
     const screenY = patrol.position.y - camera.y;
     const pulse = 0.45 + Math.sin(patrol.pulse * 7.2) * 0.18;
-    const isIntercepting = patrol.phase === "transit" || patrol.phase === "approach" || patrol.phase === "hold";
+    const isIntercepting = patrol.phase === "standoff" || patrol.phase === "transit" || patrol.phase === "approach" || patrol.phase === "hold";
 
     this.context.save();
 
