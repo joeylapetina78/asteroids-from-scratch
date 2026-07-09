@@ -1,4 +1,4 @@
-import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260708-patrol1";
+import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260708-patrol2";
 
 export const WORLD_SITES = [
   // ── STORY HUBS ───────────────────────────────────────────────────────────────
