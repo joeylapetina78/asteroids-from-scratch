@@ -172,7 +172,7 @@ function pickFragmentIndexes(fragmentCount, coloredFragmentCount, random) {
 //  ice      (volatile)   — round, many sides, smooth comet-like
 //  crystal  (strange)    — spiky, dramatic alternating peaks and valleys
 //
-// angleJitter is a fraction of π radians applied per-vertex. Safe max is
+// angleJitter is a fraction of Ï€ radians applied per-vertex. Safe max is
 // roughly 1/pointCount (half the inter-point spacing). Exceeding it lets
 // points swap angular order, producing self-intersecting "vector splat"
 // shapes — useful for a future shattered/debris aesthetic, but not here.

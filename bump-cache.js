@@ -3,8 +3,10 @@
 // Run after browser-facing JS/CSS/HTML edits: npm run bump:cache
 // Replaces every ?v= query string in JS imports, CSS links, and HTML script tags
 // with a single fresh version tag derived from the current git hash + timestamp.
+// Also updates the visible build tag in index.html so testers can confirm which
+// build actually loaded.
 //
-// Then reload the browser — every module URL is new, so nothing is served from cache.
+// Then reload the browser â€” every module URL is new, so nothing is served from cache.
 
 import { execSync } from "child_process";
 import { readFileSync, writeFileSync, readdirSync, statSync } from "fs";
@@ -33,6 +35,7 @@ const newVersion = `fresh-${stamp}-${gitHash}`;
 
 // --- helpers ---
 const VERSION_RE = /(\?v=)[A-Za-z0-9_-]+/g;
+const BUILD_TAG_RE = /(<span class="build-tag">build: )[^<]+(<\/span>)/;
 
 function countMatches(str) {
   return (str.match(VERSION_RE) ?? []).length;
@@ -40,10 +43,15 @@ function countMatches(str) {
 
 function bumpFile(filePath) {
   const original = readFileSync(filePath, "utf8");
-  const updated = original.replace(VERSION_RE, `$1${newVersion}`);
+  let updated = original.replace(VERSION_RE, `$1${newVersion}`);
+
+  if (filePath === "index.html") {
+    updated = updated.replace(BUILD_TAG_RE, `$1${newVersion}$2`);
+  }
+
   if (updated === original) return 0;
   writeFileSync(filePath, updated, "utf8");
-  return countMatches(original);
+  return countMatches(original) + (BUILD_TAG_RE.test(original) ? 1 : 0);
 }
 
 function walkJs(dir, out = []) {

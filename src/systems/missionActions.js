@@ -165,6 +165,8 @@ function runMissionAction(action, { state, actions, missionDefinition, goToStep 
   } else if (action.type === "setFlag") {
     state.journey.flags ??= {};
     state.journey.flags[action.flag] = true;
+  } else if (action.type === "clearFlag") {
+    if (state.journey.flags) delete state.journey.flags[action.flag];
   } else if (action.type === "setGlobalFlag") {
     state.journey.globalFlags ??= {};
     state.journey.globalFlags[action.flag] = true;

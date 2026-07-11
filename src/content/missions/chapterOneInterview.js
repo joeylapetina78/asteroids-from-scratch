@@ -1,4 +1,9 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260708-patrol7";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260711-0000-b3e4376";
+
+const yardExchangeIdentityCleared = ({ state }) =>
+  Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
+
+const yardExchangeIdentityNeedsReview = ({ state }) => !yardExchangeIdentityCleared({ state });
 
 const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
@@ -394,11 +399,13 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          requiresCondition: yardExchangeIdentityNeedsReview,
           nextStepId: "yard-traffic-check",
         },
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          requiresCondition: yardExchangeIdentityNeedsReview,
           nextStepId: "yard-traffic-check",
         },
         {
@@ -452,11 +459,13 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          requiresCondition: yardExchangeIdentityNeedsReview,
           nextStepId: "yard-traffic-check",
         },
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          requiresCondition: yardExchangeIdentityNeedsReview,
           nextStepId: "yard-traffic-check",
         },
         {
@@ -486,11 +495,13 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          requiresCondition: yardExchangeIdentityNeedsReview,
           nextStepId: "yard-traffic-check",
         },
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          requiresCondition: yardExchangeIdentityNeedsReview,
           nextStepId: "yard-traffic-check",
         },
         {
@@ -517,9 +528,27 @@ export const chapterOneInterviewMission = {
         },
       ],
       transitions: [
+        // Patrol cleared during approach — skip the traffic check beat entirely.
+        {
+          eventType: "patrol.cleared",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          once: true,
+          setFlag: "yardVinPresented",
+          actions: [{ type: "setFlag", flag: "yardLicensePresented" }],
+          nextStepId: "dock-yard-exchange",
+        },
+        {
+          eventType: "authority.identityCleared",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          once: true,
+          setFlag: "yardVinPresented",
+          actions: [{ type: "setFlag", flag: "yardLicensePresented" }],
+          nextStepId: "dock-yard-exchange",
+        },
         {
           eventType: "site.enteredViewport",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          requiresCondition: yardExchangeIdentityNeedsReview,
           setFlag: "yardExchangeInView",
           delayMs: 800,
           nextStepId: "yard-traffic-check",
@@ -527,6 +556,7 @@ export const chapterOneInterviewMission = {
         {
           eventType: "site.nearby",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          requiresCondition: yardExchangeIdentityNeedsReview,
           setFlag: "yardExchangeInView",
           delayMs: 800,
           nextStepId: "yard-traffic-check",
@@ -569,6 +599,25 @@ export const chapterOneInterviewMission = {
         },
       ],
       transitions: [
+        // Patrol auto-cleared the ship (already registered) — treat as both docs presented.
+        {
+          eventType: "patrol.cleared",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          once: true,
+          setFlag: "yardVinPresented",
+          delayMs: 600,
+          actions: [{ type: "setFlag", flag: "yardLicensePresented" }],
+          nextStepId: "dock-yard-exchange",
+        },
+        {
+          eventType: "authority.identityCleared",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          once: true,
+          setFlag: "yardVinPresented",
+          delayMs: 600,
+          actions: [{ type: "setFlag", flag: "yardLicensePresented" }],
+          nextStepId: "dock-yard-exchange",
+        },
         {
           eventType: "authority.documentPresented",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id, documentKind: "pilot-license" },

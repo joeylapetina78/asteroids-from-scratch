@@ -39,7 +39,7 @@ const DEFAULT_PROFILE = {
 };
 
 export const WORLD_ZONES = [
-  // ── STARTER CLUSTER — tight pack near origin, multiple zones visible at once ──
+  // â"€â"€ STARTER CLUSTER — tight pack near origin, multiple zones visible at once â"€â"€
   {
     id: "starter-drift",
     name: "First Reach",
@@ -162,7 +162,7 @@ export const WORLD_ZONES = [
     },
   },
 
-  // ── NEAR-FIELD CONNECTORS ─────────────────────────────────────────────────────
+  // â"€â"€ NEAR-FIELD CONNECTORS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   {
     id: "shatter-belt",
     name: "Shatter Belt",
@@ -308,7 +308,7 @@ export const WORLD_ZONES = [
     },
   },
 
-  // ── MID-RANGE ────────────────────────────────────────────────────────────────
+  // â"€â"€ MID-RANGE â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   {
     id: "blue-glint",
     name: "Blue Glint",
@@ -382,7 +382,7 @@ export const WORLD_ZONES = [
     },
   },
 
-  // ── OUTER ZONES ──────────────────────────────────────────────────────────────
+  // â"€â"€ OUTER ZONES â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   {
     id: "old-iron-run",
     name: "Old Iron Run",

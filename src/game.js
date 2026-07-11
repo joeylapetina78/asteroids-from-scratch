@@ -1,24 +1,24 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260708-patrol7";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260708-patrol7";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol7";
-import { Ship } from "./entities/Ship.js?v=fresh-20260708-patrol7";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260708-patrol7";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260711-0000-b3e4376";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260711-0000-b3e4376";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260711-0000-b3e4376";
+import { Ship } from "./entities/Ship.js?v=fresh-20260711-0000-b3e4376";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260711-0000-b3e4376";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260708-patrol7";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260708-patrol7";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260708-patrol7";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260708-patrol7";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260708-patrol7";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260708-patrol7";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260708-patrol7";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260708-patrol7";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260708-patrol7";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260708-patrol7";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260708-patrol7";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260708-patrol7";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260708-patrol7";
-import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol7";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol7";
+import { createInput } from "./systems/input.js?v=fresh-20260711-0000-b3e4376";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260711-0000-b3e4376";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260711-0000-b3e4376";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260711-0000-b3e4376";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260711-0000-b3e4376";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260711-0000-b3e4376";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260711-0000-b3e4376";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260711-0000-b3e4376";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260711-0000-b3e4376";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260711-0000-b3e4376";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260711-0000-b3e4376";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260711-0000-b3e4376";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260711-0000-b3e4376";
+import { createGameState } from "./state/gameState.js?v=fresh-20260711-0000-b3e4376";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260711-0000-b3e4376";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -1117,7 +1117,7 @@ export class Game {
 
     patrol.pulse += deltaSeconds;
 
-    // ── DEPART ──────────────────────────────────────────────────────────────
+    // â"€â"€ DEPART â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if (patrol.phase === "depart") {
       const target = patrol.departTarget ?? { x: patrol.site.position.x, y: patrol.site.position.y };
       this.steerPatrolIntercept(patrol, target, PATROL_DEPART_SPEED, deltaSeconds);
@@ -1129,7 +1129,7 @@ export class Game {
       return;
     }
 
-    // ── RETURN TO DRIFT ─────────────────────────────────────────────────────
+    // â"€â"€ RETURN TO DRIFT â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if (patrol.phase === "return") {
       const wp = patrol.waypoints[patrol.waypointIndex];
       this.steerPatrolIntercept(patrol, wp, PATROL_RETURN_SPEED, deltaSeconds);
@@ -1142,7 +1142,7 @@ export class Game {
       return;
     }
 
-    // ── DRIFT ───────────────────────────────────────────────────────────────
+    // â"€â"€ DRIFT â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if (patrol.phase === "drift") {
       // Passive scan ping when patrol passes near player.
       patrol.passiveScanTimer += deltaSeconds;
@@ -1208,7 +1208,7 @@ export class Game {
       return;
     }
 
-    // ── FLY-BY ──────────────────────────────────────────────────────────────
+    // â"€â"€ FLY-BY â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if (patrol.phase === "flyby") {
       const target = patrol.flybyTarget;
 
@@ -1251,7 +1251,7 @@ export class Game {
       return;
     }
 
-    // ── STANDOFF ────────────────────────────────────────────────────────────
+    // â"€â"€ STANDOFF â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     // Patrol holds the approach line aimed at the player. Tether is active.
     // After a short dwell the patrol begins orbiting (approach phase).
     if (patrol.phase === "standoff") {
@@ -1277,7 +1277,7 @@ export class Game {
       return;
     }
 
-    // ── TRANSIT ─────────────────────────────────────────────────────────────
+    // â"€â"€ TRANSIT â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     // Transit is only used for mission-scripted intercepts (spawnPatrolIntercept
     // from a beat). Hub-triggered intercepts use jumpPatrolToInterceptPosition
     // instead and skip transit entirely, going straight to standoff.
@@ -1293,7 +1293,7 @@ export class Game {
       return;
     }
 
-    // ── APPROACH / HOLD (intercept) ─────────────────────────────────────────
+    // â"€â"€ APPROACH / HOLD (intercept) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if (patrol.orbitAngle === null) {
       patrol.orbitAngle = Math.atan2(patrol.position.y - this.ship.position.y, patrol.position.x - this.ship.position.x);
     }
@@ -3027,7 +3027,7 @@ export class Game {
 
     ctx.save();
 
-    // ── Hex fills: ore density drives brightness, zone color drives hue ──────
+    // â"€â"€ Hex fills: ore density drives brightness, zone color drives hue â"€â"€â"€â"€â"€â"€
     // Dark empty space stays near-invisible; rich ore pockets glow neon.
     network.plots.forEach((plot) => {
       const claim = this.claimField.getClaimAt(plot.center.x, plot.center.y);
@@ -3035,7 +3035,7 @@ export class Game {
       if (intensity < 0.06) return;
 
       const oreGlow = this.state.ui?.mapGlow ?? 0.20;
-      const exponent = 0.3 + oreGlow * 1.2; // 0.3 flat → 1.5 high-contrast
+      const exponent = 0.3 + oreGlow * 1.2; // 0.3 flat â†’ 1.5 high-contrast
       const glow = Math.pow(intensity, exponent);
       const [cr, cg, cb] = claim.color;
 
@@ -3063,7 +3063,7 @@ export class Game {
       ctx.fill();
     });
 
-    // ── Dashed edges and vertex dots (unchanged from Codex) ──────────────────
+    // â"€â"€ Dashed edges and vertex dots (unchanged from Codex) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     ctx.globalAlpha = 0.58;
     ctx.strokeStyle = "rgba(126, 162, 178, 0.72)";
     ctx.lineWidth = 1.1;

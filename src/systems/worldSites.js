@@ -1,7 +1,7 @@
-import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260708-patrol4";
+import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260711-0000-b3e4376";
 
 export const WORLD_SITES = [
-  // ── STORY HUBS ───────────────────────────────────────────────────────────────
+  // â"€â"€ STORY HUBS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   // These are the Chapter 1 anchor points. Positions are story-fixed.
   {
     id: storySites.starterHub.id,
@@ -33,7 +33,7 @@ export const WORLD_SITES = [
     services: ["scrap-porch-supply"],
   },
 
-  // ── INNER BELT OUTPOST ───────────────────────────────────────────────────────
+  // â"€â"€ INNER BELT OUTPOST â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   // Positioned past Red Teeth on the way to Ore Ridge. Reachable in the starter
   // ship — first hub the player can discover on their own.
   {
@@ -48,7 +48,7 @@ export const WORLD_SITES = [
     services: [],
   },
 
-  // ── OUTER HUBS ───────────────────────────────────────────────────────────────
+  // â"€â"€ OUTER HUBS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   // These require a faster ship or serious fuel planning to reach.
   {
     id: "ore-station-one",

@@ -1,5 +1,5 @@
-import { runMissionActions } from "./missionActions.js?v=fresh-20260708-patrol10";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260708-patrol10";
+import { runMissionActions } from "./missionActions.js?v=fresh-20260711-0000-b3e4376";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260711-0000-b3e4376";
 
 export function createMissionRunner({ missionDefinition, state, actions }) {
   const beatDefs = missionDefinition.beats ?? missionDefinition.steps;
@@ -73,6 +73,11 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
   }
 
   function handleEvent(event) {
+    if (pendingDelayedTransition) {
+      pendingDelayedTransition.queuedEvents.push(event);
+      return false;
+    }
+
     const step = getCurrentStep();
 
     if (!step || state.journey.mission?.status !== "active") {
@@ -111,10 +116,20 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
 
     if (transition.nextStepId) {
       if (transition.delayMs) {
+        const sourceStepId = state.journey.currentStepId;
+        pendingDelayedTransition = {
+          nextStepId: transition.nextStepId,
+          queuedEvents: [],
+          sourceStepId,
+        };
         setTimeout(() => {
-          if (!destroyed) {
-            goToStep(transition.nextStepId);
+          const pending = pendingDelayedTransition;
+          pendingDelayedTransition = null;
+
+          if (!destroyed && pending?.sourceStepId === sourceStepId && state.journey.currentStepId === sourceStepId) {
+            goToStep(pending.nextStepId);
             actions.onChange?.();
+            replayQueuedEvents(pending.queuedEvents);
           }
         }, transition.delayMs);
       } else {
@@ -125,6 +140,16 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     }
 
     return true;
+  }
+
+  function replayQueuedEvents(events) {
+    for (const event of events) {
+      if (destroyed) {
+        return;
+      }
+
+      handleEvent(event);
+    }
   }
 
   function goToStep(stepId) {
@@ -170,6 +195,7 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
   }
 
   let destroyed = false;
+  let pendingDelayedTransition = null;
 
   return {
     accept,

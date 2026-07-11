@@ -1,30 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260708-patrol11";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260708-patrol11";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260708-patrol11";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260708-patrol11";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260708-patrol11";
-import { Game } from "./game.js?v=fresh-20260708-patrol11";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260708-patrol11";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260708-patrol11";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260708-patrol11";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260708-patrol11";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260711-0000-b3e4376";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260711-0000-b3e4376";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260711-0000-b3e4376";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260711-0000-b3e4376";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260711-0000-b3e4376";
+import { Game } from "./game.js?v=fresh-20260711-0000-b3e4376";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260711-0000-b3e4376";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260711-0000-b3e4376";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260711-0000-b3e4376";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260711-0000-b3e4376";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260708-patrol11";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260708-patrol11";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260708-patrol11";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260708-patrol11";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260708-patrol11";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260708-patrol11";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260708-patrol11";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260708-patrol11";
-import { Processor } from "./systems/processor.js?v=fresh-20260708-patrol11";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260708-patrol11";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260708-patrol11";
-import { createGameState } from "./state/gameState.js?v=fresh-20260708-patrol11";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260711-0000-b3e4376";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260711-0000-b3e4376";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260711-0000-b3e4376";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260711-0000-b3e4376";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260711-0000-b3e4376";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260711-0000-b3e4376";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260711-0000-b3e4376";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260711-0000-b3e4376";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260711-0000-b3e4376";
+import { Processor } from "./systems/processor.js?v=fresh-20260711-0000-b3e4376";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260711-0000-b3e4376";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260711-0000-b3e4376";
+import { createGameState } from "./state/gameState.js?v=fresh-20260711-0000-b3e4376";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -1676,6 +1677,29 @@ function updateHubAuthorityMessages() {
     if (event.type === "authority.identityRequested") {
       const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
       const siteId = event.payload.siteId;
+      const site = game.worldSites.find((candidate) => candidate.id === siteId) ?? null;
+      const registrySubject = getRegistrySubject(state, {
+        registryEntityId: getRegistryEntityIdForSite(site),
+        subjectEntityId: event.payload.entityId,
+      });
+
+      if (registrySubject?.status === "cleared") {
+        pendingHubIdentityPresentations.delete(siteId);
+        state.ledger.recordEvent(
+          "authority.identityCleared",
+          {
+            siteId,
+            siteName: event.payload.siteName ?? site?.name ?? null,
+            entityId: event.payload.entityId ?? registrySubject.subjectEntityId ?? null,
+            presentedLicenseId: registrySubject.pilotLicenseId ?? event.payload.pilotLicenseId ?? null,
+            presentedVin: registrySubject.shipVin ?? event.payload.shipVin ?? null,
+            source: "registry-memory",
+          },
+          { visible: false },
+        );
+        return;
+      }
+
       // Pre-populate with any documents the player already presented before the patrol finished scanning.
       const pastEvents = state.ledger.getEventsAfterId(0, { includeHidden: true })
         .filter((e) => e.type === "authority.documentPresented" && e.payload.siteId === siteId && e.id < event.id);
@@ -1687,6 +1711,7 @@ function updateHubAuthorityMessages() {
       pendingHubIdentityPresentations.set(siteId, record);
       if (record.kinds.has("ship-vin") && record.kinds.has("pilot-license")) {
         markHubIdentityDocumentPresented(siteId, "ship-vin", {});
+        return;
       }
 
       commsDirector.say({
@@ -1796,6 +1821,9 @@ function updateHubAuthorityMessages() {
         ]),
         requireIdle: false,
       });
+      pendingHubIdentityPresentations.delete(event.payload.siteId);
+    } else if (event.type === "authority.identityCleared") {
+      pendingHubIdentityPresentations.delete(event.payload.siteId);
     } else if (event.type === "patrol.dockingBlocked") {
       const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
       commsDirector.say({
@@ -1810,6 +1838,7 @@ function updateHubAuthorityMessages() {
       });
     } else if (event.type === "patrol.dismissed") {
       commsDirector.clearActiveMessage();
+      pendingHubIdentityPresentations.delete(event.payload.siteId);
     } else if (event.type === "site.nearby" && event.payload.siteType === "hub") {
       const vin = state.components.hull.vinPlateAttached ? state.components.hull.vin : "unverified VIN";
       const license = getPilotLicense(state).licenseId ?? "no active license";
@@ -2589,6 +2618,9 @@ function renderJourney(journey = state.journey) {
   const isTrafficCheck = journey.currentStepId === "yard-traffic-check";
   hullVin.classList.toggle("needs-id-attention", isTrafficCheck && !journey.flags?.yardVinPresented);
   licenseIdDisplay.classList.toggle("needs-id-attention", isTrafficCheck && !journey.flags?.yardLicensePresented);
+  const identityReady = canPresentIdentityDocuments();
+  hullVin.disabled = !identityReady;
+  licenseIdDisplay.disabled = !identityReady;
   journeyPanel?.classList.toggle("is-journey-open", isOpen);
   journeyPanel?.classList.toggle("is-journey-speaking", Boolean(latestMessage));
   journeyPanel?.setAttribute("data-speaker", normalizeSpeakerKey(speaker));
@@ -2629,90 +2661,206 @@ function renderObjectives(state) {
   const flags = state.journey?.flags ?? {};
   const contracts = Object.values(state.contracts?.records ?? {});
   const obligations = Object.values(state.obligations?.records ?? {});
+  const now = Date.now();
+  const previousItems = readObjectiveDataset(el, "objectiveItems", []);
+  const carriedCompletions = readObjectiveDataset(el, "completedObjectives", [])
+    .filter((item) => item.expiresAt > now);
 
-  // Track which flags have already played their flash so we only animate once
+  // Track which flags have already played their flash so we only animate once.
   const flashed = new Set(JSON.parse(el.dataset.flashedFlags ?? "[]"));
+  const sectionMap = new Map();
+  const activeItems = [];
+  const previousOrderByKey = new Map(previousItems.map((item) => [item.key, item.order ?? 0]));
+  let objectiveOrder = previousItems.reduce((max, item) => Math.max(max, item.order ?? 0), -1) + 1;
 
-  const sections = [];
+  function addObjective(section, item) {
+    const flashKey = `objective:${item.key}`;
+    const shouldFlash = Boolean(item.flash) && !flashed.has(flashKey);
+    if (shouldFlash) flashed.add(flashKey);
+    const order = previousOrderByKey.has(item.key)
+      ? previousOrderByKey.get(item.key)
+      : objectiveOrder++;
+    const objective = {
+      key: item.key,
+      label: item.label,
+      section,
+      done: Boolean(item.done),
+      flash: shouldFlash,
+      order,
+    };
+    activeItems.push(objective);
+    if (!sectionMap.has(section)) sectionMap.set(section, []);
+    sectionMap.get(section).push(objective);
+  }
 
-  // ── PATROL CHECK ─────────────────────────────────────────────────────────────
+  const tasks = mission?.tasks ?? [];
+  if (tasks.length > 0 && mission?.status === "active") {
+    tasks.forEach((task) => {
+      const done = Boolean(flags[task.flag]);
+      const justDone = done && !flashed.has(task.flag);
+      if (justDone) flashed.add(task.flag);
+      addObjective("Tasks", {
+        key: `mission:${mission.id ?? "active"}:${task.flag}`,
+        label: task.label,
+        done,
+        flash: justDone,
+      });
+    });
+  }
+
+  const activeContracts = contracts.filter((c) => c.status === "active" || c.status === "fulfilled");
+  activeContracts.forEach((c) => {
+    let label;
+    if (c.status === "fulfilled") {
+      label = `Collect payment from ${c.issuer ?? "contractor"}`;
+    } else if (c.type === "resource-delivery") {
+      const delivered = c.deliveredAmount ?? 0;
+      const required = c.terms?.amount ?? 0;
+      const resource = c.terms?.resourceName ?? c.terms?.resourceType ?? "cargo";
+      label = `Deliver ${delivered}/${required} ${resource}`;
+    } else {
+      label = c.summary ?? c.title ?? c.id;
+    }
+    addObjective("Contracts", {
+      key: `contract:${c.id}`,
+      label,
+    });
+  });
+
+  const activeObligations = obligations.filter((o) => o.status === "active" && (o.balance ?? 0) > 0);
+  activeObligations.forEach((o) => {
+    addObjective("Obligations", {
+      key: `obligation:${o.id}`,
+      label: `${o.title}: ${Math.ceil(o.balance).toLocaleString()} cr`,
+    });
+  });
+
+  // Interrupters render after the standard Tasks / Contracts / Obligations stack.
   const patrol = game?.activePatrolIntercept;
   if (patrol && (patrol.phase === "standoff" || patrol.phase === "approach" || patrol.phase === "hold")) {
     const siteName = patrol.site?.name ?? "Hub";
     const flagged = patrol.hasScanned && patrol.flaggedDismissTimer > 0;
     const reasons = patrol.flaggedReasons ?? [];
 
-    let taskItems;
     if (flagged) {
       const docTasks = [];
       if (reasons.includes("missing-vin")) docTasks.push("Attach ship VIN plate");
       if (reasons.includes("missing-pilot-license")) docTasks.push("Obtain a pilot license");
       if (reasons.includes("unauthorized-zone-history")) docTasks.push("Resolve zone violation on record");
       if (docTasks.length === 0) docTasks.push("Resolve documentation issue");
-      taskItems = docTasks.map((label) => `<li class="obj-task"><span class="obj-check">☐</span><span>${label}</span></li>`).join("");
+      docTasks.forEach((label) => addObjective(`Patrol Check - ${siteName}`, {
+        key: `patrol:${patrol.site?.id ?? "hub"}:flagged:${label}`,
+        label,
+      }));
     } else if (patrol.hasScanned) {
       const presented = pendingHubIdentityPresentations.get(patrol.site?.id)?.kinds ?? new Set();
       const vinDone = presented.has("ship-vin");
       const licDone = presented.has("pilot-license");
-      const vinItem = `<li class="obj-task${vinDone ? " obj-done obj-flash" : ""}"><span class="obj-check">${vinDone ? "☑" : "☐"}</span><span>Present ship VIN</span></li>`;
-      const licItem = `<li class="obj-task${licDone ? " obj-done obj-flash" : ""}"><span class="obj-check">${licDone ? "☑" : "☐"}</span><span>Present pilot authorization</span></li>`;
-      taskItems = vinItem + licItem;
+      addObjective(`Patrol Check - ${siteName}`, {
+        key: `patrol:${patrol.site?.id ?? "hub"}:present-vin`,
+        label: "Present ship VIN",
+        done: vinDone,
+        flash: vinDone,
+      });
+      addObjective(`Patrol Check - ${siteName}`, {
+        key: `patrol:${patrol.site?.id ?? "hub"}:present-license`,
+        label: "Present pilot authorization",
+        done: licDone,
+        flash: licDone,
+      });
     } else {
-      taskItems = `<li class="obj-task"><span class="obj-check">☐</span><span>Hold position — identity check in progress</span></li>`;
+      addObjective(`Patrol Check - ${siteName}`, {
+        key: `patrol:${patrol.site?.id ?? "hub"}:hold`,
+        label: "Hold position - identity check in progress",
+      });
     }
-
-    sections.push(`<p class="obj-section-label">Patrol Check — ${siteName}</p><ul class="obj-list">${taskItems}</ul>`);
   }
 
-  const tasks = mission?.tasks ?? [];
-  if (tasks.length > 0 && mission?.status === "active") {
-    const items = tasks.map((task) => {
-      const done = Boolean(flags[task.flag]);
-      const justDone = done && !flashed.has(task.flag);
-      if (justDone) flashed.add(task.flag);
-      return `<li class="obj-task${done ? " obj-done" : ""}${justDone ? " obj-flash" : ""}"><span class="obj-check">${done ? "☑" : "☐"}</span><span>${task.label}</span></li>`;
-    }).join("");
-    sections.push(`<p class="obj-section-label">Tasks</p><ul class="obj-list">${items}</ul>`);
-  }
+  const activeKeys = new Set(activeItems.map((item) => item.key));
+  const completionsByKey = new Map(carriedCompletions.map((item) => [item.key, item]));
+  previousItems.forEach((item) => {
+    if (!item.done && !activeKeys.has(item.key) && !completionsByKey.has(item.key)) {
+      completionsByKey.set(item.key, {
+        ...item,
+        done: true,
+        flash: true,
+        expiresAt: now + 1300,
+      });
+    }
+  });
 
-  const activeContracts = contracts.filter((c) => c.status === "active" || c.status === "fulfilled");
-  if (activeContracts.length > 0) {
-    const items = activeContracts.map((c) => {
-      let label;
-      if (c.status === "fulfilled") {
-        label = `Collect payment from ${c.issuer ?? "contractor"}`;
-      } else if (c.type === "resource-delivery") {
-        const delivered = c.deliveredAmount ?? 0;
-        const required = c.terms?.amount ?? 0;
-        const resource = c.terms?.resourceName ?? c.terms?.resourceType ?? "cargo";
-        label = `Deliver ${delivered}/${required} ${resource}`;
-      } else {
-        label = c.summary ?? c.title ?? c.id;
-      }
-      return `<li class="obj-task"><span class="obj-check">☐</span><span>${label}</span></li>`;
-    }).join("");
-    sections.push(`<p class="obj-section-label">Contracts</p><ul class="obj-list">${items}</ul>`);
-  }
+  [...completionsByKey.values()]
+    .filter((item) => !activeKeys.has(item.key))
+    .forEach((item) => {
+      if (!sectionMap.has(item.section)) sectionMap.set(item.section, []);
+      sectionMap.get(item.section).push({ ...item, done: true, flash: true, retiring: true, order: item.order ?? -1 });
+    });
 
-  const activeObligations = obligations.filter((o) => o.status === "active" && (o.balance ?? 0) > 0);
-  if (activeObligations.length > 0) {
-    const items = activeObligations.map((o) => {
-      return `<li class="obj-task"><span class="obj-check">☐</span><span>${o.title}: ${Math.ceil(o.balance).toLocaleString()} cr</span></li>`;
-    }).join("");
-    sections.push(`<p class="obj-section-label">Obligations</p><ul class="obj-list">${items}</ul>`);
-  }
-
-  if (sections.length === 0) {
+  if (sectionMap.size === 0) {
     el.hidden = true;
     el.dataset.flashedFlags = "[]";
+    el.dataset.objectiveItems = "[]";
+    el.dataset.completedObjectives = "[]";
     return;
   }
 
   el.hidden = false;
-  el.innerHTML = sections.join("");
+  el.innerHTML = [...sectionMap.entries()]
+    .map(([label, items]) => {
+      const renderedItems = items
+        .toSorted((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map(renderObjectiveItem)
+        .join("");
+      return `<p class="obj-section-label">${escapeHtml(label)}</p><ul class="obj-list">${renderedItems}</ul>`;
+    })
+    .join("");
   el.dataset.flashedFlags = JSON.stringify([...flashed]);
+  el.dataset.objectiveItems = JSON.stringify(activeItems.map(({ key, label, section, done, order }) => ({ key, label, section, done, order })));
+  const activeCompletions = [...completionsByKey.values()].filter((item) => item.expiresAt > now);
+  el.dataset.completedObjectives = JSON.stringify(activeCompletions);
+  scheduleObjectiveCleanup(el, state, activeCompletions);
 }
 
+function renderObjectiveItem(item) {
+  const classes = ["obj-task"];
+  if (item.done) classes.push(item.retiring ? "obj-done" : "obj-done-active");
+  if (item.flash) classes.push(item.retiring ? "obj-flash-retiring" : "obj-flash");
+  return `<li class="${classes.join(" ")}"><span>${escapeHtml(item.label)}</span></li>`;
+}
+
+function readObjectiveDataset(el, key, fallback) {
+  try {
+    return JSON.parse(el.dataset[key] ?? JSON.stringify(fallback));
+  } catch {
+    return fallback;
+  }
+}
+
+function scheduleObjectiveCleanup(el, state, completions) {
+  if (completions.length === 0) {
+    el.dataset.cleanupAt = "";
+    return;
+  }
+
+  const cleanupAt = Math.min(...completions.map((item) => item.expiresAt));
+  if (el.dataset.cleanupAt === String(cleanupAt)) return;
+
+  el.dataset.cleanupAt = String(cleanupAt);
+  setTimeout(() => {
+    if (el.dataset.cleanupAt === String(cleanupAt)) {
+      renderObjectives(state);
+    }
+  }, Math.max(0, cleanupAt - Date.now()) + 40);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
 function normalizeSpeakerKey(speaker = "") {
   return speaker.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "journey";
 }
@@ -2836,16 +2984,22 @@ function wirePanelControlSounds() {
   );
 }
 
-function presentIdentityDocument(documentKind, payload = {}) {
-  // Prefer a hub the player is physically within interaction range of, but
-  // fall back to the active patrol's site — the patrol spawns at sensor range
-  // (3× interaction radius) so the player may not be within nearbySite range yet.
+function getIdentityPresentationSite() {
   const hubSite = currentSiteState?.nearbySite?.type === "hub"
     ? currentSiteState.nearbySite
     : currentSiteState?.dockedSite?.type === "hub"
       ? currentSiteState.dockedSite
       : null;
-  const site = hubSite ?? game.activePatrolIntercept?.site ?? null;
+  return hubSite ?? game.activePatrolIntercept?.site ?? null;
+}
+
+function canPresentIdentityDocuments() {
+  const site = getIdentityPresentationSite();
+  return site ? pendingHubIdentityPresentations.has(site.id) : false;
+}
+
+function presentIdentityDocument(documentKind, payload = {}) {
+  const site = getIdentityPresentationSite();
 
   state.ledger.recordEvent(
     "authority.documentPresented",
@@ -2858,6 +3012,9 @@ function presentIdentityDocument(documentKind, payload = {}) {
     { visible: false },
   );
 
+  // Process immediately so mission flags and comms update in the same tick as
+  // the click, rather than waiting up to 50ms for the next logic accumulator fire.
+  updateLedgerDrivenSystems();
   updateHudDisplay();
 }
 
@@ -3092,7 +3249,7 @@ function pumpSupplyTick(type) {
 
   if (type === "fuel") {
     const engine = state.components.engine;
-    const chunk = 7 + Math.floor(Math.random() * 6); // 7–12 units
+    const chunk = 7 + Math.floor(Math.random() * 6); // 7—12 units
     const space = engine.maxFuel - engine.fuel;
 
     if (space <= 0) {
@@ -3116,7 +3273,7 @@ function pumpSupplyTick(type) {
 
   if (type === "scan") {
     const scanner = state.components.scanner;
-    const chunk = 30 + Math.floor(Math.random() * 25); // 30–54 units
+    const chunk = 30 + Math.floor(Math.random() * 25); // 30—54 units
     const space = scanner.maxScanergy - scanner.scanergy;
 
     if (space <= 0) {
@@ -3169,7 +3326,7 @@ function pumpSupplyTick(type) {
       return false;
     }
 
-    const chunk = 5 + Math.floor(Math.random() * 18); // 5–22 units
+    const chunk = 5 + Math.floor(Math.random() * 18); // 5—22 units
     const added = Math.min(chunk, space);
     const repairCostPerUnit = (currentSiteState?.repairCost ?? 0) / Math.max(1, space);
     const cost = Math.ceil(added * repairCostPerUnit);
