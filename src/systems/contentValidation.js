@@ -1,8 +1,8 @@
-import { getContractRequirementDefinition } from "./contractRules.js?v=fresh-20260711-0000-b3e4376";
-import { COMPONENT_STATE_BY_PANEL_ID, PANEL_IDS } from "./componentRegistry.js?v=fresh-20260711-0000-b3e4376";
-import { HUB_SERVICE_BEHAVIOR_BY_TYPE } from "./hubServiceBehaviors.js?v=fresh-20260711-0000-b3e4376";
-import { getMissionActionDefinition } from "./missionActions.js?v=fresh-20260711-0000-b3e4376";
-import { createGameState } from "../state/gameState.js?v=fresh-20260711-0000-b3e4376";
+import { getContractRequirementDefinition } from "./contractRules.js?v=fresh-20260712-1255-52d5b19";
+import { COMPONENT_STATE_BY_PANEL_ID, PANEL_IDS } from "./componentRegistry.js?v=fresh-20260712-1255-52d5b19";
+import { HUB_SERVICE_BEHAVIOR_BY_TYPE } from "./hubServiceBehaviors.js?v=fresh-20260712-1255-52d5b19";
+import { getMissionActionDefinition } from "./missionActions.js?v=fresh-20260712-1255-52d5b19";
+import { createGameState } from "../state/gameState.js?v=fresh-20260712-1255-52d5b19";
 
 export function validateMissionDefinition(missionDefinition, context = createValidationContext()) {
   const issues = [];
@@ -143,12 +143,14 @@ export function validateHubServiceDefinitions(hubServiceDefinitions = {}, contex
       });
 
       (service.componentOffers ?? []).forEach((offer) => {
+        const panelId = offer.panelId ?? offer.componentId;
+
         if (!context.componentIds.has(offer.componentId)) {
           issues.push(createIssue("hub-service", `${serviceLabel} component offer '${offer.id}' references missing component '${offer.componentId}'.`));
         }
 
-        if (!context.panelIds.has(offer.componentId)) {
-          issues.push(createIssue("hub-service", `${serviceLabel} component offer '${offer.id}' references missing panel '${offer.componentId}'.`));
+        if (!context.panelIds.has(panelId)) {
+          issues.push(createIssue("hub-service", `${serviceLabel} component offer '${offer.id}' references missing panel '${panelId}'.`));
         }
       });
     });

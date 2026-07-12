@@ -1,8 +1,8 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260711-0000-b3e4376";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260711-0000-b3e4376";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260711-0000-b3e4376";
-import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260711-0000-b3e4376";
-import { createMissionRunner } from "./missionRunner.js?v=fresh-20260711-0000-b3e4376";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260712-1255-52d5b19";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260712-1255-52d5b19";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260712-1255-52d5b19";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260712-1255-52d5b19";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260712-1255-52d5b19";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -161,6 +161,8 @@ export function createJourneyDirector({
       throw new Error(`Unknown mission: ${missionId}`);
     }
 
+    journey.pendingAcknowledgement = null;
+    journey.messages = [];
     activeMission.destroy?.();
     activeMission = createMission(missionDefinition);
     activeMission.startOffer();
@@ -305,6 +307,7 @@ export function createJourneyDirector({
         },
         showComponent: unlockComponent,
         spawnHunterNearShip: (reason) => game?.spawnHunterNearShip(reason),
+        spawnPirateNearShip: (reason) => game?.spawnPirateNearShip(reason),
         unlockHubService,
         onChange: () => onChange(journey),
       },

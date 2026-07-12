@@ -20,6 +20,11 @@ export function getNextHubServiceContractId(service, { state, random = Math.rand
   }
 
   const eligibleContractIds = getEligibleServiceContractIds(service, { state, missionFirstResolved });
+  const firstRunContractIds = eligibleContractIds.filter((contractId) => state.contracts.records[contractId]?.status !== "paid");
+
+  if (firstRunContractIds.length > 0) {
+    return firstRunContractIds[0];
+  }
 
   if (eligibleContractIds.length === 0) {
     return null;

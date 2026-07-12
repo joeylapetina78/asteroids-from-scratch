@@ -1,5 +1,5 @@
-import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260711-0000-b3e4376";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260711-0000-b3e4376";
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260712-1255-52d5b19";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260712-1255-52d5b19";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -21,6 +21,7 @@ export class Processor {
     this.context = canvas.getContext("2d");
     this.onUnitProcessed = onUnitProcessed;
     this.isClickable = options.isClickable ?? true;
+    this.getUnitFlags = options.getUnitFlags ?? (() => ({}));
     this.units = [];
     this.sparks = [];
     this.lastFrameTime = 0;
@@ -34,12 +35,13 @@ export class Processor {
     requestAnimationFrame((time) => this.frame(time));
   }
 
-  addUnit(type) {
+  addUnit(type, metadata = {}) {
     const slot = this.units.length % 4;
     const spacing = UNIT_SIZE + 4;
 
     this.units.push({
       type,
+      ...metadata,
       color: RESOURCE_COLOR[type] ?? "#ff7452",
       shape: getResourceShape(type),
       x: this.canvas.width / 2 - spacing * 2 + slot * spacing,
@@ -98,6 +100,8 @@ export class Processor {
         vy: unit.vy,
         angle: unit.angle ?? 0,
         angularVelocity: unit.angularVelocity ?? 0,
+        sourceClaimId: unit.sourceClaimId ?? null,
+        sourceClaimName: unit.sourceClaimName ?? null,
       })),
     };
   }
@@ -117,6 +121,8 @@ export class Processor {
       vy: unit.vy,
       angle: unit.angle ?? 0,
       angularVelocity: unit.angularVelocity ?? 0,
+      sourceClaimId: unit.sourceClaimId ?? null,
+      sourceClaimName: unit.sourceClaimName ?? null,
       size: UNIT_SIZE,
     }));
   }
@@ -172,6 +178,9 @@ export class Processor {
       this.context.translate(unit.x + unit.size / 2, unit.y + unit.size / 2);
       this.context.rotate(unit.angle ?? 0);
       drawResourceShape(this.context, unit.shape, unit.size);
+      if (this.getUnitFlags(unit)?.illegal) {
+        drawIllegalMark(this.context, unit.size);
+      }
       this.context.restore();
     });
 
@@ -347,6 +356,26 @@ export class Processor {
 
 function getCollisionSize(unit) {
   return unit.size * COLLISION_COMPRESSION;
+}
+
+function drawIllegalMark(context, size) {
+  const h = size * 0.36;
+
+  context.save();
+  context.strokeStyle = "rgba(8, 10, 15, 0.92)";
+  context.lineWidth = 4;
+  context.lineCap = "round";
+  context.beginPath();
+  context.moveTo(-h, -h);
+  context.lineTo(h, h);
+  context.moveTo(h, -h);
+  context.lineTo(-h, h);
+  context.stroke();
+
+  context.strokeStyle = "rgba(255, 255, 255, 0.9)";
+  context.lineWidth = 1.4;
+  context.stroke();
+  context.restore();
 }
 
 function clamp(value, min, max) {

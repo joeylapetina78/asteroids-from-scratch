@@ -1,6 +1,6 @@
 import { createValueNoise } from "./valueNoise.js";
 import { getRegionProfile } from "./worldRegions.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260711-0000-b3e4376";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260712-1255-52d5b19";
 
 const GRID_SIZE = 350;
 const JITTER = 100;
@@ -101,6 +101,40 @@ export function createClaimField() {
   function getClaimAt(wx, wy) {
     const { seed1 } = sampleClaim(wx, wy);
 
+    return getClaimFromSeed(seed1);
+  }
+
+  function getClaimById(claimId) {
+    const match = /^claim-(-?\d+)-(-?\d+)$/.exec(claimId ?? "");
+    if (!match) {
+      return null;
+    }
+
+    return getClaimFromSeed(getSeed(Number(match[1]), Number(match[2])));
+  }
+
+  function getPlotAt(wx, wy) {
+    const row = Math.round(wy / HEX_ROW_STEP);
+    const rowOffset = Math.abs(row % 2) * HEX_WIDTH * 0.5;
+    const col = Math.round((wx - rowOffset) / HEX_WIDTH);
+
+    return getPlot(col, row);
+  }
+
+  function getPlotById(plotId) {
+    const match = /^plot-hex-(-?\d+)-(-?\d+)$/.exec(plotId ?? "");
+    if (!match) {
+      return null;
+    }
+
+    return getPlot(Number(match[1]), Number(match[2]));
+  }
+
+  function getClaimOrPlotById(id) {
+    return getPlotById(id) ?? getClaimById(id);
+  }
+
+  function getClaimFromSeed(seed1) {
     return {
       id: seed1.id,
       center: { x: seed1.wx, y: seed1.wy },
@@ -267,6 +301,21 @@ export function createClaimField() {
     };
   }
 
+  function getPlot(col, row) {
+    const plot = getHexPlot(col, row);
+    const claim = getClaimAt(plot.center.x, plot.center.y);
+
+    return {
+      ...claim,
+      id: plot.id,
+      center: plot.center,
+      vertices: plot.vertices,
+      parcelKind: "plot",
+      sourceClaimId: claim.id,
+      sourceClaimName: claim.strongestZoneName,
+    };
+  }
+
   function getPlotVertex(rawX, rawY) {
     const key = `${Math.round(rawX / 8)},${Math.round(rawY / 8)}`;
     let vertex = plotVertexCache.get(key);
@@ -283,7 +332,7 @@ export function createClaimField() {
     return vertex;
   }
 
-  return { getClaimAt, getClaimColor, getClaimGraph, getPlotNetwork };
+  return { getClaimAt, getClaimById, getPlotAt, getPlotById, getClaimOrPlotById, getClaimColor, getClaimGraph, getPlotNetwork };
 }
 
 function resolveNeon(profile) {

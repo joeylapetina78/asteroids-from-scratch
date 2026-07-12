@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260711-0000-b3e4376";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260711-0000-b3e4376";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260711-0000-b3e4376";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260711-0000-b3e4376";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260711-0000-b3e4376";
-import { Game } from "./game.js?v=fresh-20260711-0000-b3e4376";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260711-0000-b3e4376";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260711-0000-b3e4376";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260711-0000-b3e4376";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260711-0000-b3e4376";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260712-1255-52d5b19";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260712-1255-52d5b19";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260712-1255-52d5b19";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260712-1255-52d5b19";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260712-1255-52d5b19";
+import { Game } from "./game.js?v=fresh-20260712-1255-52d5b19";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260712-1255-52d5b19";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260712-1255-52d5b19";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260712-1255-52d5b19";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260712-1255-52d5b19";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260711-0000-b3e4376";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260711-0000-b3e4376";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260711-0000-b3e4376";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260711-0000-b3e4376";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260711-0000-b3e4376";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260711-0000-b3e4376";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260711-0000-b3e4376";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260711-0000-b3e4376";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260711-0000-b3e4376";
-import { Processor } from "./systems/processor.js?v=fresh-20260711-0000-b3e4376";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260711-0000-b3e4376";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260711-0000-b3e4376";
-import { createGameState } from "./state/gameState.js?v=fresh-20260711-0000-b3e4376";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260712-1255-52d5b19";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260712-1255-52d5b19";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260712-1255-52d5b19";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260712-1255-52d5b19";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260712-1255-52d5b19";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260712-1255-52d5b19";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260712-1255-52d5b19";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260712-1255-52d5b19";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260712-1255-52d5b19";
+import { Processor } from "./systems/processor.js?v=fresh-20260712-1255-52d5b19";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260712-1255-52d5b19";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260712-1255-52d5b19";
+import { createGameState } from "./state/gameState.js?v=fresh-20260712-1255-52d5b19";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -92,7 +92,8 @@ const DEFAULT_PANEL_LAYOUT = {
   journey: { x: 980, y: 20, z: JOURNEY_PANEL_Z_INDEX },
   engine: { x: -300, y: 20, z: 70 },
   "beacon-locator": { x: 980, y: 300, z: 90 },
-  scanner: { x: 980, y: 430, z: 88 },
+  "beacon-bay": { x: 980, y: 430, z: 89 },
+  scanner: { x: 980, y: 560, z: 88 },
   docking: { x: -300, y: 340, z: 100 },
   tow: { x: -300, y: 520, z: 125 },
   contract: { x: -300, y: 340, z: 95 },
@@ -205,6 +206,10 @@ const processorOutputPanel = document.querySelector(".processor-outputs");
 const scanButton = document.querySelector("#ship-scan");
 const scanTrigger = document.querySelector("#scan-trigger");
 const beaconTracking = document.querySelector("#beacon-tracking");
+const beaconBayButtons = [...document.querySelectorAll("[data-beacon-bay]")];
+const beaconRecoveryMeter = document.querySelector("#beacon-recovery-meter");
+const beaconRecoveryLabel = document.querySelector("#beacon-recovery-label");
+const beaconRecoveryFill = document.querySelector("#beacon-recovery-fill");
 const scanergyCount = document.querySelector("#scanergy-count");
 const beaconDirectionArrow = document.querySelector("#beacon-direction-arrow");
 const shipOffersPanel = document.querySelector("#ship-offers");
@@ -221,6 +226,9 @@ const zoomLabel = document.querySelector("#zoom-label");
 const alphaUpButton = document.querySelector("#alpha-up");
 const alphaDownButton = document.querySelector("#alpha-down");
 const alphaLabel = document.querySelector("#alpha-label");
+const ledgerStreamEvents = document.querySelector("#ledger-stream-events");
+const ledgerStreamStats = document.querySelector("#ledger-stream-stats");
+const ledgerStreamSignals = document.querySelector("#ledger-stream-signals");
 let panelAlpha = 0;
 const worldDebugFields = {
   position: document.querySelector("#debug-position"),
@@ -265,8 +273,8 @@ if (shouldResetSave() || initialDevStart || peekSavedDevStartId()) {
 const savedProfile = loadSavedProfile(state);
 const audio = createGameAudio();
 wireAudioUnlockGestures();
-const processor = new Processor(processorCanvas, processUnit);
-const cargoHold = new Processor(cargoCanvas, handleCargoUnitClick, { isClickable: true });
+const processor = new Processor(processorCanvas, processUnit, { getUnitFlags: getResourceUnitFlags });
+const cargoHold = new Processor(cargoCanvas, handleCargoUnitClick, { isClickable: true, getUnitFlags: getCargoUnitFlags });
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio, updateLedgerDrivenSystems);
 const contractManager = createContractManager({
   state,
@@ -428,6 +436,14 @@ scanButton.addEventListener("click", () => {
   game.cycleBeacon();
 });
 
+beaconBayButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const bayIndex = Number(button.dataset.beaconBay);
+    game.deployBeaconFromBay(bayIndex);
+    updateHudDisplay();
+  });
+});
+
 scanTrigger?.addEventListener("click", () => {
   game.triggerResourceScan();
   updateHudDisplay();
@@ -556,6 +572,7 @@ const PANORAMA_PANEL_OVERRIDES = {
   hull:             { x: 760, y: 100, z: 50 },
   docking:          { x: 760, y: 330, z: 100 },
   "beacon-locator": { x: 1000, y: 330, z: 90 },
+  "beacon-bay":     { x: 1000, y: 460, z: 89 },
   scanner:          { x: 1000, y: 560, z: 88 },
   miner:            { x: 520, y: 330, z: 60 },
   collector:        { x: 760, y: 560, z: 60 },
@@ -635,6 +652,7 @@ function updateHudDisplay() {
   }
 
   updateBeaconLocatorDisplay();
+  updateBeaconBayDisplay();
 
   const tractorActive = state.components.collector.isActive;
   if (tractorActive !== _hud.tractorActive) {
@@ -672,13 +690,13 @@ function updateHudDisplay() {
 function updateBeaconLocatorDisplay() {
   const locator = state.components.beaconLocator;
   const scanner = state.components.scanner;
-  const activeSite = game.worldSites.find((site) => site.id === locator.activeBeaconId);
+  const activeBeacon = game.getBeaconTarget(locator.activeBeaconId);
 
   if (beaconTracking) {
-    beaconTracking.textContent = activeSite?.name ?? "None";
+    beaconTracking.textContent = activeBeacon?.name ?? "None";
   }
   if (scanButton) {
-    scanButton.disabled = !locator.installed || (locator.beaconMemoryIds?.length ?? 0) === 0;
+    scanButton.disabled = !locator.installed || game.getBeaconTargets().length === 0;
   }
   if (scanergyCount) {
     scanergyCount.textContent = String(Math.floor(scanner.scanergy));
@@ -687,12 +705,47 @@ function updateBeaconLocatorDisplay() {
     scanTrigger.disabled = !scanner.installed || scanner.scanergy < 50;
   }
 
-  if (!beaconDirectionArrow || !activeSite) {
+  if (!beaconDirectionArrow || !activeBeacon) {
     return;
   }
 
-  const angle = Math.atan2(activeSite.position.y - game.ship.position.y, activeSite.position.x - game.ship.position.x);
+  const angle = Math.atan2(activeBeacon.position.y - game.ship.position.y, activeBeacon.position.x - game.ship.position.x);
   beaconDirectionArrow.style.transform = `rotate(${angle + Math.PI / 2}rad)`;
+}
+
+function updateBeaconBayDisplay() {
+  const bayState = state.components.beaconBay;
+
+  beaconBayButtons.forEach((button) => {
+    const bayIndex = Number(button.dataset.beaconBay);
+    const bay = bayState?.bays?.[bayIndex];
+
+    if (!bay) {
+      button.disabled = true;
+      button.textContent = "Empty";
+      return;
+    }
+
+    button.disabled = !bayState.installed || bay.status !== "stored";
+    button.textContent = bay.status === "stored" ? "Deploy" : "Empty";
+  });
+
+  if (!beaconRecoveryMeter || !beaconRecoveryFill || !beaconRecoveryLabel) {
+    return;
+  }
+
+  const recovery = bayState?.recovery;
+  if (!recovery) {
+    beaconRecoveryMeter.hidden = true;
+    beaconRecoveryFill.style.transform = "scaleX(0)";
+    return;
+  }
+
+  const bay = bayState.bays?.[recovery.bayIndex];
+  const progress = Math.min(1, Math.max(0, recovery.progress ?? 0));
+  beaconRecoveryMeter.hidden = false;
+  beaconRecoveryLabel.textContent = `Recovering ${bay?.label ?? "beacon"}`;
+  beaconRecoveryFill.style.transform = `scaleX(${progress})`;
 }
 
 function setTowAvailable(isAvailable) {
@@ -964,6 +1017,7 @@ function setupExplorerStart() {
   state.components.cargoHold.installed = true;
   state.components.docking.installed = true;
   state.components.collector.installed = true;
+  state.components.beaconBay.installed = true;
 
   state.ship.frameId = "explorer";
   state.ship.shape = "explorer";
@@ -989,6 +1043,7 @@ function setupExplorerStart() {
   setComponentAvailable("engine", true);
   setComponentAvailable("hull", true);
   setComponentAvailable("beacon-locator", true);
+  setComponentAvailable("beacon-bay", true);
   setComponentAvailable("scanner", true);
   setComponentAvailable("miner", true);
   setComponentAvailable("cargo", true);
@@ -1971,6 +2026,7 @@ function formatBias(value) {
 }
 
 function renderContract(contract = contractManager.getCurrentContract()) {
+  game.syncContractBeaconTarget(contract);
   renderContractFileStack(contract);
 
   if (!contract) {
@@ -2153,7 +2209,9 @@ function renderContractTerms(contract) {
     contractPrimaryLabel.textContent = "Resource";
     contractVin.replaceChildren(createResourceBadge(contract.terms.resourceType), `${contract.terms.amount} ${contract.terms.resourceName}`);
     contractSecondaryLabel.textContent = "Destination";
-    contractDestination.textContent = contract.terms.destinationName;
+    contractDestination.textContent = contract.terms.sourceClaimIds?.length
+      ? `${contract.terms.destinationName} / marked ${contract.terms.sourceClaimLabel ?? "plots"}`
+      : contract.terms.destinationName;
     contractTertiaryLabel.textContent = "Reward";
     contractReward.textContent = `${contract.reward.credits ?? 0} cr (${contract.reward.creditsPerUnit} cr/unit)`;
     return;
@@ -3069,7 +3127,7 @@ function setTractorFieldActive(isActive) {
   updateHudDisplay();
 }
 
-function processUnit(type) {
+function processUnit(type, unit = {}) {
   // Processor clicks do not care where a unit came from. The selected output
   // determines whether the same physical unit becomes fuel, ammo, scanergy, or
   // stored cargo.
@@ -3090,30 +3148,44 @@ function processUnit(type) {
   } else if (output === "scanergy") {
     state.components.scanner.scanergy += amount;
   } else if (output === "cargo") {
-    cargoHold.addUnit(type);
+    cargoHold.addUnit(type, getResourceUnitMetadata(unit));
   }
 
   updateHudDisplay();
   game.updateSiteReadout();
 }
 
-function receiveCollectedResource(type) {
+function receiveCollectedResource(resource) {
+  const type = typeof resource === "string" ? resource : resource.type;
+  const metadata = getResourceUnitMetadata(resource);
+
   if (state.components.processor.installed) {
-    processor.addUnit(type);
+    processor.addUnit(type, metadata);
     return;
   }
 
   if (state.components.cargoHold.installed) {
-    cargoHold.addUnit(type);
+    cargoHold.addUnit(type, metadata);
   }
 }
 
-function handleCargoUnitClick(type) {
+function getResourceUnitMetadata(resource = {}) {
+  if (!resource || typeof resource === "string") {
+    return {};
+  }
+
+  return {
+    sourceClaimId: resource.sourceClaimId ?? null,
+    sourceClaimName: resource.sourceClaimName ?? null,
+  };
+}
+
+function handleCargoUnitClick(type, unit) {
   if (isCargoSellModeActive) {
     return sellCargoUnit(type);
   }
 
-  return depositCargoUnit(type);
+  return depositCargoUnit(type, unit);
 }
 
 function getOreUnitValue(type) {
@@ -3346,16 +3418,21 @@ function pumpSupplyTick(type) {
   return false;
 }
 
-function depositCargoUnit(type) {
+function depositCargoUnit(type, unit = {}) {
   const contract = contractManager.getCurrentContract();
 
   if (!activeDepositContractId || contract?.id !== activeDepositContractId || !canDepositToContract(contract)) {
     return false;
   }
 
+  if (isIllegalForContractSource(contract, unit)) {
+    return false;
+  }
+
   const didDeposit = contractManager.depositResourceUnit({
     contractId: contract.id,
     resourceType: type,
+    sourceClaimId: unit.sourceClaimId ?? null,
     siteId: currentSiteState?.dockedSite?.id,
   });
 
@@ -3375,6 +3452,54 @@ function depositCargoUnit(type) {
   return true;
 }
 
+function getCargoUnitFlags(unit) {
+  return getResourceUnitFlags(unit);
+}
+
+function getResourceUnitFlags(unit) {
+  const contract = getSourceLimitedContractForUnit(unit);
+
+  return {
+    illegal: isIllegalForContractSource(contract, unit),
+  };
+}
+
+function getSourceLimitedContractForUnit(unit = {}) {
+  const preferredContracts = [
+    activeDepositContractId ? state.contracts.records[activeDepositContractId] : null,
+    contractManager.getCurrentContract(),
+    ...Object.values(state.contracts.records ?? {}),
+  ];
+
+  return preferredContracts.find((contract) => isSourceLimitedResourceContractForUnit(contract, unit)) ?? null;
+}
+
+function isSourceLimitedResourceContractForUnit(contract, unit = {}) {
+  return Boolean(
+    contract?.type === "resource-delivery" &&
+    contract.status === "active" &&
+    contract.terms?.sourceClaimIds?.length &&
+    resourceTypesMatchForContract(contract.terms.resourceType, unit.type),
+  );
+}
+
+function isIllegalForContractSource(contract, unit = {}) {
+  const sourceClaimIds = contract?.terms?.sourceClaimIds ?? [];
+
+  if (
+    !isSourceLimitedResourceContractForUnit(contract, unit) ||
+    sourceClaimIds.length === 0
+  ) {
+    return false;
+  }
+
+  return !sourceClaimIds.includes(unit.sourceClaimId);
+}
+
+function resourceTypesMatchForContract(expectedType, actualType) {
+  return normalizeResourceType(expectedType) === normalizeResourceType(actualType);
+}
+
 function updateEventLedgerDisplay() {
   if (renderedLedgerVersion === state.ledger.version) {
     return;
@@ -3382,6 +3507,7 @@ function updateEventLedgerDisplay() {
 
   playLedgerAudioEvents();
   renderedLedgerVersion = state.ledger.version;
+  updateLedgerStreamDisplay();
   worldDebugFields.eventCount.textContent = String(state.ledger.eventCount);
   worldDebugFields.shotsFired.textContent = String(state.ledger.getStat("weapon.fired.total"));
   worldDebugFields.rocksDestroyed.textContent = String(state.ledger.getStat("asteroid.destroyed.total"));
@@ -3396,6 +3522,85 @@ function updateEventLedgerDisplay() {
       return item;
     }),
   );
+}
+
+function updateLedgerStreamDisplay() {
+  if (!ledgerStreamEvents || !ledgerStreamStats || !ledgerStreamSignals) {
+    return;
+  }
+
+  ledgerStreamEvents.replaceChildren(
+    ...state.ledger.getRecentEvents(40, { includeHidden: true })
+      .filter((event) => event.type !== "ship.moved")
+      .slice(0, 28)
+      .map((event) => {
+      const item = document.createElement("li");
+      const type = document.createElement("strong");
+      const message = document.createElement("span");
+      const payload = document.createElement("code");
+
+      type.textContent = `#${event.id} ${event.type}`;
+      message.textContent = event.message;
+      payload.textContent = formatLedgerPayload(event.payload);
+      item.className = event.visible ? "is-visible-event" : "is-hidden-event";
+      item.append(type, message, payload);
+      return item;
+    }),
+  );
+
+  const statEntries = Object.entries(state.ledger.getStatsSnapshot())
+    .filter(([key]) => key !== "ship.moved.total")
+    .sort(([left], [right]) => left.localeCompare(right))
+    .slice(-34);
+
+  ledgerStreamStats.replaceChildren(
+    ...statEntries.flatMap(([key, value]) => {
+      const term = document.createElement("dt");
+      const data = document.createElement("dd");
+
+      term.textContent = key;
+      data.textContent = formatLedgerValue(value);
+      return [term, data];
+    }),
+  );
+
+  const signalEntries = Object.entries(state.ledger.getSignalsSnapshot())
+    .filter(([, value]) => Boolean(value))
+    .sort(([left], [right]) => left.localeCompare(right))
+    .slice(-26);
+
+  ledgerStreamSignals.replaceChildren(
+    ...signalEntries.map(([key]) => {
+      const item = document.createElement("li");
+      item.textContent = key;
+      return item;
+    }),
+  );
+}
+
+function formatLedgerPayload(payload = {}) {
+  const entries = Object.entries(payload)
+    .filter(([, value]) => value !== null && value !== undefined)
+    .slice(0, 5)
+    .map(([key, value]) => `${key}: ${formatLedgerValue(value)}`);
+
+  return entries.length > 0 ? entries.join(" | ") : "-";
+}
+
+function formatLedgerValue(value) {
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : value.toFixed(2);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.slice(0, 3).map(formatLedgerValue).join(", ")}${value.length > 3 ? ", ..." : ""}]`;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return "{...}";
+  }
+
+  return String(value);
 }
 
 function playLedgerAudioEvents() {
@@ -3839,9 +4044,9 @@ function renderComponentShop(service = null) {
   }
 
   const currentCredits = Math.floor(getCredits(state));
-  const offers = service?.componentOffers ?? [];
+  const offers = getVisibleComponentOffers(service?.componentOffers ?? []);
   const nextKey = `${service?.id ?? "none"}:${currentCredits}:${offers
-    .map((offer) => `${offer.id}:${state.components[offer.componentId]?.installed ? "installed" : "open"}`)
+    .map((offer) => `${offer.id}:${isComponentOfferPurchased(offer) ? "installed" : "open"}`)
     .join("|")}`;
 
   if (componentOffersPanel.dataset.renderedKey === nextKey) {
@@ -3861,7 +4066,7 @@ function renderComponentShop(service = null) {
       const description = document.createElement("p");
       const tags = document.createElement("div");
       const button = document.createElement("button");
-      const isInstalled = Boolean(state.components[offer.componentId]?.installed);
+      const isInstalled = isComponentOfferPurchased(offer);
       const canAfford = currentCredits >= offer.price;
 
       card.className = "ship-offer is-special-offer";
@@ -3886,17 +4091,46 @@ function renderComponentShop(service = null) {
   );
 }
 
+function getVisibleComponentOffers(offers) {
+  const starterOffers = offers.filter((offer) => (offer.stockGroup ?? "starter") === "starter");
+  const starterComplete = starterOffers.length > 0 && starterOffers.every((offer) => isComponentOfferPurchased(offer));
+  const desiredStockGroup = starterComplete ? "restock-1" : "starter";
+  const visibleOffers = offers.filter((offer) => (offer.stockGroup ?? "starter") === desiredStockGroup);
+
+  return visibleOffers.length > 0 ? visibleOffers : starterOffers;
+}
+
+function isComponentOfferPurchased(offer) {
+  const component = state.components[offer.componentId];
+
+  if (!component) {
+    return false;
+  }
+
+  if (offer.upgradeId) {
+    return component.upgrades?.includes(offer.upgradeId) ?? false;
+  }
+
+  return Boolean(component.installed);
+}
+
 function buyComponentOffer(offer, service = null) {
   const component = state.components[offer.componentId];
 
-  if (!component || component.installed || !canSpendCredits(state, offer.price)) {
+  if (!component || isComponentOfferPurchased(offer) || !canSpendCredits(state, offer.price)) {
     renderComponentShop(service);
     return;
   }
 
   spendCredits(state, offer.price);
   component.installed = true;
-  setComponentAvailable(offer.componentId, true);
+
+  if (offer.upgradeId) {
+    component.upgrades = Array.from(new Set([...(component.upgrades ?? []), offer.upgradeId]));
+  }
+
+  applyComponentOffer(offer);
+  setComponentAvailable(offer.panelId ?? offer.componentId, true);
 
   if (offer.componentId === "processor") {
     // Cargo hold becomes the processor's output destination. Ensure the panel
@@ -3928,6 +4162,12 @@ function buyComponentOffer(offer, service = null) {
   });
   renderComponentShop(service);
   updateHudDisplay();
+}
+
+function applyComponentOffer(offer) {
+  if (offer.apply?.engine) {
+    Object.assign(state.components.engine, offer.apply.engine);
+  }
 }
 
 function handleShipOfferClick(offer) {

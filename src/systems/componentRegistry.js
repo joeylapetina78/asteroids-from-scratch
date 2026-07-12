@@ -6,6 +6,7 @@ export const PANEL_IDS = Object.freeze([
   "viewport",
   "engine",
   "beacon-locator",
+  "beacon-bay",
   "scanner",
   "miner",
   "collector",
@@ -28,6 +29,7 @@ export const STARTUP_HIDDEN_PANEL_IDS = Object.freeze([
   "viewport",
   "engine",
   "beacon-locator",
+  "beacon-bay",
   "scanner",
   "miner",
   "collector",
@@ -45,6 +47,7 @@ export const STARTUP_HIDDEN_PANEL_IDS = Object.freeze([
 export const COMPONENT_STATE_BY_PANEL_ID = Object.freeze({
   engine: "engine",
   "beacon-locator": "beaconLocator",
+  "beacon-bay": "beaconBay",
   scanner: "scanner",
   miner: "miner",
   collector: "collector",

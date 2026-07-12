@@ -1,4 +1,4 @@
-import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260711-0000-b3e4376";
+import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260712-1255-52d5b19";
 
 const RESOURCE_CONTRACTS = [
   {
@@ -33,8 +33,28 @@ const RESOURCE_CONTRACTS = [
     resourceName: "copper ore",
     title: "Heavy Copper Drift Run",
     amount: 10,
-    prerequisites: ["rook-copper-run-5"],
+    prerequisites: ["rook-red-resource-run-5"],
     summary: (dest) => `Deliver 10 copper ore to ${dest}. Copper Drift is northwest — teal rocks, medium density field.`,
+  },
+  {
+    id: "rook-red-teeth-claim-run-50",
+    resourceType: "iron-nickel",
+    resourceName: "red ore",
+    title: "Red Teeth Plot Run",
+    amount: 20,
+    prerequisites: ["rook-copper-run-10"],
+    sourceClaimIds: [
+      "plot-hex-3--2",
+      "plot-hex-4--2",
+      "plot-hex-2--2",
+      "plot-hex-3--1",
+      "plot-hex-4--1",
+      "plot-hex-2--1",
+      "plot-hex-3-0",
+      "plot-hex-4-0",
+    ],
+    sourceClaimLabel: "Red Teeth charter plot",
+    summary: (dest) => `Deliver 20 red ore from Rook's marked Red Teeth plots to ${dest}. The Beacon Locator can track the plot markers.`,
   },
 ];
 
@@ -129,6 +149,8 @@ export const chapterOneContracts = [
       amount: contract.amount,
       destinationSiteId: storySites.starterHub.id,
       destinationName: storySites.starterHub.name,
+      sourceClaimIds: contract.sourceClaimIds ?? [],
+      sourceClaimLabel: contract.sourceClaimLabel ?? null,
     },
     reward: {
       creditsPerUnit: 200,
@@ -138,7 +160,10 @@ export const chapterOneContracts = [
       `Terms are satisfied when ${contract.amount} units of ${contract.resourceName} are delivered from cargo at ${storySites.starterHub.name}.`,
       "Payment releases when the completed contract is confirmed.",
       "Resources must be in the cargo hold, not loose in space.",
+      contract.sourceClaimIds?.length
+        ? "Only ore traced to the marked contract plots counts for this job. Off-plot ore is marked in cargo."
+        : null,
       "Return to Rook Industries for the next available job.",
-    ],
+    ].filter(Boolean),
   })),
 ];

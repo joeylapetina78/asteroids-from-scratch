@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260711-0000-b3e4376";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260711-0000-b3e4376";
+import { getNpcName } from "../npcs.js?v=fresh-20260712-1255-52d5b19";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260712-1255-52d5b19";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
@@ -13,14 +13,12 @@ export const hubServiceDefinitions = {
       description: "Resource work and starter hauling jobs.",
       contractIds: [
         "rook-red-resource-run-5",
-        "rook-red-resource-run-10",
-        "rook-copper-run-5",
         "rook-copper-run-10",
+        "rook-red-teeth-claim-run-50",
       ],
       contractPrerequisites: {
-        "rook-red-resource-run-10": ["rook-red-resource-run-5"],
-        "rook-copper-run-5": ["rook-red-resource-run-10"],
-        "rook-copper-run-10": ["rook-copper-run-5"],
+        "rook-copper-run-10": ["rook-red-resource-run-5"],
+        "rook-red-teeth-claim-run-50": ["rook-copper-run-10"],
       },
       defaultUnlocked: false,
       greeting: "Got work if you want it. Check what's in the contract tray and let me know.",
@@ -102,6 +100,7 @@ export const hubServiceDefinitions = {
       componentOffers: [
         {
           id: "tractor-field-mk1",
+          stockGroup: "starter",
           componentId: "collector",
           componentName: "Tractor Field",
           price: 400,
@@ -112,6 +111,7 @@ export const hubServiceDefinitions = {
         },
         {
           id: "scanner-mk1",
+          stockGroup: "starter",
           componentId: "scanner",
           componentName: "Scanner",
           price: 400,
@@ -122,6 +122,7 @@ export const hubServiceDefinitions = {
         },
         {
           id: "processor-mk1",
+          stockGroup: "starter",
           componentId: "processor",
           componentName: "Processor",
           price: 600,
@@ -129,6 +130,43 @@ export const hubServiceDefinitions = {
           description:
             "Converts collected resources into fuel, charges, or scanergy as they arrive. Set output in the panel.",
           tags: ["Converts resources", "Passive output", "Configurable"],
+        },
+        {
+          id: "engine-speed-mk2",
+          stockGroup: "restock-1",
+          componentId: "engine",
+          componentName: "Engine Tune",
+          upgradeId: "speed-mk2",
+          price: 900,
+          title: "Yard-Filed Speed Tune",
+          description:
+            "A rough but honest drive tune. Raises thrust and top speed without changing your hull.",
+          tags: ["Engine upgrade", "Higher top speed", "More thrust"],
+          apply: {
+            engine: {
+              thrustPower: 125,
+              maxSpeed: 145,
+              fuelBurnRate: 11,
+              thrustVisual: {
+                style: "ragged-flame",
+                color: "#ffd36b",
+                length: 17,
+                width: 5,
+              },
+            },
+          },
+        },
+        {
+          id: "beacon-bay-mk1",
+          stockGroup: "restock-1",
+          componentId: "beaconBay",
+          panelId: "beacon-bay",
+          componentName: "Beacon Bay",
+          price: 700,
+          title: "Beacon Bay Mk I",
+          description:
+            "Three reusable drop beacons. Deploy one in open space, track it from the Beacon Locator, then recover it later.",
+          tags: ["3 reusable beacons", "Adds locator targets", "Recoverable"],
         },
       ],
     },

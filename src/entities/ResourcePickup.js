@@ -1,6 +1,6 @@
-import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260711-0000-b3e4376";
+import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260712-1255-52d5b19";
 import { createRandom, randomRange } from "../systems/random.js";
-import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260711-0000-b3e4376";
+import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260712-1255-52d5b19";
 
 const PICKUP_RADIUS = 10;
 const PICKUP_DRAG = 0.985;
@@ -17,10 +17,12 @@ const SHAPE_SIZE = {
 };
 
 export class ResourcePickup {
-  constructor({ x, y, type, velocity }) {
+  constructor({ x, y, type, velocity, sourceClaimId = null, sourceClaimName = null }) {
     this.position = { x, y };
     this.velocity = velocity;
     this.type = normalizeResourceType(type);
+    this.sourceClaimId = sourceClaimId;
+    this.sourceClaimName = sourceClaimName;
     this.color = RESOURCE_COLOR[this.type] ?? "#888888";
     this.radius = PICKUP_RADIUS;
     this.shape = getResourceShape(this.type);
@@ -50,7 +52,7 @@ export class ResourcePickup {
   }
 }
 
-export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity = { x: 0, y: 0 }) {
+export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity = { x: 0, y: 0 }, metadata = {}) {
   if (asteroid.color === WHITE_ASTEROID_COLOR) {
     return [];
   }
@@ -75,6 +77,8 @@ export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity
         x: asteroid.position.x + Math.cos(angle) * randomRange(random, 4, 12),
         y: asteroid.position.y + Math.sin(angle) * randomRange(random, 4, 12),
         type: pickupType,
+        sourceClaimId: metadata.sourceClaimId ?? asteroid.sourceClaimId ?? null,
+        sourceClaimName: metadata.sourceClaimName ?? asteroid.sourceClaimName ?? null,
         velocity: {
           x: asteroid.velocity.x * 0.12 + Math.cos(angle) * speed + impactVelocity.x * 0.0015,
           y: asteroid.velocity.y * 0.12 + Math.sin(angle) * speed + impactVelocity.y * 0.0015,

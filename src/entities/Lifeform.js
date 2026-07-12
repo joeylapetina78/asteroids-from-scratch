@@ -9,8 +9,10 @@ const LIFE_COLORS = {
 // both drawing style and steering recipe: hunters seek, threadlings flock,
 // grazers orbit rocks, and skitters dart around danger.
 export class Lifeform {
-  constructor({ type, x, y, velocity, seed }) {
+  constructor({ type, x, y, velocity, seed, role = null, name = null }) {
     this.type = type;
+    this.role = role;
+    this.name = name;
     this.position = { x, y };
     this.velocity = velocity;
     this.acceleration = { x: 0, y: 0 };
@@ -351,19 +353,31 @@ function findNearestAsteroid(position, asteroids, range) {
 }
 
 function drawHunter(context, lifeform) {
-  context.fillStyle = "rgba(255, 93, 108, 0.24)";
-  context.strokeStyle = LIFE_COLORS.hunter;
+  const isPirate = lifeform.role === "pirate";
+
+  context.fillStyle = isPirate ? "rgba(255, 178, 77, 0.22)" : "rgba(255, 93, 108, 0.24)";
+  context.strokeStyle = isPirate ? "#ffb24d" : LIFE_COLORS.hunter;
   context.lineWidth = 2;
   context.beginPath();
-  context.moveTo(18, 0);
+  context.moveTo(isPirate ? 22 : 18, 0);
   context.lineTo(-10, -8);
   context.lineTo(-4, 0);
   context.lineTo(-10, 8);
   context.closePath();
   context.fill();
   context.stroke();
-  context.fillStyle = "#ffffff";
-  context.fillRect(5, -1.5, 4, 3);
+  if (isPirate) {
+    context.beginPath();
+    context.moveTo(-2, -10);
+    context.lineTo(3, -17);
+    context.lineTo(7, -7);
+    context.moveTo(-2, 10);
+    context.lineTo(3, 17);
+    context.lineTo(7, 7);
+    context.stroke();
+  }
+  context.fillStyle = isPirate ? "#1b0e10" : "#ffffff";
+  context.fillRect(5, -1.5, isPirate ? 6 : 4, 3);
 }
 
 function drawThreadling(context, lifeform) {

@@ -1,8 +1,8 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260711-0000-b3e4376";
-import { depositCredits, getCredits } from "./accounts.js?v=fresh-20260711-0000-b3e4376";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260711-0000-b3e4376";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260711-0000-b3e4376";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260711-0000-b3e4376";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260712-1255-52d5b19";
+import { depositCredits, getCredits } from "./accounts.js?v=fresh-20260712-1255-52d5b19";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260712-1255-52d5b19";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260712-1255-52d5b19";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260712-1255-52d5b19";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -167,7 +167,7 @@ export function createContractManager({ state, onChange = () => {} }) {
       });
   }
 
-  function depositResourceUnit({ contractId = state.contracts.currentContractId, resourceType, siteId }) {
+  function depositResourceUnit({ contractId = state.contracts.currentContractId, resourceType, siteId, sourceClaimId = null }) {
     const contract = state.contracts.records[contractId];
 
     if (
@@ -186,6 +186,21 @@ export function createContractManager({ state, onChange = () => {} }) {
       return false;
     }
 
+    if (contract.terms.sourceClaimIds?.length && !contract.terms.sourceClaimIds.includes(sourceClaimId)) {
+      state.ledger.recordEvent(
+        "contract.resourceRejected",
+        {
+          contractId: contract.id,
+          contractTitle: contract.title,
+          resourceType: normalizeResourceType(resourceType),
+          sourceClaimId,
+          reason: "outside-source-claims",
+        },
+        { visible: false },
+      );
+      return false;
+    }
+
     contract.deliveredAmount = (contract.deliveredAmount ?? 0) + 1;
     state.ledger.recordEvent("contract.resourceDeposited", {
       contractId: contract.id,
@@ -198,6 +213,7 @@ export function createContractManager({ state, onChange = () => {} }) {
       deliveredAmount: contract.deliveredAmount,
       requiredAmount,
       destinationSiteId: contract.terms.destinationSiteId,
+      sourceClaimId,
     });
 
     if (contract.deliveredAmount >= requiredAmount) {

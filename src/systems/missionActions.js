@@ -90,6 +90,12 @@ export const MISSION_ACTION_DEFINITIONS = {
     required: [],
     optional: ["reason"],
   },
+  spawnPirateNearShip: {
+    label: "Spawn Pirate Near Ship",
+    description: "Spawn a pirate attacker near the controlled ship for a scripted contract danger beat.",
+    required: [],
+    optional: ["reason"],
+  },
   setFlag: {
     label: "Set Flag",
     description: "Set a flag in the current mission's journey.flags.",
@@ -162,6 +168,8 @@ function runMissionAction(action, { state, actions, missionDefinition, goToStep 
     actions.startMission(action.missionId);
   } else if (action.type === "spawnHunterNearShip") {
     actions.spawnHunterNearShip(action.reason);
+  } else if (action.type === "spawnPirateNearShip") {
+    actions.spawnPirateNearShip(action.reason);
   } else if (action.type === "setFlag") {
     state.journey.flags ??= {};
     state.journey.flags[action.flag] = true;

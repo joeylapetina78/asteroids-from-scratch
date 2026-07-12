@@ -1,5 +1,5 @@
-import { runMissionActions } from "./missionActions.js?v=fresh-20260711-0000-b3e4376";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260711-0000-b3e4376";
+import { runMissionActions } from "./missionActions.js?v=fresh-20260712-1255-52d5b19";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260712-1255-52d5b19";
 
 export function createMissionRunner({ missionDefinition, state, actions }) {
   const beatDefs = missionDefinition.beats ?? missionDefinition.steps;
@@ -10,6 +10,8 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
   function startOffer() {
     const prologue = missionDefinition.prologue;
 
+    state.journey.pendingAcknowledgement = null;
+    state.journey.messages = [];
     Object.assign(state.journey, {
       chapterId: prologue.chapterId,
       chapterName: prologue.chapterName,
@@ -37,6 +39,7 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
   function accept() {
     const activeChapter = missionDefinition.activeChapter;
 
+    state.journey.pendingAcknowledgement = null;
     Object.assign(state.journey, {
       chapterId: activeChapter.chapterId,
       chapterName: activeChapter.chapterName,
@@ -167,11 +170,13 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
       state.journey.completedStepIds = [...new Set([...state.journey.completedStepIds, previousStepId])];
     }
 
+    state.journey.pendingAcknowledgement = null;
     state.journey.currentStepId = stepId;
     setMission({
       ...state.journey.mission,
       objective: step.objective,
       helpText: step.helpText,
+      actionLabel: step.actionLabel ?? null,
       tasks: step.tasks ?? [],
     });
     runActions(step.onEnter ?? []);

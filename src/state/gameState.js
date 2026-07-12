@@ -1,10 +1,10 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260711-0000-b3e4376";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260711-0000-b3e4376";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260711-0000-b3e4376";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260711-0000-b3e4376";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260711-0000-b3e4376";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260711-0000-b3e4376";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260711-0000-b3e4376";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260712-1255-52d5b19";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260712-1255-52d5b19";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260712-1255-52d5b19";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260712-1255-52d5b19";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260712-1255-52d5b19";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260712-1255-52d5b19";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260712-1255-52d5b19";
 
 export function createGameState() {
   const state = {
@@ -108,6 +108,7 @@ export function createGameState() {
         installed: false,
         powered: false,
         powerLocked: false,
+        upgrades: [],
         thrustMode: "forward",
         fuel: 200,
         maxFuel: 200,
@@ -134,6 +135,16 @@ export function createGameState() {
         beaconMemoryIds: ["scrap-porch", "yard-exchange"],
         activeBeaconId: "yard-exchange",
         beaconLocatorUsed: false,
+      },
+      beaconBay: {
+        installed: false,
+        recoverySeconds: 2.4,
+        recovery: null,
+        bays: [
+          { id: "bay-1", label: "Bay 1", status: "stored", beaconId: "personal-beacon-1", position: null },
+          { id: "bay-2", label: "Bay 2", status: "stored", beaconId: "personal-beacon-2", position: null },
+          { id: "bay-3", label: "Bay 3", status: "stored", beaconId: "personal-beacon-3", position: null },
+        ],
       },
       scanner: {
         installed: false,

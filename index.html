@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260711-0000-b3e4376" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260712-1255-52d5b19" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -51,7 +51,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260711-0000-b3e4376</span>
+      <span class="build-tag">build: fresh-20260712-1255-52d5b19</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -61,6 +61,20 @@
       <a href="https://github.com/joeylapetina78/asteroids-from-scratch">GitHub</a>
       <a href="https://cash.app/$joeylapetina">Murmur alms</a>
     </nav>
+    <aside class="ledger-stream" aria-label="Live event ledger diagnostics">
+      <section>
+        <h2>Ledger</h2>
+        <ol id="ledger-stream-events" class="ledger-stream-list"></ol>
+      </section>
+      <section>
+        <h2>Stats</h2>
+        <dl id="ledger-stream-stats" class="ledger-stream-stats"></dl>
+      </section>
+      <section>
+        <h2>Signals</h2>
+        <ol id="ledger-stream-signals" class="ledger-stream-list ledger-stream-signals"></ol>
+      </section>
+    </aside>
     <main class="game-shell">
       <div class="play-layout">
         <section class="component-stack">
@@ -165,6 +179,35 @@
                 <span>Tracking: <strong id="beacon-tracking">None</strong></span>
                 <div class="beacon-compass" aria-hidden="true">
                   <span id="beacon-direction-arrow"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="component-panel beacon-bay-panel" data-panel-id="beacon-bay" aria-label="Beacon bay component">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Beacon Bay</strong>
+                  <span>deployable waypoints</span>
+                </div>
+              </div>
+              <div class="beacon-bay-grid" id="beacon-bay-grid" aria-live="polite">
+                <div class="beacon-bay-slot">
+                  <span>Bay 1</span>
+                  <button class="beacon-bay-button" type="button" data-beacon-bay="0">Deploy</button>
+                </div>
+                <div class="beacon-bay-slot">
+                  <span>Bay 2</span>
+                  <button class="beacon-bay-button" type="button" data-beacon-bay="1">Deploy</button>
+                </div>
+                <div class="beacon-bay-slot">
+                  <span>Bay 3</span>
+                  <button class="beacon-bay-button" type="button" data-beacon-bay="2">Deploy</button>
+                </div>
+              </div>
+              <div class="beacon-recovery-meter" id="beacon-recovery-meter" hidden>
+                <span id="beacon-recovery-label">Recovering beacon</span>
+                <div class="component-meter-track" aria-hidden="true">
+                  <span id="beacon-recovery-fill"></span>
                 </div>
               </div>
             </div>
@@ -582,6 +625,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260711-0000-b3e4376"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260712-1255-52d5b19"></script>
   </body>
 </html>

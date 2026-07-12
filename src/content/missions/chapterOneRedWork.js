@@ -1,4 +1,13 @@
-import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=fresh-20260711-0000-b3e4376";
+import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=fresh-20260712-1255-52d5b19";
+
+function hasActiveRedTeethPlotContract({ state }) {
+  const contract = state.contracts?.records?.["rook-red-teeth-claim-run-50"];
+  return contract?.status === "active";
+}
+
+function doesNotHaveActiveRedTeethPlotContract(context) {
+  return !hasActiveRedTeethPlotContract(context);
+}
 
 export const chapterOneRedWorkMission = {
   id: "chapter-1-red-work",
@@ -118,6 +127,7 @@ export const chapterOneRedWorkMission = {
       payloadEquals: { zoneId: storyZones.dangerBoundary.id },
       once: true,
       setFlag: "warned-red-teeth",
+      requiresCondition: doesNotHaveActiveRedTeethPlotContract,
       actions: [
         {
           type: "spawnHunterNearShip",
@@ -128,6 +138,27 @@ export const chapterOneRedWorkMission = {
           speaker: "Rook",
           text:
             "That's Red Teeth, rookie. Too far for this run. And now you've got company. Turn us around, get back toward Yard Exchange, and find red rock closer to home.",
+        },
+      ],
+    },
+    {
+      id: "red-teeth-plot-pirate",
+      fromBeat: "mine-red-resources",
+      eventType: "zone.entered",
+      payloadEquals: { zoneId: storyZones.dangerBoundary.id },
+      once: true,
+      setFlag: "redTeethPlotPirateSpawned",
+      requiresCondition: hasActiveRedTeethPlotContract,
+      actions: [
+        {
+          type: "spawnPirateNearShip",
+          reason: "red-teeth-plot-contract",
+        },
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Heads up. That plot job is marked work, and marked work attracts vultures. I've got a pirate ping closing on you. Keep moving, keep the ore legal, and don't let them shove you off the claim.",
         },
       ],
     },
@@ -144,6 +175,22 @@ export const chapterOneRedWorkMission = {
           speaker: "Rook",
           text:
             "Hunter in sight. Red little problem with teeth. If you're light on hull or charges, do not be a hero; get back toward Yard Exchange.",
+        },
+      ],
+    },
+    {
+      id: "pirate-kill-commentary",
+      fromBeat: "mine-red-resources",
+      eventType: "enemy.destroyed",
+      payloadEquals: { enemyType: "pirate" },
+      once: true,
+      setFlag: "plotPirateDestroyed",
+      actions: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Pirate down. Good. The legal ore is the job, but staying alive is the part that keeps us both paid.",
         },
       ],
     },
