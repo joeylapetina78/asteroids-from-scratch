@@ -1,9 +1,7 @@
 export function createInput() {
   const pressedKeys = new Set();
   const justPressedKeys = new Set();
-  const keyLastSeenAt = new Map();
   const gameKeys = new Set(["KeyA", "KeyD", "KeyW", "KeyS", "KeyE", "Space"]);
-  const STALE_GAME_KEY_MS = 1600;
   let gameInputSuspended = false;
 
   function isTextEntryTarget(target) {
@@ -22,33 +20,12 @@ export function createInput() {
 
       pressedKeys.delete(code);
       justPressedKeys.delete(code);
-      keyLastSeenAt.delete(code);
     });
   }
 
   function clearAllKeys() {
     pressedKeys.clear();
     justPressedKeys.clear();
-    keyLastSeenAt.clear();
-  }
-
-  function markKeySeen(code) {
-    keyLastSeenAt.set(code, performance.now());
-  }
-
-  function expireStaleGameKey(code) {
-    if (!gameKeys.has(code) || !pressedKeys.has(code)) {
-      return;
-    }
-
-    const lastSeenAt = keyLastSeenAt.get(code) ?? 0;
-    if (performance.now() - lastSeenAt <= STALE_GAME_KEY_MS) {
-      return;
-    }
-
-    pressedKeys.delete(code);
-    justPressedKeys.delete(code);
-    keyLastSeenAt.delete(code);
   }
 
   window.addEventListener("keydown", (event) => {
@@ -62,7 +39,6 @@ export function createInput() {
       if (gameInputSuspended) {
         pressedKeys.delete(event.code);
         justPressedKeys.delete(event.code);
-        keyLastSeenAt.delete(event.code);
         return;
       }
     }
@@ -72,14 +48,12 @@ export function createInput() {
     }
 
     pressedKeys.add(event.code);
-    markKeySeen(event.code);
-  });
+  }, true);
 
   window.addEventListener("keyup", (event) => {
     pressedKeys.delete(event.code);
     justPressedKeys.delete(event.code);
-    keyLastSeenAt.delete(event.code);
-  });
+  }, true);
 
   window.addEventListener("blur", () => {
     clearAllKeys();
@@ -101,34 +75,12 @@ export function createInput() {
     true,
   );
 
-  document.addEventListener(
-    "pointerup",
-    (event) => {
-      if (isInteractiveTarget(event.target)) {
-        clearGameKeys({ includeDock: true });
-      }
-    },
-    true,
-  );
-
-  document.addEventListener(
-    "focusin",
-    (event) => {
-      if (isInteractiveTarget(event.target)) {
-        clearGameKeys({ includeDock: true });
-      }
-    },
-    true,
-  );
-
   return {
     isDown(code) {
-      expireStaleGameKey(code);
       return pressedKeys.has(code);
     },
 
     wasPressed(code) {
-      expireStaleGameKey(code);
       return justPressedKeys.has(code);
     },
 
