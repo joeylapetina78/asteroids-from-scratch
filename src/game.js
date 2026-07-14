@@ -1,24 +1,24 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260712-1345-a8d335f";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260712-1345-a8d335f";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260712-1345-a8d335f";
-import { Ship } from "./entities/Ship.js?v=fresh-20260712-1345-a8d335f";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260712-1345-a8d335f";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260713-2123-91ff60b";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260713-2123-91ff60b";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260713-2123-91ff60b";
+import { Ship } from "./entities/Ship.js?v=fresh-20260713-2123-91ff60b";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260713-2123-91ff60b";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260712-1345-a8d335f";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260712-1345-a8d335f";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260712-1345-a8d335f";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260712-1345-a8d335f";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260712-1345-a8d335f";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260712-1345-a8d335f";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260712-1345-a8d335f";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260712-1345-a8d335f";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260712-1345-a8d335f";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260712-1345-a8d335f";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260712-1345-a8d335f";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260712-1345-a8d335f";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260712-1345-a8d335f";
-import { createGameState } from "./state/gameState.js?v=fresh-20260712-1345-a8d335f";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260712-1345-a8d335f";
+import { createInput } from "./systems/input.js?v=fresh-20260713-2123-91ff60b";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260713-2123-91ff60b";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260713-2123-91ff60b";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260713-2123-91ff60b";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260713-2123-91ff60b";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260713-2123-91ff60b";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260713-2123-91ff60b";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260713-2123-91ff60b";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260713-2123-91ff60b";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260713-2123-91ff60b";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260713-2123-91ff60b";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260713-2123-91ff60b";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260713-2123-91ff60b";
+import { createGameState } from "./state/gameState.js?v=fresh-20260713-2123-91ff60b";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260713-2123-91ff60b";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -353,6 +353,7 @@ export class Game {
         type: "contract-claim",
         contractId: target.contractId,
         claimId: target.claimId,
+        claimIds: target.claimIds,
       }));
 
     return [...rememberedHubs, ...personalBeacons, ...contractBeacons];
@@ -382,22 +383,24 @@ export class Game {
     records
       .filter((contract) => contract.status === "active" && contract.terms?.sourceClaimIds?.length)
       .forEach((contract) => {
-        contract.terms.sourceClaimIds.forEach((claimId, index) => {
-          const claim = this.claimField.getClaimOrPlotById(claimId);
+        const claims = contract.terms.sourceClaimIds
+          .map((claimId) => this.claimField.getClaimOrPlotById(claimId))
+          .filter(Boolean);
+        const claimGroups = groupNearbyClaims(claims);
 
-          if (!claim) {
-            return;
-          }
+        claimGroups.forEach((group, index) => {
+          const groupLabel = contract.terms.sourceClaimLabel ?? contract.title;
+          const name = claimGroups.length > 1 ? `${groupLabel} ${index + 1}` : groupLabel;
 
           targets.push({
             contractId: contract.id,
-            claimId,
-            beaconId: `contract-${contract.id}-${claimId}`,
-            name: contract.terms.sourceClaimLabel
-              ? `${contract.terms.sourceClaimLabel} ${index + 1}`
-              : `${contract.title} plot ${index + 1}`,
-            position: claim.center,
-            claim,
+            claimId: group[0]?.id,
+            claimIds: group.map((claim) => claim.id),
+            beaconId: `contract-${contract.id}-claim-group-${index + 1}`,
+            name,
+            position: getClaimsCenter(group),
+            claims: group,
+            claim: group[0],
           });
         });
       });
@@ -415,12 +418,46 @@ export class Game {
       return;
     }
 
-    const activeBeaconId = this.state.components.beaconLocator.activeBeaconId;
-    if (targets.some((target) => target.beaconId === activeBeaconId)) {
+    const locator = this.state.components.beaconLocator;
+    locator.syncedContractIds ??= [];
+    if (locator.syncedContractIds.includes(contract.id)) {
       return;
     }
 
-    this.state.components.beaconLocator.activeBeaconId = targets[0].beaconId;
+    const activeBeaconId = this.state.components.beaconLocator.activeBeaconId;
+    if (targets.some((target) => target.beaconId === activeBeaconId)) {
+      locator.syncedContractIds.push(contract.id);
+      return;
+    }
+
+    locator.activeBeaconId = targets[0].beaconId;
+    locator.syncedContractIds.push(contract.id);
+  }
+
+  rememberHubBeacon(siteId) {
+    const locator = this.state.components.beaconLocator;
+    const site = this.worldSites.find((candidate) => candidate.id === siteId && candidate.type === "hub");
+
+    if (!locator?.installed || !site) {
+      return false;
+    }
+
+    locator.beaconMemoryIds ??= [];
+    if (!locator.beaconMemoryIds.includes(site.id)) {
+      locator.beaconMemoryIds.push(site.id);
+    }
+
+    if (!this.getBeaconTarget(locator.activeBeaconId)) {
+      locator.activeBeaconId = site.id;
+    }
+
+    this.state.ledger.recordEvent("beaconLocator.hubRemembered", {
+      siteId: site.id,
+      siteName: site.name,
+      beaconId: site.beaconId ?? site.id,
+    });
+    this.onHudChange(this.state);
+    return true;
   }
 
   deployBeaconFromBay(bayIndex) {
@@ -511,6 +548,7 @@ export class Game {
       this.input.clearGameKeys({ includeDock: directInputSuspended });
       this.ship.stopThrusting();
     }
+    this.updatePilotDebugMarker(directInputSuspended);
 
     this.fireCooldown = Math.max(0, this.fireCooldown - deltaSeconds);
     this.shipHitCooldown = Math.max(0, this.shipHitCooldown - deltaSeconds);
@@ -599,6 +637,75 @@ export class Game {
 
     const patrolPhase = this.activePatrolIntercept?.phase;
     return patrolPhase === "standoff" || patrolPhase === "hold";
+  }
+
+  updatePilotDebugMarker(directInputSuspended) {
+    const markerKey = this.input.wasPressed("KeyR")
+      ? "R"
+      : this.input.wasPressed("KeyT")
+        ? "T"
+        : null;
+
+    if (!markerKey) {
+      return;
+    }
+
+    const activeElement = document.activeElement;
+    const inputSnapshot = this.input.getDebugSnapshot();
+    const patrol = this.activePatrolIntercept;
+    const tow = this.activeTow;
+
+    this.state.ledger.recordEvent(
+      "pilot.debugMarker",
+      {
+        markerKey,
+        note: markerKey === "T" ? "tow/patrol/control anomaly" : "rogue input anomaly",
+        activeElement: describeDebugElement(activeElement),
+        documentHasFocus: document.hasFocus(),
+        directInputSuspended,
+        input: inputSnapshot,
+        ship: {
+          x: Math.round(this.ship.position.x),
+          y: Math.round(this.ship.position.y),
+          vx: Math.round(this.ship.velocity.x),
+          vy: Math.round(this.ship.velocity.y),
+          angle: Number(this.ship.angle.toFixed(3)),
+          thrusting: this.ship.isThrusting,
+          destroyed: this.shipDestroyed,
+        },
+        engine: {
+          powered: this.state.components.engine.powered,
+          fuel: Math.round(this.state.components.engine.fuel),
+          powerLocked: Boolean(this.state.components.engine.powerLocked),
+        },
+        collector: {
+          installed: Boolean(this.state.components.collector.installed),
+          active: Boolean(this.state.components.collector.isActive),
+        },
+        controlSignals: {
+          actorLocked: this.state.ledger.getSignal("actor.controlLocked"),
+          shipLocked: this.state.ledger.getSignal("controlledShip.controlLocked"),
+        },
+        patrol: patrol
+          ? {
+              id: patrol.id,
+              siteId: patrol.site?.id ?? null,
+              phase: patrol.phase,
+              hasScanned: Boolean(patrol.hasScanned),
+            }
+          : null,
+        tow: tow
+          ? {
+              siteId: tow.site?.id ?? null,
+              phase: tow.phase,
+              cost: tow.cost,
+            }
+          : null,
+        dockedSiteId: this.dockedSite?.id ?? null,
+        nearbySiteId: this.nearbySite?.id ?? null,
+      },
+      { visible: true },
+    );
   }
 
   updateBeaconRecovery(deltaSeconds) {
@@ -3300,7 +3407,7 @@ export class Game {
     const targets = this.getContractClaimTargets();
 
     targets.forEach((target, index) => {
-      if (!isVisible({ position: target.position, radius: target.claim?.vertices ? 470 : 260 }, canvas, camera)) {
+      if (!isVisible({ position: target.position, radius: target.claims?.length ? 900 : 260 }, canvas, camera)) {
         return;
       }
 
@@ -3313,7 +3420,26 @@ export class Game {
       this.context.fillStyle = "rgba(255, 58, 102, 0.08)";
       this.context.lineWidth = 2;
       this.context.setLineDash([12, 8]);
-      if (target.claim?.vertices?.length) {
+      if (target.claims?.length) {
+        target.claims.forEach((claim) => {
+          if (!claim.vertices?.length) {
+            return;
+          }
+          this.context.beginPath();
+          claim.vertices.forEach((vertex, vertexIndex) => {
+            const vx = vertex.x - camera.x;
+            const vy = vertex.y - camera.y;
+            if (vertexIndex === 0) {
+              this.context.moveTo(vx, vy);
+            } else {
+              this.context.lineTo(vx, vy);
+            }
+          });
+          this.context.closePath();
+          this.context.fill();
+          this.context.stroke();
+        });
+      } else if (target.claim?.vertices?.length) {
         this.context.beginPath();
         target.claim.vertices.forEach((vertex, vertexIndex) => {
           const vx = vertex.x - camera.x;
@@ -3890,6 +4016,49 @@ function distance(firstPosition, secondPosition) {
   return Math.hypot(firstPosition.x - secondPosition.x, firstPosition.y - secondPosition.y);
 }
 
+function getClaimsCenter(claims) {
+  if (!claims.length) {
+    return { x: 0, y: 0 };
+  }
+
+  const total = claims.reduce(
+    (sum, claim) => ({
+      x: sum.x + claim.center.x,
+      y: sum.y + claim.center.y,
+    }),
+    { x: 0, y: 0 },
+  );
+
+  return {
+    x: total.x / claims.length,
+    y: total.y / claims.length,
+  };
+}
+
+function groupNearbyClaims(claims) {
+  const remaining = [...claims];
+  const groups = [];
+  const adjacencyDistance = 780;
+
+  while (remaining.length) {
+    const group = [remaining.shift()];
+
+    for (let index = 0; index < group.length; index += 1) {
+      const claim = group[index];
+
+      for (let remainingIndex = remaining.length - 1; remainingIndex >= 0; remainingIndex -= 1) {
+        if (distance(claim.center, remaining[remainingIndex].center) <= adjacencyDistance) {
+          group.push(remaining.splice(remainingIndex, 1)[0]);
+        }
+      }
+    }
+
+    groups.push(group);
+  }
+
+  return groups;
+}
+
 function getRelativeSpeed(firstBody, secondBody) {
   return Math.hypot(firstBody.velocity.x - secondBody.velocity.x, firstBody.velocity.y - secondBody.velocity.y);
 }
@@ -4023,6 +4192,31 @@ function isInViewport(entity, canvas, camera, radius = entity.radius ?? 0) {
 
 function getHubSensorRadius(site) {
   return site.interactionRadius * HUB_SENSOR_RADIUS_MULTIPLIER;
+}
+
+function describeDebugElement(element) {
+  if (!element) {
+    return "none";
+  }
+
+  const parts = [element.tagName?.toLowerCase?.() ?? "unknown"];
+
+  if (element.id) {
+    parts.push(`#${element.id}`);
+  }
+
+  if (element.classList?.length) {
+    parts.push(`.${[...element.classList].slice(0, 3).join(".")}`);
+  }
+
+  const panel = element.closest?.("[data-panel-id], .panel, .journey-panel, .hub-service-window, .contract-card");
+  if (panel?.dataset?.panelId) {
+    parts.push(`panel:${panel.dataset.panelId}`);
+  } else if (panel?.classList?.length) {
+    parts.push(`inside:${[...panel.classList].slice(0, 2).join(".")}`);
+  }
+
+  return parts.join("");
 }
 
 function getInspectionCacheKey(site, identity) {

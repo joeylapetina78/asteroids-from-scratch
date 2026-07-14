@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260712-1345-a8d335f";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260712-1345-a8d335f";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260712-1345-a8d335f";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260712-1345-a8d335f";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260712-1345-a8d335f";
-import { Game } from "./game.js?v=fresh-20260712-1345-a8d335f";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260712-1345-a8d335f";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260712-1345-a8d335f";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260712-1345-a8d335f";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260712-1345-a8d335f";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260713-2123-91ff60b";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260713-2123-91ff60b";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260713-2123-91ff60b";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260713-2123-91ff60b";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260713-2123-91ff60b";
+import { Game } from "./game.js?v=fresh-20260713-2123-91ff60b";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260713-2123-91ff60b";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260713-2123-91ff60b";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260713-2123-91ff60b";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260713-2123-91ff60b";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260712-1345-a8d335f";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260712-1345-a8d335f";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260712-1345-a8d335f";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260712-1345-a8d335f";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260712-1345-a8d335f";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260712-1345-a8d335f";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260712-1345-a8d335f";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260712-1345-a8d335f";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260712-1345-a8d335f";
-import { Processor } from "./systems/processor.js?v=fresh-20260712-1345-a8d335f";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260712-1345-a8d335f";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260712-1345-a8d335f";
-import { createGameState } from "./state/gameState.js?v=fresh-20260712-1345-a8d335f";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260713-2123-91ff60b";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260713-2123-91ff60b";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260713-2123-91ff60b";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260713-2123-91ff60b";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260713-2123-91ff60b";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260713-2123-91ff60b";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260713-2123-91ff60b";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260713-2123-91ff60b";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260713-2123-91ff60b";
+import { Processor } from "./systems/processor.js?v=fresh-20260713-2123-91ff60b";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260713-2123-91ff60b";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260713-2123-91ff60b";
+import { createGameState } from "./state/gameState.js?v=fresh-20260713-2123-91ff60b";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -333,6 +333,10 @@ let movePaperPanelToDesk = () => {};
 let movePaperPanelToDrawer = () => {};
 let contractPulledFromDrawer = false;
 let renderedLedgerVersion = -1;
+let renderedLedgerEventsKey = "";
+let renderedLedgerStatsKey = "";
+let renderedLedgerSignalsKey = "";
+let renderedWorldEventLogKey = "";
 let lastAudioEventId = 0;
 let journeyTypeTimers = [];
 let _renderedMessageId = null;
@@ -531,6 +535,13 @@ finleyScanButton.addEventListener("click", () => {
 });
 
 hubServiceMenu.addEventListener("click", (event) => {
+  const beaconButton = event.target.closest("[data-hub-beacon-id]");
+
+  if (beaconButton) {
+    addHubBeaconToNavigation(beaconButton.dataset.hubBeaconId);
+    return;
+  }
+
   const button = event.target.closest("[data-service-id]");
 
   if (!button) {
@@ -1377,7 +1388,15 @@ function getEntityLabel(entityId) {
 
 function renderHubServiceMenu(site) {
   const services = site ? getHubServices(site.id).filter((service) => isHubServiceUnlocked(site.id, service)) : [];
-  const nextKey = `${site?.id ?? "none"}:${activeHubServiceId ?? "none"}:${services.map((service) => service.id).join("|")}`;
+  const locator = state.components.beaconLocator;
+  const hasHubBeacon = Boolean(site && (locator.beaconMemoryIds ?? []).includes(site.id));
+  const nextKey = [
+    site?.id ?? "none",
+    activeHubServiceId ?? "none",
+    locator.installed ? "locator" : "no-locator",
+    hasHubBeacon ? "remembered" : "new",
+    services.map((service) => service.id).join("|"),
+  ].join(":");
 
   if (hubServiceMenu.dataset.renderedKey === nextKey) {
     return;
@@ -1390,7 +1409,10 @@ function renderHubServiceMenu(site) {
     return;
   }
 
+  const beaconButton = site ? renderHubBeaconButton(site, hasHubBeacon) : null;
+
   hubServiceMenu.replaceChildren(
+    ...(beaconButton ? [beaconButton] : []),
     ...services.map((service) => {
       const button = document.createElement("button");
       const label = document.createElement("strong");
@@ -1407,6 +1429,34 @@ function renderHubServiceMenu(site) {
       return button;
     }),
   );
+}
+
+function renderHubBeaconButton(site, hasHubBeacon) {
+  const button = document.createElement("button");
+  const label = document.createElement("strong");
+  const meta = document.createElement("span");
+  const locator = state.components.beaconLocator;
+
+  button.type = "button";
+  button.className = "hub-service-button hub-beacon-button";
+  button.dataset.hubBeaconId = site.id;
+  button.disabled = !locator.installed || hasHubBeacon;
+  label.textContent = hasHubBeacon ? "Beacon Stored" : "Add Hub Beacon";
+  meta.textContent = hasHubBeacon
+    ? `${site.name} is already in Beacon Navigation.`
+    : `Add ${site.name} to Beacon Navigation.`;
+  button.append(label, meta);
+  return button;
+}
+
+function addHubBeaconToNavigation(siteId) {
+  if (!game.rememberHubBeacon(siteId)) {
+    return;
+  }
+
+  updateBeaconDisplay();
+  renderHubServiceMenu(currentSiteState?.dockedSite);
+  scheduleSave();
 }
 
 function isHubServiceUnlocked(siteId, service) {
@@ -3508,20 +3558,34 @@ function updateEventLedgerDisplay() {
   playLedgerAudioEvents();
   renderedLedgerVersion = state.ledger.version;
   updateLedgerStreamDisplay();
-  worldDebugFields.eventCount.textContent = String(state.ledger.eventCount);
-  worldDebugFields.shotsFired.textContent = String(state.ledger.getStat("weapon.fired.total"));
-  worldDebugFields.rocksDestroyed.textContent = String(state.ledger.getStat("asteroid.destroyed.total"));
-  worldDebugFields.resourcesCollected.textContent = String(state.ledger.getStat("resource.collected.total"));
-  worldDebugFields.kills.textContent = String(state.ledger.getStat("enemy.destroyed.total") + state.ledger.getStat("npc.destroyed.total"));
-  worldDebugFields.salesCredits.textContent = String(state.ledger.getStat("credits.earned.sales"));
-  worldDebugFields.repairCredits.textContent = String(state.ledger.getStat("credits.spent.repairs"));
-  worldDebugFields.eventLog.replaceChildren(
-    ...state.ledger.getRecentEventGroups(5).reverse().map((eventGroup) => {
+  setTextIfChanged(worldDebugFields.eventCount, String(state.ledger.eventCount));
+  setTextIfChanged(worldDebugFields.shotsFired, String(state.ledger.getStat("weapon.fired.total")));
+  setTextIfChanged(worldDebugFields.rocksDestroyed, String(state.ledger.getStat("asteroid.destroyed.total")));
+  setTextIfChanged(worldDebugFields.resourcesCollected, String(state.ledger.getStat("resource.collected.total")));
+  setTextIfChanged(
+    worldDebugFields.kills,
+    String(state.ledger.getStat("enemy.destroyed.total") + state.ledger.getStat("npc.destroyed.total")),
+  );
+  setTextIfChanged(worldDebugFields.salesCredits, String(state.ledger.getStat("credits.earned.sales")));
+  setTextIfChanged(worldDebugFields.repairCredits, String(state.ledger.getStat("credits.spent.repairs")));
+
+  const eventGroups = state.ledger
+    .getRecentEventGroups(25)
+    .filter((eventGroup) => eventGroup.latestEvent?.type !== "ship.moved")
+    .slice(0, 5)
+    .reverse();
+  const eventLogKey = eventGroups.map((eventGroup) => `${eventGroup.latestEvent?.type}:${eventGroup.message}`).join("|");
+
+  if (renderedWorldEventLogKey !== eventLogKey) {
+    renderedWorldEventLogKey = eventLogKey;
+    worldDebugFields.eventLog.replaceChildren(
+      ...eventGroups.map((eventGroup) => {
       const item = document.createElement("li");
       item.textContent = eventGroup.message;
       return item;
-    }),
-  );
+      }),
+    );
+  }
 }
 
 function updateLedgerStreamDisplay() {
@@ -3529,53 +3593,108 @@ function updateLedgerStreamDisplay() {
     return;
   }
 
-  ledgerStreamEvents.replaceChildren(
-    ...state.ledger.getRecentEvents(40, { includeHidden: true })
-      .filter((event) => event.type !== "ship.moved")
-      .slice(0, 28)
-      .map((event) => {
-      const item = document.createElement("li");
-      const type = document.createElement("strong");
-      const message = document.createElement("span");
-      const payload = document.createElement("code");
+  const visibleEvents = getCompactLedgerEvents();
+  const eventsKey = visibleEvents.map((event) => `${event.message}:${event.count}`).join("|");
 
-      type.textContent = `#${event.id} ${event.type}`;
-      message.textContent = event.message;
-      payload.textContent = formatLedgerPayload(event.payload);
-      item.className = event.visible ? "is-visible-event" : "is-hidden-event";
-      item.append(type, message, payload);
-      return item;
-    }),
-  );
+  if (renderedLedgerEventsKey !== eventsKey) {
+    renderedLedgerEventsKey = eventsKey;
+    ledgerStreamEvents.replaceChildren(
+      ...visibleEvents.map((eventGroup) => {
+        const item = document.createElement("li");
+        const message = document.createElement("span");
+
+        message.textContent = eventGroup.message;
+        item.className = eventGroup.visible ? "is-visible-event" : "is-hidden-event";
+        item.append(message);
+
+        if (eventGroup.count > 1) {
+          const count = document.createElement("em");
+          count.textContent = `x${eventGroup.count}`;
+          item.append(count);
+        }
+
+        return item;
+      }),
+    );
+  }
 
   const statEntries = Object.entries(state.ledger.getStatsSnapshot())
-    .filter(([key]) => key !== "ship.moved.total")
+    .filter(([key]) => !isNoisyLedgerKey(key))
     .sort(([left], [right]) => left.localeCompare(right))
     .slice(-34);
+  const statsKey = statEntries.map(([key, value]) => `${key}:${formatLedgerValue(value)}`).join("|");
 
-  ledgerStreamStats.replaceChildren(
-    ...statEntries.flatMap(([key, value]) => {
-      const term = document.createElement("dt");
-      const data = document.createElement("dd");
+  if (renderedLedgerStatsKey !== statsKey) {
+    renderedLedgerStatsKey = statsKey;
+    ledgerStreamStats.replaceChildren(
+      ...statEntries.flatMap(([key, value]) => {
+        const term = document.createElement("dt");
+        const data = document.createElement("dd");
 
-      term.textContent = key;
-      data.textContent = formatLedgerValue(value);
-      return [term, data];
-    }),
-  );
+        term.textContent = key;
+        data.textContent = formatLedgerValue(value);
+        return [term, data];
+      }),
+    );
+  }
 
   const signalEntries = Object.entries(state.ledger.getSignalsSnapshot())
     .filter(([, value]) => Boolean(value))
     .sort(([left], [right]) => left.localeCompare(right))
     .slice(-26);
+  const signalsKey = signalEntries.map(([key]) => key).join("|");
 
-  ledgerStreamSignals.replaceChildren(
-    ...signalEntries.map(([key]) => {
-      const item = document.createElement("li");
-      item.textContent = key;
-      return item;
-    }),
-  );
+  if (renderedLedgerSignalsKey !== signalsKey) {
+    renderedLedgerSignalsKey = signalsKey;
+    ledgerStreamSignals.replaceChildren(
+      ...signalEntries.map(([key]) => {
+        const item = document.createElement("li");
+        item.textContent = key;
+        return item;
+      }),
+    );
+  }
+}
+
+function setTextIfChanged(element, value) {
+  if (element && element.textContent !== value) {
+    element.textContent = value;
+  }
+}
+
+function getCompactLedgerEvents() {
+  const repeatWindowMs = 90_000;
+  const now = Date.now();
+  const groups = new Map();
+  const recentEvents = state.ledger.getRecentEvents(160, { includeHidden: true })
+    .filter((event) => !isNoisyLedgerEvent(event));
+
+  recentEvents.forEach((event) => {
+    const message = event.message?.trim();
+
+    if (!message || groups.has(message)) {
+      return;
+    }
+
+    const matchingEvents = recentEvents
+      .filter((candidate) => candidate.message === message && now - candidate.time <= repeatWindowMs);
+
+    groups.set(message, {
+      message,
+      count: Math.max(1, matchingEvents.length),
+      visible: event.visible,
+    });
+  });
+
+  return [...groups.values()].slice(0, 28);
+}
+
+function isNoisyLedgerEvent(event) {
+  return event.type === "ship.moved" || event.message === "Ship moved";
+}
+
+function isNoisyLedgerKey(key) {
+  return key === "events.ship.moved" || key === "ship.moved.total" || key.startsWith("ship.distance.");
 }
 
 function formatLedgerPayload(payload = {}) {

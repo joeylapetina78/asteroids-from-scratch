@@ -1,4 +1,4 @@
-import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260712-1345-a8d335f";
+import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260713-2123-91ff60b";
 
 const RESOURCE_CONTRACTS = [
   {
@@ -40,21 +40,21 @@ const RESOURCE_CONTRACTS = [
     id: "rook-red-teeth-claim-run-50",
     resourceType: "iron-nickel",
     resourceName: "red ore",
-    title: "Red Teeth Plot Run",
+    title: "Ore Ridge Plot Run",
     amount: 20,
     prerequisites: ["rook-copper-run-10"],
     sourceClaimIds: [
-      "plot-hex-3--2",
-      "plot-hex-4--2",
-      "plot-hex-2--2",
-      "plot-hex-3--1",
-      "plot-hex-4--1",
-      "plot-hex-2--1",
-      "plot-hex-3-0",
-      "plot-hex-4-0",
+      "plot-hex-13--9",
+      "plot-hex-14--9",
+      "plot-hex-13--8",
+      "plot-hex-14--8",
+      "plot-hex-13--10",
+      "plot-hex-14--10",
+      "plot-hex-15--10",
+      "plot-hex-15--8",
     ],
-    sourceClaimLabel: "Red Teeth charter plot",
-    summary: (dest) => `Deliver 20 red ore from Rook's marked Red Teeth plots to ${dest}. The Beacon Locator can track the plot markers.`,
+    sourceClaimLabel: "Ore Ridge charter plot",
+    summary: (dest) => `Deliver 20 red ore from Rook's marked Ore Ridge plots to ${dest}. The Beacon Locator can track the plot markers.`,
   },
 ];
 

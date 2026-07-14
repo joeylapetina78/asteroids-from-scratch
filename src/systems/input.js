@@ -100,6 +100,16 @@ export function createInput() {
       }
     },
 
+    getDebugSnapshot() {
+      return {
+        pressed: [...pressedKeys].sort(),
+        justPressed: [...justPressedKeys].sort(),
+        gamePressed: [...pressedKeys].filter((code) => gameKeys.has(code)).sort(),
+        gameJustPressed: [...justPressedKeys].filter((code) => gameKeys.has(code)).sort(),
+        gameInputSuspended,
+      };
+    },
+
     finishFrame() {
       justPressedKeys.clear();
     },

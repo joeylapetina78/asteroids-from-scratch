@@ -1,12 +1,47 @@
-import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=fresh-20260712-1345-a8d335f";
+import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=fresh-20260713-2123-91ff60b";
+import { resourceTypesMatch } from "../../systems/resourceDefinitions.js?v=fresh-20260713-2123-91ff60b";
 
-function hasActiveRedTeethPlotContract({ state }) {
-  const contract = state.contracts?.records?.["rook-red-teeth-claim-run-50"];
+const PLOT_CONTRACT_ID = "rook-red-teeth-claim-run-50";
+const PLOT_CONTRACT_ZONE_ID = "ore-ridge";
+
+function getActivePlotContract(state) {
+  const contract = state.contracts?.records?.[PLOT_CONTRACT_ID];
+  return contract?.status === "active" ? contract : null;
+}
+
+function hasActivePlotContract({ state }) {
+  const contract = getActivePlotContract(state);
   return contract?.status === "active";
 }
 
-function doesNotHaveActiveRedTeethPlotContract(context) {
-  return !hasActiveRedTeethPlotContract(context);
+function doesNotHaveActivePlotContract(context) {
+  return !hasActivePlotContract(context);
+}
+
+function isLegalPlotCollection(event, contract) {
+  return (
+    event?.type === "resource.collected" &&
+    resourceTypesMatch(event.payload?.resourceType, contract.terms?.resourceType) &&
+    (contract.terms?.sourceClaimIds ?? []).includes(event.payload?.sourceClaimId)
+  );
+}
+
+function getLegalPlotCollectionCount(state, contract) {
+  const resourceType = contract.terms?.resourceType;
+  return (contract.terms?.sourceClaimIds ?? []).reduce((total, sourceClaimId) => {
+    return total + state.ledger.getStat(`resource.collected.sourceClaim.${sourceClaimId}.${resourceType}`, 0);
+  }, 0);
+}
+
+function hasHalfPlotCargoCollected({ event, state }) {
+  const contract = getActivePlotContract(state);
+  if (!contract || !isLegalPlotCollection(event, contract)) {
+    return false;
+  }
+
+  const requiredAmount = contract.terms?.amount ?? 0;
+  const halfAmount = Math.max(1, Math.ceil(requiredAmount / 2));
+  return getLegalPlotCollectionCount(state, contract) >= halfAmount;
 }
 
 export const chapterOneRedWorkMission = {
@@ -127,7 +162,7 @@ export const chapterOneRedWorkMission = {
       payloadEquals: { zoneId: storyZones.dangerBoundary.id },
       once: true,
       setFlag: "warned-red-teeth",
-      requiresCondition: doesNotHaveActiveRedTeethPlotContract,
+      requiresCondition: doesNotHaveActivePlotContract,
       actions: [
         {
           type: "spawnHunterNearShip",
@@ -142,23 +177,56 @@ export const chapterOneRedWorkMission = {
       ],
     },
     {
-      id: "red-teeth-plot-pirate",
+      id: "ore-ridge-plot-warning",
       fromBeat: "mine-red-resources",
       eventType: "zone.entered",
-      payloadEquals: { zoneId: storyZones.dangerBoundary.id },
+      payloadEquals: { zoneId: PLOT_CONTRACT_ZONE_ID },
       once: true,
-      setFlag: "redTeethPlotPirateSpawned",
-      requiresCondition: hasActiveRedTeethPlotContract,
+      setFlag: "oreRidgePlotWarningGiven",
+      requiresCondition: hasActivePlotContract,
       actions: [
-        {
-          type: "spawnPirateNearShip",
-          reason: "red-teeth-plot-contract",
-        },
         {
           type: "say",
           speaker: "Rook",
           text:
-            "Heads up. That plot job is marked work, and marked work attracts vultures. I've got a pirate ping closing on you. Keep moving, keep the ore legal, and don't let them shove you off the claim.",
+            "That's Ore Ridge. Farther out, richer rock, fewer friendly eyes. Stay inside the marked plots. Off-plot ore won't count, and claim jumpers love catching rookies with half a hold.",
+        },
+      ],
+    },
+    {
+      id: "ore-ridge-plot-jumper-pressure",
+      fromBeat: "mine-red-resources",
+      eventType: "resource.collected",
+      repeatable: true,
+      cooldownMs: 22000,
+      maxRuns: 4,
+      requiresCondition: hasHalfPlotCargoCollected,
+      beforeResponseActions: [
+        {
+          type: "spawnPirateNearShip",
+          reason: "ore-ridge-plot-jumper",
+        },
+      ],
+      responses: [
+        {
+          speaker: "Rook",
+          text:
+            "Plot jumper ping. They saw enough legal ore go into your hold and decided you're worth stealing from. Keep mining if you can, but don't let them box you in.",
+        },
+        {
+          speaker: "Rook",
+          text:
+            "Another jumper coming in. That's the cost of working marked ground out here: the rocks are better and so are the thieves.",
+        },
+        {
+          speaker: "Rook",
+          text:
+            "You've got company again. Finish the count or run home with what you've got, but don't drift off the charter plots.",
+        },
+        {
+          speaker: "Rook",
+          text:
+            "Last warning I'm giving for free: Ore Ridge is awake now. Mine clean, fly mean, get paid.",
         },
       ],
     },

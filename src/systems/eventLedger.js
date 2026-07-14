@@ -212,8 +212,15 @@ export function createEventLedger(options = {}) {
         incrementStat(`resource.mined.${type}`, count);
       });
     } else if (event.type === "resource.collected") {
+      const amount = event.payload.amount ?? 1;
+      const sourceClaimId = event.payload.sourceClaimId ?? "unknown";
       incrementStat("resource.collected.total");
-      incrementStat(`resource.collected.${event.payload.resourceType}`, event.payload.amount ?? 1);
+      incrementStat(`resource.collected.${event.payload.resourceType}`, amount);
+      incrementStat(`resource.collected.sourceClaim.${sourceClaimId}.total`, amount);
+      incrementStat(`resource.collected.sourceClaim.${sourceClaimId}.${event.payload.resourceType}`, amount);
+    } else if (event.type === "pilot.debugMarker") {
+      incrementStat("pilot.debugMarker.total");
+      incrementStat(`pilot.debugMarker.${event.payload.markerKey ?? "unknown"}`);
     } else if (event.type === "resource.processed") {
       incrementStat("resource.processed.total");
       incrementStat(`resource.processed.input.${event.payload.resourceType}`);
@@ -475,6 +482,10 @@ function getDefaultMessage(type, payload) {
 
   if (type === "ship.towed") {
     return `Emergency tow to ${payload.siteName ?? payload.siteId ?? "nearest hub"} for ${payload.cost ?? 0} credits`;
+  }
+
+  if (type === "pilot.debugMarker") {
+    return `Pilot debug marker ${payload.markerKey ?? "?"}: ${payload.note ?? "input anomaly"}`;
   }
 
   if (type === "site.nearby") {

@@ -1389,11 +1389,12 @@ body {
 
 .ledger-stream-list li {
   display: grid;
-  gap: 1px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
   justify-items: end;
+  align-items: baseline;
   min-width: 0;
   opacity: 0.88;
-  animation: ledger-line-in 220ms ease-out both;
 }
 
 .ledger-stream-list strong,
@@ -1414,6 +1415,12 @@ body {
 
 .ledger-stream-list span {
   color: rgba(190, 204, 226, 0.66);
+}
+
+.ledger-stream-list em {
+  color: rgba(255, 216, 128, 0.72);
+  font-style: normal;
+  font-weight: 800;
 }
 
 .ledger-stream-list code {
