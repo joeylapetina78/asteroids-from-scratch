@@ -1,12 +1,13 @@
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260713-2123-91ff60b";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260714-0212-d103f79";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260713-2123-91ff60b";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260714-0212-d103f79";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.
 const HUNTER_PACK_ATTEMPTS = 4;
 const HUNTER_MAX_STARTING_COUNT = 7;
 const THREADLING_FLOCKS = 8;
+const LANTERN_HERDS = 5;
 const GRAZER_ATTEMPTS = 42;
 const SKITTER_ATTEMPTS = 40;
 
@@ -26,8 +27,10 @@ export function createLifeField(asteroids) {
     return lifeforms;
   }
 
+  seedRockmoss(anchors, random);
   addHunters(lifeforms, anchors, random);
   addThreadlings(lifeforms, anchors, random);
+  addLanternHerds(lifeforms, anchors, random);
   addGrazers(lifeforms, anchors, random);
   addSkitters(lifeforms, anchors, random);
 
@@ -119,6 +122,26 @@ function addThreadlings(lifeforms, anchors, random) {
   }
 }
 
+function addLanternHerds(lifeforms, anchors, random) {
+  const weightedAnchors = anchors
+    .map((anchor) => ({ asteroid: anchor, weight: getLanternAnchorWeight(anchor) }))
+    .filter(({ weight }) => weight > 0.1);
+
+  for (let herd = 0; herd < LANTERN_HERDS; herd += 1) {
+    const anchor = pickWeightedAnchor(weightedAnchors, random);
+
+    if (!anchor) {
+      return;
+    }
+
+    const herdSize = Math.round(randomRange(random, 4, 8) * clamp(getLanternAnchorWeight(anchor), 0.75, 1.25));
+
+    for (let index = 0; index < herdSize; index += 1) {
+      lifeforms.push(createLifeformNear("lantern", anchor, random, 210, 700 + herd * 20 + index));
+    }
+  }
+}
+
 function addGrazers(lifeforms, anchors, random) {
   const weightedAnchors = getAmbientWeightedAnchors(anchors);
 
@@ -145,6 +168,23 @@ function addSkitters(lifeforms, anchors, random) {
 
     lifeforms.push(createLifeformNear("skitter", anchor, random, 230, 500 + index));
   }
+}
+
+function seedRockmoss(anchors, random) {
+  anchors.forEach((anchor, index) => {
+    const mossWeight = getRockmossAnchorWeight(anchor);
+
+    if (mossWeight <= 0.18 || random() > clamp(mossWeight * 0.18, 0.02, 0.38)) {
+      return;
+    }
+
+    const resourceScore = getResourceScore(anchor);
+    anchor.rockmoss = {
+      seed: hashNumbers(anchor.position.x, anchor.position.y, 9100 + index),
+      coverage: clamp(0.22 + mossWeight * 0.22 + resourceScore * 0.12 + randomRange(random, -0.08, 0.14), 0.18, 0.72),
+      glow: clamp(0.34 + resourceScore * 0.2 + randomRange(random, -0.08, 0.18), 0.25, 0.9),
+    };
+  });
 }
 
 function createLifeformNear(type, anchor, random, radius, seedOffset) {
@@ -211,6 +251,37 @@ function getAmbientAnchorWeight(anchor) {
   const sparsePenalty = zone.tags.includes("sparse") || zone.tags.includes("low-life") ? 0.45 : 1;
 
   return zone.ambientLifeBias * densityWeight * dangerPenalty * sparsePenalty;
+}
+
+function getLanternAnchorWeight(anchor) {
+  const zone = getAnchorZoneProfile(anchor);
+  const resourceScore = getResourceScore(anchor);
+  const dangerPenalty = 1 - zone.danger * 0.28;
+  const sparsePenalty = zone.tags.includes("sparse") || zone.tags.includes("low-life") ? 0.55 : 1;
+
+  return getAmbientAnchorWeight(anchor) * (0.45 + resourceScore * 1.65) * dangerPenalty * sparsePenalty;
+}
+
+function getRockmossAnchorWeight(anchor) {
+  const zone = getAnchorZoneProfile(anchor);
+  const resourceScore = getResourceScore(anchor);
+  const safeEcologyBonus = 1.15 - zone.danger * 0.35;
+  const sparsePenalty = zone.tags.includes("sparse") || zone.tags.includes("low-life") ? 0.45 : 1;
+
+  return zone.ambientLifeBias * safeEcologyBonus * sparsePenalty * (0.55 + resourceScore * 1.4);
+}
+
+function getResourceScore(anchor) {
+  if (!anchor.resources) {
+    return 0;
+  }
+
+  return Object.entries(anchor.resources).reduce((sum, [resource, amount]) => {
+    if (resource === "stone") {
+      return sum;
+    }
+    return sum + Math.max(0, amount);
+  }, 0);
 }
 
 function getHunterPackSize(zone, random) {

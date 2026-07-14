@@ -2,7 +2,7 @@
 
 This document is the re-entry map for the Asteroids RPG prototype. The game is a custom browser Canvas project, not p5.js or a larger framework. The core idea is a space simulation where the player navigates an institutional world — banks, registries, mining authorities, employers, patrol organizations, factions — through documents, contracts, ships, and components. Mining is one profession within that world, not the definition of it.
 
-See [README.md](../README.md) for the design direction and run instructions. See [docs/agent-map.md](agent-map.md) for the short future-agent re-entry map. See [docs/world-structure.md](world-structure.md) for the Region/Zone split. See [docs/authority-model.md](authority-model.md) for the Place/Actor/Power/Right/Action authority spine. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status. See [docs/resource-design.md](resource-design.md) for the resource family taxonomy, scarcity model, and asteroid ecology design.
+See [README.md](../README.md) for the design direction and run instructions. See [docs/agent-map.md](agent-map.md) for the short future-agent re-entry map. See [docs/world-structure.md](world-structure.md) for the Region/Zone split. See [docs/authority-model.md](authority-model.md) for the Place/Actor/Power/Right/Action authority spine. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status. See [docs/resource-design.md](resource-design.md) for the resource family taxonomy and scarcity model. See [docs/lifeform-design.md](lifeform-design.md) for ambient ecology and future creature direction.
 
 ## How The Project Runs
 
@@ -72,6 +72,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/systems/audio.js](../src/systems/audio.js) | Procedural Atari-style sound effects using Web Audio. |
 | [docs/event-dictionary.md](event-dictionary.md) | Living list of ledger events, payloads, mission rule conditions, and mission actions. |
 | [docs/system-authoring-roadmap.md](system-authoring-roadmap.md) | Roadmap for moving toward reusable systems and future web-authored missions/contracts. |
+| [docs/lifeform-design.md](lifeform-design.md) | Ambient ecology notes: rockmoss, lantern herds, skitterwebs, threadwyrms, and rare horror encounters. |
 
 Content authoring can be checked without opening the browser:
 
@@ -251,7 +252,11 @@ Non-hardware panels (Contract, Merchant, Hub, World) are UI panels with availabi
 
 ### Lifeform
 
-[src/entities/Lifeform.js](../src/entities/Lifeform.js) — `hunter`, `threadling`, `grazer`, `skitter`. Steering behavior: seek, flee, separate, align, cohere, wander, orbit.
+[src/entities/Lifeform.js](../src/entities/Lifeform.js) — `hunter`, `threadling`, `grazer`, `skitter`, `lantern`. Steering behavior: seek, flee, separate, align, cohere, wander, orbit.
+
+[src/entities/Threadwyrm.js](../src/entities/Threadwyrm.js) — segmented route-based megafauna that follows asteroid corridor loops. It is not a normal point-steering `Lifeform`; it is a larger world creature that can strike if the ship cuts too close through its body.
+
+[src/entities/DriftMouth.js](../src/entities/DriftMouth.js) — rare anomaly-scale life/event. It stays nearly invisible at range, reveals as a circular distortion when approached, and gently pulls ships, pickups, and nearby life.
 
 ## System Dictionary
 
@@ -295,6 +300,8 @@ Important direction: this file currently mixes some Region-like and Zone-like re
 `worldTerrain.js` — deterministic chunk terrain profiles for flight feel and rock arrangement.
 `asteroidField.js` — streamed deterministic asteroid chunks from resource and terrain samples.
 `lifeField.js` — lifeforms anchored near asteroids, weighted by zone profile.
+`threadwyrmField.js` — rare route-based threadwyrms seeded from corridor-friendly asteroid anchors.
+`driftMouthField.js` — rare Mouth in the Drift anomalies seeded from strange/dangerous zone profiles.
 
 Asteroids are chunk-streamed around the ship. Dynamic fragments remain live until normal gameplay removes them.
 

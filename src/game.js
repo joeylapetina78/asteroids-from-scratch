@@ -1,24 +1,26 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260713-2123-91ff60b";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260713-2123-91ff60b";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260713-2123-91ff60b";
-import { Ship } from "./entities/Ship.js?v=fresh-20260713-2123-91ff60b";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260713-2123-91ff60b";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260714-0212-d103f79";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260714-0212-d103f79";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260714-0212-d103f79";
+import { Ship } from "./entities/Ship.js?v=fresh-20260714-0212-d103f79";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260714-0212-d103f79";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260713-2123-91ff60b";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260713-2123-91ff60b";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260713-2123-91ff60b";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260713-2123-91ff60b";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260713-2123-91ff60b";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260713-2123-91ff60b";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260713-2123-91ff60b";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260713-2123-91ff60b";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260713-2123-91ff60b";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260713-2123-91ff60b";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260713-2123-91ff60b";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260713-2123-91ff60b";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260713-2123-91ff60b";
-import { createGameState } from "./state/gameState.js?v=fresh-20260713-2123-91ff60b";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260713-2123-91ff60b";
+import { createInput } from "./systems/input.js?v=fresh-20260714-0212-d103f79";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260714-0212-d103f79";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260714-0212-d103f79";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260714-0212-d103f79";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260714-0212-d103f79";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260714-0212-d103f79";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260714-0212-d103f79";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260714-0212-d103f79";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260714-0212-d103f79";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260714-0212-d103f79";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260714-0212-d103f79";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260714-0212-d103f79";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260714-0212-d103f79";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260714-0212-d103f79";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260714-0212-d103f79";
+import { createGameState } from "./state/gameState.js?v=fresh-20260714-0212-d103f79";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260714-0212-d103f79";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -96,6 +98,13 @@ const PATROL_FLYBY_CHECK_INTERVAL = 8;
 const PATROL_FLYBY_RANGE = 900;
 const PATROL_FLYBY_SCAN_DIST = 180;
 const PATROL_CREATE_RANGE_FACTOR = 4.2;
+const SKITTER_WEB_TUG_RADIUS = 28;
+const SKITTER_WEB_DAMPING = 0.78;
+const SKITTER_WEB_PULL = 135;
+const SKITTER_WEB_COOLDOWN_SECONDS = 1.1;
+const LIFE_DISTURBANCE_WEAPON_RADIUS = 720;
+const LIFE_DISTURBANCE_SCAN_RADIUS = 1050;
+const LIFE_DISTURBANCE_SECONDS = 1.35;
 
 export class Game {
   constructor(
@@ -134,6 +143,9 @@ export class Game {
     const { added: initialAsteroids } = this.chunkManager.update(0, 0);
     this.asteroids = initialAsteroids;
     this.lifeforms = createLifeField(this.asteroids);
+    this.threadwyrms = createThreadwyrmField(this.asteroids);
+    this.driftMouths = createDriftMouthField();
+    this.lifeDisturbances = [];
     this.npcShips = createNpcRouteShips(this.worldSites);
     this.bullets = [];
     this.particles = [];
@@ -141,6 +153,7 @@ export class Game {
     this.pickups = [];
     this.fireCooldown = 0;
     this.shipHitCooldown = 0;
+    this.skitterWebCooldown = 0;
     this.impactSeed = 0;
     this.hunterRespawnSeed = 9000;
     this.shipDestroyed = false;
@@ -501,6 +514,7 @@ export class Game {
 
     scannerState.scanergy = Math.max(0, scannerState.scanergy - SCAN_COST);
     this.scanner.scan(this.ship, this.asteroids, this.worldSites, { targets: scannerState.targets ?? ["resources"] });
+    this.addLifeDisturbance("scanner", this.ship.position, LIFE_DISTURBANCE_SCAN_RADIUS, 0.72);
     this.onHudChange(this.state);
   }
 
@@ -584,6 +598,7 @@ export class Game {
     this.updateAsteroidChunks();
     this.asteroids.forEach((asteroid) => asteroid.update(deltaSeconds));
     this.updateHubDefenses(deltaSeconds);
+    this.updateLifeDisturbances(deltaSeconds);
     // Lifeforms are preserved off-screen, but only nearby ones are simulated.
     // That keeps the field feeling persistent without paying every steering
     // cost for every distant creature each frame.
@@ -600,12 +615,16 @@ export class Game {
         lifeforms: activeLifeforms,
         ship: this.ship,
         shipPowered: this.state.components.engine.powered,
+        disturbances: this.lifeDisturbances,
       });
     });
     this.activeLifeformCount = activeLifeforms.length;
     this.activeHunterCount = activeLifeforms.filter((lifeform) => lifeform.type === "hunter").length;
+    this.updateSkitterWebHazards(activeLifeforms, deltaSeconds);
     this.updateHunterEnvironmentalHits(activeLifeforms, activeAsteroids, deltaSeconds);
     this.updateHunterHits();
+    this.updateThreadwyrms(deltaSeconds);
+    this.updateDriftMouths(deltaSeconds, activeLifeforms);
     this.updateNpcShips(activeAsteroids, deltaSeconds);
     this.updatePatrolIntercept(deltaSeconds);
     this.updateScanRings(deltaSeconds);
@@ -2331,6 +2350,7 @@ export class Game {
     );
     this.onHudChange(this.state);
     this.bullets.push(new Bullet(this.ship));
+    this.addLifeDisturbance("weapon", this.ship.position, LIFE_DISTURBANCE_WEAPON_RADIUS, 1);
     this.audio?.playMiningShot();
     this.fireCooldown = FIRE_COOLDOWN_SECONDS;
   }
@@ -2483,6 +2503,146 @@ export class Game {
       this.createHunterDrops(rammingHunter, this.ship.velocity);
       this.respawnHunter();
     }
+  }
+
+  addLifeDisturbance(type, position, radius, intensity = 1) {
+    this.lifeDisturbances.push({
+      type,
+      position: {
+        x: position.x,
+        y: position.y,
+      },
+      radius,
+      intensity,
+      age: 0,
+      duration: LIFE_DISTURBANCE_SECONDS,
+    });
+  }
+
+  updateLifeDisturbances(deltaSeconds) {
+    this.lifeDisturbances.forEach((disturbance) => {
+      disturbance.age += deltaSeconds;
+    });
+    this.lifeDisturbances = this.lifeDisturbances.filter((disturbance) => disturbance.age < disturbance.duration);
+  }
+
+  updateThreadwyrms(deltaSeconds) {
+    this.threadwyrms.forEach((threadwyrm) => {
+      threadwyrm.update(deltaSeconds, {
+        ship: this.ship,
+        shipPowered: this.state.components.engine.powered,
+        disturbances: this.lifeDisturbances,
+      });
+
+      const hit = threadwyrm.consumeHit();
+
+      if (!hit || this.shipHitCooldown > 0) {
+        return;
+      }
+
+      this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
+      this.state.ledger.recordEvent(
+        "lifeform.threadwyrmStrike",
+        {
+          lifeformId: threadwyrm.id,
+          damage: hit.damage,
+          distance: hit.distance,
+          x: Math.round(this.ship.position.x),
+          y: Math.round(this.ship.position.y),
+        },
+        { visible: false },
+      );
+      this.damageHull(hit.damage);
+      this.triggerImpactFeedback(hit.damage);
+      this.createShipSparks(threadwyrm);
+    });
+  }
+
+  updateDriftMouths(deltaSeconds, activeLifeforms) {
+    this.driftMouths.forEach((mouth) => {
+      mouth.update(deltaSeconds, {
+        ship: this.ship,
+        pickups: this.pickups,
+        lifeforms: activeLifeforms,
+      });
+
+      if (!mouth.consumeReveal()) {
+        return;
+      }
+
+      this.state.ledger.recordEvent(
+        "lifeform.driftMouthRevealed",
+        {
+          lifeformId: mouth.id,
+          x: Math.round(mouth.position.x),
+          y: Math.round(mouth.position.y),
+        },
+        { visible: false },
+      );
+    });
+  }
+
+  updateSkitterWebHazards(activeLifeforms, deltaSeconds) {
+    if (this.skitterWebCooldown > 0) {
+      this.skitterWebCooldown = Math.max(0, this.skitterWebCooldown - deltaSeconds);
+    }
+
+    if (!this.state.components.engine.powered || this.skitterWebCooldown > 0) {
+      return;
+    }
+
+    const skitter = activeLifeforms.find((lifeform) => {
+      if (lifeform.type !== "skitter" || lifeform.webTrail.length < 2) {
+        return false;
+      }
+
+      return lifeform.webTrail.some((point, index) => {
+        if (index === 0) {
+          return false;
+        }
+
+        const previous = lifeform.webTrail[index - 1];
+        const nearest = closestPointOnSegment(this.ship.position, previous, point);
+        return distance(this.ship.position, nearest) <= SKITTER_WEB_TUG_RADIUS;
+      });
+    });
+
+    if (!skitter) {
+      return;
+    }
+
+    let nearestPoint = null;
+    let nearestDistance = Infinity;
+    skitter.webTrail.forEach((point, index) => {
+      if (index === 0) {
+        return;
+      }
+
+      const candidate = closestPointOnSegment(this.ship.position, skitter.webTrail[index - 1], point);
+      const candidateDistance = distance(this.ship.position, candidate);
+      if (candidateDistance < nearestDistance) {
+        nearestDistance = candidateDistance;
+        nearestPoint = candidate;
+      }
+    });
+
+    if (!nearestPoint || nearestDistance > SKITTER_WEB_TUG_RADIUS) {
+      return;
+    }
+
+    const pull = normalizeVector(nearestPoint.x - this.ship.position.x, nearestPoint.y - this.ship.position.y);
+    this.ship.velocity.x = this.ship.velocity.x * SKITTER_WEB_DAMPING + pull.x * SKITTER_WEB_PULL * deltaSeconds;
+    this.ship.velocity.y = this.ship.velocity.y * SKITTER_WEB_DAMPING + pull.y * SKITTER_WEB_PULL * deltaSeconds;
+    this.skitterWebCooldown = SKITTER_WEB_COOLDOWN_SECONDS;
+    this.state.ledger.recordEvent(
+      "lifeform.skitterWebSnared",
+      {
+        lifeformId: skitter.id,
+        x: Math.round(this.ship.position.x),
+        y: Math.round(this.ship.position.y),
+      },
+      { visible: false },
+    );
   }
 
   respawnHunter() {
@@ -3336,8 +3496,15 @@ export class Game {
     this.asteroids.forEach((asteroid) => {
       if (isVisible(asteroid, drawCanvas, drawCamera)) {
         asteroid.draw(this.context, drawCamera);
+        this.drawRockmoss(asteroid, drawCamera);
         this.drawContractAsteroidMarker(asteroid, drawCamera);
       }
+    });
+    this.threadwyrms.forEach((threadwyrm) => {
+      threadwyrm.draw(this.context, drawCamera);
+    });
+    this.driftMouths.forEach((mouth) => {
+      mouth.draw(this.context, drawCamera);
     });
     this.lifeforms.forEach((lifeform) => {
       if (isVisible(lifeform, drawCanvas, drawCamera)) {
@@ -3401,6 +3568,98 @@ export class Game {
       this.context.stroke();
       this.context.restore();
     });
+  }
+
+  drawRockmoss(asteroid, camera = this.camera) {
+    if (!asteroid.rockmoss || !asteroid.points?.length) {
+      return;
+    }
+
+    const moss = asteroid.rockmoss;
+    const screenX = asteroid.position.x - camera.x;
+    const screenY = asteroid.position.y - camera.y;
+    const patchCount = Math.max(2, Math.min(8, Math.round(asteroid.points.length * moss.coverage)));
+    const pulse = 0.6 + Math.sin(performance.now() / 900 + moss.seed * 0.001) * 0.18;
+
+    this.context.save();
+    this.context.translate(screenX, screenY);
+    this.context.rotate(asteroid.rotation);
+    this.context.lineWidth = 1.5;
+
+    for (let index = 0; index < patchCount; index += 1) {
+      const pointIndex = Math.floor(pseudoRandom(moss.seed, index) * asteroid.points.length) % asteroid.points.length;
+      const point = asteroid.points[pointIndex];
+      const spread = 0.16 + pseudoRandom(moss.seed + 33, index) * 0.12;
+      const baseDistance = point.distance * (0.86 + pseudoRandom(moss.seed + 71, index) * 0.16);
+      const angle = point.angle + (pseudoRandom(moss.seed + 99, index) - 0.5) * spread;
+      const x = Math.cos(angle) * baseDistance;
+      const y = Math.sin(angle) * baseDistance;
+      const size = 4 + asteroid.radius * 0.035 + pseudoRandom(moss.seed + 123, index) * 5;
+      const glow = moss.glow * (0.55 + pseudoRandom(moss.seed + 171, index) * 0.45) * pulse;
+
+      this.context.fillStyle = `rgba(107, 255, 178, ${0.08 + glow * 0.18})`;
+      this.context.strokeStyle = `rgba(152, 255, 205, ${0.25 + glow * 0.35})`;
+      this.context.beginPath();
+      this.context.ellipse(x, y, size * 1.45, size * 0.75, angle + Math.PI / 2, 0, Math.PI * 2);
+      this.context.fill();
+      this.context.stroke();
+
+      if (index % 3 === 0) {
+        this.context.fillStyle = `rgba(213, 255, 188, ${0.3 + glow * 0.45})`;
+        this.context.beginPath();
+        this.context.arc(x + Math.cos(angle) * size, y + Math.sin(angle) * size, 1.8, 0, Math.PI * 2);
+        this.context.fill();
+      }
+    }
+
+    this.drawRockmossCrawlers(asteroid, moss);
+    this.context.restore();
+  }
+
+  drawRockmossCrawlers(asteroid, moss) {
+    const crawlerCount = Math.max(1, Math.min(5, Math.floor(moss.coverage * 7)));
+
+    for (let index = 0; index < crawlerCount; index += 1) {
+      const progress = (performance.now() / (5200 + index * 720) + pseudoRandom(moss.seed + 401, index)) % 1;
+      const pathPosition = progress * asteroid.points.length;
+      const pointIndex = Math.floor(pathPosition) % asteroid.points.length;
+      const nextPointIndex = (pointIndex + 1) % asteroid.points.length;
+      const blend = pathPosition - Math.floor(pathPosition);
+      const point = asteroid.points[pointIndex];
+      const nextPoint = asteroid.points[nextPointIndex];
+      const angle = lerpAngle(point.angle, nextPoint.angle, blend);
+      const distance = point.distance * (1 - blend) + nextPoint.distance * blend;
+      const wobble = Math.sin(performance.now() / 380 + index * 1.7 + moss.seed) * 2.2;
+      const crawlDistance = distance + 4 + wobble;
+      const x = Math.cos(angle) * crawlDistance;
+      const y = Math.sin(angle) * crawlDistance;
+      const heading = angle + Math.PI / 2;
+      const scale = 0.75 + pseudoRandom(moss.seed + 499, index) * 0.55;
+
+      this.context.save();
+      this.context.translate(x, y);
+      this.context.rotate(heading);
+      this.context.scale(scale, scale);
+      this.context.fillStyle = "rgba(197, 255, 175, 0.72)";
+      this.context.strokeStyle = "rgba(96, 255, 170, 0.82)";
+      this.context.lineWidth = 1.25;
+      this.context.beginPath();
+      this.context.ellipse(0, 0, 4.4, 2.5, 0, 0, Math.PI * 2);
+      this.context.fill();
+      this.context.stroke();
+      this.context.strokeStyle = "rgba(198, 255, 220, 0.52)";
+      this.context.beginPath();
+      this.context.moveTo(-3.4, -2.2);
+      this.context.lineTo(-6.2, -4.2);
+      this.context.moveTo(-3.4, 2.2);
+      this.context.lineTo(-6.2, 4.2);
+      this.context.moveTo(2.8, -2.0);
+      this.context.lineTo(5.5, -3.5);
+      this.context.moveTo(2.8, 2.0);
+      this.context.lineTo(5.5, 3.5);
+      this.context.stroke();
+      this.context.restore();
+    }
   }
 
   drawContractClaimTargets(camera = this.camera, canvas = this.canvas) {
@@ -4016,6 +4275,26 @@ function distance(firstPosition, secondPosition) {
   return Math.hypot(firstPosition.x - secondPosition.x, firstPosition.y - secondPosition.y);
 }
 
+function closestPointOnSegment(point, start, end) {
+  const segment = {
+    x: end.x - start.x,
+    y: end.y - start.y,
+  };
+  const segmentLengthSquared = segment.x * segment.x + segment.y * segment.y || 1;
+  const amount = Math.max(
+    0,
+    Math.min(
+      1,
+      ((point.x - start.x) * segment.x + (point.y - start.y) * segment.y) / segmentLengthSquared,
+    ),
+  );
+
+  return {
+    x: start.x + segment.x * amount,
+    y: start.y + segment.y * amount,
+  };
+}
+
 function getClaimsCenter(claims) {
   if (!claims.length) {
     return { x: 0, y: 0 };
@@ -4260,6 +4539,12 @@ function getAsteroidDominantResource(asteroid) {
 
 function getHostileEnemyType(lifeform) {
   return lifeform.role ?? lifeform.type ?? "hostile";
+}
+
+function pseudoRandom(seed, index) {
+  const value = Math.sin(seed * 12.9898 + index * 78.233) * 43758.5453;
+
+  return value - Math.floor(value);
 }
 
 function getAsteroidResourceType(asteroid) {

@@ -3,11 +3,13 @@ const LIFE_COLORS = {
   threadling: "#b8f7ff",
   grazer: "#8cf0b2",
   skitter: "#d9b3ff",
+  lantern: "#ffe98a",
 };
 
 // A single Lifeform class covers the current autonomous agents. The type chooses
 // both drawing style and steering recipe: hunters seek, threadlings flock,
-// grazers orbit rocks, and skitters dart around danger.
+// grazers orbit rocks, lanterns drift around rich rocks, and skitters dart
+// around danger.
 export class Lifeform {
   constructor({ type, x, y, velocity, seed, role = null, name = null }) {
     this.type = type;
@@ -25,6 +27,7 @@ export class Lifeform {
     this.perception = getPerception(type);
     this.isAlive = true;
     this.health = type === "hunter" ? 100 : 1;
+    this.webTrail = [];
   }
 
   update(deltaSeconds, world) {
@@ -36,6 +39,8 @@ export class Lifeform {
       this.updateThreadling(deltaSeconds, world);
     } else if (this.type === "grazer") {
       this.updateGrazer(deltaSeconds, world);
+    } else if (this.type === "lantern") {
+      this.updateLantern(deltaSeconds, world);
     } else {
       this.updateSkitter(deltaSeconds, world);
     }
@@ -95,7 +100,37 @@ export class Lifeform {
     this.avoidAsteroids(world.asteroids, 4.2);
   }
 
+  updateLantern(deltaSeconds, world) {
+    const asteroid = findNearestResourceAsteroid(this.position, world.asteroids, 700);
+
+    if (asteroid) {
+      const herdOffset = (this.seed % 7) * 0.35;
+      const orbitDistance = asteroid.radius + 92 + (this.seed % 4) * 18;
+      const orbit = {
+        x: asteroid.position.x + Math.cos(this.pulse * 0.34 + this.seed + herdOffset) * orbitDistance,
+        y: asteroid.position.y + Math.sin(this.pulse * 0.34 + this.seed + herdOffset) * orbitDistance,
+      };
+      this.applySteer(seek(this, orbit, this.maxSpeed * 0.78), 0.92);
+    } else {
+      this.applySteer(this.wander(deltaSeconds), 0.55);
+    }
+
+    this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 155, "lantern"), 72), 0.78);
+    this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 92), 34), 0.28);
+    this.applySteer(fleeIfClose(this, world.ship.position, 240, this.maxSpeed * 1.05), 0.65);
+    this.applySteer(fleeDisturbances(this, world.disturbances ?? [], this.maxSpeed * 1.75), 2.1);
+
+    const nearestHunter = findNearestLifeform(this.position, world.lifeforms, "hunter", 620);
+
+    if (nearestHunter) {
+      this.applySteer(flee(this, nearestHunter.position, this.maxSpeed * 1.85), 2.35);
+    }
+
+    this.avoidAsteroids(world.asteroids, 3.7);
+  }
+
   updateSkitter(deltaSeconds, world) {
+    this.rememberWebTrail(deltaSeconds);
     const asteroid = findNearestAsteroid(this.position, world.asteroids, 380);
 
     if (asteroid && distanceSquared(this.position, asteroid.position) < (asteroid.radius + 70) ** 2) {
@@ -108,6 +143,29 @@ export class Lifeform {
     this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 95), 52), 0.9);
     this.applySteer(this.wander(deltaSeconds * 1.6), 1.0);
     this.avoidAsteroids(world.asteroids, 5.6);
+  }
+
+  rememberWebTrail(deltaSeconds) {
+    this.webTrail.forEach((point) => {
+      point.age = (point.age ?? 0) + deltaSeconds;
+    });
+    this.webTrail = this.webTrail.filter((point) => (point.age ?? 0) < 4.5);
+
+    if (!this.lastWebTrailTime) {
+      this.lastWebTrailTime = this.pulse;
+      this.webTrail.push({ x: this.position.x, y: this.position.y, age: 0 });
+      return;
+    }
+
+    if (this.pulse - this.lastWebTrailTime < 0.18 + deltaSeconds * 0.2) {
+      return;
+    }
+
+    this.lastWebTrailTime = this.pulse;
+    this.webTrail.push({ x: this.position.x, y: this.position.y, age: 0 });
+    if (this.webTrail.length > 7) {
+      this.webTrail.shift();
+    }
   }
 
   wander(deltaSeconds) {
@@ -188,6 +246,10 @@ export class Lifeform {
     const screenY = this.position.y - camera.y;
     const heading = Math.atan2(this.velocity.y, this.velocity.x);
 
+    if (this.type === "skitter") {
+      drawSkitterTrail(context, this, camera);
+    }
+
     context.save();
     context.translate(screenX, screenY);
     context.rotate(heading);
@@ -198,6 +260,8 @@ export class Lifeform {
       drawThreadling(context, this);
     } else if (this.type === "grazer") {
       drawGrazer(context, this);
+    } else if (this.type === "lantern") {
+      drawLantern(context, this);
     } else {
       drawSkitter(context, this);
     }
@@ -255,6 +319,43 @@ function fleeIfClose(agent, target, range, speed) {
   };
 }
 
+function fleeDisturbances(agent, disturbances, speed) {
+  const force = { x: 0, y: 0 };
+  let count = 0;
+
+  disturbances.forEach((disturbance) => {
+    const distanceToDisturbance = distance(agent.position, disturbance.position);
+
+    if (distanceToDisturbance > disturbance.radius) {
+      return;
+    }
+
+    const closeness = 1 - distanceToDisturbance / Math.max(1, disturbance.radius);
+    const typeWeight = disturbance.type === "weapon" ? 1.35 : 0.82;
+    const away = normalize(
+      agent.position.x - disturbance.position.x,
+      agent.position.y - disturbance.position.y,
+      speed * closeness * typeWeight * (disturbance.intensity ?? 1),
+    );
+
+    force.x += away.x;
+    force.y += away.y;
+    count += 1;
+  });
+
+  if (count === 0) {
+    return force;
+  }
+
+  return limit(
+    {
+      x: force.x / count,
+      y: force.y / count,
+    },
+    agent.maxForce * 2.2,
+  );
+}
+
 function separate(agent, neighbors, desiredDistance) {
   const force = { x: 0, y: 0 };
 
@@ -281,6 +382,27 @@ function nearbyLifeforms(agent, lifeforms, range, type = null) {
       (type === null || lifeform.type === type) &&
       distanceSquared(agent.position, lifeform.position) < rangeSquared,
   );
+}
+
+function findNearestLifeform(position, lifeforms, type, range) {
+  const rangeSquared = range * range;
+  let nearest = null;
+  let nearestDistanceSquared = rangeSquared;
+
+  lifeforms.forEach((lifeform) => {
+    if (!lifeform.isAlive || lifeform.type !== type) {
+      return;
+    }
+
+    const distanceToLifeform = distanceSquared(position, lifeform.position);
+
+    if (distanceToLifeform < nearestDistanceSquared) {
+      nearest = lifeform;
+      nearestDistanceSquared = distanceToLifeform;
+    }
+  });
+
+  return nearest;
 }
 
 function orbitNearestAsteroid(agent, asteroids, range, orbitDistance, deltaSeconds) {
@@ -352,6 +474,47 @@ function findNearestAsteroid(position, asteroids, range) {
   return best;
 }
 
+function findNearestResourceAsteroid(position, asteroids, range) {
+  let best = null;
+  let bestScore = 0;
+  const rangeSquared = range * range;
+
+  asteroids.forEach((asteroid) => {
+    const currentDistanceSquared = distanceSquared(position, asteroid.position);
+
+    if (currentDistanceSquared > rangeSquared) {
+      return;
+    }
+
+    const resourceScore = getResourceScore(asteroid);
+    if (resourceScore <= 0) {
+      return;
+    }
+
+    const nearness = 1 - currentDistanceSquared / rangeSquared;
+    const score = resourceScore * (0.35 + nearness);
+    if (score > bestScore) {
+      best = asteroid;
+      bestScore = score;
+    }
+  });
+
+  return best;
+}
+
+function getResourceScore(asteroid) {
+  if (!asteroid.resources) {
+    return 0;
+  }
+
+  return Object.entries(asteroid.resources).reduce((sum, [resource, amount]) => {
+    if (resource === "stone") {
+      return sum;
+    }
+    return sum + Math.max(0, amount);
+  }, 0);
+}
+
 function drawHunter(context, lifeform) {
   const isPirate = lifeform.role === "pirate";
 
@@ -420,6 +583,55 @@ function drawSkitter(context, lifeform) {
   context.stroke();
 }
 
+function drawSkitterTrail(context, lifeform, camera) {
+  if (lifeform.webTrail.length < 2) {
+    return;
+  }
+
+  context.save();
+  context.lineWidth = 1;
+  context.setLineDash([7, 9]);
+  lifeform.webTrail.forEach((point, index) => {
+    if (index === 0) {
+      return;
+    }
+
+    const previous = lifeform.webTrail[index - 1];
+    const x = point.x - camera.x;
+    const y = point.y - camera.y;
+    const age = point.age ?? 0;
+    context.strokeStyle = `rgba(217, 179, 255, ${Math.max(0.07, 0.24 - age * 0.035)})`;
+    context.beginPath();
+    context.moveTo(previous.x - camera.x, previous.y - camera.y);
+    context.lineTo(x, y);
+    context.stroke();
+  });
+  context.setLineDash([]);
+  context.restore();
+}
+
+function drawLantern(context, lifeform) {
+  const glow = 0.55 + Math.sin(lifeform.pulse * 4.2 + lifeform.seed) * 0.24;
+
+  context.fillStyle = `rgba(255, 233, 138, ${0.1 + glow * 0.18})`;
+  context.strokeStyle = LIFE_COLORS.lantern;
+  context.lineWidth = 2;
+  context.beginPath();
+  context.arc(0, 0, 9 + glow * 3, 0, Math.PI * 2);
+  context.fill();
+  context.stroke();
+  context.strokeStyle = "rgba(255, 248, 190, 0.75)";
+  context.beginPath();
+  context.moveTo(-14, 0);
+  context.quadraticCurveTo(-2, -9 - glow * 3, 14, 0);
+  context.quadraticCurveTo(-2, 9 + glow * 3, -14, 0);
+  context.stroke();
+  context.fillStyle = "#fff8be";
+  context.beginPath();
+  context.arc(2, 0, 2.5, 0, Math.PI * 2);
+  context.fill();
+}
+
 function getRadius(type) {
   if (type === "hunter") {
     return 24;
@@ -427,6 +639,10 @@ function getRadius(type) {
 
   if (type === "threadling") {
     return 18;
+  }
+
+  if (type === "lantern") {
+    return 22;
   }
 
   return 20;
@@ -445,6 +661,10 @@ function getMaxSpeed(type) {
     return 88;
   }
 
+  if (type === "lantern") {
+    return 72;
+  }
+
   return 154;
 }
 
@@ -461,6 +681,10 @@ function getMaxForce(type) {
     return 0.13;
   }
 
+  if (type === "lantern") {
+    return 0.11;
+  }
+
   return 0.24;
 }
 
@@ -471,6 +695,10 @@ function getPerception(type) {
 
   if (type === "threadling") {
     return 125;
+  }
+
+  if (type === "lantern") {
+    return 155;
   }
 
   return 145;
