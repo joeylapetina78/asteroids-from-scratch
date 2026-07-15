@@ -1,6 +1,6 @@
 import { createValueNoise } from "./valueNoise.js";
 import { getRegionProfile } from "./worldRegions.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260714-0212-d103f79";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260714-2116-856b156";
 
 const GRID_SIZE = 350;
 const JITTER = 100;

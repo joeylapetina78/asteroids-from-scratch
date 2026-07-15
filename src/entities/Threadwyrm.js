@@ -66,6 +66,10 @@ export class Threadwyrm {
     return segments;
   }
 
+  getDistanceTo(position) {
+    return getDistanceToBody(position, this.getSegments());
+  }
+
   consumeHit() {
     const hit = this.lastHit;
     this.lastHit = null;

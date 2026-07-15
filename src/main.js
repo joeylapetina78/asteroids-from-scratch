@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260714-0212-d103f79";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260714-0212-d103f79";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260714-0212-d103f79";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260714-0212-d103f79";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260714-0212-d103f79";
-import { Game } from "./game.js?v=fresh-20260714-0212-d103f79";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260714-0212-d103f79";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260714-0212-d103f79";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260714-0212-d103f79";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260714-0212-d103f79";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260714-2116-856b156";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260714-2116-856b156";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260714-2116-856b156";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260714-2116-856b156";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260714-2116-856b156";
+import { Game } from "./game.js?v=fresh-20260714-2116-856b156";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260714-2116-856b156";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260714-2116-856b156";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260714-2116-856b156";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260714-2116-856b156";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260714-0212-d103f79";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260714-0212-d103f79";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260714-0212-d103f79";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260714-0212-d103f79";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260714-0212-d103f79";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260714-0212-d103f79";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260714-0212-d103f79";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260714-0212-d103f79";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260714-0212-d103f79";
-import { Processor } from "./systems/processor.js?v=fresh-20260714-0212-d103f79";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260714-0212-d103f79";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260714-0212-d103f79";
-import { createGameState } from "./state/gameState.js?v=fresh-20260714-0212-d103f79";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260714-2116-856b156";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260714-2116-856b156";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260714-2116-856b156";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260714-2116-856b156";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260714-2116-856b156";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260714-2116-856b156";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260714-2116-856b156";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260714-2116-856b156";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260714-2116-856b156";
+import { Processor } from "./systems/processor.js?v=fresh-20260714-2116-856b156";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260714-2116-856b156";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260714-2116-856b156";
+import { createGameState } from "./state/gameState.js?v=fresh-20260714-2116-856b156";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -81,6 +81,18 @@ const YARD_EXCHANGE_CORE_SERVICES = [
   yardExchangeServices.supply,
 ];
 const MURMUR_SERVICE_ID = yardExchangeServices.roadmap;
+const MURMUR_LIFEFORM_TOUR_MESSAGES = {
+  rockmoss:
+    "Rockmoss. Green hunger on stone. It feeds slowly, hints loudly, and marks the rocks that have slept beside minerals for a long time.",
+  lantern:
+    "Lantern drift. Gentle stomach-stars. They graze on mineral scent and wander toward good rock. Follow softly and they may teach you where the belt is sweet.",
+  skitter:
+    "Skitterweb. Do not admire the thread from inside it. Fresh silk pulls at a ship like space trying to tie a knot.",
+  threadwyrm:
+    "Threadwyrm. Old corridor-owner. It is not chasing you. It is using a road it had before roads had names. Cross it loudly and it will explain boundaries.",
+  "drift-mouth":
+    "A drift mouth. Rare. Wrong. Hungry without anger. If space bends around a silence, believe the silence.",
+};
 const STARTER_REGION_NAME = storyRegions.starterRegion.name;
 const DEEP_SPACE_REGION_NAME = storyRegions.deepSpace.name;
 const JOURNEY_WORD_DELAY_MS = 34;
@@ -350,6 +362,7 @@ let lastHubAuthorityEventId = 0;
 let lastRookAutoOfferEventId = 0;
 let lastTowChatterEventId = 0;
 let lastDockingInspectionEventId = 0;
+let lastLifeformTourEventId = 0;
 const pendingHubIdentityPresentations = new Map();
 const fulfilledContractPanelPulls = new Set();
 const COMPONENT_WARNING_RULES = [
@@ -535,6 +548,13 @@ finleyScanButton.addEventListener("click", () => {
 });
 
 hubServiceMenu.addEventListener("click", (event) => {
+  const ecologyButton = event.target.closest("[data-ecology-beacon-action]");
+
+  if (ecologyButton) {
+    addEcologyBeaconsToNavigation();
+    return;
+  }
+
   const beaconButton = event.target.closest("[data-hub-beacon-id]");
 
   if (beaconButton) {
@@ -1012,6 +1032,7 @@ function setupExplorerStart() {
       "coldwater-depot",
       "deep-research",
     ],
+    ecologyBeacons: [],
     activeBeaconId: "yard-exchange",
   });
   Object.assign(state.components.scanner, {
@@ -1390,11 +1411,14 @@ function renderHubServiceMenu(site) {
   const services = site ? getHubServices(site.id).filter((service) => isHubServiceUnlocked(site.id, service)) : [];
   const locator = state.components.beaconLocator;
   const hasHubBeacon = Boolean(site && (locator.beaconMemoryIds ?? []).includes(site.id));
+  const ecologyBeaconCount = locator.ecologyBeacons?.length ?? 0;
+  const canAddEcologyBeacons = Boolean(site?.id === chapterOneRoute.destinationSite.id && locator.installed);
   const nextKey = [
     site?.id ?? "none",
     activeHubServiceId ?? "none",
     locator.installed ? "locator" : "no-locator",
     hasHubBeacon ? "remembered" : "new",
+    canAddEcologyBeacons ? `ecology:${ecologyBeaconCount}` : "no-ecology",
     services.map((service) => service.id).join("|"),
   ].join(":");
 
@@ -1410,9 +1434,11 @@ function renderHubServiceMenu(site) {
   }
 
   const beaconButton = site ? renderHubBeaconButton(site, hasHubBeacon) : null;
+  const ecologyButton = canAddEcologyBeacons ? renderEcologyBeaconButton(ecologyBeaconCount) : null;
 
   hubServiceMenu.replaceChildren(
     ...(beaconButton ? [beaconButton] : []),
+    ...(ecologyButton ? [ecologyButton] : []),
     ...services.map((service) => {
       const button = document.createElement("button");
       const label = document.createElement("strong");
@@ -1431,6 +1457,24 @@ function renderHubServiceMenu(site) {
   );
 }
 
+function renderEcologyBeaconButton(ecologyBeaconCount) {
+  const button = document.createElement("button");
+  const label = document.createElement("strong");
+  const meta = document.createElement("span");
+  const hasEcologyBeacons = ecologyBeaconCount > 0;
+
+  button.type = "button";
+  button.className = "hub-service-button hub-beacon-button";
+  button.dataset.ecologyBeaconAction = "add-all";
+  button.disabled = hasEcologyBeacons;
+  label.textContent = hasEcologyBeacons ? "Ecology Beacons Stored" : "Add Ecology Beacons";
+  meta.textContent = hasEcologyBeacons
+    ? "Lifeform tour markers are already in Beacon Navigation."
+    : "Add Murmur's lifeform tour markers to Beacon Navigation.";
+  button.append(label, meta);
+  return button;
+}
+
 function renderHubBeaconButton(site, hasHubBeacon) {
   const button = document.createElement("button");
   const label = document.createElement("strong");
@@ -1447,6 +1491,36 @@ function renderHubBeaconButton(site, hasHubBeacon) {
     : `Add ${site.name} to Beacon Navigation.`;
   button.append(label, meta);
   return button;
+}
+
+function addEcologyBeaconsToNavigation() {
+  const locator = state.components.beaconLocator;
+
+  if (!locator.installed) {
+    return;
+  }
+
+  const ecologyBeacons = game.createEcologyBeaconTargets?.() ?? [];
+
+  if (ecologyBeacons.length === 0) {
+    return;
+  }
+
+  locator.ecologyBeacons = ecologyBeacons;
+  locator.activeBeaconId = ecologyBeacons[0].id;
+  locator.beaconLocatorUsed = true;
+  state.ledger.recordEvent(
+    "beaconLocator.ecologyBeaconsStored",
+    {
+      count: ecologyBeacons.length,
+      sourceSiteId: chapterOneRoute.destinationSite.id,
+      sourceSiteName: chapterOneRoute.destinationSite.name,
+    },
+    { visible: false },
+  );
+  updateBeaconDisplay();
+  renderHubServiceMenu(currentSiteState?.dockedSite);
+  scheduleSave();
 }
 
 function addHubBeaconToNavigation(siteId) {
@@ -1693,6 +1767,7 @@ function updateLedgerDrivenSystems() {
   updateRookFollowupOffers();
   updateHubAuthorityMessages();
   updateTowChatter();
+  updateLifeformTour();
   updateDockingInspection();
 }
 
@@ -1748,6 +1823,35 @@ function updateTowChatter() {
         text: `You're docked. That's ${cost} credits off your account. Stay closer to home next run.`,
       });
     }
+  });
+}
+
+function updateLifeformTour() {
+  const events = state.ledger.getEventsAfterId(lastLifeformTourEventId, { includeHidden: true });
+
+  events.forEach((event) => {
+    lastLifeformTourEventId = Math.max(lastLifeformTourEventId, event.id);
+
+    if (event.type !== "lifeform.contacted") {
+      return;
+    }
+
+    const ecologyType = event.payload?.ecologyType;
+    const text = MURMUR_LIFEFORM_TOUR_MESSAGES[ecologyType];
+
+    if (!text) {
+      return;
+    }
+
+    commsDirector.say({
+      source: COMMS_SOURCES.worldNpc,
+      speaker: "Murmur",
+      text,
+      priority: 28,
+      requireIdle: true,
+      queueIfBlocked: true,
+      ttlMs: 16000,
+    });
   });
 }
 

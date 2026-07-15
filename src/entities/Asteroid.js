@@ -139,6 +139,14 @@ export function breakAsteroid(asteroid, seed, impactVelocity = { x: 0, y: 0 }) {
       random,
     });
 
+    if (asteroid.rockmoss) {
+      fragment.rockmoss = {
+        seed: (asteroid.rockmoss.seed ?? seed) + index * 811,
+        coverage: Math.max(0.12, asteroid.rockmoss.coverage * randomRange(random, 0.62, 0.92)),
+        glow: Math.max(0.18, asteroid.rockmoss.glow * randomRange(random, 0.72, 1.02)),
+      };
+    }
+
     fragment.origin = { x, y };
     fragment.velocity.x =
       asteroid.velocity.x * 0.65 + Math.cos(angle) * randomRange(random, 34, 86) + impactVelocity.x * 0.02;

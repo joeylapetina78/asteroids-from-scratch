@@ -68,9 +68,7 @@ export class DriftMouth {
     for (let index = rippleCount; index >= 1; index -= 1) {
       context.strokeStyle = `rgba(194, 112, 255, ${0.05 + open * 0.09})`;
       context.lineWidth = 1.2;
-      context.beginPath();
-      context.arc(0, 0, mouthRadius + index * 70 + pulse * index * 10, 0, Math.PI * 2);
-      context.stroke();
+      drawAngularRing(context, mouthRadius + index * 70 + pulse * index * 10, 9 + index, time / (1800 + index * 220));
     }
 
     context.fillStyle = `rgba(0, 0, 0, ${0.45 + open * 0.35})`;
@@ -92,8 +90,38 @@ export class DriftMouth {
       context.stroke();
     }
 
+    context.strokeStyle = `rgba(126, 240, 255, ${0.12 + open * 0.28})`;
+    context.lineWidth = 1.4;
+    for (let index = 0; index < 6; index += 1) {
+      const angle = (Math.PI * 2 * index) / 6 - time / 3100;
+      const radius = mouthRadius * (1.28 + (index % 2) * 0.18);
+      context.beginPath();
+      context.moveTo(Math.cos(angle) * mouthRadius * 0.72, Math.sin(angle) * mouthRadius * 0.72);
+      context.lineTo(Math.cos(angle + 0.18) * radius, Math.sin(angle + 0.18) * radius);
+      context.lineTo(Math.cos(angle + 0.36) * mouthRadius * 0.92, Math.sin(angle + 0.36) * mouthRadius * 0.92);
+      context.stroke();
+    }
+
     context.restore();
   }
+}
+
+function drawAngularRing(context, radius, pointCount, rotation) {
+  context.beginPath();
+  for (let index = 0; index < pointCount; index += 1) {
+    const angle = rotation + (Math.PI * 2 * index) / pointCount;
+    const jitter = index % 2 === 0 ? 1 : 0.88;
+    const x = Math.cos(angle) * radius * jitter;
+    const y = Math.sin(angle) * radius * jitter;
+
+    if (index === 0) {
+      context.moveTo(x, y);
+    } else {
+      context.lineTo(x, y);
+    }
+  }
+  context.closePath();
+  context.stroke();
 }
 
 function pullBody(center, body, deltaSeconds, strength, radius) {

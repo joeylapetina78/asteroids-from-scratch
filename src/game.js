@@ -1,26 +1,26 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260714-0212-d103f79";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260714-0212-d103f79";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260714-0212-d103f79";
-import { Ship } from "./entities/Ship.js?v=fresh-20260714-0212-d103f79";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260714-0212-d103f79";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260714-2116-856b156";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260714-2116-856b156";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260714-2116-856b156";
+import { Ship } from "./entities/Ship.js?v=fresh-20260714-2116-856b156";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260714-2116-856b156";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260714-0212-d103f79";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260714-0212-d103f79";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260714-0212-d103f79";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260714-0212-d103f79";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260714-0212-d103f79";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260714-0212-d103f79";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260714-0212-d103f79";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260714-0212-d103f79";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260714-0212-d103f79";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260714-0212-d103f79";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260714-0212-d103f79";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260714-0212-d103f79";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260714-0212-d103f79";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260714-0212-d103f79";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260714-0212-d103f79";
-import { createGameState } from "./state/gameState.js?v=fresh-20260714-0212-d103f79";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260714-0212-d103f79";
+import { createInput } from "./systems/input.js?v=fresh-20260714-2116-856b156";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260714-2116-856b156";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260714-2116-856b156";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260714-2116-856b156";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260714-2116-856b156";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260714-2116-856b156";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260714-2116-856b156";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260714-2116-856b156";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260714-2116-856b156";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260714-2116-856b156";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260714-2116-856b156";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260714-2116-856b156";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260714-2116-856b156";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260714-2116-856b156";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260714-2116-856b156";
+import { createGameState } from "./state/gameState.js?v=fresh-20260714-2116-856b156";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260714-2116-856b156";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -105,6 +105,13 @@ const SKITTER_WEB_COOLDOWN_SECONDS = 1.1;
 const LIFE_DISTURBANCE_WEAPON_RADIUS = 720;
 const LIFE_DISTURBANCE_SCAN_RADIUS = 1050;
 const LIFE_DISTURBANCE_SECONDS = 1.35;
+const LIFEFORM_CONTACT_RANGES = {
+  rockmoss: 150,
+  lantern: 160,
+  skitter: 175,
+  threadwyrm: 210,
+  "drift-mouth": 720,
+};
 
 export class Game {
   constructor(
@@ -146,6 +153,7 @@ export class Game {
     this.threadwyrms = createThreadwyrmField(this.asteroids);
     this.driftMouths = createDriftMouthField();
     this.lifeDisturbances = [];
+    this.lifeformContacts = new Set();
     this.npcShips = createNpcRouteShips(this.worldSites);
     this.bullets = [];
     this.particles = [];
@@ -368,8 +376,18 @@ export class Game {
         claimId: target.claimId,
         claimIds: target.claimIds,
       }));
+    const ecologyBeacons = (locator.ecologyBeacons ?? [])
+      .filter((target) => target?.position)
+      .map((target) => ({
+        id: target.id,
+        beaconId: target.beaconId ?? target.id,
+        name: target.name,
+        position: target.position,
+        type: "ecology",
+        ecologyType: target.ecologyType,
+      }));
 
-    return [...rememberedHubs, ...personalBeacons, ...contractBeacons];
+    return [...rememberedHubs, ...personalBeacons, ...contractBeacons, ...ecologyBeacons];
   }
 
   getBeaconTarget(beaconId) {
@@ -387,6 +405,40 @@ export class Game {
         type: "personal",
         bayIndex: index,
       }));
+  }
+
+  createEcologyBeaconTargets() {
+    const targets = [];
+    const addTarget = (id, name, ecologyType, position) => {
+      if (!position) {
+        return;
+      }
+
+      targets.push({
+        id,
+        beaconId: id,
+        name,
+        ecologyType,
+        position: {
+          x: Math.round(position.x),
+          y: Math.round(position.y),
+        },
+      });
+    };
+
+    const rockmossAsteroid = this.asteroids.find((asteroid) => asteroid.rockmoss);
+    const lantern = this.lifeforms.find((lifeform) => lifeform.type === "lantern");
+    const skitter = this.lifeforms.find((lifeform) => lifeform.type === "skitter");
+    const threadwyrm = this.threadwyrms[0];
+    const driftMouth = this.driftMouths[0];
+
+    addTarget("ecology-rockmoss", "Rockmoss Colony", "rockmoss", rockmossAsteroid?.position);
+    addTarget("ecology-lanterns", "Lantern Drift", "lantern", lantern?.position);
+    addTarget("ecology-skitterweb", "Skitterweb Run", "skitter", skitter?.position);
+    addTarget("ecology-threadwyrm", "Threadwyrm Track", "threadwyrm", threadwyrm?.position);
+    addTarget("ecology-drift-mouth", "Drift Mouth", "drift-mouth", driftMouth?.position);
+
+    return targets;
   }
 
   getContractClaimTargets() {
@@ -625,6 +677,7 @@ export class Game {
     this.updateHunterHits();
     this.updateThreadwyrms(deltaSeconds);
     this.updateDriftMouths(deltaSeconds, activeLifeforms);
+    this.updateLifeformContacts(activeLifeforms);
     this.updateNpcShips(activeAsteroids, deltaSeconds);
     this.updatePatrolIntercept(deltaSeconds);
     this.updateScanRings(deltaSeconds);
@@ -2582,6 +2635,63 @@ export class Game {
     });
   }
 
+  updateLifeformContacts(activeLifeforms) {
+    const shipPosition = this.ship.position;
+    const contactChecks = [
+      {
+        type: "rockmoss",
+        target: this.asteroids.find((asteroid) =>
+          asteroid.rockmoss && distance(shipPosition, asteroid.position) <= asteroid.radius + LIFEFORM_CONTACT_RANGES.rockmoss,
+        ),
+      },
+      {
+        type: "lantern",
+        target: activeLifeforms.find((lifeform) =>
+          lifeform.type === "lantern" && distance(shipPosition, lifeform.position) <= LIFEFORM_CONTACT_RANGES.lantern,
+        ),
+      },
+      {
+        type: "skitter",
+        target: activeLifeforms.find((lifeform) =>
+          lifeform.type === "skitter" && distance(shipPosition, lifeform.position) <= LIFEFORM_CONTACT_RANGES.skitter,
+        ),
+      },
+      {
+        type: "threadwyrm",
+        target: this.threadwyrms.find((threadwyrm) =>
+          threadwyrm.getDistanceTo(shipPosition) <= LIFEFORM_CONTACT_RANGES.threadwyrm,
+        ),
+      },
+      {
+        type: "drift-mouth",
+        target: this.driftMouths.find((mouth) =>
+          (mouth.hasRevealed || mouth.reveal > 0.1) && distance(shipPosition, mouth.position) <= LIFEFORM_CONTACT_RANGES["drift-mouth"],
+        ),
+      },
+    ];
+
+    contactChecks.forEach(({ type, target }) => {
+      if (!target || this.lifeformContacts.has(type)) {
+        return;
+      }
+
+      this.lifeformContacts.add(type);
+      this.state.ledger.recordEvent(
+        "lifeform.contacted",
+        {
+          ecologyType: type,
+          lifeformId: target.id ?? null,
+          x: Math.round(target.position.x),
+          y: Math.round(target.position.y),
+        },
+        {
+          visible: false,
+          message: `Contacted ${getLifeformLabel(type)}`,
+        },
+      );
+    });
+  }
+
   updateSkitterWebHazards(activeLifeforms, deltaSeconds) {
     if (this.skitterWebCooldown > 0) {
       this.skitterWebCooldown = Math.max(0, this.skitterWebCooldown - deltaSeconds);
@@ -3035,6 +3145,9 @@ export class Game {
       }
 
       this.pickups.push(...minedPickups);
+      if (asteroid.rockmoss) {
+        this.createRockmossBurst(asteroid, impactVelocity);
+      }
       if (asteroid.color === WHITE_ASTEROID_COLOR) {
         this.createStoneBurst(asteroid, impactVelocity);
       }
@@ -3079,6 +3192,35 @@ export class Game {
         size: 2 + Math.random() * 3,
         life: 0.45 + Math.random() * 0.35,
         maxLife: 0.8,
+      });
+    }
+  }
+
+  createRockmossBurst(asteroid, impactVelocity) {
+    const moss = asteroid.rockmoss;
+    const count = 14 + Math.floor((moss?.coverage ?? 0.5) * 16);
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 35 + Math.random() * 115;
+      const edgeDistance = asteroid.radius * (0.25 + Math.random() * 0.55);
+      const color = index % 4 === 0 ? "#d9ffb8" : index % 3 === 0 ? "#72ffc9" : "#4dff94";
+
+      this.particles.push({
+        type: "spark",
+        position: {
+          x: asteroid.position.x + Math.cos(angle) * edgeDistance,
+          y: asteroid.position.y + Math.sin(angle) * edgeDistance,
+        },
+        velocity: {
+          x: asteroid.velocity.x * 0.3 + Math.cos(angle) * speed + impactVelocity.x * 0.018,
+          y: asteroid.velocity.y * 0.3 + Math.sin(angle) * speed + impactVelocity.y * 0.018,
+        },
+        color,
+        size: 1.4 + Math.random() * 2.4,
+        drag: 0.965,
+        life: 0.45 + Math.random() * 0.55,
+        maxLife: 1,
       });
     }
   }
@@ -3618,9 +3760,28 @@ export class Game {
 
   drawRockmossCrawlers(asteroid, moss) {
     const crawlerCount = Math.max(1, Math.min(5, Math.floor(moss.coverage * 7)));
+    const now = performance.now();
 
     for (let index = 0; index < crawlerCount; index += 1) {
-      const progress = (performance.now() / (5200 + index * 720) + pseudoRandom(moss.seed + 401, index)) % 1;
+      const direction = pseudoRandom(moss.seed + 463, index) > 0.46 ? 1 : -1;
+      const cycleMs = 5200 + index * 720 + pseudoRandom(moss.seed + 487, index) * 2600;
+      const pauseStart = 0.22 + pseudoRandom(moss.seed + 509, index) * 0.56;
+      const pauseDuration = 0.12 + pseudoRandom(moss.seed + 541, index) * 0.18;
+      const rawProgress = (now / cycleMs + pseudoRandom(moss.seed + 401, index)) % 1;
+      let travelProgress = rawProgress;
+
+      if (rawProgress >= pauseStart && rawProgress <= pauseStart + pauseDuration) {
+        travelProgress = pauseStart;
+      } else if (rawProgress > pauseStart + pauseDuration) {
+        travelProgress = rawProgress - pauseDuration;
+      }
+
+      const movingSpan = 1 - pauseDuration;
+      let progress = (travelProgress / movingSpan) % 1;
+      if (direction < 0) {
+        progress = 1 - progress;
+      }
+
       const pathPosition = progress * asteroid.points.length;
       const pointIndex = Math.floor(pathPosition) % asteroid.points.length;
       const nextPointIndex = (pointIndex + 1) % asteroid.points.length;
@@ -3629,11 +3790,11 @@ export class Game {
       const nextPoint = asteroid.points[nextPointIndex];
       const angle = lerpAngle(point.angle, nextPoint.angle, blend);
       const distance = point.distance * (1 - blend) + nextPoint.distance * blend;
-      const wobble = Math.sin(performance.now() / 380 + index * 1.7 + moss.seed) * 2.2;
+      const wobble = Math.sin(now / 380 + index * 1.7 + moss.seed) * 2.2;
       const crawlDistance = distance + 4 + wobble;
       const x = Math.cos(angle) * crawlDistance;
       const y = Math.sin(angle) * crawlDistance;
-      const heading = angle + Math.PI / 2;
+      const heading = angle + (direction > 0 ? Math.PI / 2 : -Math.PI / 2);
       const scale = 0.75 + pseudoRandom(moss.seed + 499, index) * 0.55;
 
       this.context.save();
@@ -4539,6 +4700,18 @@ function getAsteroidDominantResource(asteroid) {
 
 function getHostileEnemyType(lifeform) {
   return lifeform.role ?? lifeform.type ?? "hostile";
+}
+
+function getLifeformLabel(type) {
+  return (
+    {
+      rockmoss: "Rockmoss Colony",
+      lantern: "Lantern Drift",
+      skitter: "Skitterweb Run",
+      threadwyrm: "Threadwyrm Track",
+      "drift-mouth": "Drift Mouth",
+    }[type] ?? "unknown lifeform"
+  );
 }
 
 function pseudoRandom(seed, index) {

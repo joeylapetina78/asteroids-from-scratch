@@ -1,6 +1,6 @@
-import { Threadwyrm } from "../entities/Threadwyrm.js?v=fresh-20260714-0212-d103f79";
+import { Threadwyrm } from "../entities/Threadwyrm.js?v=fresh-20260714-2116-856b156";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260714-0212-d103f79";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260714-2116-856b156";
 
 const THREADWYRM_ATTEMPTS = 14;
 const MAX_THREADWYRMS = 3;
@@ -52,26 +52,48 @@ function createCorridorRoute(anchor, asteroids, random) {
     .filter((asteroid) => asteroid !== anchor)
     .filter((asteroid) => distance(anchor.position, asteroid.position) < ROUTE_RADIUS)
     .sort((first, second) => distance(anchor.position, first.position) - distance(anchor.position, second.position))
-    .slice(0, 12);
+    .slice(0, 16);
 
-  const routeAnchors = [anchor, ...nearby].slice(0, Math.floor(randomRange(random, MIN_ROUTE_POINTS + 1, 10)));
+  const routeAnchors = createMeanderAnchors(
+    [anchor, ...nearby],
+    Math.floor(randomRange(random, MIN_ROUTE_POINTS + 2, 11)),
+    random,
+  );
   const center = getCenter(routeAnchors);
 
-  return routeAnchors
-    .sort(
-      (first, second) =>
-        Math.atan2(first.position.y - center.y, first.position.x - center.x) -
-        Math.atan2(second.position.y - center.y, second.position.x - center.x),
-    )
-    .map((asteroid, index) => {
-      const angle = Math.atan2(asteroid.position.y - center.y, asteroid.position.x - center.x);
-      const offset = asteroid.radius + randomRange(random, 72, 138);
+  return routeAnchors.map((asteroid, index) => {
+    const next = routeAnchors[(index + 1) % routeAnchors.length];
+    const prev = routeAnchors[(index - 1 + routeAnchors.length) % routeAnchors.length];
+    const travelAngle = Math.atan2(next.position.y - prev.position.y, next.position.x - prev.position.x);
+    const side = index % 2 === 0 ? 1 : -1;
+    const offsetAngle = travelAngle + Math.PI / 2 * side + randomRange(random, -0.45, 0.45);
+    const offset = asteroid.radius + randomRange(random, 82, 180);
 
-      return {
-        x: asteroid.position.x + Math.cos(angle) * offset,
-        y: asteroid.position.y + Math.sin(angle) * offset,
-      };
-    });
+    return {
+      x: asteroid.position.x + Math.cos(offsetAngle) * offset,
+      y: asteroid.position.y + Math.sin(offsetAngle) * offset,
+    };
+  });
+}
+
+function createMeanderAnchors(candidates, count, random) {
+  if (candidates.length <= count) {
+    return [...candidates];
+  }
+
+  const selected = [candidates[0]];
+  const remaining = candidates.slice(1);
+
+  while (selected.length < count && remaining.length > 0) {
+    const last = selected[selected.length - 1];
+    remaining.sort((first, second) => distance(last.position, first.position) - distance(last.position, second.position));
+    const window = remaining.slice(0, Math.min(5, remaining.length));
+    const choice = window[Math.floor(random() * window.length)];
+    selected.push(choice);
+    remaining.splice(remaining.indexOf(choice), 1);
+  }
+
+  return selected;
 }
 
 function getThreadwyrmAnchorWeight(asteroid) {
