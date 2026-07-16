@@ -1,10 +1,10 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260715-2022-moss-finance-v1";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260715-2022-moss-finance-v1";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260715-2147-moss-seeder-v1";
 
 export function createGameState() {
   const state = {
@@ -40,6 +40,7 @@ export function createGameState() {
     hubServices: {
       unlocked: {},
       flags: {},
+      skipMissionFirstContracts: {},
     },
     worldRecords: createEmptyWorldRecords(),
     character: {
@@ -187,6 +188,11 @@ export function createGameState() {
         intakeProgress: 0,
         intakeRadius: 96,
         position: null,
+      },
+      mossSeeder: {
+        installed: false,
+        status: "No crawler cargo",
+        shotsFired: 0,
       },
     },
   };

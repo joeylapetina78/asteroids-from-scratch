@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260715-2022-moss-finance-v1";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260715-2022-moss-finance-v1";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260715-2022-moss-finance-v1";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260715-2022-moss-finance-v1";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260715-2022-moss-finance-v1";
-import { Game } from "./game.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260715-2022-moss-finance-v1";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260715-2022-moss-finance-v1";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { Game } from "./game.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260715-2147-moss-seeder-v1";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260715-2022-moss-finance-v1";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260715-2022-moss-finance-v1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260715-2022-moss-finance-v1";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260715-2022-moss-finance-v1";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260715-2022-moss-finance-v1";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260715-2022-moss-finance-v1";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260715-2022-moss-finance-v1";
-import { Processor } from "./systems/processor.js?v=fresh-20260715-2022-moss-finance-v1";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260715-2022-moss-finance-v1";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createGameState } from "./state/gameState.js?v=fresh-20260715-2022-moss-finance-v1";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { Processor } from "./systems/processor.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createGameState } from "./state/gameState.js?v=fresh-20260715-2147-moss-seeder-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -98,6 +98,7 @@ const DEEP_SPACE_REGION_NAME = storyRegions.deepSpace.name;
 const JOURNEY_WORD_DELAY_MS = 34;
 const ATTENTION_ONCE_MS = 1800;
 const PAPERWORK_DRAWER_AUTO_CLOSE_MS = 900;
+const ROCKMOSS_CRAWLER_RESOURCE = "rockmoss-crawler";
 const DEFAULT_PANEL_LAYOUT = {
   viewport: { x: 0, y: 0, z: 20 },
   license: { x: 980, y: 20, z: 95 },
@@ -110,6 +111,7 @@ const DEFAULT_PANEL_LAYOUT = {
   tow: { x: -300, y: 520, z: 125 },
   "tow-cable": { x: 760, y: 760, z: 55 },
   "moss-harvester": { x: 760, y: 580, z: 56 },
+  "moss-seeder": { x: 760, y: 400, z: 57 },
   contract: { x: -300, y: 340, z: 95 },
   document: { x: -40, y: 240, z: 96 },
   finley: { x: 70, y: 120, z: 115 },
@@ -241,6 +243,9 @@ const mossHarvesterDeployButton = document.querySelector("#moss-harvester-deploy
 const mossHarvesterRecallButton = document.querySelector("#moss-harvester-recall");
 const mossHarvesterStatus = document.querySelector("#moss-harvester-status");
 const mossHarvesterFood = document.querySelector("#moss-harvester-food");
+const mossSeederFireButton = document.querySelector("#moss-seeder-fire");
+const mossSeederCount = document.querySelector("#moss-seeder-count");
+const mossSeederStatus = document.querySelector("#moss-seeder-status");
 const tractorFieldButton = document.querySelector("#tractor-field-button");
 const tractorFieldStatus = document.querySelector("#tractor-field-status");
 const viewportRegion = document.querySelector("#viewport-region");
@@ -284,6 +289,7 @@ const _hud = {
   tractorActive: null,
   towCableKey: null,
   mossHarvesterKey: null,
+  mossSeederKey: null,
   hullPct: null,
   hullFraction: null,
   hullVin: null,
@@ -483,6 +489,11 @@ mossHarvesterDeployButton?.addEventListener("click", () => {
 
 mossHarvesterRecallButton?.addEventListener("click", () => {
   game.recallMossHarvester();
+  updateHudDisplay();
+});
+
+mossSeederFireButton?.addEventListener("click", () => {
+  fireMossSeederFromCargo();
   updateHudDisplay();
 });
 
@@ -747,6 +758,16 @@ function updateHudDisplay() {
     mossHarvesterFood.textContent = String(mossHarvesterDisplay.food);
     mossHarvesterDeployButton.disabled = mossHarvesterDisplay.deployed;
     mossHarvesterRecallButton.disabled = !mossHarvesterDisplay.deployed;
+  }
+
+  const mossSeederCargoCount = cargoHold.getUnitCounts()[ROCKMOSS_CRAWLER_RESOURCE] ?? 0;
+  const mossSeederDisplay = game.getMossSeederDisplay(mossSeederCargoCount);
+  const mossSeederKey = `${mossSeederDisplay.status}|${mossSeederDisplay.crawlerCargoCount}|${mossSeederDisplay.canFire}`;
+  if (mossSeederKey !== _hud.mossSeederKey) {
+    _hud.mossSeederKey = mossSeederKey;
+    mossSeederCount.textContent = String(mossSeederDisplay.crawlerCargoCount);
+    mossSeederStatus.textContent = mossSeederDisplay.status;
+    mossSeederFireButton.disabled = !mossSeederDisplay.canFire;
   }
 
   const hullPct = Math.ceil((state.components.hull.integrity / state.components.hull.maxIntegrity) * 100);
@@ -1108,6 +1129,7 @@ function setupExplorerStart() {
   state.components.collector.installed = true;
   state.components.towCable.installed = true;
   state.components.beaconBay.installed = true;
+  state.components.mossSeeder.installed = true;
 
   state.ship.frameId = "explorer";
   state.ship.shape = "explorer";
@@ -1131,6 +1153,7 @@ function setupExplorerStart() {
       yardExchangeServices.modworks,
     ]),
   );
+  state.hubServices.skipMissionFirstContracts[yardExchangeServices.finance] = true;
   state.hubServices.flags.yardCoreSeenDocked = true;
 
   depositCredits(state, 1000);
@@ -1148,6 +1171,7 @@ function setupExplorerStart() {
   setComponentAvailable("processor", true);
   setComponentAvailable("collector", true);
   setComponentAvailable("tow-cable", true);
+  setComponentAvailable("moss-seeder", true);
   setComponentAvailable("license", true);
 }
 
@@ -3377,6 +3401,25 @@ function wireTowCableHoldButton(button, control) {
     game.setTowCableControl("hold");
     updateHudDisplay();
   });
+}
+
+function fireMossSeederFromCargo() {
+  const removedUnits = cargoHold.removeUnits(ROCKMOSS_CRAWLER_RESOURCE, 1);
+
+  if (removedUnits.length === 0) {
+    game.setMossSeederStatus("No crawler cargo");
+    return false;
+  }
+
+  const fired = game.fireMossSeeder(getResourceUnitMetadata(removedUnits[0]));
+
+  if (!fired) {
+    cargoHold.addUnit(ROCKMOSS_CRAWLER_RESOURCE, getResourceUnitMetadata(removedUnits[0]));
+    game.setMossSeederStatus("Seeder offline");
+    return false;
+  }
+
+  return true;
 }
 
 function processUnit(type, unit = {}) {

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260715-2022-moss-finance-v1" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260715-2147-moss-seeder-v1" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -51,7 +51,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260715-2022-moss-finance-v1</span>
+      <span class="build-tag">build: fresh-20260715-2147-moss-seeder-v1</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -288,6 +288,20 @@
               <div class="system-readout moss-harvester-readout" aria-live="polite">
                 <span>Status: <strong id="moss-harvester-status">Stored</strong></span>
                 <span>Food: <strong id="moss-harvester-food">0</strong></span>
+              </div>
+            </div>
+
+            <div class="component-panel moss-seeder-panel" data-panel-id="moss-seeder" aria-label="Moss seeder launcher">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Moss Seeder</strong>
+                  <span>rear crawler launcher</span>
+                </div>
+              </div>
+              <button id="moss-seeder-fire" class="moss-seeder-button" type="button">Fire Crawler</button>
+              <div class="system-readout moss-seeder-readout" aria-live="polite">
+                <span>Crawlers: <strong id="moss-seeder-count">0</strong></span>
+                <span>Status: <strong id="moss-seeder-status">No crawler cargo</strong></span>
               </div>
             </div>
 
@@ -659,6 +673,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260715-2022-moss-finance-v1"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260715-2147-moss-seeder-v1"></script>
   </body>
 </html>

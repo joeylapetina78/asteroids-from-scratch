@@ -43,6 +43,10 @@ export function getInProgressServiceContractId(service, state) {
 function isMissionFirstContractResolved(service, state) {
   const missionFirstContractId = service.missionFirstContractId;
 
+  if (state.hubServices?.skipMissionFirstContracts?.[service.id]) {
+    return true;
+  }
+
   if (!missionFirstContractId) {
     return true;
   }

@@ -1,26 +1,26 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260715-2022-moss-finance-v1";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260715-2022-moss-finance-v1";
-import { Ship } from "./entities/Ship.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260715-2022-moss-finance-v1";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { Ship } from "./entities/Ship.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260715-2147-moss-seeder-v1";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260715-2022-moss-finance-v1";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260715-2022-moss-finance-v1";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260715-2022-moss-finance-v1";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260715-2022-moss-finance-v1";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260715-2022-moss-finance-v1";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260715-2022-moss-finance-v1";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260715-2022-moss-finance-v1";
-import { createGameState } from "./state/gameState.js?v=fresh-20260715-2022-moss-finance-v1";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createInput } from "./systems/input.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createGameState } from "./state/gameState.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260715-2147-moss-seeder-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -82,6 +82,8 @@ const TOW_CABLE_ASTEROID_PULL = 0.42;
 const TOW_CABLE_HOOK_RADIUS = 8;
 const MOSS_HARVESTER_INTAKE_RADIUS = 96;
 const MOSS_HARVESTER_PROCESS_SECONDS = 3.8;
+const MOSS_SEEDER_LAUNCH_SPEED = 245;
+const MOSS_SEEDER_REAR_OFFSET = 34;
 const PATROL_APPROACH_SPEED = 145;
 const PATROL_DRIFT_SPEED = 58;
 const PATROL_RETURN_SPEED = 88;
@@ -157,6 +159,13 @@ export class Game {
         intakeProgress: 0,
         intakeRadius: MOSS_HARVESTER_INTAKE_RADIUS,
         position: null,
+      };
+    }
+    if (!this.state.components.mossSeeder) {
+      this.state.components.mossSeeder = {
+        installed: false,
+        status: "No crawler cargo",
+        shotsFired: 0,
       };
     }
     this.onHudChange = onHudChange;
@@ -2242,6 +2251,77 @@ export class Game {
       food: Math.floor(harvester.food ?? 0),
       deployed: Boolean(harvester.deployed),
       progress: harvester.intakeProgress ?? 0,
+    };
+  }
+
+  fireMossSeeder(unitMetadata = {}) {
+    const seeder = this.state.components.mossSeeder;
+
+    if (!seeder?.installed) {
+      return false;
+    }
+
+    const rearAngle = this.ship.angle + Math.PI;
+    const rearVector = {
+      x: Math.cos(rearAngle),
+      y: Math.sin(rearAngle),
+    };
+    const launchPosition = {
+      x: this.ship.position.x + rearVector.x * MOSS_SEEDER_REAR_OFFSET,
+      y: this.ship.position.y + rearVector.y * MOSS_SEEDER_REAR_OFFSET,
+    };
+
+    this.pickups.push(
+      new ResourcePickup({
+        x: launchPosition.x,
+        y: launchPosition.y,
+        type: ROCKMOSS_CRAWLER_TYPE,
+        sourceClaimId: unitMetadata.sourceClaimId ?? null,
+        sourceClaimName: unitMetadata.sourceClaimName ?? null,
+        velocity: {
+          x: this.ship.velocity.x * 0.35 + rearVector.x * MOSS_SEEDER_LAUNCH_SPEED,
+          y: this.ship.velocity.y * 0.35 + rearVector.y * MOSS_SEEDER_LAUNCH_SPEED,
+        },
+      }),
+    );
+
+    seeder.status = "Crawler fired";
+    seeder.shotsFired = Math.floor(seeder.shotsFired ?? 0) + 1;
+    this.createTowCableSparks(launchPosition, "#72ffc9");
+    this.state.ledger.recordEvent(
+      "mossSeeder.fired",
+      {
+        shotsFired: seeder.shotsFired,
+        sourceClaimId: unitMetadata.sourceClaimId ?? null,
+        sourceClaimName: unitMetadata.sourceClaimName ?? null,
+      },
+      { visible: true },
+    );
+    this.onHudChange(this.state);
+    return true;
+  }
+
+  setMossSeederStatus(status) {
+    const seeder = this.state.components.mossSeeder;
+
+    if (!seeder) {
+      return;
+    }
+
+    seeder.status = status;
+    this.onHudChange(this.state);
+  }
+
+  getMossSeederDisplay(crawlerCargoCount = 0) {
+    const seeder = this.state.components.mossSeeder ?? {};
+    const installed = Boolean(seeder.installed);
+
+    return {
+      installed,
+      canFire: installed && crawlerCargoCount > 0,
+      crawlerCargoCount,
+      status: installed && crawlerCargoCount > 0 ? (seeder.status ?? "Ready") : "No crawler cargo",
+      shotsFired: Math.floor(seeder.shotsFired ?? 0),
     };
   }
 

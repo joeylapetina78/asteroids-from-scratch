@@ -1,4 +1,4 @@
-import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260715-2022-moss-finance-v1";
+import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260715-2147-moss-seeder-v1";
 
 // For now, routes are authored from existing world sites. Later this can become
 // the same data layer that powers trade lanes, missions, patrols, and piracy.

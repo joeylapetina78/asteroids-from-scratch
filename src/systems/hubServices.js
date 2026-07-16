@@ -1,4 +1,4 @@
-import { hubServiceDefinitions } from "../content/hubs/yardExchangeServices.js?v=fresh-20260715-2022-moss-finance-v1";
+import { hubServiceDefinitions } from "../content/hubs/yardExchangeServices.js?v=fresh-20260715-2147-moss-seeder-v1";
 
 export function getHubServices(siteId) {
   return hubServiceDefinitions[siteId] ?? [];

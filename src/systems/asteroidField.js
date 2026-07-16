@@ -1,6 +1,6 @@
-import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260715-2147-moss-seeder-v1";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260715-2147-moss-seeder-v1";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same

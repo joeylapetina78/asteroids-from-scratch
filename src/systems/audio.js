@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260715-2147-moss-seeder-v1";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;

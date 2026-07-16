@@ -1,6 +1,6 @@
-import { getPowerTypeForAction, getRightTypeForAction, isRecordActive, limitsAllowAction } from "./authorityModel.js?v=fresh-20260715-2022-moss-finance-v1";
-import { isSameOrChildPlace } from "./placeRegistry.js?v=fresh-20260715-2022-moss-finance-v1";
-import { ensureWorldRecords } from "./worldRecords.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getPowerTypeForAction, getRightTypeForAction, isRecordActive, limitsAllowAction } from "./authorityModel.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { isSameOrChildPlace } from "./placeRegistry.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { ensureWorldRecords } from "./worldRecords.js?v=fresh-20260715-2147-moss-seeder-v1";
 
 export function upsertAuthorityGrant(state, grant) {
   const records = ensureWorldRecords(state);

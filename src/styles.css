@@ -776,12 +776,14 @@ body {
   font-size: 0.84rem;
 }
 
-.moss-harvester-panel {
+.moss-harvester-panel,
+.moss-seeder-panel {
   width: 210px;
   border-color: #2f5d43;
 }
 
-.moss-harvester-button {
+.moss-harvester-button,
+.moss-seeder-button {
   width: 100%;
   border: 1px solid #3d7450;
   border-radius: 6px;
@@ -802,18 +804,22 @@ body {
 }
 
 .moss-harvester-button:hover:not(:disabled),
-.moss-harvester-button:focus-visible:not(:disabled) {
+.moss-harvester-button:focus-visible:not(:disabled),
+.moss-seeder-button:hover:not(:disabled),
+.moss-seeder-button:focus-visible:not(:disabled) {
   border-color: #8dff9e;
   background: #173220;
   box-shadow: 0 0 18px rgba(141, 255, 158, 0.16);
 }
 
-.moss-harvester-button:disabled {
+.moss-harvester-button:disabled,
+.moss-seeder-button:disabled {
   opacity: 0.45;
   cursor: default;
 }
 
-.moss-harvester-readout {
+.moss-harvester-readout,
+.moss-seeder-readout {
   align-items: start;
   margin-top: 10px;
   color: #cdfeda;

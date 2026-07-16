@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260715-2022-moss-finance-v1";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getNpcName } from "../npcs.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260715-2147-moss-seeder-v1";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
@@ -181,6 +181,20 @@ export const hubServiceDefinitions = {
           tags: ["Deployable rig", "Feeds on rockmoss", "Produces food"],
           purchaseMessage:
             "Moss Harvester is packed and ready. Drop it near rockmoss, then use the tow cable to drag mossy rocks into its bite.",
+        },
+        {
+          id: "moss-seeder-mk1",
+          stockGroup: "restock-1",
+          componentId: "mossSeeder",
+          panelId: "moss-seeder",
+          componentName: "Moss Seeder",
+          price: 650,
+          title: "Moss Seeder Rack",
+          description:
+            "A rear-facing crawler launcher. Load crawler stock into cargo, then fire it into a rock to start a new moss colony.",
+          tags: ["Uses crawler cargo", "Rear launcher", "Colonizes rocks"],
+          purchaseMessage:
+            "Moss Seeder is wired in. Put crawler stock in cargo, line up a rock behind you, and plant the weird little future.",
         },
       ],
     },
