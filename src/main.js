@@ -984,12 +984,14 @@ function applyDevStart(devStartId) {
 
   if (devStartId === "explorer") {
     setupExplorerStart();
+    spawnExplorerIncursionPortal();
     licenseApplication.classList.add("is-dismissed");
     updateHudDisplay();
   }
 
   if (devStartId === "panorama") {
     setupExplorerStart();
+    spawnExplorerIncursionPortal();
     licenseApplication.classList.add("is-dismissed");
     applyViewportLayout("fullscreen-background");
     updateHudDisplay();
@@ -1173,6 +1175,18 @@ function setupExplorerStart() {
   setComponentAvailable("tow-cable", true);
   setComponentAvailable("moss-seeder", true);
   setComponentAvailable("license", true);
+}
+
+function spawnExplorerIncursionPortal() {
+  if (state._explorerIncursionSeeded) {
+    return;
+  }
+
+  state._explorerIncursionSeeded = true;
+  game.spawnIncursionPortal({
+    x: game.ship.position.x + 1250,
+    y: game.ship.position.y - 520,
+  });
 }
 
 function setupDevRedWorkStart() {

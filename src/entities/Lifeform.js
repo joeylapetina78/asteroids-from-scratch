@@ -517,9 +517,16 @@ function getResourceScore(asteroid) {
 
 function drawHunter(context, lifeform) {
   const isPirate = lifeform.role === "pirate";
+  const isInvader = lifeform.role === "invader";
+  const fillColor = isPirate
+    ? "rgba(255, 178, 77, 0.22)"
+    : isInvader
+      ? "rgba(177, 102, 255, 0.22)"
+      : "rgba(255, 93, 108, 0.24)";
+  const strokeColor = isPirate ? "#ffb24d" : isInvader ? "#b166ff" : LIFE_COLORS.hunter;
 
-  context.fillStyle = isPirate ? "rgba(255, 178, 77, 0.22)" : "rgba(255, 93, 108, 0.24)";
-  context.strokeStyle = isPirate ? "#ffb24d" : LIFE_COLORS.hunter;
+  context.fillStyle = fillColor;
+  context.strokeStyle = strokeColor;
   context.lineWidth = 2;
   context.beginPath();
   context.moveTo(isPirate ? 22 : 18, 0);
@@ -529,17 +536,17 @@ function drawHunter(context, lifeform) {
   context.closePath();
   context.fill();
   context.stroke();
-  if (isPirate) {
+  if (isPirate || isInvader) {
     context.beginPath();
     context.moveTo(-2, -10);
-    context.lineTo(3, -17);
+    context.lineTo(isInvader ? 8 : 3, -17);
     context.lineTo(7, -7);
     context.moveTo(-2, 10);
-    context.lineTo(3, 17);
+    context.lineTo(isInvader ? 8 : 3, 17);
     context.lineTo(7, 7);
     context.stroke();
   }
-  context.fillStyle = isPirate ? "#1b0e10" : "#ffffff";
+  context.fillStyle = isPirate ? "#1b0e10" : isInvader ? "#ffffff" : "#ffffff";
   context.fillRect(5, -1.5, isPirate ? 6 : 4, 3);
 }
 

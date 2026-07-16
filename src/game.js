@@ -11,6 +11,7 @@ import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/renderin
 import { createResourceField } from "./systems/resourceField.js?v=fresh-20260715-2147-moss-seeder-v1";
 import { createScanner } from "./systems/scanner.js?v=fresh-20260715-2147-moss-seeder-v1";
 import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260715-2147-moss-seeder-v1";
 import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260715-2147-moss-seeder-v1";
 import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260715-2147-moss-seeder-v1";
 import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260715-2147-moss-seeder-v1";
@@ -20,7 +21,7 @@ import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZo
 import { createClaimField } from "./systems/claimField.js?v=fresh-20260715-2147-moss-seeder-v1";
 import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260715-2147-moss-seeder-v1";
 import { createGameState } from "./state/gameState.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260715-2147-moss-seeder-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -126,6 +127,8 @@ const LIFEFORM_CONTACT_RANGES = {
 const ROCKMOSS_CRAWLER_TYPE = "rockmoss-crawler";
 const ROCKMOSS_WORK_DISTANCE_PER_PATCH = 170;
 const ROCKMOSS_MIN_PATCHES = 1;
+const INCURSION_PORTAL_BULLET_DAMAGE = 38;
+const INCURSION_PORTAL_BASE_REWARD = 180;
 
 export class Game {
   constructor(
@@ -192,6 +195,7 @@ export class Game {
     this.lifeforms = createLifeField(this.asteroids);
     this.threadwyrms = createThreadwyrmField(this.asteroids);
     this.driftMouths = createDriftMouthField();
+    this.incursionField = createIncursionField();
     this.lifeDisturbances = [];
     this.lifeformContacts = new Set();
     this.npcShips = createNpcRouteShips(this.worldSites);
@@ -435,8 +439,16 @@ export class Game {
         type: "ecology",
         ecologyType: target.ecologyType,
       }));
+    const incursionBeacons = this.incursionField.getActivePortals().map((portal) => ({
+      id: `incursion-${portal.id}`,
+      beaconId: `incursion-${portal.id}`,
+      name: `Rift Incursion ${portal.waveCount}`,
+      position: portal.position,
+      type: "incursion",
+      portalId: portal.id,
+    }));
 
-    return [...rememberedHubs, ...personalBeacons, ...contractBeacons, ...ecologyBeacons];
+    return [...rememberedHubs, ...personalBeacons, ...contractBeacons, ...ecologyBeacons, ...incursionBeacons];
   }
 
   getBeaconTarget(beaconId) {
@@ -488,6 +500,31 @@ export class Game {
     addTarget("ecology-drift-mouth", "Drift Mouth", "drift-mouth", driftMouth?.position);
 
     return targets;
+  }
+
+  spawnIncursionPortal(position = null) {
+    const angle = this.ship.angle + Math.PI / 2;
+    const spawnPosition = position ?? {
+      x: this.ship.position.x + Math.cos(angle) * 820,
+      y: this.ship.position.y + Math.sin(angle) * 820,
+    };
+    const { portal, spawned } = this.incursionField.spawnPortal({
+      x: spawnPosition.x,
+      y: spawnPosition.y,
+      seed: this.state.ledger.eventCount + 1200,
+    });
+
+    this.lifeforms.push(...spawned);
+    this.state.ledger.recordEvent("incursion.portalOpened", {
+      portalId: portal.id,
+      factionId: portal.factionId,
+      waveCount: portal.waveCount,
+      enemyCount: spawned.length,
+      x: Math.round(portal.position.x),
+      y: Math.round(portal.position.y),
+    });
+    this.onHudChange(this.state);
+    return portal;
   }
 
   getContractClaimTargets() {
@@ -703,6 +740,7 @@ export class Game {
     this.updateMossHarvester(deltaSeconds);
     this.updateHubDefenses(deltaSeconds);
     this.updateLifeDisturbances(deltaSeconds);
+    this.updateIncursions(deltaSeconds);
     // Lifeforms are preserved off-screen, but only nearby ones are simulated.
     // That keeps the field feeling persistent without paying every steering
     // cost for every distant creature each frame.
@@ -727,6 +765,7 @@ export class Game {
     this.updateSkitterWebHazards(activeLifeforms, deltaSeconds);
     this.updateHunterEnvironmentalHits(activeLifeforms, activeAsteroids, deltaSeconds);
     this.updateHunterHits();
+    this.updateIncursionPortalHits();
     this.updateThreadwyrms(deltaSeconds);
     this.updateDriftMouths(deltaSeconds, activeLifeforms);
     this.updateLifeformContacts(activeLifeforms);
@@ -2976,7 +3015,9 @@ export class Game {
       this.recordEnemyDestroyed(getHostileEnemyType(hitHunter), "weapon");
       this.createHunterBurst(hitHunter, bullet.velocity);
       this.createHunterDrops(hitHunter, bullet.velocity);
-      this.respawnHunter();
+      if (!hitHunter.sourcePortalId) {
+        this.respawnHunter();
+      }
     });
 
     if (this.shipHitCooldown > 0) {
@@ -3011,8 +3052,82 @@ export class Game {
       this.recordEnemyDestroyed(getHostileEnemyType(rammingHunter), "ramming-ship");
       this.createHunterBurst(rammingHunter, this.ship.velocity);
       this.createHunterDrops(rammingHunter, this.ship.velocity);
-      this.respawnHunter();
+      if (!rammingHunter.sourcePortalId) {
+        this.respawnHunter();
+      }
     }
+  }
+
+  updateIncursions(deltaSeconds) {
+    const result = this.incursionField.update(deltaSeconds, this.lifeforms);
+
+    if (result.spawned.length > 0) {
+      this.lifeforms.push(...result.spawned);
+      this.addLifeDisturbance("incursion", result.spawned[0].position, LIFE_DISTURBANCE_WEAPON_RADIUS * 0.7, 0.92);
+    }
+
+    result.events.forEach((event) => {
+      this.state.ledger.recordEvent(event.type, event.payload);
+    });
+  }
+
+  updateIncursionPortalHits() {
+    const activePortals = this.incursionField.getActivePortals();
+
+    if (activePortals.length === 0) {
+      return;
+    }
+
+    this.bullets.forEach((bullet) => {
+      if (!bullet.isAlive) {
+        return;
+      }
+
+      const hitPortal = activePortals.find((portal) =>
+        circlesOverlap(bullet.position, bullet.radius, portal.position, portal.radius),
+      );
+
+      if (!hitPortal) {
+        return;
+      }
+
+      bullet.destroy();
+      const damaged = hitPortal.damage(INCURSION_PORTAL_BULLET_DAMAGE);
+      this.createIncursionPortalSparks(hitPortal, damaged ? "#d9a7ff" : "#ff74ae");
+      this.state.ledger.recordEvent(
+        damaged ? "incursion.portalDamaged" : "incursion.portalShielded",
+        {
+          portalId: hitPortal.id,
+          waveCount: hitPortal.waveCount,
+          guardCount: hitPortal.guardIds.size,
+          health: Math.round(hitPortal.health),
+        },
+        { visible: false },
+      );
+
+      if (!hitPortal.isAlive) {
+        this.clearIncursionPortal(hitPortal);
+      }
+    });
+  }
+
+  clearIncursionPortal(portal) {
+    const reward = getIncursionPortalReward(portal.waveCount);
+
+    this.incursionField.portals = this.incursionField.portals.filter((candidate) => candidate !== portal);
+    this.createIncursionPortalBurst(portal);
+    if (reward > 0) {
+      depositCredits(this.state, reward);
+    }
+    this.state.ledger.recordEvent("incursion.portalDestroyed", {
+      portalId: portal.id,
+      factionId: portal.factionId,
+      waveCount: portal.waveCount,
+      reward,
+      x: Math.round(portal.position.x),
+      y: Math.round(portal.position.y),
+    });
+    this.onHudChange(this.state);
   }
 
   addLifeDisturbance(type, position, radius, intensity = 1) {
@@ -3456,7 +3571,9 @@ export class Game {
     this.recordEnemyDestroyed(getHostileEnemyType(hunter), cause);
     this.createHunterBurst(hunter, hunter.velocity);
     this.createHunterDrops(hunter, hunter.velocity);
-    this.respawnHunter();
+    if (!hunter.sourcePortalId) {
+      this.respawnHunter();
+    }
   }
 
   recordEnemyDestroyed(enemyType, cause) {
@@ -3859,6 +3976,58 @@ export class Game {
     }
   }
 
+  createIncursionPortalSparks(portal, color = "#d9a7ff") {
+    const count = portal.isShielded ? 10 : 7;
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 45 + Math.random() * 115;
+
+      this.particles.push({
+        type: "spark",
+        position: {
+          x: portal.position.x + Math.cos(angle) * portal.radius * (0.55 + Math.random() * 0.35),
+          y: portal.position.y + Math.sin(angle) * portal.radius * (0.55 + Math.random() * 0.35),
+        },
+        velocity: {
+          x: Math.cos(angle) * speed,
+          y: Math.sin(angle) * speed,
+        },
+        color,
+        size: 1.3 + Math.random() * 2.7,
+        drag: 0.952,
+        life: 0.22 + Math.random() * 0.28,
+        maxLife: 0.5,
+      });
+    }
+  }
+
+  createIncursionPortalBurst(portal) {
+    const count = 38;
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = (Math.PI * 2 * index) / count + Math.random() * 0.3;
+      const speed = 75 + Math.random() * 230;
+
+      this.particles.push({
+        type: index % 4 === 0 ? "square" : "spark",
+        position: {
+          x: portal.position.x + Math.cos(angle) * portal.radius * 0.35,
+          y: portal.position.y + Math.sin(angle) * portal.radius * 0.35,
+        },
+        velocity: {
+          x: Math.cos(angle) * speed,
+          y: Math.sin(angle) * speed,
+        },
+        color: index % 5 === 0 ? "#ffffff" : index % 2 === 0 ? "#ff74ae" : "#b166ff",
+        size: 1.6 + Math.random() * 3.5,
+        drag: 0.94,
+        life: 0.45 + Math.random() * 0.48,
+        maxLife: 0.93,
+      });
+    }
+  }
+
   createHunterBurst(hunter, impactVelocity) {
     const count = 22;
 
@@ -4249,6 +4418,7 @@ export class Game {
     this.driftMouths.forEach((mouth) => {
       mouth.draw(this.context, drawCamera);
     });
+    this.drawIncursionPortals(drawCamera, drawCanvas);
     this.lifeforms.forEach((lifeform) => {
       if (isVisible(lifeform, drawCanvas, drawCamera)) {
         lifeform.draw(this.context, drawCamera);
@@ -4331,6 +4501,14 @@ export class Game {
     this.context.fill();
 
     this.context.restore();
+  }
+
+  drawIncursionPortals(camera = this.camera, canvas = this.canvas) {
+    this.incursionField.getActivePortals().forEach((portal) => {
+      if (isVisible(portal, canvas, camera)) {
+        portal.draw(this.context, camera);
+      }
+    });
   }
 
   drawDeployedBeacons(camera = this.camera, canvas = this.canvas) {
@@ -5403,6 +5581,10 @@ function getAsteroidDominantResource(asteroid) {
 
 function getHostileEnemyType(lifeform) {
   return lifeform.role ?? lifeform.type ?? "hostile";
+}
+
+function getIncursionPortalReward(waveCount) {
+  return Math.round(INCURSION_PORTAL_BASE_REWARD * Math.pow(1.75, Math.max(0, waveCount - 1)));
 }
 
 function getLifeformLabel(type) {

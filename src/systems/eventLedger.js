@@ -184,6 +184,17 @@ export function createEventLedger(options = {}) {
       incrementStat("ship.towed.total");
       incrementStat("credits.spent.tows", event.payload.cost ?? 0);
       incrementStat(`ship.towed.${event.payload.siteId ?? "unknown"}`);
+    } else if (event.type === "incursion.portalOpened") {
+      incrementStat("incursion.portalOpened.total");
+      incrementStat(`incursion.portalOpened.${event.payload.factionId ?? "unknown"}`);
+    } else if (event.type === "incursion.waveSpawned") {
+      incrementStat("incursion.waveSpawned.total");
+      setStatMax("incursion.wave.max", event.payload.waveCount ?? 0);
+      incrementStat("incursion.enemies.spawned", event.payload.enemyCount ?? 0);
+    } else if (event.type === "incursion.portalDestroyed") {
+      incrementStat("incursion.portalDestroyed.total");
+      setStatMax("incursion.portalDestroyed.wave.max", event.payload.waveCount ?? 0);
+      incrementStat("credits.earned.incursions", event.payload.reward ?? 0);
     } else if (event.type === "site.nearby") {
       incrementStat("site.nearby.total");
       incrementStat(`site.nearby.${event.payload.siteId ?? "unknown"}`);
@@ -486,6 +497,26 @@ function getDefaultMessage(type, payload) {
 
   if (type === "pilot.debugMarker") {
     return `Pilot debug marker ${payload.markerKey ?? "?"}: ${payload.note ?? "input anomaly"}`;
+  }
+
+  if (type === "incursion.portalOpened") {
+    return `Incursion portal opened with ${payload.enemyCount ?? 0} guards`;
+  }
+
+  if (type === "incursion.waveSpawned") {
+    return `Incursion wave ${payload.waveCount ?? 0}: ${payload.enemyCount ?? 0} hunters`;
+  }
+
+  if (type === "incursion.portalDamaged") {
+    return `Damaged incursion portal`;
+  }
+
+  if (type === "incursion.portalShielded") {
+    return `Portal shield held: ${payload.guardCount ?? 0} guards remain`;
+  }
+
+  if (type === "incursion.portalDestroyed") {
+    return `Destroyed incursion portal for ${payload.reward ?? 0} credits`;
   }
 
   if (type === "site.nearby") {
