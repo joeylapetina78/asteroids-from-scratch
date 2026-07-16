@@ -1,8 +1,8 @@
-import { getContractRequirementDefinition } from "./contractRules.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { COMPONENT_STATE_BY_PANEL_ID, PANEL_IDS } from "./componentRegistry.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { HUB_SERVICE_BEHAVIOR_BY_TYPE } from "./hubServiceBehaviors.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { getMissionActionDefinition } from "./missionActions.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createGameState } from "../state/gameState.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getContractRequirementDefinition } from "./contractRules.js?v=fresh-20260716-1720-a6efb5a";
+import { COMPONENT_STATE_BY_PANEL_ID, PANEL_IDS } from "./componentRegistry.js?v=fresh-20260716-1720-a6efb5a";
+import { HUB_SERVICE_BEHAVIOR_BY_TYPE } from "./hubServiceBehaviors.js?v=fresh-20260716-1720-a6efb5a";
+import { getMissionActionDefinition } from "./missionActions.js?v=fresh-20260716-1720-a6efb5a";
+import { createGameState } from "../state/gameState.js?v=fresh-20260716-1720-a6efb5a";
 
 export function validateMissionDefinition(missionDefinition, context = createValidationContext()) {
   const issues = [];

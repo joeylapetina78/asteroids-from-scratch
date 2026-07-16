@@ -1,6 +1,6 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { ensureObligations } from "./obligations.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260716-1720-a6efb5a";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260716-1720-a6efb5a";
+import { ensureObligations } from "./obligations.js?v=fresh-20260716-1720-a6efb5a";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 

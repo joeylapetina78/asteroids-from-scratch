@@ -1,11 +1,12 @@
-import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260716-1720-a6efb5a";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260716-1720-a6efb5a";
 import { hashNumbers } from "./random.js";
 
 const FIRST_WAVE_COUNT = 3;
 const BASE_WAVE_SECONDS = 26;
 const MIN_WAVE_SECONDS = 14;
 const PORTAL_HUNTER_ORBIT_RADIUS = 150;
+const PORTAL_SHIELD_GUARD_RADIUS = 950;
 
 export function createIncursionField() {
   return {
@@ -31,7 +32,14 @@ export function createIncursionField() {
     update(deltaSeconds, lifeforms) {
       const livingGuardIds = new Set(
         lifeforms
-          .filter((lifeform) => lifeform.isAlive && lifeform.sourcePortalId)
+          .filter((lifeform) => {
+            if (!lifeform.isAlive || !lifeform.sourcePortalId) {
+              return false;
+            }
+
+            const portal = this.portals.find((candidate) => candidate.id === lifeform.sourcePortalId);
+            return portal && getDistance(lifeform.position, portal.position) <= PORTAL_SHIELD_GUARD_RADIUS;
+          })
           .map((lifeform) => lifeform.id),
       );
       const events = [];
@@ -108,4 +116,8 @@ function spawnPortalWave(portal, count, waveIndex) {
 
 function getNextWaveSeconds(portal) {
   return Math.max(MIN_WAVE_SECONDS, BASE_WAVE_SECONDS - portal.waveCount * 2.5);
+}
+
+function getDistance(first, second) {
+  return Math.hypot(first.x - second.x, first.y - second.y);
 }

@@ -1,7 +1,7 @@
-import { getRightTypeForAction, isRecordActive, limitsAllowAction } from "./authorityModel.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { actorHasPower, getAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { isSameOrChildPlace } from "./placeRegistry.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { getWorldDocument } from "./worldRecords.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getRightTypeForAction, isRecordActive, limitsAllowAction } from "./authorityModel.js?v=fresh-20260716-1720-a6efb5a";
+import { actorHasPower, getAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260716-1720-a6efb5a";
+import { isSameOrChildPlace } from "./placeRegistry.js?v=fresh-20260716-1720-a6efb5a";
+import { getWorldDocument } from "./worldRecords.js?v=fresh-20260716-1720-a6efb5a";
 
 export function canActorDoAction(state, {
   actorId,

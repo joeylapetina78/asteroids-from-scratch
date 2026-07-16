@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getNpcName } from "../npcs.js?v=fresh-20260716-1720-a6efb5a";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260716-1720-a6efb5a";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [

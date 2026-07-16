@@ -1,27 +1,27 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { Ship } from "./entities/Ship.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260716-1720-a6efb5a";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260716-1720-a6efb5a";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260716-1720-a6efb5a";
+import { Ship } from "./entities/Ship.js?v=fresh-20260716-1720-a6efb5a";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260716-1720-a6efb5a";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { createGameState } from "./state/gameState.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { createInput } from "./systems/input.js?v=fresh-20260716-1720-a6efb5a";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260716-1720-a6efb5a";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260716-1720-a6efb5a";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260716-1720-a6efb5a";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260716-1720-a6efb5a";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260716-1720-a6efb5a";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260716-1720-a6efb5a";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260716-1720-a6efb5a";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260716-1720-a6efb5a";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260716-1720-a6efb5a";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260716-1720-a6efb5a";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260716-1720-a6efb5a";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260716-1720-a6efb5a";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260716-1720-a6efb5a";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260716-1720-a6efb5a";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260716-1720-a6efb5a";
+import { createGameState } from "./state/gameState.js?v=fresh-20260716-1720-a6efb5a";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260716-1720-a6efb5a";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -129,6 +129,7 @@ const ROCKMOSS_WORK_DISTANCE_PER_PATCH = 170;
 const ROCKMOSS_MIN_PATCHES = 1;
 const INCURSION_PORTAL_BULLET_DAMAGE = 38;
 const INCURSION_PORTAL_BASE_REWARD = 180;
+const INCURSION_HUB_EXCLUSION_BUFFER = 180;
 
 export class Game {
   constructor(
@@ -504,10 +505,11 @@ export class Game {
 
   spawnIncursionPortal(position = null) {
     const angle = this.ship.angle + Math.PI / 2;
-    const spawnPosition = position ?? {
+    const requestedPosition = position ?? {
       x: this.ship.position.x + Math.cos(angle) * 820,
       y: this.ship.position.y + Math.sin(angle) * 820,
     };
+    const spawnPosition = getIncursionSafePosition(requestedPosition, this.worldSites, this.ship.position);
     const { portal, spawned } = this.incursionField.spawnPortal({
       x: spawnPosition.x,
       y: spawnPosition.y,
@@ -5585,6 +5587,50 @@ function getHostileEnemyType(lifeform) {
 
 function getIncursionPortalReward(waveCount) {
   return Math.round(INCURSION_PORTAL_BASE_REWARD * Math.pow(1.75, Math.max(0, waveCount - 1)));
+}
+
+function getIncursionSafePosition(requestedPosition, worldSites, fallbackPosition) {
+  let position = { x: requestedPosition.x, y: requestedPosition.y };
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const protectedSite = worldSites.find((site) => {
+      if (site.type !== "hub") {
+        return false;
+      }
+
+      const protectedRadius = getHubSensorRadius(site) + INCURSION_HUB_EXCLUSION_BUFFER;
+      return distance(position, site.position) < protectedRadius;
+    });
+
+    if (!protectedSite) {
+      return position;
+    }
+
+    const protectedRadius = getHubSensorRadius(protectedSite) + INCURSION_HUB_EXCLUSION_BUFFER;
+    let directionX = position.x - protectedSite.position.x;
+    let directionY = position.y - protectedSite.position.y;
+    let length = Math.hypot(directionX, directionY);
+
+    if (length < 0.001) {
+      directionX = fallbackPosition.x - protectedSite.position.x;
+      directionY = fallbackPosition.y - protectedSite.position.y;
+      length = Math.hypot(directionX, directionY);
+    }
+
+    if (length < 0.001) {
+      const angle = (protectedSite.id.length % 12) * ((Math.PI * 2) / 12);
+      directionX = Math.cos(angle);
+      directionY = Math.sin(angle);
+      length = 1;
+    }
+
+    position = {
+      x: protectedSite.position.x + (directionX / length) * protectedRadius,
+      y: protectedSite.position.y + (directionY / length) * protectedRadius,
+    };
+  }
+
+  return position;
 }
 
 function getLifeformLabel(type) {

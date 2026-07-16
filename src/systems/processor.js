@@ -1,5 +1,5 @@
-import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260715-2147-moss-seeder-v1";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260716-1720-a6efb5a";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260716-1720-a6efb5a";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;

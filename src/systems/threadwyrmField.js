@@ -1,6 +1,6 @@
-import { Threadwyrm } from "../entities/Threadwyrm.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { Threadwyrm } from "../entities/Threadwyrm.js?v=fresh-20260716-1720-a6efb5a";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260716-1720-a6efb5a";
 
 const THREADWYRM_ATTEMPTS = 14;
 const MAX_THREADWYRMS = 3;

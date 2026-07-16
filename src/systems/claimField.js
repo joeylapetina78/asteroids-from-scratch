@@ -1,6 +1,6 @@
 import { createValueNoise } from "./valueNoise.js";
 import { getRegionProfile } from "./worldRegions.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260715-2147-moss-seeder-v1";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260716-1720-a6efb5a";
 
 const GRID_SIZE = 350;
 const JITTER = 100;
