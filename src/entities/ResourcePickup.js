@@ -1,9 +1,10 @@
-import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260714-2116-856b156";
+import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260715-2022-moss-finance-v1";
 import { createRandom, randomRange } from "../systems/random.js";
-import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260714-2116-856b156";
+import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260715-2022-moss-finance-v1";
 
 const PICKUP_RADIUS = 10;
 const PICKUP_DRAG = 0.985;
+const ROCKMOSS_CRAWLER_TYPE = "rockmoss-crawler";
 
 // Named sizes per shape so volatiles (circle) feel lighter and strange (shard) feel larger.
 const SHAPE_SIZE = {
@@ -46,10 +47,39 @@ export class ResourcePickup {
     context.strokeStyle = "rgba(255,255,255,0.7)";
     context.lineWidth = 1;
 
-    drawResourceShape(context, this.shape, this.size);
+    if (this.type === ROCKMOSS_CRAWLER_TYPE) {
+      drawCrawlerPickup(context, this.size);
+    } else {
+      drawResourceShape(context, this.shape, this.size);
+    }
 
     context.restore();
   }
+}
+
+function drawCrawlerPickup(context, size) {
+  const pulse = 0.85 + Math.sin(performance.now() / 170) * 0.12;
+  const bodyLength = size * 0.95 * pulse;
+  const bodyWidth = size * 0.48;
+
+  context.fillStyle = "rgba(115, 255, 191, 0.78)";
+  context.strokeStyle = "rgba(213, 255, 188, 0.9)";
+  context.beginPath();
+  context.ellipse(0, 0, bodyLength * 0.5, bodyWidth * 0.5, 0, 0, Math.PI * 2);
+  context.fill();
+  context.stroke();
+
+  context.strokeStyle = "rgba(114, 255, 201, 0.7)";
+  context.beginPath();
+  context.moveTo(-bodyLength * 0.25, -bodyWidth * 0.45);
+  context.lineTo(-bodyLength * 0.58, -bodyWidth * 0.82);
+  context.moveTo(-bodyLength * 0.25, bodyWidth * 0.45);
+  context.lineTo(-bodyLength * 0.58, bodyWidth * 0.82);
+  context.moveTo(bodyLength * 0.22, -bodyWidth * 0.42);
+  context.lineTo(bodyLength * 0.55, -bodyWidth * 0.72);
+  context.moveTo(bodyLength * 0.22, bodyWidth * 0.42);
+  context.lineTo(bodyLength * 0.55, bodyWidth * 0.72);
+  context.stroke();
 }
 
 export function createResourcePickupsFromAsteroid(asteroid, seed, impactVelocity = { x: 0, y: 0 }, metadata = {}) {

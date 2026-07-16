@@ -1,10 +1,10 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260714-2116-856b156";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260714-2116-856b156";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260714-2116-856b156";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260714-2116-856b156";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260714-2116-856b156";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260714-2116-856b156";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260714-2116-856b156";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260715-2022-moss-finance-v1";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260715-2022-moss-finance-v1";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260715-2022-moss-finance-v1";
 
 export function createGameState() {
   const state = {
@@ -172,6 +172,21 @@ export function createGameState() {
       collector: {
         installed: false,
         isActive: false,
+      },
+      towCable: {
+        installed: false,
+        status: "Idle",
+        lineLength: 0,
+        maxLength: 650,
+      },
+      mossHarvester: {
+        installed: false,
+        deployed: false,
+        status: "Stored",
+        food: 0,
+        intakeProgress: 0,
+        intakeRadius: 96,
+        position: null,
       },
     },
   };

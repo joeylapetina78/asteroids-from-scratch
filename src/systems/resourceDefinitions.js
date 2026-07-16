@@ -44,6 +44,7 @@ export const FAMILY_MEMBERS = {
   strange: [
     { id: "crystal-matrix", color: "#de6fff", weight: 2 },
     { id: "anomaly-shard",  color: "#ff3080", weight: 1 },
+    { id: "rockmoss-crawler", color: "#72ffc9", weight: 0 },
   ],
 };
 

@@ -1,6 +1,6 @@
 const IN_PROGRESS_CONTRACT_STATUSES = ["offered", "active", "fulfilled"];
 const MISSION_FIRST_RESOLVED_STATUSES = ["active", "fulfilled", "paid"];
-const EMERGENCY_FUEL_LOAN_ID = "mako-emergency-fuel-loan";
+const MINIMUM_FINANCE_LOAN_ID = "mako-emergency-fuel-loan";
 
 export function getNextHubServiceContractId(service, { state, random = Math.random }) {
   const contractIds = service.contractIds ?? [];
@@ -11,8 +11,8 @@ export function getNextHubServiceContractId(service, { state, random = Math.rand
     return missionFirstContractId;
   }
 
-  if (shouldOfferEmergencyFuelLoan(service, state)) {
-    return EMERGENCY_FUEL_LOAN_ID;
+  if (shouldOfferMinimumFinanceLoan(service, state)) {
+    return MINIMUM_FINANCE_LOAN_ID;
   }
 
   if (service.singleActiveContract && getInProgressServiceContractId(service, state)) {
@@ -51,13 +51,13 @@ function isMissionFirstContractResolved(service, state) {
   return Boolean(missionFirstContract && MISSION_FIRST_RESOLVED_STATUSES.includes(missionFirstContract.status));
 }
 
-function shouldOfferEmergencyFuelLoan(service, state) {
-  if (service.serviceType !== "finance" || state.components.engine.fuel > 0) {
+function shouldOfferMinimumFinanceLoan(service, state) {
+  if (service.serviceType !== "finance") {
     return false;
   }
 
-  const existingEmergencyLoan = state.contracts.records[EMERGENCY_FUEL_LOAN_ID];
-  return !existingEmergencyLoan || existingEmergencyLoan.status === "paid";
+  const existingMinimumLoan = state.contracts.records[MINIMUM_FINANCE_LOAN_ID];
+  return !existingMinimumLoan || existingMinimumLoan.status === "paid";
 }
 
 function getEligibleServiceContractIds(service, { state, missionFirstResolved }) {
@@ -66,10 +66,6 @@ function getEligibleServiceContractIds(service, { state, missionFirstResolved })
 
   return (service.contractIds ?? []).filter((contractId) => {
     if (contractId !== missionFirstContractId && !missionFirstResolved) {
-      return false;
-    }
-
-    if (contractId === EMERGENCY_FUEL_LOAN_ID && state.components.engine.fuel > 0) {
       return false;
     }
 

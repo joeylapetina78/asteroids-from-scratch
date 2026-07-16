@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260714-2116-856b156";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260714-2116-856b156";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260714-2116-856b156";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260714-2116-856b156";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260714-2116-856b156";
-import { Game } from "./game.js?v=fresh-20260714-2116-856b156";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260714-2116-856b156";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260714-2116-856b156";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260714-2116-856b156";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260714-2116-856b156";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260715-2022-moss-finance-v1";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260715-2022-moss-finance-v1";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260715-2022-moss-finance-v1";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260715-2022-moss-finance-v1";
+import { Game } from "./game.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260715-2022-moss-finance-v1";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260715-2022-moss-finance-v1";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260715-2022-moss-finance-v1";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260714-2116-856b156";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260714-2116-856b156";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260714-2116-856b156";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260714-2116-856b156";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260714-2116-856b156";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260714-2116-856b156";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260714-2116-856b156";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260714-2116-856b156";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260714-2116-856b156";
-import { Processor } from "./systems/processor.js?v=fresh-20260714-2116-856b156";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260714-2116-856b156";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260714-2116-856b156";
-import { createGameState } from "./state/gameState.js?v=fresh-20260714-2116-856b156";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260715-2022-moss-finance-v1";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260715-2022-moss-finance-v1";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260715-2022-moss-finance-v1";
+import { Processor } from "./systems/processor.js?v=fresh-20260715-2022-moss-finance-v1";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260715-2022-moss-finance-v1";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createGameState } from "./state/gameState.js?v=fresh-20260715-2022-moss-finance-v1";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -108,6 +108,8 @@ const DEFAULT_PANEL_LAYOUT = {
   scanner: { x: 980, y: 560, z: 88 },
   docking: { x: -300, y: 340, z: 100 },
   tow: { x: -300, y: 520, z: 125 },
+  "tow-cable": { x: 760, y: 760, z: 55 },
+  "moss-harvester": { x: 760, y: 580, z: 56 },
   contract: { x: -300, y: 340, z: 95 },
   document: { x: -40, y: 240, z: 96 },
   finley: { x: 70, y: 120, z: 115 },
@@ -229,6 +231,16 @@ const shipStatus = document.querySelector("#ship-status");
 const towSection = document.querySelector("#tow-section");
 const towButton = document.querySelector("#tow-button");
 const towCostDisplay = document.querySelector("#tow-cost");
+const towCableFireButton = document.querySelector("#tow-cable-fire");
+const towCableReelButton = document.querySelector("#tow-cable-reel");
+const towCablePayOutButton = document.querySelector("#tow-cable-pay-out");
+const towCableReleaseButton = document.querySelector("#tow-cable-release");
+const towCableStatus = document.querySelector("#tow-cable-status");
+const towCableLength = document.querySelector("#tow-cable-length");
+const mossHarvesterDeployButton = document.querySelector("#moss-harvester-deploy");
+const mossHarvesterRecallButton = document.querySelector("#moss-harvester-recall");
+const mossHarvesterStatus = document.querySelector("#moss-harvester-status");
+const mossHarvesterFood = document.querySelector("#moss-harvester-food");
 const tractorFieldButton = document.querySelector("#tractor-field-button");
 const tractorFieldStatus = document.querySelector("#tractor-field-status");
 const viewportRegion = document.querySelector("#viewport-region");
@@ -270,6 +282,8 @@ const _hud = {
   fuelFraction: null,
   ammo: null,
   tractorActive: null,
+  towCableKey: null,
+  mossHarvesterKey: null,
   hullPct: null,
   hullFraction: null,
   hullVin: null,
@@ -448,6 +462,29 @@ tractorFieldButton.addEventListener("pointerup", (event) => {
 tractorFieldButton.addEventListener("click", (event) => event.preventDefault());
 tractorFieldButton.addEventListener("pointercancel", () => setTractorFieldActive(false));
 tractorFieldButton.addEventListener("lostpointercapture", () => setTractorFieldActive(false));
+
+towCableFireButton.addEventListener("click", () => {
+  game.fireTowCable();
+  updateHudDisplay();
+});
+
+towCableReleaseButton.addEventListener("click", () => {
+  game.releaseTowCable();
+  updateHudDisplay();
+});
+
+wireTowCableHoldButton(towCableReelButton, "reel");
+wireTowCableHoldButton(towCablePayOutButton, "payout");
+
+mossHarvesterDeployButton?.addEventListener("click", () => {
+  game.deployMossHarvester();
+  updateHudDisplay();
+});
+
+mossHarvesterRecallButton?.addEventListener("click", () => {
+  game.recallMossHarvester();
+  updateHudDisplay();
+});
 
 scanButton.addEventListener("click", () => {
   game.cycleBeacon();
@@ -690,6 +727,26 @@ function updateHudDisplay() {
     _hud.tractorActive = tractorActive;
     tractorFieldStatus.textContent = tractorActive ? "Pulling" : "Idle";
     tractorFieldButton.setAttribute("aria-pressed", String(tractorActive));
+  }
+
+  const towCableDisplay = game.getTowCableDisplay();
+  const towCableKey = `${towCableDisplay.status}|${towCableDisplay.lineLength}|${towCableDisplay.maxLength}|${towCableDisplay.control}`;
+  if (towCableKey !== _hud.towCableKey) {
+    _hud.towCableKey = towCableKey;
+    towCableStatus.textContent = towCableDisplay.status;
+    towCableLength.textContent = `${towCableDisplay.lineLength} / ${towCableDisplay.maxLength}`;
+    towCableReelButton.setAttribute("aria-pressed", String(towCableDisplay.control === "reel"));
+    towCablePayOutButton.setAttribute("aria-pressed", String(towCableDisplay.control === "payout"));
+  }
+
+  const mossHarvesterDisplay = game.getMossHarvesterDisplay();
+  const mossHarvesterKey = `${mossHarvesterDisplay.status}|${mossHarvesterDisplay.food}|${mossHarvesterDisplay.deployed}`;
+  if (mossHarvesterKey !== _hud.mossHarvesterKey) {
+    _hud.mossHarvesterKey = mossHarvesterKey;
+    mossHarvesterStatus.textContent = mossHarvesterDisplay.status;
+    mossHarvesterFood.textContent = String(mossHarvesterDisplay.food);
+    mossHarvesterDeployButton.disabled = mossHarvesterDisplay.deployed;
+    mossHarvesterRecallButton.disabled = !mossHarvesterDisplay.deployed;
   }
 
   const hullPct = Math.ceil((state.components.hull.integrity / state.components.hull.maxIntegrity) * 100);
@@ -1049,6 +1106,7 @@ function setupExplorerStart() {
   state.components.cargoHold.installed = true;
   state.components.docking.installed = true;
   state.components.collector.installed = true;
+  state.components.towCable.installed = true;
   state.components.beaconBay.installed = true;
 
   state.ship.frameId = "explorer";
@@ -1065,7 +1123,13 @@ function setupExplorerStart() {
 
   // Unlock Rook contracts at Yard Exchange so they can take runs freely.
   state.hubServices.unlocked[chapterOneRoute.destinationSite.id] = Array.from(
-    new Set([...(state.hubServices.unlocked[chapterOneRoute.destinationSite.id] ?? []), yardExchangeServices.rook, yardExchangeServices.supply]),
+    new Set([
+      ...(state.hubServices.unlocked[chapterOneRoute.destinationSite.id] ?? []),
+      yardExchangeServices.rook,
+      yardExchangeServices.finance,
+      yardExchangeServices.supply,
+      yardExchangeServices.modworks,
+    ]),
   );
   state.hubServices.flags.yardCoreSeenDocked = true;
 
@@ -1083,6 +1147,7 @@ function setupExplorerStart() {
   setComponentAvailable("contract", true);
   setComponentAvailable("processor", true);
   setComponentAvailable("collector", true);
+  setComponentAvailable("tow-cable", true);
   setComponentAvailable("license", true);
 }
 
@@ -3281,6 +3346,39 @@ function setTractorFieldActive(isActive) {
   updateHudDisplay();
 }
 
+function wireTowCableHoldButton(button, control) {
+  button.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    button.setPointerCapture(event.pointerId);
+    game.setTowCableControl(control);
+    updateHudDisplay();
+  });
+
+  button.addEventListener("pointerup", (event) => {
+    if (button.hasPointerCapture(event.pointerId)) {
+      button.releasePointerCapture(event.pointerId);
+    }
+
+    game.setTowCableControl("hold");
+    updateHudDisplay();
+    button.blur();
+  });
+
+  button.addEventListener("click", (event) => event.preventDefault());
+  button.addEventListener("pointercancel", () => {
+    game.setTowCableControl("hold");
+    updateHudDisplay();
+  });
+  button.addEventListener("lostpointercapture", () => {
+    game.setTowCableControl("hold");
+    updateHudDisplay();
+  });
+}
+
 function processUnit(type, unit = {}) {
   // Processor clicks do not care where a unit came from. The selected output
   // determines whether the same physical unit becomes fuel, ammo, scanergy, or
@@ -4381,7 +4479,9 @@ function buyComponentOffer(offer, service = null) {
   commsDirector.say({
     source: COMMS_SOURCES.serviceNpc,
     speaker: service?.npcName ?? "Modworks",
-    text: `${offer.componentName} is bolted in. It will not make you graceful, but it will make you harder to ignore.`,
+    text:
+      offer.purchaseMessage ??
+      `${offer.componentName} is bolted in. It will not make you graceful, but it will make you harder to ignore.`,
   });
   renderComponentShop(service);
   updateHudDisplay();

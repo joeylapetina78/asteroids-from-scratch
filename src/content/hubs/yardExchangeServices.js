@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260714-2116-856b156";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260714-2116-856b156";
+import { getNpcName } from "../npcs.js?v=fresh-20260715-2022-moss-finance-v1";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260715-2022-moss-finance-v1";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
@@ -167,6 +167,20 @@ export const hubServiceDefinitions = {
           description:
             "Three reusable drop beacons. Deploy one in open space, track it from the Beacon Locator, then recover it later.",
           tags: ["3 reusable beacons", "Adds locator targets", "Recoverable"],
+        },
+        {
+          id: "moss-harvester-mk1",
+          stockGroup: "restock-1",
+          componentId: "mossHarvester",
+          panelId: "moss-harvester",
+          componentName: "Moss Harvester",
+          price: 850,
+          title: "Moss Harvester Field Kit",
+          description:
+            "A little deployable farm rig. Drop it near rockmoss and it chews the colony into crude food stock.",
+          tags: ["Deployable rig", "Feeds on rockmoss", "Produces food"],
+          purchaseMessage:
+            "Moss Harvester is packed and ready. Drop it near rockmoss, then use the tow cable to drag mossy rocks into its bite.",
         },
       ],
     },

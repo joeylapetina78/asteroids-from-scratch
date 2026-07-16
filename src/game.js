@@ -1,26 +1,26 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260714-2116-856b156";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260714-2116-856b156";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260714-2116-856b156";
-import { Ship } from "./entities/Ship.js?v=fresh-20260714-2116-856b156";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260714-2116-856b156";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260715-2022-moss-finance-v1";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260715-2022-moss-finance-v1";
+import { Ship } from "./entities/Ship.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260715-2022-moss-finance-v1";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260714-2116-856b156";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260714-2116-856b156";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260714-2116-856b156";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260714-2116-856b156";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260714-2116-856b156";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260714-2116-856b156";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260714-2116-856b156";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260714-2116-856b156";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260714-2116-856b156";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260714-2116-856b156";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260714-2116-856b156";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260714-2116-856b156";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260714-2116-856b156";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260714-2116-856b156";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260714-2116-856b156";
-import { createGameState } from "./state/gameState.js?v=fresh-20260714-2116-856b156";
-import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260714-2116-856b156";
+import { createInput } from "./systems/input.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260715-2022-moss-finance-v1";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260715-2022-moss-finance-v1";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260715-2022-moss-finance-v1";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260715-2022-moss-finance-v1";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260715-2022-moss-finance-v1";
+import { createGameState } from "./state/gameState.js?v=fresh-20260715-2022-moss-finance-v1";
+import { canSpendCredits, debitCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260715-2022-moss-finance-v1";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -73,6 +73,15 @@ const TOW_LINE_STIFFNESS = 2.8;
 const TOW_LINE_DAMPING = 0.965;
 const TOW_CUTTER_RANGE = 285;
 const TOW_CUTTER_COOLDOWN_SECONDS = 1.15;
+const TOW_CABLE_MAX_LENGTH = 650;
+const TOW_CABLE_MIN_LENGTH = 58;
+const TOW_CABLE_HOOK_SPEED = 520;
+const TOW_CABLE_REEL_SPEED = 210;
+const TOW_CABLE_STIFFNESS = 2.9;
+const TOW_CABLE_ASTEROID_PULL = 0.42;
+const TOW_CABLE_HOOK_RADIUS = 8;
+const MOSS_HARVESTER_INTAKE_RADIUS = 96;
+const MOSS_HARVESTER_PROCESS_SECONDS = 3.8;
 const PATROL_APPROACH_SPEED = 145;
 const PATROL_DRIFT_SPEED = 58;
 const PATROL_RETURN_SPEED = 88;
@@ -112,6 +121,9 @@ const LIFEFORM_CONTACT_RANGES = {
   threadwyrm: 210,
   "drift-mouth": 720,
 };
+const ROCKMOSS_CRAWLER_TYPE = "rockmoss-crawler";
+const ROCKMOSS_WORK_DISTANCE_PER_PATCH = 170;
+const ROCKMOSS_MIN_PATCHES = 1;
 
 export class Game {
   constructor(
@@ -128,6 +140,25 @@ export class Game {
     this.context = canvas.getContext("2d");
     document.addEventListener("contextmenu", (e) => e.preventDefault());
     this.state = state;
+    if (!this.state.components.towCable) {
+      this.state.components.towCable = {
+        installed: false,
+        status: "Idle",
+        lineLength: 0,
+        maxLength: TOW_CABLE_MAX_LENGTH,
+      };
+    }
+    if (!this.state.components.mossHarvester) {
+      this.state.components.mossHarvester = {
+        installed: false,
+        deployed: false,
+        status: "Stored",
+        food: 0,
+        intakeProgress: 0,
+        intakeRadius: MOSS_HARVESTER_INTAKE_RADIUS,
+        position: null,
+      };
+    }
     this.onHudChange = onHudChange;
     this.onResourceCollected = onResourceCollected;
     this.onDebugChange = onDebugChange;
@@ -201,6 +232,15 @@ export class Game {
       draw: false,
     };
     this.activeTow = null;
+    this.towCable = {
+      phase: "idle",
+      hookPosition: null,
+      hookVelocity: { x: 0, y: 0 },
+      anchor: null,
+      lineLength: 0,
+      control: "hold",
+      pulse: 0,
+    };
     this.activePatrolIntercept = null;
   }
 
@@ -649,6 +689,9 @@ export class Game {
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
     this.updateAsteroidChunks();
     this.asteroids.forEach((asteroid) => asteroid.update(deltaSeconds));
+    this.updateTowCable(deltaSeconds);
+    this.updateRockmossLifecycle(deltaSeconds);
+    this.updateMossHarvester(deltaSeconds);
     this.updateHubDefenses(deltaSeconds);
     this.updateLifeDisturbances(deltaSeconds);
     // Lifeforms are preserved off-screen, but only nearby ones are simulated.
@@ -687,6 +730,7 @@ export class Game {
     this.lifeforms = this.lifeforms.filter((lifeform) => lifeform.isAlive);
     this.npcShips = this.npcShips.filter((ship) => ship.isAlive);
     this.pickups.forEach((pickup) => pickup.update(deltaSeconds));
+    this.updateRockmossSpores();
     this.updateParticles(deltaSeconds);
     this.updateSiteDefenseBeams(deltaSeconds);
     this.updateCollector(deltaSeconds);
@@ -2059,6 +2103,339 @@ export class Game {
     });
   }
 
+  fireTowCable() {
+    const cableState = this.state.components.towCable;
+
+    if (!cableState?.installed || this.shipDestroyed || this.activeTow || this.towCable.phase !== "idle") {
+      return false;
+    }
+
+    const rearAngle = this.ship.angle + Math.PI;
+    const rearDirection = {
+      x: Math.cos(rearAngle),
+      y: Math.sin(rearAngle),
+    };
+    const startPosition = {
+      x: this.ship.position.x + rearDirection.x * 26,
+      y: this.ship.position.y + rearDirection.y * 26,
+    };
+
+    this.towCable = {
+      phase: "fired",
+      hookPosition: startPosition,
+      hookVelocity: {
+        x: this.ship.velocity.x + rearDirection.x * TOW_CABLE_HOOK_SPEED,
+        y: this.ship.velocity.y + rearDirection.y * TOW_CABLE_HOOK_SPEED,
+      },
+      anchor: null,
+      lineLength: 0,
+      control: "hold",
+      pulse: 0,
+    };
+    this.syncTowCableState("Fired");
+    this.state.ledger.recordEvent(
+      "towCable.fired",
+      {
+        x: Math.round(startPosition.x),
+        y: Math.round(startPosition.y),
+      },
+      { visible: false },
+    );
+    this.onHudChange(this.state);
+    return true;
+  }
+
+  setTowCableControl(control = "hold") {
+    if (!["hold", "reel", "payout"].includes(control)) {
+      return;
+    }
+
+    this.towCable.control = control;
+    this.syncTowCableState();
+  }
+
+  releaseTowCable() {
+    if (this.towCable.phase === "idle") {
+      return;
+    }
+
+    this.towCable = {
+      phase: "idle",
+      hookPosition: null,
+      hookVelocity: { x: 0, y: 0 },
+      anchor: null,
+      lineLength: 0,
+      control: "hold",
+      pulse: 0,
+    };
+    this.syncTowCableState("Idle");
+    this.state.ledger.recordEvent("towCable.released", {}, { visible: false });
+    this.onHudChange(this.state);
+  }
+
+  getTowCableDisplay() {
+    const cableState = this.state.components.towCable ?? {};
+    return {
+      status: cableState.status ?? "Idle",
+      lineLength: Math.round(cableState.lineLength ?? 0),
+      maxLength: Math.round(cableState.maxLength ?? TOW_CABLE_MAX_LENGTH),
+      control: this.towCable.control,
+    };
+  }
+
+  deployMossHarvester() {
+    const harvester = this.state.components.mossHarvester;
+
+    if (!harvester?.installed || harvester.deployed) {
+      return false;
+    }
+
+    harvester.deployed = true;
+    harvester.status = "Deployed";
+    harvester.position = {
+      x: this.ship.position.x,
+      y: this.ship.position.y,
+    };
+    harvester.intakeProgress = 0;
+    harvester.intakeRadius = MOSS_HARVESTER_INTAKE_RADIUS;
+
+    this.createTowCableSparks(harvester.position, "#8dff9e");
+    this.state.ledger.recordEvent(
+      "mossHarvester.deployed",
+      {
+        x: Math.round(harvester.position.x),
+        y: Math.round(harvester.position.y),
+      },
+      { visible: true },
+    );
+    this.onHudChange(this.state);
+    return true;
+  }
+
+  recallMossHarvester() {
+    const harvester = this.state.components.mossHarvester;
+
+    if (!harvester?.installed || !harvester.deployed || !harvester.position) {
+      return false;
+    }
+
+    if (distance(this.ship.position, harvester.position) > 120) {
+      harvester.status = "Too far";
+      this.onHudChange(this.state);
+      return false;
+    }
+
+    this.createTowCableSparks(harvester.position, "#9ee8ff");
+    harvester.deployed = false;
+    harvester.status = "Stored";
+    harvester.position = null;
+    harvester.intakeProgress = 0;
+    this.state.ledger.recordEvent("mossHarvester.recalled", {}, { visible: true });
+    this.onHudChange(this.state);
+    return true;
+  }
+
+  getMossHarvesterDisplay() {
+    const harvester = this.state.components.mossHarvester ?? {};
+    return {
+      status: harvester.status ?? "Stored",
+      food: Math.floor(harvester.food ?? 0),
+      deployed: Boolean(harvester.deployed),
+      progress: harvester.intakeProgress ?? 0,
+    };
+  }
+
+  updateMossHarvester(deltaSeconds) {
+    const harvester = this.state.components.mossHarvester;
+
+    if (!harvester?.installed || !harvester.deployed || !harvester.position) {
+      return;
+    }
+
+    const intakeRadius = harvester.intakeRadius ?? MOSS_HARVESTER_INTAKE_RADIUS;
+    const targetAsteroid = this.asteroids.find((asteroid) =>
+      asteroid.rockmoss && distance(harvester.position, asteroid.position) <= intakeRadius + asteroid.radius,
+    );
+
+    if (!targetAsteroid) {
+      harvester.status = "Waiting";
+      harvester.intakeProgress = Math.max(0, (harvester.intakeProgress ?? 0) - deltaSeconds * 0.2);
+      return;
+    }
+
+    const moss = this.normalizeRockmossState(targetAsteroid);
+    harvester.status = "Feeding";
+    harvester.intakeProgress = Math.min(1, (harvester.intakeProgress ?? 0) + deltaSeconds / MOSS_HARVESTER_PROCESS_SECONDS);
+
+    if (harvester.intakeProgress < 1) {
+      return;
+    }
+
+    harvester.intakeProgress = 0;
+    harvester.food = Math.floor(harvester.food ?? 0) + 1;
+    moss.patches = Math.max(0, moss.patches - 1);
+    moss.crawlers = Math.max(0, Math.min(moss.crawlers, moss.patches));
+    moss.coverage = moss.patches <= 0 ? 0 : moss.patches / Math.max(1, this.getRockmossPatchCap(targetAsteroid));
+    moss.glow = Math.max(0.12, moss.glow - 0.08);
+
+    if (moss.patches <= 0) {
+      delete targetAsteroid.rockmoss;
+      harvester.status = "Cleared moss";
+    }
+
+    this.createRockmossBurst(targetAsteroid, { x: 0, y: 0 }, 10);
+    this.state.ledger.recordEvent(
+      "mossHarvester.foodProduced",
+      {
+        totalFood: harvester.food,
+        x: Math.round(targetAsteroid.position.x),
+        y: Math.round(targetAsteroid.position.y),
+      },
+      { visible: true },
+    );
+    this.onHudChange(this.state);
+  }
+
+  updateTowCable(deltaSeconds) {
+    if (!this.state.components.towCable?.installed || this.towCable.phase === "idle") {
+      return;
+    }
+
+    this.towCable.pulse += deltaSeconds;
+
+    if (this.towCable.phase === "fired") {
+      this.updateFlyingTowCable(deltaSeconds);
+    } else if (this.towCable.phase === "attached") {
+      this.updateAttachedTowCable(deltaSeconds);
+    }
+
+    this.syncTowCableState();
+  }
+
+  updateFlyingTowCable(deltaSeconds) {
+    const cable = this.towCable;
+    if (cable.control === "reel") {
+      const towardShip = normalizeVector(this.ship.position.x - cable.hookPosition.x, this.ship.position.y - cable.hookPosition.y);
+      cable.hookVelocity.x = this.ship.velocity.x + towardShip.x * TOW_CABLE_HOOK_SPEED * 0.74;
+      cable.hookVelocity.y = this.ship.velocity.y + towardShip.y * TOW_CABLE_HOOK_SPEED * 0.74;
+    }
+
+    cable.hookPosition.x += cable.hookVelocity.x * deltaSeconds;
+    cable.hookPosition.y += cable.hookVelocity.y * deltaSeconds;
+
+    const lineDistance = distance(this.ship.position, cable.hookPosition);
+    cable.lineLength = Math.min(lineDistance, TOW_CABLE_MAX_LENGTH);
+
+    const hitAsteroid = this.asteroids.find((asteroid) =>
+      circlesOverlap(cable.hookPosition, TOW_CABLE_HOOK_RADIUS, asteroid.position, asteroid.radius),
+    );
+
+    if (hitAsteroid) {
+      cable.phase = "attached";
+      cable.anchor = hitAsteroid;
+      cable.hookPosition = hitAsteroid.position;
+      cable.hookVelocity = { x: 0, y: 0 };
+      cable.lineLength = Math.min(TOW_CABLE_MAX_LENGTH, Math.max(TOW_CABLE_MIN_LENGTH, distance(this.ship.position, hitAsteroid.position)));
+      this.createTowCableSparks(hitAsteroid.position, "#ffd36b");
+      this.state.ledger.recordEvent(
+        "towCable.attached",
+        {
+          targetType: "asteroid",
+          lineLength: Math.round(cable.lineLength),
+        },
+        { visible: false },
+      );
+      return;
+    }
+
+    if (lineDistance > TOW_CABLE_MAX_LENGTH) {
+      const rearAngle = this.ship.angle + Math.PI;
+      cable.hookPosition = {
+        x: this.ship.position.x + Math.cos(rearAngle) * TOW_CABLE_MAX_LENGTH,
+        y: this.ship.position.y + Math.sin(rearAngle) * TOW_CABLE_MAX_LENGTH,
+      };
+      cable.hookVelocity.x *= 0.15;
+      cable.hookVelocity.y *= 0.15;
+    }
+
+    if (cable.control === "reel" && lineDistance < 42) {
+      this.releaseTowCable();
+    }
+  }
+
+  updateAttachedTowCable(deltaSeconds) {
+    const cable = this.towCable;
+    const anchor = cable.anchor;
+
+    if (!anchor || !this.asteroids.includes(anchor)) {
+      this.releaseTowCable();
+      return;
+    }
+
+    if (cable.control === "reel") {
+      cable.lineLength = Math.max(TOW_CABLE_MIN_LENGTH, cable.lineLength - TOW_CABLE_REEL_SPEED * deltaSeconds);
+    } else if (cable.control === "payout") {
+      cable.lineLength = Math.min(TOW_CABLE_MAX_LENGTH, cable.lineLength + TOW_CABLE_REEL_SPEED * deltaSeconds);
+    }
+
+    const offsetX = anchor.position.x - this.ship.position.x;
+    const offsetY = anchor.position.y - this.ship.position.y;
+    const currentDistance = Math.hypot(offsetX, offsetY) || 1;
+    const excess = currentDistance - cable.lineLength;
+
+    if (excess <= 0) {
+      return;
+    }
+
+    const normal = {
+      x: offsetX / currentDistance,
+      y: offsetY / currentDistance,
+    };
+    const force = Math.min(520, excess * TOW_CABLE_STIFFNESS);
+    const asteroidMass = Math.max(1.2, anchor.radius / 22);
+
+    this.ship.velocity.x += normal.x * force * deltaSeconds;
+    this.ship.velocity.y += normal.y * force * deltaSeconds;
+    anchor.velocity.x -= normal.x * force * TOW_CABLE_ASTEROID_PULL * deltaSeconds / asteroidMass;
+    anchor.velocity.y -= normal.y * force * TOW_CABLE_ASTEROID_PULL * deltaSeconds / asteroidMass;
+  }
+
+  syncTowCableState(statusOverride = null) {
+    const cableState = this.state.components.towCable;
+
+    if (!cableState) {
+      return;
+    }
+
+    const statusByPhase = {
+      idle: "Idle",
+      fired: "Line out",
+      attached: this.towCable.control === "reel" ? "Reeling" : this.towCable.control === "payout" ? "Paying out" : "Attached",
+    };
+
+    cableState.status = statusOverride ?? statusByPhase[this.towCable.phase] ?? "Idle";
+    cableState.lineLength = Math.round(this.towCable.phase === "idle" ? 0 : this.towCable.lineLength);
+    cableState.maxLength = TOW_CABLE_MAX_LENGTH;
+  }
+
+  createTowCableSparks(position, color = "#ffd36b") {
+    for (let index = 0; index < 12; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 45 + Math.random() * 110;
+      this.particles.push({
+        position: { x: position.x, y: position.y },
+        velocity: {
+          x: Math.cos(angle) * speed,
+          y: Math.sin(angle) * speed,
+        },
+        color,
+        size: 1.2 + Math.random() * 2.4,
+        life: 0.35 + Math.random() * 0.35,
+        maxLife: 0.7,
+      });
+    }
+  }
+
   emergencyTow(towCost = null) {
     if (this.activeTow || this.dockedSite) {
       return false;
@@ -3147,6 +3524,7 @@ export class Game {
       this.pickups.push(...minedPickups);
       if (asteroid.rockmoss) {
         this.createRockmossBurst(asteroid, impactVelocity);
+        this.emitRockmossCrawlerSpores(asteroid, impactVelocity);
       }
       if (asteroid.color === WHITE_ASTEROID_COLOR) {
         this.createStoneBurst(asteroid, impactVelocity);
@@ -3158,6 +3536,22 @@ export class Game {
       fragment.sourceClaimId = asteroid.sourceClaimId;
       fragment.sourceClaimName = asteroid.sourceClaimName;
     });
+    if (asteroid.rockmoss && fragments.length > 0) {
+      const parentMoss = this.normalizeRockmossState(asteroid);
+
+      fragments.forEach((fragment, index) => {
+        const patchCap = this.getRockmossPatchCap(fragment);
+        const inheritedPatches = Math.max(1, Math.min(patchCap, Math.ceil(parentMoss.patches / fragments.length)));
+        fragment.rockmoss = {
+          seed: (parentMoss.seed ?? this.impactSeed) + index * 811,
+          coverage: inheritedPatches / Math.max(1, patchCap),
+          glow: Math.max(0.18, parentMoss.glow * 0.82),
+          patches: inheritedPatches,
+          crawlers: inheritedPatches,
+          work: parentMoss.work * 0.35,
+        };
+      });
+    }
 
     return fragments;
   }
@@ -3169,6 +3563,109 @@ export class Game {
 
     const origin = asteroid.origin ?? asteroid.position;
     return this.claimField.getPlotAt(origin.x, origin.y);
+  }
+
+  updateRockmossLifecycle(deltaSeconds) {
+    this.asteroids.forEach((asteroid) => {
+      if (!asteroid.rockmoss) {
+        return;
+      }
+
+      const moss = this.normalizeRockmossState(asteroid);
+      const patchCap = this.getRockmossPatchCap(asteroid);
+
+      if (moss.patches >= patchCap) {
+        moss.patches = patchCap;
+        moss.crawlers = patchCap;
+        moss.work = 0;
+        moss.coverage = Math.max(moss.coverage, moss.patches / Math.max(1, patchCap));
+        return;
+      }
+
+      const crawlerTravel = moss.crawlers * (16 + asteroid.radius * 0.08) * deltaSeconds;
+      moss.work += crawlerTravel;
+
+      while (moss.work >= ROCKMOSS_WORK_DISTANCE_PER_PATCH && moss.patches < patchCap) {
+        moss.work -= ROCKMOSS_WORK_DISTANCE_PER_PATCH;
+        moss.patches += 1;
+        moss.crawlers = moss.patches;
+        moss.coverage = Math.max(moss.coverage, moss.patches / Math.max(1, patchCap));
+        moss.glow = Math.min(1, moss.glow + 0.035);
+      }
+    });
+  }
+
+  updateRockmossSpores() {
+    const colonizedSpores = new Set();
+
+    this.pickups.forEach((pickup) => {
+      if (pickup.type !== ROCKMOSS_CRAWLER_TYPE) {
+        return;
+      }
+
+      const targetAsteroid = this.asteroids.find((asteroid) =>
+        circlesOverlap(pickup.position, pickup.radius, asteroid.position, asteroid.radius),
+      );
+
+      if (!targetAsteroid) {
+        return;
+      }
+
+      this.colonizeRockWithMoss(targetAsteroid, pickup);
+      colonizedSpores.add(pickup);
+    });
+
+    if (colonizedSpores.size > 0) {
+      this.pickups = this.pickups.filter((pickup) => !colonizedSpores.has(pickup));
+    }
+  }
+
+  normalizeRockmossState(asteroid) {
+    const moss = asteroid.rockmoss;
+    const patchCap = this.getRockmossPatchCap(asteroid);
+    const existingPatches = moss.patches ?? Math.max(ROCKMOSS_MIN_PATCHES, Math.round(patchCap * (moss.coverage ?? 0.24)));
+
+    moss.patches = Math.max(ROCKMOSS_MIN_PATCHES, Math.min(patchCap, existingPatches));
+    moss.crawlers = Math.max(ROCKMOSS_MIN_PATCHES, Math.min(patchCap, moss.crawlers ?? moss.patches));
+    moss.work = moss.work ?? 0;
+    moss.coverage = Math.max(moss.coverage ?? 0.24, moss.patches / Math.max(1, patchCap));
+    moss.glow = moss.glow ?? 0.4;
+
+    return moss;
+  }
+
+  getRockmossPatchCap(asteroid) {
+    return Math.max(ROCKMOSS_MIN_PATCHES, Math.min(10, Math.floor(asteroid.radius / 7)));
+  }
+
+  colonizeRockWithMoss(asteroid, pickup) {
+    const patchCap = this.getRockmossPatchCap(asteroid);
+
+    if (asteroid.rockmoss) {
+      const moss = this.normalizeRockmossState(asteroid);
+      moss.work = Math.min(ROCKMOSS_WORK_DISTANCE_PER_PATCH * 0.75, moss.work + ROCKMOSS_WORK_DISTANCE_PER_PATCH * 0.35);
+      moss.glow = Math.min(1, moss.glow + 0.08);
+      return;
+    }
+
+    asteroid.rockmoss = {
+      seed: Math.round((pickup.position.x + 30000) * 17 + (pickup.position.y + 30000) * 31),
+      coverage: 1 / Math.max(1, patchCap),
+      glow: 0.42,
+      patches: 1,
+      crawlers: 1,
+      work: 0,
+    };
+
+    this.createRockmossBurst(asteroid, { x: pickup.velocity.x * 0.2, y: pickup.velocity.y * 0.2 }, 8);
+    this.state.ledger.recordEvent(
+      "lifeform.rockmossColonized",
+      {
+        x: Math.round(asteroid.position.x),
+        y: Math.round(asteroid.position.y),
+      },
+      { visible: false },
+    );
   }
 
   createStoneBurst(asteroid, impactVelocity) {
@@ -3196,9 +3693,9 @@ export class Game {
     }
   }
 
-  createRockmossBurst(asteroid, impactVelocity) {
+  createRockmossBurst(asteroid, impactVelocity, countOverride = null) {
     const moss = asteroid.rockmoss;
-    const count = 14 + Math.floor((moss?.coverage ?? 0.5) * 16);
+    const count = countOverride ?? 14 + Math.floor((moss?.coverage ?? 0.5) * 16);
 
     for (let index = 0; index < count; index += 1) {
       const angle = Math.random() * Math.PI * 2;
@@ -3222,6 +3719,28 @@ export class Game {
         life: 0.45 + Math.random() * 0.55,
         maxLife: 1,
       });
+    }
+  }
+
+  emitRockmossCrawlerSpores(asteroid, impactVelocity) {
+    const moss = this.normalizeRockmossState(asteroid);
+    const sporeCount = Math.max(1, Math.min(4, Math.ceil(moss.crawlers / 3)));
+
+    for (let index = 0; index < sporeCount; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 95 + Math.random() * 145;
+
+      this.pickups.push(
+        new ResourcePickup({
+          x: asteroid.position.x + Math.cos(angle) * asteroid.radius * 0.55,
+          y: asteroid.position.y + Math.sin(angle) * asteroid.radius * 0.55,
+          type: ROCKMOSS_CRAWLER_TYPE,
+          velocity: {
+            x: asteroid.velocity.x * 0.2 + Math.cos(angle) * speed + impactVelocity.x * 0.02,
+            y: asteroid.velocity.y * 0.2 + Math.sin(angle) * speed + impactVelocity.y * 0.02,
+          },
+        }),
+      );
     }
   }
 
@@ -3635,6 +4154,8 @@ export class Game {
     this.drawDeployedBeacons(drawCamera, drawCanvas);
     this.drawContractClaimTargets(drawCamera, drawCanvas);
     this.drawSiteDefenseBeams(drawCamera);
+    this.drawTowCable(drawCamera);
+    this.drawMossHarvester(drawCamera, drawCanvas);
     this.asteroids.forEach((asteroid) => {
       if (isVisible(asteroid, drawCanvas, drawCamera)) {
         asteroid.draw(this.context, drawCamera);
@@ -3676,6 +4197,60 @@ export class Game {
 
     this.drawDamageFlash();
     this.drawViewportTitle();
+  }
+
+  drawMossHarvester(camera = this.camera, canvas = this.canvas) {
+    const harvester = this.state.components.mossHarvester;
+
+    if (!harvester?.installed || !harvester.deployed || !harvester.position) {
+      return;
+    }
+
+    if (!isVisible({ position: harvester.position, radius: MOSS_HARVESTER_INTAKE_RADIUS }, canvas, camera)) {
+      return;
+    }
+
+    const x = harvester.position.x - camera.x;
+    const y = harvester.position.y - camera.y;
+    const pulse = 0.55 + Math.sin(performance.now() / 260) * 0.18;
+    const progress = harvester.intakeProgress ?? 0;
+
+    this.context.save();
+    this.context.translate(x, y);
+
+    this.context.strokeStyle = `rgba(141, 255, 158, ${0.18 + pulse * 0.18})`;
+    this.context.lineWidth = 1.2;
+    this.context.setLineDash([7, 8]);
+    this.context.beginPath();
+    this.context.arc(0, 0, harvester.intakeRadius ?? MOSS_HARVESTER_INTAKE_RADIUS, 0, Math.PI * 2);
+    this.context.stroke();
+    this.context.setLineDash([]);
+
+    this.context.fillStyle = "rgba(19, 40, 28, 0.82)";
+    this.context.strokeStyle = "#8dff9e";
+    this.context.lineWidth = 1.8;
+    this.context.beginPath();
+    this.context.moveTo(0, -18);
+    this.context.lineTo(18, -5);
+    this.context.lineTo(12, 16);
+    this.context.lineTo(-14, 16);
+    this.context.lineTo(-19, -4);
+    this.context.closePath();
+    this.context.fill();
+    this.context.stroke();
+
+    this.context.strokeStyle = "#ffd36b";
+    this.context.lineWidth = 2.4;
+    this.context.beginPath();
+    this.context.arc(0, 0, 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+    this.context.stroke();
+
+    this.context.fillStyle = "#8dff9e";
+    this.context.beginPath();
+    this.context.arc(0, 0, 3.5 + progress * 2, 0, Math.PI * 2);
+    this.context.fill();
+
+    this.context.restore();
   }
 
   drawDeployedBeacons(camera = this.camera, canvas = this.canvas) {
@@ -3720,7 +4295,7 @@ export class Game {
     const moss = asteroid.rockmoss;
     const screenX = asteroid.position.x - camera.x;
     const screenY = asteroid.position.y - camera.y;
-    const patchCount = Math.max(2, Math.min(8, Math.round(asteroid.points.length * moss.coverage)));
+    const patchCount = Math.max(ROCKMOSS_MIN_PATCHES, Math.min(asteroid.points.length, moss.patches ?? Math.round(asteroid.points.length * moss.coverage)));
     const pulse = 0.6 + Math.sin(performance.now() / 900 + moss.seed * 0.001) * 0.18;
 
     this.context.save();
@@ -3759,7 +4334,7 @@ export class Game {
   }
 
   drawRockmossCrawlers(asteroid, moss) {
-    const crawlerCount = Math.max(1, Math.min(5, Math.floor(moss.coverage * 7)));
+    const crawlerCount = Math.max(ROCKMOSS_MIN_PATCHES, Math.min(5, moss.crawlers ?? Math.floor(moss.coverage * 7)));
     const now = performance.now();
 
     for (let index = 0; index < crawlerCount; index += 1) {
@@ -4176,6 +4751,54 @@ export class Game {
     this.context.arc(-25, 21, 2.5, 0, Math.PI * 2);
     this.context.fill();
 
+    this.context.restore();
+  }
+
+  drawTowCable(camera = this.camera) {
+    if (this.towCable.phase === "idle") {
+      return;
+    }
+
+    const cable = this.towCable;
+    const anchorPosition = cable.phase === "attached" && cable.anchor ? cable.anchor.position : cable.hookPosition;
+
+    if (!anchorPosition) {
+      return;
+    }
+
+    const shipRearAngle = this.ship.angle + Math.PI;
+    const shipRear = {
+      x: this.ship.position.x + Math.cos(shipRearAngle) * 24,
+      y: this.ship.position.y + Math.sin(shipRearAngle) * 24,
+    };
+    const shipX = shipRear.x - camera.x;
+    const shipY = shipRear.y - camera.y;
+    const hookX = anchorPosition.x - camera.x;
+    const hookY = anchorPosition.y - camera.y;
+    const pulse = 0.55 + Math.sin(cable.pulse * 9) * 0.2;
+
+    this.context.save();
+    this.context.strokeStyle = `rgba(255, 211, 107, ${0.58 + pulse * 0.22})`;
+    this.context.lineWidth = cable.phase === "attached" ? 2.2 : 1.6;
+    this.context.setLineDash(cable.phase === "attached" ? [10, 5] : [5, 8]);
+    this.context.beginPath();
+    this.context.moveTo(shipX, shipY);
+    this.context.lineTo(hookX, hookY);
+    this.context.stroke();
+    this.context.setLineDash([]);
+
+    this.context.translate(hookX, hookY);
+    this.context.strokeStyle = cable.phase === "attached" ? "#ffd36b" : "#9ee8ff";
+    this.context.fillStyle = cable.phase === "attached" ? "rgba(255, 211, 107, 0.18)" : "rgba(158, 232, 255, 0.12)";
+    this.context.lineWidth = 1.7;
+    this.context.beginPath();
+    this.context.moveTo(9, 0);
+    this.context.lineTo(-4, -7);
+    this.context.lineTo(-2, 0);
+    this.context.lineTo(-4, 7);
+    this.context.closePath();
+    this.context.fill();
+    this.context.stroke();
     this.context.restore();
   }
 

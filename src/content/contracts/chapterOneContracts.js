@@ -1,4 +1,4 @@
-import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260714-2116-856b156";
+import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260715-2022-moss-finance-v1";
 
 const RESOURCE_CONTRACTS = [
   {
@@ -113,26 +113,26 @@ export const chapterOneContracts = [
     id: "mako-emergency-fuel-loan",
     type: "loan",
     repeatable: true,
-    title: "Emergency Fuel Note",
+    title: "Minimum Field Note",
     issuer: "Yard Exchange Finance Office",
-    summary: "A short emergency loan for stranded pilots who need fuel money.",
+    summary: "A standing minimum credit note for pilots who need operating cash.",
     terms: {
       principal: 5000,
       interestRate: 0.18,
       interestHours: 6,
       maxInterest: 1500,
       dueLabel: "6 in-game hours",
-      fundingPurpose: "emergency-fuel",
+      fundingPurpose: "operating-cash",
     },
     reward: {
       credits: 5000,
     },
     clauses: [
       "5,000 credits are deposited to the cash account tied to your provisional ID.",
-      "Accepting creates a short emergency fuel obligation.",
+      "Accepting creates a short field obligation.",
       "This note exists for pilots who made it back alive but not solvent.",
       "Interest accrues later up to a maximum of 1,500 credits.",
-      "Use Supply to buy fuel after the note funds.",
+      "Use the funds for fuel, repairs, charges, or whatever keeps you moving.",
     ],
   },
   ...RESOURCE_CONTRACTS.map((contract) => ({

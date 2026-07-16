@@ -1,6 +1,6 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260714-2116-856b156";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260714-2116-856b156";
-import { ensureObligations } from "./obligations.js?v=fresh-20260714-2116-856b156";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260715-2022-moss-finance-v1";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260715-2022-moss-finance-v1";
+import { ensureObligations } from "./obligations.js?v=fresh-20260715-2022-moss-finance-v1";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 

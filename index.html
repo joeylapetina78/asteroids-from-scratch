@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260714-2116-856b156" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260715-2022-moss-finance-v1" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -51,7 +51,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260714-2116-856b156</span>
+      <span class="build-tag">build: fresh-20260715-2022-moss-finance-v1</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -255,6 +255,40 @@
               </div>
               <button id="tractor-field-button" class="tractor-button" type="button">Hold Field</button>
               <span>Field: <strong id="tractor-field-status">Idle</strong></span>
+            </div>
+
+            <div class="component-panel tow-cable-panel" data-panel-id="tow-cable" aria-label="Tow cable component">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Tow Cable</strong>
+                  <span>rear tether launcher</span>
+                </div>
+              </div>
+              <button id="tow-cable-fire" class="tow-cable-button" type="button">Fire Cable</button>
+              <div class="tow-cable-controls" aria-label="Tow cable controls">
+                <button id="tow-cable-reel" class="tow-cable-button" type="button">Reel In</button>
+                <button id="tow-cable-pay-out" class="tow-cable-button" type="button">Pay Out</button>
+                <button id="tow-cable-release" class="tow-cable-button" type="button">Release</button>
+              </div>
+              <div class="system-readout tow-cable-readout" aria-live="polite">
+                <span>Status: <strong id="tow-cable-status">Idle</strong></span>
+                <span>Line: <strong id="tow-cable-length">0 / 650</strong></span>
+              </div>
+            </div>
+
+            <div class="component-panel moss-harvester-panel" data-panel-id="moss-harvester" aria-label="Moss harvester deployable">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Moss Harvester</strong>
+                  <span>field farm rig</span>
+                </div>
+              </div>
+              <button id="moss-harvester-deploy" class="moss-harvester-button" type="button">Deploy Rig</button>
+              <button id="moss-harvester-recall" class="moss-harvester-button secondary" type="button">Recall Rig</button>
+              <div class="system-readout moss-harvester-readout" aria-live="polite">
+                <span>Status: <strong id="moss-harvester-status">Stored</strong></span>
+                <span>Food: <strong id="moss-harvester-food">0</strong></span>
+              </div>
             </div>
 
             <div class="component-panel hull-panel" data-panel-id="hull" aria-label="Hull component">
@@ -625,6 +659,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260714-2116-856b156"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260715-2022-moss-finance-v1"></script>
   </body>
 </html>

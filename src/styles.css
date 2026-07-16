@@ -732,6 +732,94 @@ body {
   color: #c9f1ff;
 }
 
+.tow-cable-panel {
+  width: 220px;
+}
+
+.tow-cable-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tow-cable-controls .tow-cable-button:last-child {
+  grid-column: 1 / -1;
+}
+
+.tow-cable-button {
+  border: 1px solid #6d7054;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #181c1d;
+  color: #fff0bd;
+  cursor: pointer;
+  font: inherit;
+}
+
+.tow-cable-button:hover:not(:disabled),
+.tow-cable-button:focus-visible:not(:disabled) {
+  border-color: #ffd36b;
+  background: #262414;
+}
+
+.tow-cable-button:active:not(:disabled),
+.tow-cable-button[aria-pressed="true"] {
+  border-color: #9ee8ff;
+  color: #d8f5ff;
+  background: #123044;
+}
+
+.tow-cable-readout {
+  align-items: start;
+  margin-top: 10px;
+  font-size: 0.84rem;
+}
+
+.moss-harvester-panel {
+  width: 210px;
+  border-color: #2f5d43;
+}
+
+.moss-harvester-button {
+  width: 100%;
+  border: 1px solid #3d7450;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #111b15;
+  color: #cdfeda;
+  cursor: pointer;
+  font: inherit;
+}
+
+.moss-harvester-button + .moss-harvester-button {
+  margin-top: 8px;
+}
+
+.moss-harvester-button.secondary {
+  border-color: #425a61;
+  color: #d8f5ff;
+}
+
+.moss-harvester-button:hover:not(:disabled),
+.moss-harvester-button:focus-visible:not(:disabled) {
+  border-color: #8dff9e;
+  background: #173220;
+  box-shadow: 0 0 18px rgba(141, 255, 158, 0.16);
+}
+
+.moss-harvester-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.moss-harvester-readout {
+  align-items: start;
+  margin-top: 10px;
+  color: #cdfeda;
+  font-size: 0.84rem;
+}
+
 .tractor-button[aria-pressed="true"] {
   border-color: #9ee8ff;
   background: #123044;
