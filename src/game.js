@@ -1,27 +1,27 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260716-1909-6776161";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260716-1909-6776161";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260716-1909-6776161";
-import { Ship } from "./entities/Ship.js?v=fresh-20260716-1909-6776161";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260716-1909-6776161";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260716-2155-47b6461";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260716-2155-47b6461";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260716-2155-47b6461";
+import { Ship } from "./entities/Ship.js?v=fresh-20260716-2155-47b6461";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260716-2155-47b6461";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260716-1909-6776161";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260716-1909-6776161";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260716-1909-6776161";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260716-1909-6776161";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260716-1909-6776161";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260716-1909-6776161";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260716-1909-6776161";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260716-1909-6776161";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260716-1909-6776161";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260716-1909-6776161";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260716-1909-6776161";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260716-1909-6776161";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260716-1909-6776161";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260716-1909-6776161";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260716-1909-6776161";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260716-1909-6776161";
-import { createGameState } from "./state/gameState.js?v=fresh-20260716-1909-6776161";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260716-1909-6776161";
+import { createInput } from "./systems/input.js?v=fresh-20260716-2155-47b6461";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260716-2155-47b6461";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260716-2155-47b6461";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260716-2155-47b6461";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260716-2155-47b6461";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260716-2155-47b6461";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260716-2155-47b6461";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260716-2155-47b6461";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260716-2155-47b6461";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260716-2155-47b6461";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260716-2155-47b6461";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260716-2155-47b6461";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260716-2155-47b6461";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260716-2155-47b6461";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260716-2155-47b6461";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260716-2155-47b6461";
+import { createGameState } from "./state/gameState.js?v=fresh-20260716-2155-47b6461";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260716-2155-47b6461";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -104,6 +104,12 @@ const PATROL_WAYPOINT_DWELL_SECONDS = 2.4;
 const PATROL_PASSIVE_SCAN_RANGE = 250;
 const PATROL_PASSIVE_SCAN_INTERVAL = 2.2;
 const PATROL_FLAGGED_DISMISS_SECONDS = 3.2;
+const PATROL_WEAPON_RANGE = 780;
+const PATROL_WEAPON_COOLDOWN_SECONDS = 0.34;
+const PATROL_WEAPON_DAMAGE = 48;
+const PATROL_PORTAL_WEAPON_DAMAGE = 32;
+const PATROL_COMBAT_SPEED = 172;
+const PATROL_COMBAT_STANDOFF_DISTANCE = 300;
 const SCAN_RING_MAX_RADIUS = 130;
 const SCAN_RING_DURATION = 1.4;
 const PATROL_FLYBY_CHECK_INTERVAL = 8;
@@ -130,6 +136,9 @@ const ROCKMOSS_MIN_PATCHES = 1;
 const INCURSION_PORTAL_BULLET_DAMAGE = 38;
 const INCURSION_PORTAL_BASE_REWARD = 180;
 const INCURSION_HUB_EXCLUSION_BUFFER = 180;
+const INCURSION_OBJECTIVE_SPAWN_CHANCE = 0.32;
+const INCURSION_OBJECTIVE_MIN_OFFSET = 560;
+const INCURSION_OBJECTIVE_MAX_OFFSET = 920;
 
 export class Game {
   constructor(
@@ -505,9 +514,10 @@ export class Game {
 
   spawnIncursionPortal(position = null) {
     const angle = this.ship.angle + Math.PI / 2;
+    const objectivePosition = position ? null : this.getIncursionObjectiveSpawnPosition();
     const requestedPosition = position ?? {
-      x: this.ship.position.x + Math.cos(angle) * 820,
-      y: this.ship.position.y + Math.sin(angle) * 820,
+      x: objectivePosition?.x ?? this.ship.position.x + Math.cos(angle) * 820,
+      y: objectivePosition?.y ?? this.ship.position.y + Math.sin(angle) * 820,
     };
     const spawnPosition = getIncursionSafePosition(requestedPosition, this.worldSites, this.ship.position);
     const { portal, spawned } = this.incursionField.spawnPortal({
@@ -527,6 +537,29 @@ export class Game {
     });
     this.onHudChange(this.state);
     return portal;
+  }
+
+  getIncursionObjectiveSpawnPosition() {
+    if (Math.random() > INCURSION_OBJECTIVE_SPAWN_CHANCE) {
+      return null;
+    }
+
+    const targets = this.getContractClaimTargets()
+      .filter((target) => target.position)
+      .filter((target) => distance(this.ship.position, target.position) > 900);
+
+    if (!targets.length) {
+      return null;
+    }
+
+    const target = targets[Math.floor(Math.random() * targets.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const offset = INCURSION_OBJECTIVE_MIN_OFFSET + Math.random() * (INCURSION_OBJECTIVE_MAX_OFFSET - INCURSION_OBJECTIVE_MIN_OFFSET);
+
+    return {
+      x: target.position.x + Math.cos(angle) * offset,
+      y: target.position.y + Math.sin(angle) * offset,
+    };
   }
 
   getContractClaimTargets() {
@@ -1413,6 +1446,7 @@ export class Game {
       waypointDwellTimer: 0,
       passiveScanTimer: 0,
       flaggedDismissTimer: 0,
+      weaponCooldown: 0,
       flybyTarget: null,
       flybyCheckTimer: 0,
       flybyHasScanned: false,
@@ -1495,6 +1529,7 @@ export class Game {
       waypointDwellTimer: 0,
       passiveScanTimer: 0,
       flaggedDismissTimer: 0,
+      weaponCooldown: 0,
       flybyTarget: null,
       flybyCheckTimer: 0,
       flybyHasScanned: false,
@@ -1589,6 +1624,7 @@ export class Game {
     }
 
     patrol.pulse += deltaSeconds;
+    patrol.weaponCooldown = Math.max(0, (patrol.weaponCooldown ?? 0) - deltaSeconds);
 
     // â"€â"€ DEPART â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if (patrol.phase === "depart") {
@@ -1603,6 +1639,10 @@ export class Game {
     }
 
     // â"€â"€ RETURN TO DRIFT â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    if (this.updatePatrolIncursionDefense(patrol, deltaSeconds)) {
+      return;
+    }
+
     if (patrol.phase === "return") {
       const wp = patrol.waypoints[patrol.waypointIndex];
       this.steerPatrolIntercept(patrol, wp, PATROL_RETURN_SPEED, deltaSeconds);
@@ -1925,6 +1965,135 @@ export class Game {
       x: patrol.site.position.x + directionToShip.x * patrol.site.interactionRadius * 1.15,
       y: patrol.site.position.y + directionToShip.y * patrol.site.interactionRadius * 1.15,
     };
+  }
+
+  updatePatrolIncursionDefense(patrol, deltaSeconds) {
+    const target = this.findPatrolIncursionTarget(patrol);
+
+    if (!target) {
+      if (patrol.phase === "combat") {
+        patrol.phase = "return";
+        patrol.waypointIndex = this.nearestWaypointIndex(patrol);
+      }
+      return false;
+    }
+
+    const targetPosition = target.body.position;
+    const targetDistance = distance(patrol.position, targetPosition);
+    const intercepting = patrol.phase === "standoff" || patrol.phase === "transit" || patrol.phase === "approach" || patrol.phase === "hold";
+
+    this.firePatrolWeapon(patrol, target, targetDistance);
+
+    if (intercepting) {
+      return false;
+    }
+
+    patrol.phase = "combat";
+    patrol.flybyTarget = null;
+    patrol.flybyHasScanned = false;
+
+    const awayFromTarget = normalizeVector(patrol.position.x - targetPosition.x, patrol.position.y - targetPosition.y);
+    const desiredPosition = {
+      x: targetPosition.x + awayFromTarget.x * PATROL_COMBAT_STANDOFF_DISTANCE,
+      y: targetPosition.y + awayFromTarget.y * PATROL_COMBAT_STANDOFF_DISTANCE,
+    };
+
+    if (targetDistance > PATROL_WEAPON_RANGE * 0.62) {
+      this.steerPatrolIntercept(patrol, desiredPosition, PATROL_COMBAT_SPEED, deltaSeconds);
+    } else {
+      const orbit = {
+        x: -awayFromTarget.y,
+        y: awayFromTarget.x,
+      };
+      this.steerPatrolIntercept(
+        patrol,
+        {
+          x: patrol.position.x + orbit.x * 120 + awayFromTarget.x * 36,
+          y: patrol.position.y + orbit.y * 120 + awayFromTarget.y * 36,
+        },
+        PATROL_DRIFT_SPEED * 1.25,
+        deltaSeconds,
+      );
+    }
+
+    patrol.heading = lerpAngle(patrol.heading, Math.atan2(targetPosition.y - patrol.position.y, targetPosition.x - patrol.position.x), Math.min(1, deltaSeconds * 5.2));
+    return true;
+  }
+
+  findPatrolIncursionTarget(patrol) {
+    const jurisdictionRadius = patrol.site.interactionRadius * PATROL_CREATE_RANGE_FACTOR;
+    const portalIdsInJurisdiction = new Set(
+      this.incursionField.getActivePortals()
+        .filter((portal) => distance(portal.position, patrol.site.position) <= jurisdictionRadius)
+        .map((portal) => portal.id),
+    );
+
+    const hunterTarget = this.lifeforms
+      .filter((lifeform) => {
+        if (lifeform.type !== "hunter" || !lifeform.isAlive) {
+          return false;
+        }
+        const belongsToNearbyPortal = lifeform.sourcePortalId && portalIdsInJurisdiction.has(lifeform.sourcePortalId);
+        const isNearPatrol = distance(lifeform.position, patrol.position) <= PATROL_WEAPON_RANGE * 1.45;
+        const isNearHub = distance(lifeform.position, patrol.site.position) <= jurisdictionRadius;
+        return belongsToNearbyPortal || (isNearPatrol && isNearHub);
+      })
+      .map((hunter) => ({
+        kind: "hunter",
+        body: hunter,
+        distanceToPatrol: distance(hunter.position, patrol.position),
+      }))
+      .sort((first, second) => first.distanceToPatrol - second.distanceToPatrol)[0];
+
+    if (hunterTarget) {
+      return hunterTarget;
+    }
+
+    return this.incursionField.getActivePortals()
+      .filter((portal) => distance(portal.position, patrol.site.position) <= jurisdictionRadius)
+      .map((portal) => ({
+        kind: "portal",
+        body: portal,
+        distanceToPatrol: distance(portal.position, patrol.position),
+      }))
+      .sort((first, second) => first.distanceToPatrol - second.distanceToPatrol)[0] ?? null;
+  }
+
+  firePatrolWeapon(patrol, target, targetDistance) {
+    if (targetDistance > PATROL_WEAPON_RANGE || patrol.weaponCooldown > 0) {
+      return;
+    }
+
+    patrol.weaponCooldown = PATROL_WEAPON_COOLDOWN_SECONDS;
+    const aimPoint = getLeadPoint(patrol, target.body, 780);
+    this.createPatrolDefenseBeam(patrol, aimPoint);
+
+    if (target.kind === "hunter") {
+      target.body.damage(PATROL_WEAPON_DAMAGE);
+      this.createPatrolDefenseBurst(patrol, target.body);
+      if (!target.body.isAlive) {
+        this.destroyHunterIfNeeded(target.body, "patrol-defense");
+      }
+      return;
+    }
+
+    const damaged = target.body.damage(PATROL_PORTAL_WEAPON_DAMAGE);
+    this.createIncursionPortalSparks(target.body, damaged ? "#bdefff" : "#ff74ae");
+    this.state.ledger.recordEvent(
+      damaged ? "incursion.portalDamaged" : "incursion.portalShielded",
+      {
+        portalId: target.body.id,
+        waveCount: target.body.waveCount,
+        guardCount: target.body.guardIds.size,
+        health: Math.round(target.body.health),
+        cause: "patrol-defense",
+      },
+      { visible: false },
+    );
+
+    if (!target.body.isAlive) {
+      this.clearIncursionPortal(target.body, { rewardCredits: false, cause: "patrol-defense", site: patrol.site });
+    }
   }
 
   steerPatrolIntercept(patrol, target, maxSpeed, deltaSeconds) {
@@ -3595,7 +3764,7 @@ export class Game {
 
     this.recordEnemyDestroyed(getHostileEnemyType(hunter), cause);
     this.createHunterBurst(hunter, hunter.velocity);
-    if (!(cause === "hub-defense" && hunter.sourcePortalId)) {
+    if (!((cause === "hub-defense" || cause === "patrol-defense") && hunter.sourcePortalId)) {
       this.createHunterDrops(hunter, hunter.velocity);
     }
     if (!hunter.sourcePortalId) {
@@ -3974,6 +4143,17 @@ export class Game {
       end: { x: target.position.x, y: target.position.y },
       life: 0.18,
       maxLife: 0.18,
+      color: "#9ee8ff",
+    });
+  }
+
+  createPatrolDefenseBeam(patrol, aimPoint) {
+    this.siteDefenseBeams.push({
+      start: { x: patrol.position.x, y: patrol.position.y },
+      end: { x: aimPoint.x, y: aimPoint.y },
+      life: 0.12,
+      maxLife: 0.12,
+      color: "#7ee7ff",
     });
   }
 
@@ -3999,6 +4179,32 @@ export class Game {
         size: 1.5 + Math.random() * 3.2,
         life: 0.28 + Math.random() * 0.28,
         maxLife: 0.56,
+      });
+    }
+  }
+
+  createPatrolDefenseBurst(patrol, target) {
+    const count = 7 + Math.floor(target.radius / 9);
+    const beamAngle = Math.atan2(target.position.y - patrol.position.y, target.position.x - patrol.position.x);
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = beamAngle + Math.PI + (Math.random() - 0.5) * Math.PI * 1.1;
+      const speed = 50 + Math.random() * 115;
+
+      this.particles.push({
+        type: "spark",
+        position: {
+          x: target.position.x + (Math.random() - 0.5) * target.radius,
+          y: target.position.y + (Math.random() - 0.5) * target.radius,
+        },
+        velocity: {
+          x: target.velocity.x * 0.18 + Math.cos(angle) * speed,
+          y: target.velocity.y * 0.18 + Math.sin(angle) * speed,
+        },
+        color: index % 4 === 0 ? "#ffffff" : "#7ee7ff",
+        size: 1.2 + Math.random() * 2.4,
+        life: 0.2 + Math.random() * 0.22,
+        maxLife: 0.46,
       });
     }
   }
@@ -5196,7 +5402,7 @@ export class Game {
 
       this.context.save();
       this.context.globalAlpha = alpha;
-      this.context.strokeStyle = "#9ee8ff";
+      this.context.strokeStyle = beam.color ?? "#9ee8ff";
       this.context.lineWidth = 3;
       this.context.beginPath();
       this.context.moveTo(startX, startY);
@@ -5421,6 +5627,16 @@ function normalizeVector(x, y) {
   return {
     x: x / length,
     y: y / length,
+  };
+}
+
+function getLeadPoint(source, target, projectileSpeed) {
+  const targetVelocity = target.velocity ?? { x: 0, y: 0 };
+  const travelSeconds = Math.min(1.1, distance(source.position, target.position) / Math.max(1, projectileSpeed));
+
+  return {
+    x: target.position.x + targetVelocity.x * travelSeconds,
+    y: target.position.y + targetVelocity.y * travelSeconds,
   };
 }
 

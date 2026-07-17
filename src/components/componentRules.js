@@ -1,5 +1,7 @@
 // Rules that let the ship interface emerge from installed components. The
 // processor asks this file what outputs exist instead of hardcoding them in UI.
+const PROCESS_OUTPUT_AMOUNT_LABEL = 250;
+
 export function getProcessorOutputs(components) {
   const outputs = [];
 
@@ -7,7 +9,7 @@ export function getProcessorOutputs(components) {
     outputs.push({
       id: "fuel",
       label: "Fuel",
-      amountLabel: "+50 fuel",
+      amountLabel: `+${PROCESS_OUTPUT_AMOUNT_LABEL} fuel`,
     });
   }
 
@@ -15,7 +17,7 @@ export function getProcessorOutputs(components) {
     outputs.push({
       id: "ammo",
       label: "Charges",
-      amountLabel: "+50 charges",
+      amountLabel: `+${PROCESS_OUTPUT_AMOUNT_LABEL} charges`,
     });
   }
 
@@ -23,7 +25,7 @@ export function getProcessorOutputs(components) {
     outputs.push({
       id: "scanergy",
       label: "Scanergy",
-      amountLabel: "+50% scan",
+      amountLabel: `+${PROCESS_OUTPUT_AMOUNT_LABEL} scanergy`,
     });
   }
 

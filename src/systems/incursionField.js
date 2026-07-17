@@ -1,10 +1,11 @@
-import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260716-1909-6776161";
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260716-1909-6776161";
+import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260716-2155-47b6461";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260716-2155-47b6461";
 import { hashNumbers } from "./random.js";
 
-const FIRST_WAVE_COUNT = 3;
-const BASE_WAVE_SECONDS = 26;
-const MIN_WAVE_SECONDS = 14;
+const PORTAL_WAVE_SIZES = [5, 10, 30];
+const BASE_WAVE_SECONDS = 70;
+const WAVE_SECONDS_STEP = 12;
+const MAX_WAVE_SECONDS = 105;
 const PORTAL_HUNTER_ORBIT_RADIUS = 150;
 const PORTAL_SHIELD_GUARD_RADIUS = 950;
 
@@ -23,7 +24,7 @@ export function createIncursionField() {
       });
       this.nextPortalIndex += 1;
       this.portals.push(portal);
-      const spawned = spawnPortalWave(portal, FIRST_WAVE_COUNT, 0);
+      const spawned = spawnPortalWave(portal, getPortalWaveSize(0), 0);
       portal.waveCount = 1;
       portal.nextWaveIn = getNextWaveSeconds(portal);
       return { portal, spawned };
@@ -55,7 +56,7 @@ export function createIncursionField() {
           return;
         }
 
-        const waveSize = FIRST_WAVE_COUNT + portal.waveCount;
+        const waveSize = getPortalWaveSize(portal.waveCount);
         const wave = spawnPortalWave(portal, waveSize, portal.waveCount);
         spawned.push(...wave);
         portal.waveCount += 1;
@@ -98,15 +99,15 @@ function spawnPortalWave(portal, count, waveIndex) {
       x,
       y,
       velocity: {
-        x: Math.cos(angle + Math.PI / 2) * (55 + waveIndex * 7),
-        y: Math.sin(angle + Math.PI / 2) * (55 + waveIndex * 7),
+        x: Math.cos(angle + Math.PI / 2) * (42 + Math.min(18, waveIndex * 3)),
+        y: Math.sin(angle + Math.PI / 2) * (42 + Math.min(18, waveIndex * 3)),
       },
       seed: hashNumbers(portal.seed, waveIndex, index),
     });
 
     hunter.id = `${portal.id}-hunter-${waveIndex + 1}-${index + 1}`;
     hunter.sourcePortalId = portal.id;
-    hunter.health = 85 + Math.min(45, waveIndex * 8);
+    hunter.health = 72 + Math.min(24, waveIndex * 5);
     portal.guardIds.add(hunter.id);
     spawned.push(hunter);
   }
@@ -115,7 +116,11 @@ function spawnPortalWave(portal, count, waveIndex) {
 }
 
 function getNextWaveSeconds(portal) {
-  return Math.max(MIN_WAVE_SECONDS, BASE_WAVE_SECONDS - portal.waveCount * 2.5);
+  return Math.min(MAX_WAVE_SECONDS, BASE_WAVE_SECONDS + portal.waveCount * WAVE_SECONDS_STEP);
+}
+
+function getPortalWaveSize(waveIndex) {
+  return PORTAL_WAVE_SIZES[Math.min(waveIndex, PORTAL_WAVE_SIZES.length - 1)];
 }
 
 function getDistance(first, second) {
