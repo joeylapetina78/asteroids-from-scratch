@@ -1,27 +1,27 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260716-1720-a6efb5a";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260716-1720-a6efb5a";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260716-1720-a6efb5a";
-import { Ship } from "./entities/Ship.js?v=fresh-20260716-1720-a6efb5a";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260716-1720-a6efb5a";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260716-1909-6776161";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260716-1909-6776161";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260716-1909-6776161";
+import { Ship } from "./entities/Ship.js?v=fresh-20260716-1909-6776161";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260716-1909-6776161";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260716-1720-a6efb5a";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260716-1720-a6efb5a";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260716-1720-a6efb5a";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260716-1720-a6efb5a";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260716-1720-a6efb5a";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260716-1720-a6efb5a";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260716-1720-a6efb5a";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260716-1720-a6efb5a";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260716-1720-a6efb5a";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260716-1720-a6efb5a";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260716-1720-a6efb5a";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260716-1720-a6efb5a";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260716-1720-a6efb5a";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260716-1720-a6efb5a";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260716-1720-a6efb5a";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260716-1720-a6efb5a";
-import { createGameState } from "./state/gameState.js?v=fresh-20260716-1720-a6efb5a";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260716-1720-a6efb5a";
+import { createInput } from "./systems/input.js?v=fresh-20260716-1909-6776161";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260716-1909-6776161";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260716-1909-6776161";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260716-1909-6776161";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260716-1909-6776161";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260716-1909-6776161";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260716-1909-6776161";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260716-1909-6776161";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260716-1909-6776161";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260716-1909-6776161";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260716-1909-6776161";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260716-1909-6776161";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260716-1909-6776161";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260716-1909-6776161";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260716-1909-6776161";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260716-1909-6776161";
+import { createGameState } from "./state/gameState.js?v=fresh-20260716-1909-6776161";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260716-1909-6776161";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -3113,19 +3113,22 @@ export class Game {
     });
   }
 
-  clearIncursionPortal(portal) {
+  clearIncursionPortal(portal, { rewardCredits = true, cause = "weapon", site = null } = {}) {
     const reward = getIncursionPortalReward(portal.waveCount);
 
     this.incursionField.portals = this.incursionField.portals.filter((candidate) => candidate !== portal);
     this.createIncursionPortalBurst(portal);
-    if (reward > 0) {
+    if (rewardCredits && reward > 0) {
       depositCredits(this.state, reward);
     }
     this.state.ledger.recordEvent("incursion.portalDestroyed", {
       portalId: portal.id,
       factionId: portal.factionId,
       waveCount: portal.waveCount,
-      reward,
+      reward: rewardCredits ? reward : 0,
+      cause,
+      siteId: site?.id ?? null,
+      siteName: site?.name ?? null,
       x: Math.round(portal.position.x),
       y: Math.round(portal.position.y),
     });
@@ -3393,11 +3396,12 @@ export class Game {
 
     const hitAsteroids = new Set();
     const hitHunters = new Set();
+    const hitPortals = new Set();
 
     this.worldSites
       .filter((site) => site.type === "hub")
       .forEach((site) => {
-        if (hitAsteroids.size + hitHunters.size >= MAX_HUB_DEFENSE_HITS_PER_FRAME) {
+        if (hitAsteroids.size + hitHunters.size + hitPortals.size >= MAX_HUB_DEFENSE_HITS_PER_FRAME) {
           return;
         }
 
@@ -3420,6 +3424,25 @@ export class Game {
           return;
         }
 
+        const portalTarget = this.incursionField.getActivePortals()
+          .filter((portal) => !hitPortals.has(portal))
+          .map((portal) => ({
+            portal,
+            distance: distance(portal.position, site.position),
+          }))
+          .filter(({ portal, distance }) => distance - portal.radius <= clearanceRadius)
+          .sort((first, second) => first.distance - second.distance)[0]?.portal;
+
+        if (portalTarget) {
+          hitPortals.add(portalTarget);
+          this.createHubDefenseBeam(site, portalTarget);
+          portalTarget.isAlive = false;
+          portalTarget.health = 0;
+          this.createHubDefenseBurst(site, portalTarget);
+          this.clearIncursionPortal(portalTarget, { rewardCredits: false, cause: "hub-defense", site });
+          return;
+        }
+
         const target = this.asteroids
           .filter((asteroid) => !hitAsteroids.has(asteroid))
           .map((asteroid) => ({
@@ -3438,7 +3461,7 @@ export class Game {
         this.createHubDefenseBurst(site, target);
       });
 
-    if (hitAsteroids.size + hitHunters.size === 0) {
+    if (hitAsteroids.size + hitHunters.size + hitPortals.size === 0) {
       return;
     }
 
@@ -3572,7 +3595,9 @@ export class Game {
 
     this.recordEnemyDestroyed(getHostileEnemyType(hunter), cause);
     this.createHunterBurst(hunter, hunter.velocity);
-    this.createHunterDrops(hunter, hunter.velocity);
+    if (!(cause === "hub-defense" && hunter.sourcePortalId)) {
+      this.createHunterDrops(hunter, hunter.velocity);
+    }
     if (!hunter.sourcePortalId) {
       this.respawnHunter();
     }

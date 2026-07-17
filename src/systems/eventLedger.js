@@ -516,6 +516,10 @@ function getDefaultMessage(type, payload) {
   }
 
   if (type === "incursion.portalDestroyed") {
+    if (payload.cause === "hub-defense") {
+      return `${payload.siteName ?? "Hub defense"} destroyed an incursion portal`;
+    }
+
     return `Destroyed incursion portal for ${payload.reward ?? 0} credits`;
   }
 
