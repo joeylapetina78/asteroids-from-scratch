@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260717-2312-49de7be";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260717-2312-49de7be";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260717-2312-49de7be";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260717-2312-49de7be";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260717-2312-49de7be";
-import { Game } from "./game.js?v=fresh-20260717-2312-49de7be";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260717-2312-49de7be";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260717-2312-49de7be";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260717-2312-49de7be";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260717-2312-49de7be";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260717-2359-46facc8";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260717-2359-46facc8";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260717-2359-46facc8";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260717-2359-46facc8";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260717-2359-46facc8";
+import { Game } from "./game.js?v=fresh-20260717-2359-46facc8";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260717-2359-46facc8";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260717-2359-46facc8";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260717-2359-46facc8";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260717-2359-46facc8";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260717-2312-49de7be";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260717-2312-49de7be";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260717-2312-49de7be";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260717-2312-49de7be";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260717-2312-49de7be";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260717-2312-49de7be";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260717-2312-49de7be";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260717-2312-49de7be";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260717-2312-49de7be";
-import { Processor } from "./systems/processor.js?v=fresh-20260717-2312-49de7be";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260717-2312-49de7be";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260717-2312-49de7be";
-import { createGameState } from "./state/gameState.js?v=fresh-20260717-2312-49de7be";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260717-2359-46facc8";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260717-2359-46facc8";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260717-2359-46facc8";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260717-2359-46facc8";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260717-2359-46facc8";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260717-2359-46facc8";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260717-2359-46facc8";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260717-2359-46facc8";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260717-2359-46facc8";
+import { Processor } from "./systems/processor.js?v=fresh-20260717-2359-46facc8";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260717-2359-46facc8";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260717-2359-46facc8";
+import { createGameState } from "./state/gameState.js?v=fresh-20260717-2359-46facc8";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -277,7 +277,7 @@ if (shouldResetSave() || initialDevStart || peekSavedDevStartId()) {
 const savedProfile = loadSavedProfile(state);
 const audio = createGameAudio();
 wireAudioUnlockGestures();
-const processor = new Processor(processorCanvas, processUnit, { getUnitFlags: getResourceUnitFlags });
+const processor = new Processor(processorCanvas, processUnit, { enableCompaction: true, getUnitFlags: getResourceUnitFlags });
 const cargoHold = new Processor(cargoCanvas, handleCargoUnitClick, { isClickable: true, getUnitFlags: getCargoUnitFlags });
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio, updateLedgerDrivenSystems);
 const contractManager = createContractManager({
@@ -3625,7 +3625,9 @@ function fireMossSeederFromCargo() {
 
 function processUnit(type, unit = {}) {
   const output = getSelectedProcessorOutput();
+  const quantity = unit.quantity ?? 1;
   const amount = getResourceProcessValue(type, output);
+  const totalAmount = amount * quantity;
 
   if (amount <= 0) {
     state.ledger.recordEvent("resource.processingRejected", {
@@ -3641,17 +3643,18 @@ function processUnit(type, unit = {}) {
   state.ledger.recordEvent("resource.processed", {
     resourceType: type,
     output,
-    amount: output === "cargo" ? 1 : amount,
+    amount: output === "cargo" ? quantity : totalAmount,
+    quantity,
   });
 
   if (output === "fuel") {
-    state.components.engine.fuel += amount;
+    state.components.engine.fuel += totalAmount;
   } else if (output === "ammo") {
-    state.components.miner.ammo += amount;
+    state.components.miner.ammo += totalAmount;
   } else if (output === "scanergy") {
-    state.components.scanner.scanergy += amount;
+    state.components.scanner.scanergy += totalAmount;
   } else if (output === "cargo") {
-    cargoHold.addUnit(type, getResourceUnitMetadata(unit));
+    cargoHold.addUnit(type, { ...getResourceUnitMetadata(unit), quantity });
   }
 
   updateHudDisplay();
@@ -3685,7 +3688,7 @@ function getResourceUnitMetadata(resource = {}) {
 
 function handleCargoUnitClick(type, unit) {
   if (isCargoSellModeActive) {
-    return sellCargoUnit(type);
+    return sellCargoUnit(type, unit);
   }
 
   return depositCargoUnit(type, unit);
@@ -3702,15 +3705,17 @@ function getOreUnitValue(type) {
     ?? 0;
 }
 
-function sellCargoUnit(type) {
+function sellCargoUnit(type, unit = {}) {
   const unitValue = getOreUnitValue(type);
+  const quantity = unit.quantity ?? 1;
 
   if (!isCargoSellModeActive || !currentSiteState?.dockedSite || unitValue <= 0) {
     return false;
   }
 
-  depositCredits(state, unitValue);
-  state.ledger.recordEvent("cargo.sold", { creditsEarned: unitValue, units: { [type]: 1 }, totalUnits: 1 }, { visible: false });
+  const creditsEarned = unitValue * quantity;
+  depositCredits(state, creditsEarned);
+  state.ledger.recordEvent("cargo.sold", { creditsEarned, units: { [type]: quantity }, totalUnits: quantity }, { visible: false });
   game.createCargoTransferTrail(type);
   renderFinleyPanel();
   updateHudDisplay();
@@ -3936,6 +3941,7 @@ function depositCargoUnit(type, unit = {}) {
     resourceType: type,
     sourceClaimId: unit.sourceClaimId ?? null,
     siteId: currentSiteState?.dockedSite?.id,
+    amount: unit.quantity ?? 1,
   });
 
   if (!didDeposit) {
@@ -3951,7 +3957,7 @@ function depositCargoUnit(type, unit = {}) {
   renderContract();
   updateHudDisplay();
   game.updateSiteReadout();
-  return true;
+  return { processedQuantity: didDeposit };
 }
 
 function getCargoUnitFlags(unit) {
@@ -4229,6 +4235,7 @@ function renderProcessorOutputs() {
     const label = document.createElement("label");
     const input = document.createElement("input");
     const detail = document.createElement("span");
+    const shapes = document.createElement("span");
 
     input.type = "radio";
     input.name = "processor-output";
@@ -4241,7 +4248,15 @@ function renderProcessorOutputs() {
     detail.className = "processor-output-detail";
     detail.textContent = output.amountLabel;
 
-    label.append(input, output.label, detail);
+    shapes.className = "processor-output-shapes";
+    output.acceptedShapes.forEach((shape) => {
+      const swatch = document.createElement("span");
+      swatch.className = `processor-output-shape is-${shape}`;
+      swatch.style.setProperty("--output-color", output.color);
+      shapes.append(swatch);
+    });
+
+    label.append(input, output.label, shapes, detail);
     processorOutputPanel.append(label);
   });
 }

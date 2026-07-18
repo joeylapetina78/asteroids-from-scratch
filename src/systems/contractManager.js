@@ -1,12 +1,12 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260717-2312-49de7be";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260717-2312-49de7be";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260717-2312-49de7be";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260717-2312-49de7be";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260717-2312-49de7be";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260717-2312-49de7be";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260717-2312-49de7be";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260717-2312-49de7be";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260717-2312-49de7be";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260717-2359-46facc8";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260717-2359-46facc8";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260717-2359-46facc8";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260717-2359-46facc8";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260717-2359-46facc8";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260717-2359-46facc8";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260717-2359-46facc8";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260717-2359-46facc8";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260717-2359-46facc8";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -293,7 +293,7 @@ export function createContractManager({ state, onChange = () => {} }) {
       });
   }
 
-  function depositResourceUnit({ contractId = state.contracts.currentContractId, resourceType, siteId, sourceClaimId = null }) {
+  function depositResourceUnit({ contractId = state.contracts.currentContractId, resourceType, siteId, sourceClaimId = null, amount = 1 }) {
     const contract = state.contracts.records[contractId];
 
     if (
@@ -327,7 +327,8 @@ export function createContractManager({ state, onChange = () => {} }) {
       return false;
     }
 
-    contract.deliveredAmount = (contract.deliveredAmount ?? 0) + 1;
+    const unitsDeposited = Math.min(amount, requiredAmount - (contract.deliveredAmount ?? 0));
+    contract.deliveredAmount = (contract.deliveredAmount ?? 0) + unitsDeposited;
     state.ledger.recordEvent("contract.resourceDeposited", {
       contractId: contract.id,
       contractTitle: contract.title,
@@ -335,7 +336,7 @@ export function createContractManager({ state, onChange = () => {} }) {
       resourceType: normalizeResourceType(resourceType),
       requestedResourceType: contract.terms.resourceType,
       resourceName: contract.terms.resourceName,
-      unitsDeposited: 1,
+      unitsDeposited,
       deliveredAmount: contract.deliveredAmount,
       requiredAmount,
       destinationSiteId: contract.terms.destinationSiteId,
@@ -354,7 +355,7 @@ export function createContractManager({ state, onChange = () => {} }) {
       onChange(contract);
     }
 
-    return true;
+    return unitsDeposited;
   }
 
   function collectPayment(contractId = state.contracts.currentContractId) {

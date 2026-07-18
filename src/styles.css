@@ -1953,6 +1953,31 @@ body {
   font-size: 0.75rem;
 }
 
+.processor-output-shapes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 14px;
+  gap: 3px;
+}
+
+.processor-output-shape {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  background: var(--output-color);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--output-color), transparent 45%);
+}
+
+.processor-output-shape.is-circle { border-radius: 50%; }
+.processor-output-shape.is-square { border-radius: 2px; }
+.processor-output-shape.is-triangle { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.processor-output-shape.is-hexagon { clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
+.processor-output-shape.is-octagon { clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); }
+.processor-output-shape.is-diamond { transform: rotate(45deg) scale(0.76); }
+.processor-output-shape.is-shard { clip-path: polygon(50% 0, 62% 37%, 100% 50%, 62% 63%, 50% 100%, 38% 63%, 0 50%, 38% 37%); }
+
 .mode-toggle {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2421,7 +2446,7 @@ body {
 .resource-guide-swatch.is-hexagon { clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
 .resource-guide-swatch.is-octagon { clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); }
 .resource-guide-swatch.is-diamond { transform: rotate(45deg) scale(0.78); }
-.resource-guide-swatch.is-shard { clip-path: polygon(22% 0, 100% 18%, 67% 100%, 0 74%); }
+.resource-guide-swatch.is-shard { clip-path: polygon(50% 0, 62% 37%, 100% 50%, 62% 63%, 50% 100%, 38% 63%, 0 50%, 38% 37%); }
 
 .license-card {
   display: grid;

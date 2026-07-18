@@ -237,7 +237,7 @@ export function createEventLedger(options = {}) {
       incrementStat(`pilot.debugMarker.${event.payload.markerKey ?? "unknown"}`);
     } else if (event.type === "resource.processed") {
       incrementStat("resource.processed.total");
-      incrementStat(`resource.processed.input.${event.payload.resourceType}`);
+      incrementStat(`resource.processed.input.${event.payload.resourceType}`, event.payload.quantity ?? 1);
       incrementStat(`resource.processed.output.${event.payload.output}`);
 
       if (event.payload.output !== "cargo") {

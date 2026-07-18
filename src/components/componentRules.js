@@ -1,7 +1,5 @@
 // Rules that let the ship interface emerge from installed components. The
 // processor asks this file what outputs exist instead of hardcoding them in UI.
-const PROCESS_OUTPUT_AMOUNT_LABEL = "material dependent";
-
 export function getProcessorOutputs(components) {
   const outputs = [];
 
@@ -9,7 +7,9 @@ export function getProcessorOutputs(components) {
     outputs.push({
       id: "fuel",
       label: "Fuel",
-      amountLabel: PROCESS_OUTPUT_AMOUNT_LABEL,
+      amountLabel: "matching materials",
+      acceptedShapes: ["circle", "triangle", "octagon"],
+      color: "#b8eaff",
     });
   }
 
@@ -17,7 +17,9 @@ export function getProcessorOutputs(components) {
     outputs.push({
       id: "ammo",
       label: "Charges",
-      amountLabel: PROCESS_OUTPUT_AMOUNT_LABEL,
+      amountLabel: "matching materials",
+      acceptedShapes: ["square", "triangle", "diamond"],
+      color: "#ff7452",
     });
   }
 
@@ -25,7 +27,9 @@ export function getProcessorOutputs(components) {
     outputs.push({
       id: "scanergy",
       label: "Scanergy",
-      amountLabel: PROCESS_OUTPUT_AMOUNT_LABEL,
+      amountLabel: "matching materials",
+      acceptedShapes: ["hexagon", "diamond"],
+      color: "#49e1b8",
     });
   }
 
@@ -34,6 +38,8 @@ export function getProcessorOutputs(components) {
       id: "cargo",
       label: "Cargo",
       amountLabel: "store unit",
+      acceptedShapes: ["circle", "square", "triangle", "hexagon", "octagon", "diamond", "shard"],
+      color: "#d9deea",
     });
   }
 

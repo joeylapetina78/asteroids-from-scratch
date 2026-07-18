@@ -1,5 +1,5 @@
-import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260717-2312-49de7be";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260717-2312-49de7be";
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260717-2359-46facc8";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260717-2359-46facc8";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -11,6 +11,8 @@ const FLOOR_ANGULAR_DRAG = 0.48;
 const COLLISION_COMPRESSION = 0.9;
 const TRIANGLE_SLOPE_PUSH = 0.42;
 const MAX_ANGULAR_VELOCITY = 1.8;
+const COMPACTION_COUNT = 10;
+const COMPACTION_DURATION = 0.38;
 
 // Processor is a small square-unit physics canvas. It is used for both the
 // clickable processor and the non-clickable cargo hold, with behavior selected
@@ -21,9 +23,11 @@ export class Processor {
     this.context = canvas.getContext("2d");
     this.onUnitProcessed = onUnitProcessed;
     this.isClickable = options.isClickable ?? true;
+    this.enableCompaction = options.enableCompaction ?? false;
     this.getUnitFlags = options.getUnitFlags ?? (() => ({}));
     this.units = [];
     this.sparks = [];
+    this.compaction = null;
     this.lastFrameTime = 0;
 
     if (this.isClickable) {
@@ -39,6 +43,8 @@ export class Processor {
     const slot = this.units.length % 4;
     const spacing = UNIT_SIZE + 4;
 
+    const quantity = metadata.quantity ?? 1;
+
     this.units.push({
       type,
       ...metadata,
@@ -50,13 +56,14 @@ export class Processor {
       vy: 0,
       angle: (Math.random() - 0.5) * 0.5,
       angularVelocity: (Math.random() - 0.5) * 0.9,
-      size: UNIT_SIZE,
+      quantity,
+      size: getUnitSize(quantity),
     });
   }
 
   getUnitCounts() {
     return this.units.reduce((counts, unit) => {
-      counts[unit.type] = (counts[unit.type] ?? 0) + 1;
+      counts[unit.type] = (counts[unit.type] ?? 0) + (unit.quantity ?? 1);
       return counts;
     }, {});
   }
@@ -74,15 +81,28 @@ export class Processor {
     let remaining = count;
 
     this.units.forEach((unit) => {
-      if (unit.type === type && remaining > 0) {
-        removedUnits.push(unit);
-        remaining -= 1;
-      } else {
-        keptUnits.push(unit);
+      const quantity = unit.quantity ?? 1;
+      const removedQuantity = unit.type === type ? Math.min(quantity, remaining) : 0;
+
+      if (removedQuantity > 0) {
+        removedUnits.push({
+          ...unit,
+          quantity: removedQuantity,
+          size: getUnitSize(removedQuantity),
+        });
+        remaining -= removedQuantity;
+      }
+
+      if (removedQuantity < quantity) {
+        keptUnits.push({
+          ...unit,
+          quantity: quantity - removedQuantity,
+          size: getUnitSize(quantity - removedQuantity),
+        });
       }
     });
 
-    if (removedUnits.length !== count) {
+    if (remaining > 0) {
       return [];
     }
 
@@ -102,6 +122,7 @@ export class Processor {
         angularVelocity: unit.angularVelocity ?? 0,
         sourceClaimId: unit.sourceClaimId ?? null,
         sourceClaimName: unit.sourceClaimName ?? null,
+        quantity: unit.quantity ?? 1,
       })),
     };
   }
@@ -123,7 +144,8 @@ export class Processor {
       angularVelocity: unit.angularVelocity ?? 0,
       sourceClaimId: unit.sourceClaimId ?? null,
       sourceClaimName: unit.sourceClaimName ?? null,
-      size: UNIT_SIZE,
+      quantity: unit.quantity ?? 1,
+      size: getUnitSize(unit.quantity ?? 1),
     }));
   }
 
@@ -138,7 +160,16 @@ export class Processor {
   }
 
   update(deltaSeconds) {
+    if (this.enableCompaction && !this.compaction) {
+      this.startCompaction();
+    }
+
+    const compactingUnits = this.advanceCompaction(deltaSeconds);
     this.units.forEach((unit) => {
+      if (compactingUnits?.has(unit)) {
+        return;
+      }
+
       unit.vy += GRAVITY * deltaSeconds;
       unit.x += unit.vx * deltaSeconds;
       unit.y += unit.vy * deltaSeconds;
@@ -149,8 +180,12 @@ export class Processor {
     });
 
     for (let step = 0; step < SOLVER_STEPS; step += 1) {
-      this.resolveUnitCollisions();
-      this.units.forEach((unit) => this.keepInsideBounds(unit));
+      this.resolveUnitCollisions(compactingUnits);
+      this.units.forEach((unit) => {
+        if (!compactingUnits?.has(unit)) {
+          this.keepInsideBounds(unit);
+        }
+      });
     }
 
     this.sparks.forEach((spark) => {
@@ -180,6 +215,14 @@ export class Processor {
       drawResourceShape(this.context, unit.shape, unit.size);
       if (this.getUnitFlags(unit)?.illegal) {
         drawIllegalMark(this.context, unit.size);
+      }
+      if ((unit.quantity ?? 1) > 1) {
+        this.context.rotate(-(unit.angle ?? 0));
+        this.context.fillStyle = "#080a0f";
+        this.context.font = "bold 11px monospace";
+        this.context.textAlign = "center";
+        this.context.textBaseline = "middle";
+        this.context.fillText(`x${unit.quantity}`, 0, 0);
       }
       this.context.restore();
     });
@@ -228,12 +271,17 @@ export class Processor {
     }
   }
 
-  resolveUnitCollisions() {
+  resolveUnitCollisions(excludedUnits = null) {
     // This is intentionally a simple axis-aligned square solver. It gives us
     // readable "pile of units" behavior without introducing a physics engine.
     for (let firstIndex = 0; firstIndex < this.units.length; firstIndex += 1) {
       for (let secondIndex = firstIndex + 1; secondIndex < this.units.length; secondIndex += 1) {
-        this.resolveUnitPair(this.units[firstIndex], this.units[secondIndex]);
+        const first = this.units[firstIndex];
+        const second = this.units[secondIndex];
+        if (excludedUnits?.has(first) || excludedUnits?.has(second)) {
+          continue;
+        }
+        this.resolveUnitPair(first, second);
       }
     }
   }
@@ -328,6 +376,14 @@ export class Processor {
         return;
       }
 
+      const processedQuantity = shouldProcess?.processedQuantity ?? (unit.quantity ?? 1);
+      if (processedQuantity < (unit.quantity ?? 1)) {
+        unit.quantity -= processedQuantity;
+        unit.size = getUnitSize(unit.quantity);
+        this.createCrushSparks({ ...unit, quantity: processedQuantity, size: getUnitSize(processedQuantity) });
+        return;
+      }
+
       this.units.splice(clickedIndex, 1);
       if (shouldProcess?.sparks !== false) {
         this.createCrushSparks(unit);
@@ -352,10 +408,122 @@ export class Processor {
       });
     }
   }
+
+  startCompaction() {
+    const candidatesByStack = new Map();
+
+    this.units.forEach((unit) => {
+      if ((unit.quantity ?? 1) !== 1) {
+        return;
+      }
+
+      const stackKey = getStackKey(unit);
+      const stack = candidatesByStack.get(stackKey) ?? [];
+      stack.push(unit);
+      candidatesByStack.set(stackKey, stack);
+    });
+
+    const candidates = [...candidatesByStack.values()].find((stack) => stack.length >= COMPACTION_COUNT)?.slice(0, COMPACTION_COUNT);
+    if (!candidates) {
+      return;
+    }
+
+    const target = candidates.reduce(
+      (position, unit) => ({ x: position.x + unit.x, y: position.y + unit.y }),
+      { x: 0, y: 0 },
+    );
+    target.x /= candidates.length;
+    target.y /= candidates.length;
+
+    this.compaction = {
+      candidates,
+      elapsed: 0,
+      target,
+      type: candidates[0].type,
+      metadata: getUnitMetadata(candidates[0]),
+    };
+  }
+
+  advanceCompaction(deltaSeconds) {
+    if (!this.compaction) {
+      return null;
+    }
+
+    const compaction = this.compaction;
+    compaction.elapsed += deltaSeconds;
+    const progress = Math.min(compaction.elapsed / COMPACTION_DURATION, 1);
+    const easedProgress = 1 - (1 - progress) ** 3;
+
+    compaction.candidates.forEach((unit) => {
+      unit.x += (compaction.target.x - unit.x) * easedProgress;
+      unit.y += (compaction.target.y - unit.y) * easedProgress;
+      unit.vx = 0;
+      unit.vy = 0;
+      unit.angularVelocity = 0;
+    });
+
+    if (progress >= 1) {
+      const size = getUnitSize(COMPACTION_COUNT);
+      const bundle = {
+        type: compaction.type,
+        ...compaction.metadata,
+        color: RESOURCE_COLOR[compaction.type] ?? "#ff7452",
+        shape: getResourceShape(compaction.type),
+        quantity: COMPACTION_COUNT,
+        size,
+        x: clamp(compaction.target.x + UNIT_SIZE / 2 - size / 2, 0, this.canvas.width - size),
+        y: clamp(compaction.target.y + UNIT_SIZE / 2 - size / 2, 0, this.canvas.height - size),
+        vx: 0,
+        vy: -36,
+        angle: 0,
+        angularVelocity: 0,
+      };
+      const compactingSet = new Set(compaction.candidates);
+      this.units = this.units.filter((unit) => !compactingSet.has(unit));
+      this.units.push(bundle);
+      this.createCompactionSparks(bundle);
+      this.compaction = null;
+      return null;
+    }
+
+    return new Set(compaction.candidates);
+  }
+
+  createCompactionSparks(unit) {
+    for (let index = 0; index < 12; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 25 + Math.random() * 65;
+      this.sparks.push({
+        x: unit.x + unit.size / 2,
+        y: unit.y + unit.size / 2,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: index % 3 === 0 ? "#ffffff" : unit.color,
+        size: 1.5 + Math.random() * 2,
+        life: 0.18 + Math.random() * 0.18,
+        maxLife: 0.36,
+      });
+    }
+  }
 }
 
 function getCollisionSize(unit) {
   return unit.size * COLLISION_COMPRESSION;
+}
+
+function getUnitSize(quantity) {
+  return quantity > 1 ? Math.round(UNIT_SIZE * 1.7) : UNIT_SIZE;
+}
+
+function getStackKey(unit) {
+  return [unit.type, unit.sourceClaimId ?? "", unit.sourceClaimName ?? ""].join("|");
+}
+
+function getUnitMetadata(unit) {
+  return {
+    sourceClaimId: unit.sourceClaimId ?? null,
+    sourceClaimName: unit.sourceClaimName ?? null,
+  };
 }
 
 function drawIllegalMark(context, size) {
