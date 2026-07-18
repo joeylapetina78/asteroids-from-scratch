@@ -1,27 +1,27 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260716-2155-47b6461";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260716-2155-47b6461";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260716-2155-47b6461";
-import { Ship } from "./entities/Ship.js?v=fresh-20260716-2155-47b6461";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260716-2155-47b6461";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260717-2003-fcd6b0d";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260717-2003-fcd6b0d";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260717-2003-fcd6b0d";
+import { Ship } from "./entities/Ship.js?v=fresh-20260717-2003-fcd6b0d";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260717-2003-fcd6b0d";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260716-2155-47b6461";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260716-2155-47b6461";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260716-2155-47b6461";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260716-2155-47b6461";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260716-2155-47b6461";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260716-2155-47b6461";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260716-2155-47b6461";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260716-2155-47b6461";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260716-2155-47b6461";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260716-2155-47b6461";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260716-2155-47b6461";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260716-2155-47b6461";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260716-2155-47b6461";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260716-2155-47b6461";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260716-2155-47b6461";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260716-2155-47b6461";
-import { createGameState } from "./state/gameState.js?v=fresh-20260716-2155-47b6461";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260716-2155-47b6461";
+import { createInput } from "./systems/input.js?v=fresh-20260717-2003-fcd6b0d";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260717-2003-fcd6b0d";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260717-2003-fcd6b0d";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260717-2003-fcd6b0d";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260717-2003-fcd6b0d";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260717-2003-fcd6b0d";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260717-2003-fcd6b0d";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260717-2003-fcd6b0d";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260717-2003-fcd6b0d";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260717-2003-fcd6b0d";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260717-2003-fcd6b0d";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260717-2003-fcd6b0d";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260717-2003-fcd6b0d";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260717-2003-fcd6b0d";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260717-2003-fcd6b0d";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260717-2003-fcd6b0d";
+import { createGameState } from "./state/gameState.js?v=fresh-20260717-2003-fcd6b0d";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260717-2003-fcd6b0d";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -139,6 +139,15 @@ const INCURSION_HUB_EXCLUSION_BUFFER = 180;
 const INCURSION_OBJECTIVE_SPAWN_CHANCE = 0.32;
 const INCURSION_OBJECTIVE_MIN_OFFSET = 560;
 const INCURSION_OBJECTIVE_MAX_OFFSET = 920;
+const INCURSION_AMBIENT_FIRST_SECONDS = 45;
+const INCURSION_AMBIENT_REPEAT_MIN_SECONDS = 90;
+const INCURSION_AMBIENT_REPEAT_MAX_SECONDS = 130;
+const INCURSION_MAX_ACTIVE_PORTALS = 2;
+const INCURSION_SENTINEL_RANGE = 700;
+const INCURSION_SENTINEL_SHOT_SPEED = 245;
+const INCURSION_SENTINEL_SHOT_SECONDS = 3.2;
+const INCURSION_SENTINEL_DAMAGE = 9;
+const INCURSION_DRAG_BLOOM_DAMPING = 0.34;
 
 export class Game {
   constructor(
@@ -206,6 +215,10 @@ export class Game {
     this.threadwyrms = createThreadwyrmField(this.asteroids);
     this.driftMouths = createDriftMouthField();
     this.incursionField = createIncursionField();
+    this.incursionShots = [];
+    this.incursionDirector = {
+      nextSpawnIn: INCURSION_AMBIENT_FIRST_SECONDS,
+    };
     this.lifeDisturbances = [];
     this.lifeformContacts = new Set();
     this.npcShips = createNpcRouteShips(this.worldSites);
@@ -513,12 +526,8 @@ export class Game {
   }
 
   spawnIncursionPortal(position = null) {
-    const angle = this.ship.angle + Math.PI / 2;
     const objectivePosition = position ? null : this.getIncursionObjectiveSpawnPosition();
-    const requestedPosition = position ?? {
-      x: objectivePosition?.x ?? this.ship.position.x + Math.cos(angle) * 820,
-      y: objectivePosition?.y ?? this.ship.position.y + Math.sin(angle) * 820,
-    };
+    const requestedPosition = position ?? objectivePosition ?? this.getAmbientIncursionSpawnPosition();
     const spawnPosition = getIncursionSafePosition(requestedPosition, this.worldSites, this.ship.position);
     const { portal, spawned } = this.incursionField.spawnPortal({
       x: spawnPosition.x,
@@ -537,6 +546,16 @@ export class Game {
     });
     this.onHudChange(this.state);
     return portal;
+  }
+
+  getAmbientIncursionSpawnPosition() {
+    const angle = Math.random() * Math.PI * 2;
+    const distanceFromShip = 1050 + Math.random() * 650;
+
+    return {
+      x: this.ship.position.x + Math.cos(angle) * distanceFromShip,
+      y: this.ship.position.y + Math.sin(angle) * distanceFromShip,
+    };
   }
 
   getIncursionObjectiveSpawnPosition() {
@@ -776,6 +795,7 @@ export class Game {
     this.updateHubDefenses(deltaSeconds);
     this.updateLifeDisturbances(deltaSeconds);
     this.updateIncursions(deltaSeconds);
+    this.updateIncursionShots(deltaSeconds);
     // Lifeforms are preserved off-screen, but only nearby ones are simulated.
     // That keeps the field feeling persistent without paying every steering
     // cost for every distant creature each frame.
@@ -3230,6 +3250,7 @@ export class Game {
   }
 
   updateIncursions(deltaSeconds) {
+    this.updateAmbientIncursionDirector(deltaSeconds);
     const result = this.incursionField.update(deltaSeconds, this.lifeforms);
 
     if (result.spawned.length > 0) {
@@ -3240,6 +3261,124 @@ export class Game {
     result.events.forEach((event) => {
       this.state.ledger.recordEvent(event.type, event.payload);
     });
+
+    this.updateIncursionDevices(deltaSeconds);
+  }
+
+  updateAmbientIncursionDirector(deltaSeconds) {
+    const activePortals = this.incursionField.getActivePortals();
+
+    if (activePortals.length >= INCURSION_MAX_ACTIVE_PORTALS || this.dockedSite || this.activeTow || this.shipDestroyed) {
+      return;
+    }
+
+    this.incursionDirector.nextSpawnIn -= deltaSeconds;
+    if (this.incursionDirector.nextSpawnIn > 0) {
+      return;
+    }
+
+    const portal = this.spawnIncursionPortal();
+    this.incursionDirector.nextSpawnIn = INCURSION_AMBIENT_REPEAT_MIN_SECONDS
+      + Math.random() * (INCURSION_AMBIENT_REPEAT_MAX_SECONDS - INCURSION_AMBIENT_REPEAT_MIN_SECONDS);
+
+    this.state.ledger.recordEvent(
+      "incursion.signalDetected",
+      {
+        portalId: portal.id,
+        x: Math.round(portal.position.x),
+        y: Math.round(portal.position.y),
+      },
+      { visible: true },
+    );
+  }
+
+  updateIncursionDevices(deltaSeconds) {
+    const portals = this.incursionField.getActivePortals();
+
+    portals.forEach((portal) => {
+      portal.devices?.filter((device) => device.isAlive).forEach((device) => {
+        if (device.type === "drag-bloom") {
+          if (distance(this.ship.position, device.position) <= device.radius && !this.shipDestroyed) {
+            const damping = Math.max(0, 1 - INCURSION_DRAG_BLOOM_DAMPING * deltaSeconds);
+            this.ship.velocity.x *= damping;
+            this.ship.velocity.y *= damping;
+          }
+          return;
+        }
+
+        device.cooldown = Math.max(0, (device.cooldown ?? 0) - deltaSeconds);
+        if (
+          device.cooldown > 0
+          || this.shipDestroyed
+          || !this.state.components.engine.powered
+          || distance(this.ship.position, device.position) > INCURSION_SENTINEL_RANGE
+        ) {
+          return;
+        }
+
+        this.fireIncursionSentry(device, portal);
+      });
+    });
+  }
+
+  fireIncursionSentry(device, portal) {
+    const targetDistance = distance(device.position, this.ship.position);
+    const leadSeconds = Math.min(0.8, targetDistance / INCURSION_SENTINEL_SHOT_SPEED);
+    const target = {
+      x: this.ship.position.x + this.ship.velocity.x * leadSeconds,
+      y: this.ship.position.y + this.ship.velocity.y * leadSeconds,
+    };
+    const direction = normalizeVector(target.x - device.position.x, target.y - device.position.y);
+
+    this.incursionShots.push({
+      portalId: portal.id,
+      position: { ...device.position },
+      velocity: {
+        x: direction.x * INCURSION_SENTINEL_SHOT_SPEED,
+        y: direction.y * INCURSION_SENTINEL_SHOT_SPEED,
+      },
+      radius: 4.5,
+      age: 0,
+      maxAge: INCURSION_SENTINEL_SHOT_SECONDS,
+      damage: INCURSION_SENTINEL_DAMAGE,
+    });
+    device.cooldown = 2.05;
+  }
+
+  updateIncursionShots(deltaSeconds) {
+    this.incursionShots.forEach((shot) => {
+      shot.age += deltaSeconds;
+      shot.position.x += shot.velocity.x * deltaSeconds;
+      shot.position.y += shot.velocity.y * deltaSeconds;
+
+      if (shot.age >= shot.maxAge || this.shipDestroyed) {
+        return;
+      }
+
+      if (!circlesOverlap(shot.position, shot.radius, this.ship.position, SHIP_COLLISION_RADIUS)) {
+        return;
+      }
+
+      shot.age = shot.maxAge;
+      if (this.shipHitCooldown > 0) {
+        return;
+      }
+
+      this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
+      this.damageHull(shot.damage);
+      this.triggerImpactFeedback(shot.damage);
+      this.createShipSparks({ position: shot.position, velocity: shot.velocity });
+      this.state.ledger.recordEvent(
+        "incursion.sentryHit",
+        {
+          portalId: shot.portalId,
+          damage: shot.damage,
+        },
+        { visible: false },
+      );
+    });
+
+    this.incursionShots = this.incursionShots.filter((shot) => shot.age < shot.maxAge);
   }
 
   updateIncursionPortalHits() {
@@ -3251,6 +3390,21 @@ export class Game {
 
     this.bullets.forEach((bullet) => {
       if (!bullet.isAlive) {
+        return;
+      }
+
+      const hitDevice = activePortals
+        .flatMap((portal) => portal.devices ?? [])
+        .find((device) => device.isAlive && circlesOverlap(bullet.position, bullet.radius, device.position, device.hitRadius ?? device.radius));
+
+      if (hitDevice) {
+        bullet.destroy();
+        hitDevice.health = Math.max(0, hitDevice.health - INCURSION_PORTAL_BULLET_DAMAGE);
+        this.createIncursionDeviceSparks(hitDevice);
+        if (hitDevice.health === 0) {
+          hitDevice.isAlive = false;
+          this.state.ledger.recordEvent("incursion.deviceDestroyed", { deviceType: hitDevice.type }, { visible: true });
+        }
         return;
       }
 
@@ -3286,6 +3440,7 @@ export class Game {
     const reward = getIncursionPortalReward(portal.waveCount);
 
     this.incursionField.portals = this.incursionField.portals.filter((candidate) => candidate !== portal);
+    this.incursionShots = this.incursionShots.filter((shot) => shot.portalId !== portal.id);
     this.createIncursionPortalBurst(portal);
     if (rewardCredits && reward > 0) {
       depositCredits(this.state, reward);
@@ -4235,6 +4390,33 @@ export class Game {
     }
   }
 
+  createIncursionDeviceSparks(device) {
+    const color = device.type === "drag-bloom" ? "#bca7ff" : "#ff74ae";
+    const count = device.isAlive ? 6 : 24;
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 50 + Math.random() * (device.isAlive ? 95 : 180);
+
+      this.particles.push({
+        type: index % 3 === 0 ? "square" : "spark",
+        position: {
+          x: device.position.x + Math.cos(angle) * (device.hitRadius ?? 20) * 0.4,
+          y: device.position.y + Math.sin(angle) * (device.hitRadius ?? 20) * 0.4,
+        },
+        velocity: {
+          x: Math.cos(angle) * speed,
+          y: Math.sin(angle) * speed,
+        },
+        color,
+        size: 1.1 + Math.random() * 2.8,
+        drag: 0.95,
+        life: 0.2 + Math.random() * 0.34,
+        maxLife: 0.54,
+      });
+    }
+  }
+
   createIncursionPortalBurst(portal) {
     const count = 38;
 
@@ -4652,6 +4834,7 @@ export class Game {
       mouth.draw(this.context, drawCamera);
     });
     this.drawIncursionPortals(drawCamera, drawCanvas);
+    this.drawIncursionShots(drawCamera, drawCanvas);
     this.lifeforms.forEach((lifeform) => {
       if (isVisible(lifeform, drawCanvas, drawCamera)) {
         lifeform.draw(this.context, drawCamera);
@@ -4741,6 +4924,30 @@ export class Game {
       if (isVisible(portal, canvas, camera)) {
         portal.draw(this.context, camera);
       }
+    });
+  }
+
+  drawIncursionShots(camera = this.camera, canvas = this.canvas) {
+    this.incursionShots.forEach((shot) => {
+      if (!isVisible({ position: shot.position, radius: shot.radius }, canvas, camera)) {
+        return;
+      }
+
+      const x = shot.position.x - camera.x;
+      const y = shot.position.y - camera.y;
+      const tail = normalizeVector(-shot.velocity.x, -shot.velocity.y, 12);
+      this.context.save();
+      this.context.strokeStyle = "rgba(255, 116, 174, 0.88)";
+      this.context.fillStyle = "#ffd4eb";
+      this.context.lineWidth = 2;
+      this.context.beginPath();
+      this.context.moveTo(x + tail.x, y + tail.y);
+      this.context.lineTo(x, y);
+      this.context.stroke();
+      this.context.beginPath();
+      this.context.arc(x, y, shot.radius, 0, Math.PI * 2);
+      this.context.fill();
+      this.context.restore();
     });
   }
 

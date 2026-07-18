@@ -13,6 +13,11 @@ export const HUB_SERVICE_BEHAVIOR_BY_TYPE = {
     prompt: "financing records are handled through active contracts.",
     offersContracts: true,
   },
+  permits: {
+    panelId: "contract",
+    prompt: "zone flight rights and hub docking permits are sold here.",
+    offersContracts: true,
+  },
   supply: {
     panelId: "finley",
     prompt: "Finley handles repair and cargo sales here.",

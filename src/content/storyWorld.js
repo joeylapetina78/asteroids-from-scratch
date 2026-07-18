@@ -38,6 +38,7 @@ export const yardExchangeServices = {
   supply: "yard-supply",
   modworks: "yard-modworks",
   roadmap: "yard-murmur-roadmap",
+  travelAuthority: "yard-travel-authority",
 };
 
 export const chapterOneRoute = {

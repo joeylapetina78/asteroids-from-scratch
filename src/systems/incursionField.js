@@ -1,5 +1,5 @@
-import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260716-2155-47b6461";
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260716-2155-47b6461";
+import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260717-2003-fcd6b0d";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260717-2003-fcd6b0d";
 import { hashNumbers } from "./random.js";
 
 const PORTAL_WAVE_SIZES = [5, 10, 30];
@@ -8,6 +8,7 @@ const WAVE_SECONDS_STEP = 12;
 const MAX_WAVE_SECONDS = 105;
 const PORTAL_HUNTER_ORBIT_RADIUS = 150;
 const PORTAL_SHIELD_GUARD_RADIUS = 950;
+const PORTAL_DEVICE_TYPES = ["rift-sentry", "drag-bloom"];
 
 export function createIncursionField() {
   return {
@@ -23,6 +24,7 @@ export function createIncursionField() {
         seed: hashNumbers(x, y, seed, this.nextPortalIndex),
       });
       this.nextPortalIndex += 1;
+      portal.devices = createPortalDevices(portal);
       this.portals.push(portal);
       const spawned = spawnPortalWave(portal, getPortalWaveSize(0), 0);
       portal.waveCount = 1;
@@ -82,6 +84,34 @@ export function createIncursionField() {
       return this.portals.filter((portal) => portal.isAlive);
     },
   };
+}
+
+function createPortalDevices(portal) {
+  const devices = [];
+
+  PORTAL_DEVICE_TYPES.forEach((type, index) => {
+    const angle = ((portal.seed % 360) * Math.PI) / 180 + index * Math.PI;
+    const distance = type === "rift-sentry" ? 132 : 190;
+    const maxHealth = type === "rift-sentry" ? 76 : 94;
+
+    devices.push({
+      id: `${portal.id}-${type}`,
+      type,
+      position: {
+        x: portal.position.x + Math.cos(angle) * distance,
+        y: portal.position.y + Math.sin(angle) * distance,
+      },
+      radius: type === "rift-sentry" ? 20 : 150,
+      hitRadius: 20,
+      maxHealth,
+      health: maxHealth,
+      isAlive: true,
+      cooldown: type === "rift-sentry" ? 1.8 + ((portal.seed >>> 4) % 10) * 0.08 : 0,
+      pulse: (portal.seed % 1000) * 0.01 + index,
+    });
+  });
+
+  return devices;
 }
 
 function spawnPortalWave(portal, count, waveIndex) {

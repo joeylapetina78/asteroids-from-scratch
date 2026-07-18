@@ -187,6 +187,9 @@ export function createEventLedger(options = {}) {
     } else if (event.type === "incursion.portalOpened") {
       incrementStat("incursion.portalOpened.total");
       incrementStat(`incursion.portalOpened.${event.payload.factionId ?? "unknown"}`);
+    } else if (event.type === "incursion.deviceDestroyed") {
+      incrementStat("incursion.devices.destroyed.total");
+      incrementStat(`incursion.devices.destroyed.${event.payload.deviceType ?? "unknown"}`);
     } else if (event.type === "incursion.waveSpawned") {
       incrementStat("incursion.waveSpawned.total");
       setStatMax("incursion.wave.max", event.payload.waveCount ?? 0);
@@ -503,6 +506,10 @@ function getDefaultMessage(type, payload) {
     return `Incursion portal opened with ${payload.enemyCount ?? 0} guards`;
   }
 
+  if (type === "incursion.signalDetected") {
+    return "Unknown incursion signal detected";
+  }
+
   if (type === "incursion.waveSpawned") {
     return `Incursion wave ${payload.waveCount ?? 0}: ${payload.enemyCount ?? 0} hunters`;
   }
@@ -513,6 +520,10 @@ function getDefaultMessage(type, payload) {
 
   if (type === "incursion.portalShielded") {
     return `Portal shield held: ${payload.guardCount ?? 0} guards remain`;
+  }
+
+  if (type === "incursion.deviceDestroyed") {
+    return `Destroyed ${payload.deviceType === "drag-bloom" ? "drag bloom" : "rift sentry"}`;
   }
 
   if (type === "incursion.portalDestroyed") {

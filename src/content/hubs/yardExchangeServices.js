@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260716-2155-47b6461";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260716-2155-47b6461";
+import { getNpcName } from "../npcs.js?v=fresh-20260717-2003-fcd6b0d";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260717-2003-fcd6b0d";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
@@ -49,6 +49,24 @@ export const hubServiceDefinitions = {
       missionFirstContractId: "mako-starter-ship-loan",
       defaultUnlocked: false,
       greeting: "Mako at Finance. Here to talk terms on something, or check your account?",
+    },
+    {
+      id: yardExchangeServices.travelAuthority,
+      npcId: "rtc-officer",
+      npcName: getNpcName("rtc-officer"),
+      organization: "Reach Transit Commission",
+      serviceType: "permits",
+      label: "Travel Authority",
+      description: "Zone flight rights and hub docking permits.",
+      contractIds: [
+        "rtc-copper-drift-flight-permit",
+        "rtc-ore-ridge-flight-permit",
+        "rtc-the-ledge-docking-permit",
+      ],
+      offersAllContracts: true,
+      defaultUnlocked: true,
+      greeting:
+        "Reach Transit Commission, Outer Operations. An operator can put you to work, but only this office can clear you to fly the territory. What do you need cleared?",
     },
     {
       id: yardExchangeServices.supply,

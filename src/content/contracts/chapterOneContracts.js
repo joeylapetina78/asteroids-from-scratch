@@ -1,4 +1,4 @@
-import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260716-2155-47b6461";
+import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260717-2003-fcd6b0d";
 
 const RESOURCE_CONTRACTS = [
   {
@@ -25,6 +25,7 @@ const RESOURCE_CONTRACTS = [
     title: "Copper Drift Run",
     amount: 5,
     prerequisites: ["rook-red-resource-run-10"],
+    requiresFlightPermitZoneName: "Copper Drift",
     summary: (dest) => `Deliver 5 copper ore to ${dest}. Head northwest into Copper Drift — it's closer than it looks.`,
   },
   {
@@ -34,6 +35,7 @@ const RESOURCE_CONTRACTS = [
     title: "Heavy Copper Drift Run",
     amount: 10,
     prerequisites: ["rook-red-resource-run-5"],
+    requiresFlightPermitZoneName: "Copper Drift",
     summary: (dest) => `Deliver 10 copper ore to ${dest}. Copper Drift is northwest — teal rocks, medium density field.`,
   },
   {
@@ -43,6 +45,7 @@ const RESOURCE_CONTRACTS = [
     title: "Ore Ridge Plot Run",
     amount: 20,
     prerequisites: ["rook-copper-run-10"],
+    requiresFlightPermitZoneName: "Ore Ridge",
     sourceClaimIds: [
       "plot-hex-13--9",
       "plot-hex-14--9",
@@ -171,7 +174,68 @@ export const chapterOneContracts = [
       contract.sourceClaimIds?.length
         ? "Only ore traced to the marked contract plots counts for this job. Off-plot ore is marked in cargo."
         : null,
+      contract.requiresFlightPermitZoneName
+        ? `Mining rights only — flight clearance for ${contract.requiresFlightPermitZoneName} is handled separately through Reach Transit Commission.`
+        : null,
       "Return to Rook Industries for the next available job.",
     ].filter(Boolean),
   })),
+  {
+    id: "rtc-copper-drift-flight-permit",
+    type: "permit",
+    title: "Copper Drift Flight Clearance",
+    issuer: "Reach Transit Commission",
+    summary: "Extends your provisional flight authorization to cover Copper Drift.",
+    terms: {
+      cost: 500,
+      permitType: "zone-flight",
+      zoneId: "copper-drift",
+      zoneName: "Copper Drift",
+    },
+    reward: {},
+    clauses: [
+      "500 credits, paid immediately from the cash account tied to your provisional ID.",
+      "Adds Copper Drift to your authorized flight zones, permanently.",
+      "This clears you to fly the zone. Mining rights there are arranged separately with whoever is paying for the job.",
+    ],
+  },
+  {
+    id: "rtc-ore-ridge-flight-permit",
+    type: "permit",
+    title: "Ore Ridge Flight Clearance",
+    issuer: "Reach Transit Commission",
+    summary: "Extends your provisional flight authorization to cover Ore Ridge.",
+    terms: {
+      cost: 1200,
+      permitType: "zone-flight",
+      zoneId: "ore-ridge",
+      zoneName: "Ore Ridge",
+    },
+    reward: {},
+    clauses: [
+      "1,200 credits, paid immediately from the cash account tied to your provisional ID.",
+      "Adds Ore Ridge to your authorized flight zones, permanently.",
+      "Ore Ridge sits well outside standard starter routes. Expect denser traffic scrutiny near The Ledge.",
+    ],
+  },
+  {
+    id: "rtc-the-ledge-docking-permit",
+    type: "permit",
+    title: "The Ledge Docking Clearance",
+    issuer: "Reach Transit Commission",
+    summary: "Pre-clears your ship with The Ledge traffic registry and adds it to Beacon Navigation.",
+    terms: {
+      cost: 800,
+      permitType: "hub-docking",
+      siteId: "the-ledge",
+      siteName: "The Ledge",
+      beaconId: "beacon-the-ledge",
+    },
+    reward: {},
+    clauses: [
+      "800 credits, paid immediately from the cash account tied to your provisional ID.",
+      "Pre-clears your VIN and pilot license with The Ledge traffic registry — no identity check on first arrival.",
+      "Adds The Ledge to Beacon Navigation.",
+    ],
+  },
 ];

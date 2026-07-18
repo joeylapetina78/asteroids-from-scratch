@@ -14,6 +14,7 @@ export class InvaderPortal {
     this.waveCount = 0;
     this.nextWaveIn = 0;
     this.guardIds = new Set();
+    this.devices = [];
     this.isAlive = true;
   }
 
@@ -21,6 +22,9 @@ export class InvaderPortal {
     this.age += deltaSeconds;
     this.guardIds = new Set([...this.guardIds].filter((id) => livingGuards.has(id)));
     this.nextWaveIn = Math.max(0, this.nextWaveIn - deltaSeconds);
+    this.devices.forEach((device) => {
+      device.pulse = (device.pulse ?? 0) + deltaSeconds;
+    });
   }
 
   get isShielded() {
@@ -102,5 +106,52 @@ export class InvaderPortal {
     context.stroke();
 
     context.restore();
+
+    this.drawDevices(context, camera);
+  }
+
+  drawDevices(context, camera) {
+    this.devices.filter((device) => device.isAlive).forEach((device) => {
+      const x = device.position.x - camera.x;
+      const y = device.position.y - camera.y;
+      const pulse = 0.5 + Math.sin((device.pulse ?? 0) * 3.2) * 0.5;
+
+      context.save();
+      context.translate(x, y);
+
+      if (device.type === "rift-sentry") {
+        context.fillStyle = "rgba(255, 116, 174, 0.18)";
+        context.strokeStyle = "#ff74ae";
+        context.lineWidth = 2;
+        context.rotate((device.pulse ?? 0) * 0.7);
+        context.beginPath();
+        context.moveTo(0, -18);
+        context.lineTo(16, 0);
+        context.lineTo(0, 18);
+        context.lineTo(-16, 0);
+        context.closePath();
+        context.fill();
+        context.stroke();
+        context.beginPath();
+        context.arc(0, 0, 5 + pulse * 2, 0, Math.PI * 2);
+        context.stroke();
+      } else {
+        context.strokeStyle = `rgba(123, 94, 255, ${0.3 + pulse * 0.25})`;
+        context.fillStyle = "rgba(66, 38, 135, 0.08)";
+        context.lineWidth = 1.5;
+        context.setLineDash([7, 8]);
+        context.beginPath();
+        context.arc(0, 0, device.radius, 0, Math.PI * 2);
+        context.fill();
+        context.stroke();
+        context.setLineDash([]);
+        context.strokeStyle = "rgba(194, 178, 255, 0.72)";
+        context.beginPath();
+        context.arc(0, 0, 16 + pulse * 3, 0, Math.PI * 2);
+        context.stroke();
+      }
+
+      context.restore();
+    });
   }
 }

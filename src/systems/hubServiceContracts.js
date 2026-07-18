@@ -33,6 +33,16 @@ export function getNextHubServiceContractId(service, { state, random = Math.rand
   return eligibleContractIds[Math.floor(random() * eligibleContractIds.length)];
 }
 
+export function getAllHubServiceContractIds(service, { state }) {
+  const missionFirstResolved = isMissionFirstContractResolved(service, state);
+
+  if (!missionFirstResolved) {
+    return service.missionFirstContractId ? [service.missionFirstContractId] : [];
+  }
+
+  return getEligibleServiceContractIds(service, { state, missionFirstResolved });
+}
+
 export function getInProgressServiceContractId(service, state) {
   return (service.contractIds ?? []).find((contractId) => {
     const contract = state.contracts.records[contractId];

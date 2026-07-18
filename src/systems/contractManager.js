@@ -1,9 +1,12 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260717-0100-loanpurpose";
-import { depositCredits, getCredits } from "./accounts.js?v=fresh-20260716-2155-47b6461";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260716-2155-47b6461";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260717-0100-loanpurpose";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260716-2155-47b6461";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260716-2155-47b6461";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260717-2003-fcd6b0d";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260717-2003-fcd6b0d";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260717-2003-fcd6b0d";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260717-2003-fcd6b0d";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260717-2003-fcd6b0d";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260717-2003-fcd6b0d";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260717-2003-fcd6b0d";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260717-2003-fcd6b0d";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260717-2003-fcd6b0d";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -84,6 +87,10 @@ export function createContractManager({ state, onChange = () => {} }) {
       return false;
     }
 
+    if (contract.type === "permit") {
+      return purchasePermit(contract);
+    }
+
     contract.status = "active";
     contract.acceptedAt = Date.now();
     if (contract.type === "loan" && !contract.disbursedAt) {
@@ -102,6 +109,91 @@ export function createContractManager({ state, onChange = () => {} }) {
     );
     onChange(contract);
     return true;
+  }
+
+  function purchasePermit(contract) {
+    const cost = contract.terms.cost ?? 0;
+
+    if (!spendCredits(state, cost)) {
+      state.ledger.recordEvent(
+        "contract.cannotAfford",
+        { contractId: contract.id, contractTitle: contract.title, cost },
+        { visible: false },
+      );
+      return false;
+    }
+
+    contract.status = "paid";
+    contract.acceptedAt = Date.now();
+    contract.paidAt = Date.now();
+    applyPermitGrant(contract);
+
+    state.ledger.recordEvent(
+      "contract.accepted",
+      {
+        contractId: contract.id,
+        contractTitle: contract.title,
+        issuer: contract.issuer,
+        contractType: contract.type,
+        contractGroup: contract.group,
+      },
+      { visible: true },
+    );
+    state.ledger.recordEvent(
+      "permit.granted",
+      {
+        contractId: contract.id,
+        contractTitle: contract.title,
+        permitType: contract.terms.permitType,
+        zoneId: contract.terms.zoneId ?? null,
+        zoneName: contract.terms.zoneName ?? null,
+        siteId: contract.terms.siteId ?? null,
+        siteName: contract.terms.siteName ?? null,
+        beaconId: contract.terms.beaconId ?? null,
+        cost,
+      },
+      { visible: true },
+    );
+
+    if (!getOpenContractIds().includes(contract.id)) {
+      state.contracts.currentContractId = getOpenContractIds()[0] ?? null;
+      onChange(getCurrentContract());
+      return true;
+    }
+
+    onChange(contract);
+    return true;
+  }
+
+  function applyPermitGrant(contract) {
+    const { permitType, zoneId, siteId } = contract.terms;
+
+    if (permitType === "zone-flight" && zoneId) {
+      const license = getPilotLicense(state);
+
+      if (!license.authorizedZones.includes(zoneId)) {
+        license.authorizedZones.push(zoneId);
+      }
+
+      return;
+    }
+
+    if (permitType === "hub-docking" && siteId) {
+      const identity = createControlledShipPublicIdentity(state);
+
+      rememberRegistrySubject(state, {
+        registryEntityId: getRegistryEntityIdForSite({ id: siteId }),
+        subjectEntityId: identity.entityId,
+        status: "cleared",
+        disposition: "cleared",
+        source: "permit-purchase",
+        data: {
+          siteId,
+          pilotLicenseId: identity.pilotLicenseId,
+          shipVin: identity.shipVin,
+        },
+      });
+    }
   }
 
   function update() {

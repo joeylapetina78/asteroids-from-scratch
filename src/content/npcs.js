@@ -47,6 +47,14 @@ export const npcDefinitions = {
     homeHubIds: ["yard-exchange"],
     organizations: ["Yard Exchange Modworks"],
   },
+  "rtc-officer": {
+    id: "rtc-officer",
+    name: "Commissioner Vey",
+    role: "flight rights and territory permits officer",
+    voiceFrequency: 455,
+    homeHubIds: ["yard-exchange"],
+    organizations: ["Reach Transit Commission"],
+  },
   "yard-dispatch": {
     id: "yard-dispatch",
     name: "Yard Exchange Dispatch",

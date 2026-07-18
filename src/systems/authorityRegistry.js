@@ -1,6 +1,6 @@
-import { getPowerTypeForAction, getRightTypeForAction, isRecordActive, limitsAllowAction } from "./authorityModel.js?v=fresh-20260716-2155-47b6461";
-import { isSameOrChildPlace } from "./placeRegistry.js?v=fresh-20260716-2155-47b6461";
-import { ensureWorldRecords } from "./worldRecords.js?v=fresh-20260716-2155-47b6461";
+import { getPowerTypeForAction, getRightTypeForAction, isRecordActive, limitsAllowAction } from "./authorityModel.js?v=fresh-20260717-2003-fcd6b0d";
+import { isSameOrChildPlace } from "./placeRegistry.js?v=fresh-20260717-2003-fcd6b0d";
+import { ensureWorldRecords } from "./worldRecords.js?v=fresh-20260717-2003-fcd6b0d";
 
 export function upsertAuthorityGrant(state, grant) {
   const records = ensureWorldRecords(state);

@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260716-2155-47b6461";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260716-2155-47b6461";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260716-2155-47b6461";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260716-2155-47b6461";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260716-2155-47b6461";
-import { Game } from "./game.js?v=fresh-20260716-2155-47b6461";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260717-0100-loanpurpose";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260716-2155-47b6461";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260716-2155-47b6461";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260716-2155-47b6461";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260717-2003-fcd6b0d";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260717-2003-fcd6b0d";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260717-2003-fcd6b0d";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260717-2003-fcd6b0d";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260717-2003-fcd6b0d";
+import { Game } from "./game.js?v=fresh-20260717-2003-fcd6b0d";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260717-2003-fcd6b0d";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260717-2003-fcd6b0d";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260717-2003-fcd6b0d";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260717-2003-fcd6b0d";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260716-2155-47b6461";
-import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260716-2155-47b6461";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260716-2155-47b6461";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260716-2155-47b6461";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260717-0102-fastcomplete";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260716-2155-47b6461";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260716-2155-47b6461";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260716-2155-47b6461";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260716-2155-47b6461";
-import { Processor } from "./systems/processor.js?v=fresh-20260716-2155-47b6461";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260716-2155-47b6461";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260716-2155-47b6461";
-import { createGameState } from "./state/gameState.js?v=fresh-20260716-2155-47b6461";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260717-2003-fcd6b0d";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260717-2003-fcd6b0d";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260717-2003-fcd6b0d";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260717-2003-fcd6b0d";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260717-2003-fcd6b0d";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260717-2003-fcd6b0d";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260717-2003-fcd6b0d";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260717-2003-fcd6b0d";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260717-2003-fcd6b0d";
+import { Processor } from "./systems/processor.js?v=fresh-20260717-2003-fcd6b0d";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260717-2003-fcd6b0d";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260717-2003-fcd6b0d";
+import { createGameState } from "./state/gameState.js?v=fresh-20260717-2003-fcd6b0d";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -385,6 +385,7 @@ let wasTowAvailable = false;
 let saveTimer = null;
 let lastHubAuthorityEventId = 0;
 let lastRookAutoOfferEventId = 0;
+let lastPermitGrantEventId = 0;
 let lastTowChatterEventId = 0;
 let lastDockingInspectionEventId = 0;
 let lastLifeformTourEventId = 0;
@@ -1743,7 +1744,11 @@ function openHubService(serviceId) {
 
   if (behavior.offersContracts) {
     setComponentAvailable("contract", true);
-    offerHubServiceContract(dockedSite, service);
+    if (service.offersAllContracts) {
+      offerAllHubServiceContracts(dockedSite, service);
+    } else {
+      offerHubServiceContract(dockedSite, service);
+    }
     pullContractForService(service);
     return;
   }
@@ -1896,15 +1901,47 @@ function offerHubServiceContract(site, service) {
   });
 }
 
+function offerAllHubServiceContracts(site, service) {
+  const contractIds = getAllHubServiceContractIds(service, { state });
+
+  contractIds.forEach((contractId) => {
+    contractManager.offerContract(contractId, {
+      type: "hub-service",
+      siteId: site.id,
+      siteName: site.name,
+      serviceId: service.id,
+      serviceType: service.serviceType,
+      npcId: service.npcId,
+      npcName: service.npcName,
+      organization: service.organization,
+    });
+  });
+}
+
 function updateLedgerDrivenSystems() {
   contractManager.update();
   journeyDirector.update();
   commsDirector.update();
   updateRookFollowupOffers();
+  updatePermitGrants();
   updateHubAuthorityMessages();
   updateTowChatter();
   updateLifeformTour();
   updateDockingInspection();
+}
+
+function updatePermitGrants() {
+  const events = state.ledger.getEventsAfterId(lastPermitGrantEventId, { includeHidden: true });
+
+  events.forEach((event) => {
+    lastPermitGrantEventId = Math.max(lastPermitGrantEventId, event.id);
+
+    if (event.type !== "permit.granted" || event.payload.permitType !== "hub-docking" || !event.payload.siteId) {
+      return;
+    }
+
+    addHubBeaconToNavigation(event.payload.siteId);
+  });
 }
 
 function updateDockingInspection() {
@@ -2485,6 +2522,17 @@ function createResourceBadge(resourceType) {
 }
 
 function renderContractTerms(contract) {
+  if (contract.type === "permit") {
+    const terms = contract.terms;
+    contractPrimaryLabel.textContent = "Grants";
+    contractVin.textContent = terms.permitType === "zone-flight" ? `Flight rights — ${terms.zoneName}` : `Docking clearance — ${terms.siteName}`;
+    contractSecondaryLabel.textContent = "Coverage";
+    contractDestination.textContent = terms.permitType === "zone-flight" ? "Permanent zone authorization" : "Registry pre-clearance + beacon";
+    contractTertiaryLabel.textContent = "Cost";
+    contractReward.textContent = `${(terms.cost ?? 0).toLocaleString()} cr`;
+    return;
+  }
+
   if (contract.type === "loan") {
     contractPrimaryLabel.textContent = "Principal";
     contractVin.textContent = `${contract.terms.principal.toLocaleString()} cr`;
@@ -2596,6 +2644,10 @@ function getContractStatusLabel(status) {
 }
 
 function getContractButtonLabel(contract) {
+  if (contract.type === "permit" && contract.status === "offered") {
+    return getCredits(state) < (contract.terms.cost ?? 0) ? "Can't Afford" : "Purchase Permit";
+  }
+
   if (contract.status === "offered") {
     return "Accept Contract";
   }
@@ -2632,6 +2684,10 @@ function getContractButtonLabel(contract) {
 }
 
 function isContractButtonEnabled(contract) {
+  if (contract.type === "permit" && contract.status === "offered") {
+    return getCredits(state) >= (contract.terms.cost ?? 0);
+  }
+
   return (
     contract.status === "offered" ||
     contract.status === "fulfilled" ||
