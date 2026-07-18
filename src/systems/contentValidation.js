@@ -1,8 +1,8 @@
-import { getContractRequirementDefinition } from "./contractRules.js?v=fresh-20260717-2359-46facc8";
-import { COMPONENT_STATE_BY_PANEL_ID, PANEL_IDS } from "./componentRegistry.js?v=fresh-20260717-2359-46facc8";
-import { HUB_SERVICE_BEHAVIOR_BY_TYPE } from "./hubServiceBehaviors.js?v=fresh-20260717-2359-46facc8";
-import { getMissionActionDefinition } from "./missionActions.js?v=fresh-20260717-2359-46facc8";
-import { createGameState } from "../state/gameState.js?v=fresh-20260717-2359-46facc8";
+import { getContractRequirementDefinition } from "./contractRules.js?v=fresh-20260718-1555-5e21702";
+import { COMPONENT_STATE_BY_PANEL_ID, PANEL_IDS } from "./componentRegistry.js?v=fresh-20260718-1555-5e21702";
+import { HUB_SERVICE_BEHAVIOR_BY_TYPE } from "./hubServiceBehaviors.js?v=fresh-20260718-1555-5e21702";
+import { getMissionActionDefinition } from "./missionActions.js?v=fresh-20260718-1555-5e21702";
+import { createGameState } from "../state/gameState.js?v=fresh-20260718-1555-5e21702";
 
 export function validateMissionDefinition(missionDefinition, context = createValidationContext()) {
   const issues = [];

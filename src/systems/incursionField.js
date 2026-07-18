@@ -1,5 +1,6 @@
-import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260717-2359-46facc8";
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260717-2359-46facc8";
+import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260718-1555-5e21702";
+import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260718-1555-5e21702";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260718-1555-5e21702";
 import { hashNumbers } from "./random.js";
 
 const PORTAL_WAVE_SIZES = [5, 10, 30];
@@ -122,7 +123,19 @@ function spawnPortalWave(portal, count, waveIndex) {
     const distance = PORTAL_HUNTER_ORBIT_RADIUS + (index % 3) * 24;
     const x = portal.position.x + Math.cos(angle) * distance;
     const y = portal.position.y + Math.sin(angle) * distance;
-    const hunter = new Lifeform({
+    // One fighter leads each wave. It makes the new flight combat readable
+    // without replacing the hunter swarm that gives portals their pressure.
+    const shouldSpawnFighter = index === 0;
+    const enemy = shouldSpawnFighter
+      ? new FlightFighter({
+        id: `${portal.id}-fighter-${waveIndex + 1}-${index + 1}`,
+        x,
+        y,
+        angle: angle + Math.PI / 2,
+        seed: hashNumbers(portal.seed, waveIndex, index),
+        sourcePortalId: portal.id,
+      })
+      : new Lifeform({
       type: "hunter",
       role: "invader",
       name: `Rift Hunter ${waveIndex + 1}-${index + 1}`,
@@ -135,11 +148,13 @@ function spawnPortalWave(portal, count, waveIndex) {
       seed: hashNumbers(portal.seed, waveIndex, index),
     });
 
-    hunter.id = `${portal.id}-hunter-${waveIndex + 1}-${index + 1}`;
-    hunter.sourcePortalId = portal.id;
-    hunter.health = 72 + Math.min(24, waveIndex * 5);
-    portal.guardIds.add(hunter.id);
-    spawned.push(hunter);
+    if (!shouldSpawnFighter) {
+      enemy.id = `${portal.id}-hunter-${waveIndex + 1}-${index + 1}`;
+      enemy.sourcePortalId = portal.id;
+      enemy.health = 72 + Math.min(24, waveIndex * 5);
+    }
+    portal.guardIds.add(enemy.id);
+    spawned.push(enemy);
   }
 
   return spawned;

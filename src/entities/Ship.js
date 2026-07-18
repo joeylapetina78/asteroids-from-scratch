@@ -1,10 +1,10 @@
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260718-1555-5e21702";
+
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_THRUST_POWER = 95;
 const DEFAULT_REVERSE_THRUST_MULTIPLIER = 0.2;
 const DEFAULT_FUEL_BURN_RATE = 6;
 const DEFAULT_MAX_SPEED = 105;
-const BRAKE_DRAG = 0.92;
-const SPACE_DRAG = 0.995;
 const SHIP_FRAMES = {
   "yard-skiff": {
     points: [
@@ -73,39 +73,27 @@ export class Ship {
   }
 
   update(deltaSeconds, input) {
-    if (!this.engine.powered) {
-      this.stopThrusting();
-    } else {
-      if (input.isDown("KeyA")) {
-        this.angle -= this.getRotationSpeed() * deltaSeconds;
-      }
-
-      if (input.isDown("KeyD")) {
-        this.angle += this.getRotationSpeed() * deltaSeconds;
-      }
-
-      this.isThrusting = input.isDown("KeyW") && this.engine.fuel > 0;
-      if (this.isThrusting) {
-        const thrustDirection = this.engine.thrustMode === "reverse" ? -1 : 1;
-        const thrustPower = this.getThrustPower() * (this.engine.thrustMode === "reverse" ? this.getReverseThrustMultiplier() : 1);
-
-        this.engine.fuel = Math.max(0, this.engine.fuel - this.getFuelBurnRate() * deltaSeconds);
-        this.velocity.x += Math.cos(this.angle) * thrustPower * thrustDirection * deltaSeconds;
-        this.velocity.y += Math.sin(this.angle) * thrustPower * thrustDirection * deltaSeconds;
-        this.limitSpeed();
-      }
-
-      if (input.isDown("KeyS")) {
-        this.velocity.x *= BRAKE_DRAG;
-        this.velocity.y *= BRAKE_DRAG;
-      }
+    const canThrust = this.engine.powered && input.isDown("KeyW") && this.engine.fuel > 0;
+    if (canThrust) {
+      this.engine.fuel = Math.max(0, this.engine.fuel - this.getFuelBurnRate() * deltaSeconds);
     }
 
-    this.velocity.x *= SPACE_DRAG;
-    this.velocity.y *= SPACE_DRAG;
-
-    this.position.x += this.velocity.x * deltaSeconds;
-    this.position.y += this.velocity.y * deltaSeconds;
+    advanceFlightBody(
+      this,
+      deltaSeconds,
+      {
+        turn: this.engine.powered ? (input.isDown("KeyA") ? -1 : input.isDown("KeyD") ? 1 : 0) : 0,
+        thrust: canThrust,
+        brake: this.engine.powered && input.isDown("KeyS"),
+        reverse: this.engine.thrustMode === "reverse",
+      },
+      {
+        rotationSpeed: this.getRotationSpeed(),
+        thrustPower: this.getThrustPower(),
+        reverseThrustMultiplier: this.getReverseThrustMultiplier(),
+        maxSpeed: this.getMaxSpeed(),
+      },
+    );
   }
 
   stopThrusting() {
@@ -133,16 +121,7 @@ export class Ship {
   }
 
   limitSpeed() {
-    const speed = Math.hypot(this.velocity.x, this.velocity.y);
-    const maxSpeed = this.getMaxSpeed();
-
-    if (speed <= maxSpeed) {
-      return;
-    }
-
-    const scale = maxSpeed / speed;
-    this.velocity.x *= scale;
-    this.velocity.y *= scale;
+    limitVelocity(this.velocity, this.getMaxSpeed());
   }
 
   draw(context, camera) {
