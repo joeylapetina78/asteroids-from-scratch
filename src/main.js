@@ -17,13 +17,13 @@ import {
 import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260717-2003-fcd6b0d";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260717-2003-fcd6b0d";
 import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260717-2003-fcd6b0d";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260717-2003-fcd6b0d";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260717-2210-verified";
 import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260717-2003-fcd6b0d";
 import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260717-2003-fcd6b0d";
 import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260717-2003-fcd6b0d";
 import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260717-2003-fcd6b0d";
 import { Processor } from "./systems/processor.js?v=fresh-20260717-2003-fcd6b0d";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260717-2003-fcd6b0d";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260717-2210-verified";
 import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260717-2003-fcd6b0d";
 import { createGameState } from "./state/gameState.js?v=fresh-20260717-2003-fcd6b0d";
 
