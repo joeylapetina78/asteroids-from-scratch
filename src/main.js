@@ -187,6 +187,7 @@ const contractTitle = document.querySelector("#contract-title");
 const contractVin = document.querySelector("#contract-vin");
 const componentCloseButtons = document.querySelectorAll("[data-close-panel]");
 const fuelCount = document.querySelector("#fuel-count");
+const attentionCalloutLayer = document.querySelector("#attention-callouts");
 const fuelFill = document.querySelector("#fuel-fill");
 const hullCount = document.querySelector("#hull-count");
 const hullFill = document.querySelector("#hull-fill");
@@ -716,6 +717,7 @@ new ResizeObserver(() => {
 window.addEventListener("beforeunload", () => saveNow());
 
 function updateHudDisplay() {
+  updateAttentionCallouts();
   renderProcessorOutputs();
   renderShipOffers();
   const activeService = currentSiteState?.dockedSite && activeHubServiceId ? getHubService(currentSiteState.dockedSite.id, activeHubServiceId) : null;
@@ -2802,7 +2804,7 @@ function setPanelAlert(panelId, level) {
   panel.classList.toggle("is-low-resource", level === "critical");
 }
 
-function requestAttention({ targetId = null, targetType = null, panelId = null, siteId = null, serviceId = null, mode = "once", reason = "general" }) {
+function requestAttention({ targetId = null, targetType = null, panelId = null, siteId = null, serviceId = null, mode = "once", reason = "general", label = null }) {
   const resolvedTargetId = targetId ?? getAttentionTarget({ targetType, panelId, siteId, serviceId });
 
   if (!resolvedTargetId) {
@@ -2818,6 +2820,7 @@ function requestAttention({ targetId = null, targetType = null, panelId = null, 
   state.ui.attention.targets[resolvedTargetId] = {
     mode,
     reason,
+    label,
     requestedAt: Date.now(),
   };
   hubServiceMenu.dataset.renderedKey = "";
@@ -2869,6 +2872,10 @@ function findAttentionElement(targetId) {
     return hubServiceMenu.querySelector(`[data-service-id="${serviceId}"]`);
   }
 
+  if (targetId.startsWith("element:")) {
+    return document.getElementById(targetId.slice("element:".length));
+  }
+
   return null;
 }
 
@@ -2881,6 +2888,61 @@ function playAttentionOnce(element) {
   void element.offsetWidth;
   element.classList.add("needs-attention-once");
   window.setTimeout(() => element.classList.remove("needs-attention-once"), ATTENTION_ONCE_MS);
+}
+
+function updateAttentionCallouts() {
+  if (!attentionCalloutLayer) {
+    return;
+  }
+
+  const activeTargetIds = new Set();
+
+  Object.entries(state.ui.attention.targets).forEach(([targetId, target]) => {
+    if (!target.label) {
+      return;
+    }
+
+    const element = findAttentionElement(targetId);
+
+    if (!element || element.offsetParent === null) {
+      return;
+    }
+
+    activeTargetIds.add(targetId);
+    positionAttentionCallout(targetId, target.label, element);
+  });
+
+  attentionCalloutLayer.querySelectorAll("[data-callout-target]").forEach((node) => {
+    if (!activeTargetIds.has(node.dataset.calloutTarget)) {
+      node.remove();
+    }
+  });
+}
+
+function positionAttentionCallout(targetId, label, element) {
+  let callout = attentionCalloutLayer.querySelector(`[data-callout-target="${CSS.escape(targetId)}"]`);
+
+  if (!callout) {
+    callout = document.createElement("div");
+    callout.className = "attention-callout";
+    callout.dataset.calloutTarget = targetId;
+    const arrow = document.createElement("span");
+    arrow.className = "attention-callout-arrow";
+    arrow.textContent = "▾";
+    const text = document.createElement("span");
+    text.className = "attention-callout-label";
+    callout.append(arrow, text);
+    attentionCalloutLayer.append(callout);
+  }
+
+  const labelNode = callout.querySelector(".attention-callout-label");
+  if (labelNode.textContent !== label) {
+    labelNode.textContent = label;
+  }
+
+  const rect = element.getBoundingClientRect();
+  callout.style.left = `${rect.left + rect.width / 2}px`;
+  callout.style.top = `${rect.top - 26}px`;
 }
 
 function setPanelHidden(panel, isHidden) {
@@ -3025,8 +3087,23 @@ function renderJourney(journey = state.journey) {
   }
 
   const isTrafficCheck = journey.currentStepId === "yard-traffic-check";
-  hullVin.classList.toggle("needs-id-attention", isTrafficCheck && !journey.flags?.yardVinPresented);
-  licenseIdDisplay.classList.toggle("needs-id-attention", isTrafficCheck && !journey.flags?.yardLicensePresented);
+  const vinNeedsAttention = isTrafficCheck && !journey.flags?.yardVinPresented;
+  const licenseNeedsAttention = isTrafficCheck && !journey.flags?.yardLicensePresented;
+
+  hullVin.classList.toggle("needs-id-attention", vinNeedsAttention);
+  licenseIdDisplay.classList.toggle("needs-id-attention", licenseNeedsAttention);
+
+  if (vinNeedsAttention) {
+    requestAttention({ targetId: "element:hull-vin", mode: "until-clicked", reason: "identity-check", label: "Show VIN" });
+  } else {
+    clearAttention("element:hull-vin");
+  }
+
+  if (licenseNeedsAttention) {
+    requestAttention({ targetId: "element:license-id", mode: "until-clicked", reason: "identity-check", label: "Show License" });
+  } else {
+    clearAttention("element:license-id");
+  }
   const identityReady = canPresentIdentityDocuments();
   hullVin.disabled = !identityReady;
   licenseIdDisplay.disabled = !identityReady;

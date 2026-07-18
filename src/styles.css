@@ -246,6 +246,59 @@ body {
   }
 }
 
+.attention-callouts {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 900;
+}
+
+.attention-callout {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transform: translate(-50%, 0);
+  padding: 3px 9px 3px 7px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 211, 107, 0.8);
+  background: rgba(20, 17, 8, 0.92);
+  color: #ffe3a3;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: 0 0 14px rgba(255, 211, 107, 0.24);
+  animation: attention-callout-bounce 1.1s ease-in-out infinite;
+}
+
+.attention-callout-arrow {
+  display: inline-block;
+  animation: attention-callout-arrow-bounce 1.1s ease-in-out infinite;
+}
+
+@keyframes attention-callout-bounce {
+  0%,
+  100% {
+    box-shadow: 0 0 14px rgba(255, 211, 107, 0.24);
+  }
+
+  50% {
+    box-shadow: 0 0 22px rgba(255, 211, 107, 0.42);
+  }
+}
+
+@keyframes attention-callout-arrow-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
 .component-panel-title {
   display: flex;
   align-items: baseline;
