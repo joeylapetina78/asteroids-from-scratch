@@ -71,7 +71,7 @@ export const WORLD_ZONES = [
     center: { x: 2000, y: -1000 },
     radius: 1000,
     falloff: 900,
-    tags: ["structural", "dense-rocks", "hunters", "metallic", "maze-corridor"],
+    tags: ["structural", "dense-rocks", "hunters", "metallic", "maze-corridor", "fuel-lean"],
     profile: {
       asteroidDensityMultiplier: 1.45,
       commonRockBias:  0.8,
@@ -95,7 +95,7 @@ export const WORLD_ZONES = [
     center: { x: -1400, y: -2000 },
     radius: 800,
     falloff: 700,
-    tags: ["conductor", "teal-rocks", "medium-density", "cluster-pocket"],
+    tags: ["conductor", "teal-rocks", "medium-density", "cluster-pocket", "scanergy-rich", "charge-lean"],
     conductorMember: "copper",
     profile: {
       asteroidDensityMultiplier: 1.1,
@@ -120,7 +120,7 @@ export const WORLD_ZONES = [
     center: { x: -2200, y: 900 },
     radius: 800,
     falloff: 700,
-    tags: ["volatile", "blue-rocks", "ambient-life", "open-drift"],
+    tags: ["volatile", "blue-rocks", "ambient-life", "open-drift", "fuel-rich"],
     profile: {
       asteroidDensityMultiplier: 0.9,
       commonRockBias:  1.1,
@@ -144,7 +144,7 @@ export const WORLD_ZONES = [
     center: { x: -3800, y: 1800 },
     radius: 1200,
     falloff: 1000,
-    tags: ["scrap", "common-rocks", "ambient-life", "debris-stream"],
+    tags: ["scrap", "common-rocks", "ambient-life", "debris-stream", "charge-rich"],
     profile: {
       asteroidDensityMultiplier: 1.05,
       commonRockBias:  1.5,
@@ -364,7 +364,7 @@ export const WORLD_ZONES = [
     center: { x: 12000, y: 25000 },
     radius: 3000,
     falloff: 4000,
-    tags: ["sparse", "low-resource", "low-life", "navigation-hazard", "sparse-dead"],
+    tags: ["sparse", "low-resource", "low-life", "navigation-hazard", "sparse-dead", "fuel-desert", "charge-desert", "scanergy-desert"],
     profile: {
       asteroidDensityMultiplier: 0.3,
       commonRockBias:  0.5,

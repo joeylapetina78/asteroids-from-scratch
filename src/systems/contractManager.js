@@ -1,12 +1,12 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260717-2003-fcd6b0d";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260717-2003-fcd6b0d";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260717-2003-fcd6b0d";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260717-2003-fcd6b0d";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260717-2003-fcd6b0d";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260717-2003-fcd6b0d";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260717-2003-fcd6b0d";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260717-2003-fcd6b0d";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260717-2003-fcd6b0d";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260717-2226-d0a062a";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260717-2226-d0a062a";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260717-2226-d0a062a";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260717-2226-d0a062a";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260717-2226-d0a062a";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260717-2226-d0a062a";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260717-2226-d0a062a";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260717-2226-d0a062a";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260717-2226-d0a062a";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 

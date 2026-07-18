@@ -299,16 +299,16 @@ The zone tag system (currently used for danger, ore bias, life bias) needs to ex
 
 ## Current Status
 
-**Not yet implemented.** The current game has two resources: red ore (fuel) and blue crystal (crystal). They work mechanically but do not create dependency relationships or ecological variety.
+The game now has a seven-family material catalog, canonical resource IDs, family shapes/colors, regional and zone-level resource biases, streamed asteroid generation, and source-claim provenance on collected units. The first survival pass gives primary processing roles to materials: volatile materials restore fuel, structural and industrial materials make mining charges, and conductor materials restore scanergy. Advanced, energy, and strange materials have more specialized or high-value roles.
+
+Resource generation has two layers: a low baseline of survival materials keeps normal travel viable, while region and zone profiles create the concentrations that make routes, trade, and claims meaningful. Tags can make a location `fuel-desert`, `charge-desert`, or `scanergy-desert`; those tags make the material scarce rather than impossible, preserving risky rescue-worthy routes without accidental soft-locks.
 
 This document defines the target. The migration path:
 
-1. Expand zone profiles to carry resource family weights
-2. Add resource family tags to asteroid field generation
-3. Replace red/blue with at least the first tier: Silicate Stone, Iron-Nickel Ore, Carbonaceous Ore, Water Ice
-4. Wire resource types to specific component recipes and contract requirements
-5. Add scarcity-aware contract generation (organizations request the resources they need, not just "ore")
-6. Add advanced resources as world generation expands into new zone types
-7. Add grades once the base resources are stable
+1. Add processor compaction and resource grades without losing physical pickup play.
+2. Add repair and component-recipe outputs through the same resource records.
+3. Add scarcity-aware contract generation (organizations request the resources they need, not just "ore").
+4. Add restricted handling and inspections for energy and strange materials.
+5. Add grades once the base survival economy is stable.
 
 The world is designed to be about 3 hours across at speed — large enough that resource scarcity is real and regional, not trivially solved by flying to the next field.

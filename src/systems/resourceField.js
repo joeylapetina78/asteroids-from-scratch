@@ -1,6 +1,7 @@
 import { createValueNoise } from "./valueNoise.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260717-2003-fcd6b0d";
-import { RESOURCE_COLOR_RGB, pickFamilyMember } from "./resourceDefinitions.js?v=fresh-20260717-2003-fcd6b0d";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260717-2226-d0a062a";
+import { getRegionProfile } from "./worldRegions.js?v=fresh-20260717-2226-d0a062a";
+import { RESOURCE_COLOR_RGB, pickFamilyMember } from "./resourceDefinitions.js?v=fresh-20260717-2226-d0a062a";
 
 export function createResourceField(seed = 1337) {
   const noise = createValueNoise(seed);
@@ -8,17 +9,20 @@ export function createResourceField(seed = 1337) {
   return {
     getProfile(x, y) {
       const zoneProfile = getZoneProfile(x, y);
+      const regionProfile = getRegionProfile(x, y);
+      const tags = [...new Set([...(regionProfile.tags ?? []), ...(zoneProfile.tags ?? [])])];
+      const survival = getSurvivalResourceProfile(tags);
       const densityNoise = Math.pow(layeredNoise(noise, x + 1000, y - 1000, 1800, 0.18, 1), 1.15);
       const density = clamp(densityNoise * zoneProfile.asteroidDensityMultiplier, 0, 1.35);
 
       // One noise channel per family. Exponent controls rarity — higher = rarer.
-      const volatileRaw   = Math.pow(layeredNoise(noise, x + 2400,   y - 8100,  3800, 0, 1), 1.8) * zoneProfile.volatileBias;
-      const structuralRaw = Math.pow(layeredNoise(noise, x + 9000,   y + 1200,  2600, 0, 1), 1.6) * zoneProfile.structuralBias;
-      const industrialRaw = Math.pow(layeredNoise(noise, x + 1500,   y + 3000,  1800, 0, 1), 1.2) * zoneProfile.industrialBias;
-      const conductorRaw  = Math.pow(layeredNoise(noise, x - 7000,   y + 5400,  3200, 0, 1), 2.1) * zoneProfile.conductorBias;
-      const energyRaw     = Math.pow(layeredNoise(noise, x + 5000,   y - 12000, 4200, 0, 1), 3.5) * zoneProfile.energyBias;
-      const advancedRaw   = Math.pow(layeredNoise(noise, x - 12000,  y - 6000,  4500, 0, 1), 2.8) * zoneProfile.advancedBias;
-      const strangeRaw    = Math.pow(layeredNoise(noise, x - 15000,  y + 8000,  5500, 0, 1), 4.5) * zoneProfile.strangeBias;
+      const volatileRaw   = Math.max(survival.volatile.floor, Math.pow(layeredNoise(noise, x + 2400,   y - 8100,  3800, 0, 1), 1.8) * combineBias(zoneProfile.volatileBias, regionProfile.volatileBias) * survival.volatile.multiplier);
+      const structuralRaw = Math.max(survival.structural.floor, Math.pow(layeredNoise(noise, x + 9000,   y + 1200,  2600, 0, 1), 1.6) * combineBias(zoneProfile.structuralBias, regionProfile.structuralBias) * survival.structural.multiplier);
+      const industrialRaw = Math.max(survival.industrial.floor, Math.pow(layeredNoise(noise, x + 1500,   y + 3000,  1800, 0, 1), 1.2) * combineBias(zoneProfile.industrialBias, regionProfile.industrialBias) * survival.industrial.multiplier);
+      const conductorRaw  = Math.max(survival.conductor.floor, Math.pow(layeredNoise(noise, x - 7000,   y + 5400,  3200, 0, 1), 2.1) * combineBias(zoneProfile.conductorBias, regionProfile.conductorBias) * survival.conductor.multiplier);
+      const energyRaw     = Math.pow(layeredNoise(noise, x + 5000,   y - 12000, 4200, 0, 1), 3.5) * combineBias(zoneProfile.energyBias, regionProfile.energyBias);
+      const advancedRaw   = Math.pow(layeredNoise(noise, x - 12000,  y - 6000,  4500, 0, 1), 2.8) * combineBias(zoneProfile.advancedBias, regionProfile.advancedBias);
+      const strangeRaw    = Math.pow(layeredNoise(noise, x - 15000,  y + 8000,  5500, 0, 1), 4.5) * combineBias(zoneProfile.strangeBias, regionProfile.strangeBias);
       const stoneRaw      = (0.9 + layeredNoise(noise, x, y, 1400, 0, 0.25)) * zoneProfile.commonRockBias;
 
       // Pick the specific member for each family using independent selector noise.
@@ -51,9 +55,51 @@ export function createResourceField(seed = 1337) {
         commonRockBias: zoneProfile.commonRockBias,
         scrapBias: zoneProfile.scrapBias,
         zoneProfile,
+        regionProfile,
+        tags,
       };
     },
   };
+}
+
+function combineBias(zoneBias, regionBias) {
+  return zoneBias * (0.65 + regionBias * 0.35);
+}
+
+export function getSurvivalResourceProfile(tags = []) {
+  const profile = {
+    volatile: { floor: 0.12, multiplier: 1 },
+    structural: { floor: 0.11, multiplier: 1 },
+    industrial: { floor: 0.09, multiplier: 1 },
+    conductor: { floor: 0.035, multiplier: 1 },
+  };
+  const tagSet = new Set(tags);
+
+  applyScarcity(tagSet, ["fuel-desert", "fuel-lean", "no-fuel"], profile.volatile, 0.16, 0.012);
+  applyScarcity(tagSet, ["charge-desert", "charge-lean", "no-charges"], profile.structural, 0.2, 0.02);
+  applyScarcity(tagSet, ["charge-desert", "charge-lean", "no-charges"], profile.industrial, 0.2, 0.018);
+  applyScarcity(tagSet, ["scanergy-desert", "scanergy-lean", "no-scanergy"], profile.conductor, 0.16, 0.005);
+
+  applyAbundance(tagSet, ["fuel-rich", "volatile-rich"], profile.volatile, 1.65, 0.2);
+  applyAbundance(tagSet, ["charge-rich", "industrial-rich"], profile.structural, 1.35, 0.15);
+  applyAbundance(tagSet, ["charge-rich", "industrial-rich"], profile.industrial, 1.35, 0.14);
+  applyAbundance(tagSet, ["scanergy-rich", "conductor-rich"], profile.conductor, 1.8, 0.07);
+
+  return profile;
+}
+
+function applyScarcity(tags, matchingTags, resource, multiplier, floor) {
+  if (matchingTags.some((tag) => tags.has(tag))) {
+    resource.multiplier *= multiplier;
+    resource.floor = Math.min(resource.floor, floor);
+  }
+}
+
+function applyAbundance(tags, matchingTags, resource, multiplier, floor) {
+  if (matchingTags.some((tag) => tags.has(tag))) {
+    resource.multiplier *= multiplier;
+    resource.floor = Math.max(resource.floor, floor);
+  }
 }
 
 function layeredNoise(noise, x, y, scale, min, max) {

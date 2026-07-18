@@ -2338,6 +2338,91 @@ body {
   gap: 8px;
 }
 
+.resource-guide-panel {
+  width: min(350px, calc(100vw - 48px));
+  display: grid;
+  gap: 10px;
+}
+
+.resource-guide-intro {
+  margin: 0;
+  color: #95a4b8;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.resource-guide-content {
+  display: grid;
+  gap: 10px;
+}
+
+.resource-guide-family {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(115, 210, 255, 0.13);
+}
+
+.resource-guide-family h3 {
+  margin: 0;
+  color: #d9e7f7;
+  font-size: 0.78rem;
+}
+
+.resource-guide-family > span {
+  color: #627188;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.resource-guide-list {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 5px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.resource-guide-entry {
+  display: grid;
+  grid-template-columns: 16px 94px 1fr;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: #cbd8e9;
+  font-size: 0.72rem;
+}
+
+.resource-guide-entry strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: inherit;
+}
+
+.resource-guide-entry > span:last-child {
+  color: #8d9bae;
+  text-align: right;
+}
+
+.resource-guide-swatch {
+  width: 14px;
+  height: 14px;
+  background: var(--resource-color);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--resource-color), transparent 48%);
+}
+
+.resource-guide-swatch.is-circle { border-radius: 50%; }
+.resource-guide-swatch.is-square { border-radius: 2px; }
+.resource-guide-swatch.is-triangle { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.resource-guide-swatch.is-hexagon { clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
+.resource-guide-swatch.is-octagon { clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); }
+.resource-guide-swatch.is-diamond { transform: rotate(45deg) scale(0.78); }
+.resource-guide-swatch.is-shard { clip-path: polygon(22% 0, 100% 18%, 67% 100%, 0 74%); }
+
 .license-card {
   display: grid;
   gap: 5px;

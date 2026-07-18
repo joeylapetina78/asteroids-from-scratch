@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260717-2003-fcd6b0d";
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260717-2003-fcd6b0d";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260717-2003-fcd6b0d";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260717-2003-fcd6b0d";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260717-2003-fcd6b0d";
-import { Game } from "./game.js?v=fresh-20260717-2003-fcd6b0d";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260717-2003-fcd6b0d";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260717-2003-fcd6b0d";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260717-2003-fcd6b0d";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260717-2003-fcd6b0d";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260717-2226-d0a062a";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260717-2226-d0a062a";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260717-2226-d0a062a";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260717-2226-d0a062a";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260717-2226-d0a062a";
+import { Game } from "./game.js?v=fresh-20260717-2226-d0a062a";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260717-2226-d0a062a";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260717-2226-d0a062a";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260717-2226-d0a062a";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260717-2226-d0a062a";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260717-2003-fcd6b0d";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260717-2003-fcd6b0d";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260717-2003-fcd6b0d";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260717-2003-fcd6b0d";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260717-2210-verified";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260717-2003-fcd6b0d";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260717-2003-fcd6b0d";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260717-2003-fcd6b0d";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260717-2003-fcd6b0d";
-import { Processor } from "./systems/processor.js?v=fresh-20260717-2003-fcd6b0d";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260717-2210-verified";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260717-2003-fcd6b0d";
-import { createGameState } from "./state/gameState.js?v=fresh-20260717-2003-fcd6b0d";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260718-0000-merged";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260718-0000-merged";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260718-0000-merged";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260718-0000-merged";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260718-0000-merged";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260718-0000-merged";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260718-0000-merged";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260718-0000-merged";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260718-0000-merged";
+import { Processor } from "./systems/processor.js?v=fresh-20260718-0000-merged";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260718-0000-merged";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260718-0000-merged";
+import { createGameState } from "./state/gameState.js?v=fresh-20260718-0000-merged";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -40,39 +40,7 @@ const JOURNEY_PANEL_Z_INDEX = 560;
 const VIEWPORT_PANEL_Z_INDEX = 10;
 const DESK_PANEL_MIN_Z_INDEX = 30;
 const DESK_PANEL_MAX_Z_INDEX = 520;
-const PROCESS_OUTPUT_AMOUNT = 250;
-const CRYSTAL_VALUE_MULTIPLIER = 5;
-const CARGO_UNIT_BASE_VALUES = {
-  // volatile
-  "water-ice":     30,
-  "methane-ice":   50,
-  "hydrogen":      80,
-  // structural
-  "iron-nickel":   20,
-  "aluminum":      35,
-  "titanium":      60,
-  // industrial
-  "silicate":      15,
-  "carbonaceous":  25,
-  // conductor
-  "copper":        50,
-  "cobalt":        80,
-  "silver":       120,
-  // energy
-  "uranium":       90,
-  "thorium":      160,
-  // advanced
-  "lithium":      130,
-  "rare-earth":   220,
-  "platinum":     300,
-  // strange
-  "crystal-matrix": 200,
-  "anomaly-shard":  450,
-  // legacy aliases
-  fuel:   20,
-  crystal: 200,
-};
-const PAPERWORK_PANEL_IDS = ["license", "document", "contract"];
+const PAPERWORK_PANEL_IDS = ["license", "resource-guide", "document", "contract"];
 const TOW_DRIVER_NAMES = ["Mara Tow", "Jax Cable", "Nell Winch", "Orson Hook"];
 const YARD_EXCHANGE_CORE_SERVICES = [
   yardExchangeServices.rook,
@@ -114,6 +82,7 @@ const DEFAULT_PANEL_LAYOUT = {
   "moss-seeder": { x: 760, y: 400, z: 57 },
   contract: { x: -300, y: 340, z: 95 },
   document: { x: -40, y: 240, z: 96 },
+  "resource-guide": { x: -40, y: 440, z: 94 },
   finley: { x: 70, y: 120, z: 115 },
   "component-shop": { x: 80, y: 140, z: 118 },
   roadmap: { x: 120, y: 100, z: 130 },
@@ -201,6 +170,7 @@ const documentStatus = document.querySelector("#document-status");
 const documentSummary = document.querySelector("#document-summary");
 const documentTitle = document.querySelector("#document-title");
 const documentType = document.querySelector("#document-type");
+const resourceGuideContent = document.querySelector("#resource-guide-content");
 const hubDetail = document.querySelector("#hub-detail");
 const hubName = document.querySelector("#hub-name");
 const hubPanel = document.querySelector("[data-panel-id='hub']");
@@ -670,6 +640,7 @@ clearOldPanelLayouts();
 setInitialPaperworkLocations();
 makePanelsDraggable();
 setupPaperworkControls();
+renderResourceGuide();
 wirePanelControlSounds();
 if (initialDevStart === "explorer" || initialDevStart === "panorama") {
   journeyDirector.startFreeMode();
@@ -1539,6 +1510,51 @@ function getDocumentFieldPairs(record) {
   if (record.grants?.length) fields.push(["Grants", record.grants.map((grant) => grant.permission).join(", ")]);
 
   return fields;
+}
+
+function renderResourceGuide() {
+  if (!resourceGuideContent) {
+    return;
+  }
+
+  resourceGuideContent.replaceChildren(
+    ...getResourceGuideEntries().map((family) => {
+      const group = document.createElement("section");
+      const heading = document.createElement("h3");
+      const meta = document.createElement("span");
+      const list = document.createElement("ul");
+
+      group.className = "resource-guide-family";
+      heading.textContent = family.label;
+      meta.textContent = family.shape;
+      list.className = "resource-guide-list";
+
+      list.append(
+        ...family.resources.map((resource) => {
+          const item = document.createElement("li");
+          const swatch = document.createElement("span");
+          const name = document.createElement("strong");
+          const detail = document.createElement("span");
+
+          item.className = "resource-guide-entry";
+          swatch.className = `resource-guide-swatch is-${family.shape}`;
+          swatch.style.setProperty("--resource-color", resource.color);
+          swatch.setAttribute("aria-label", `${formatResourceName(resource.id)} color sample`);
+          name.textContent = formatResourceName(resource.id);
+          detail.textContent = `${resource.purpose} | ${resource.value} cr`;
+          item.append(swatch, name, detail);
+          return item;
+        }),
+      );
+
+      group.append(heading, meta, list);
+      return group;
+    }),
+  );
+}
+
+function formatResourceName(resourceId) {
+  return resourceId.replaceAll("-", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 function getEntityLabel(entityId) {
@@ -3608,11 +3624,18 @@ function fireMossSeederFromCargo() {
 }
 
 function processUnit(type, unit = {}) {
-  // Processor clicks do not care where a unit came from. The selected output
-  // determines whether the same physical unit becomes fuel, ammo, scanergy, or
-  // stored cargo.
   const output = getSelectedProcessorOutput();
-  const amount = getUnitProcessValue(type);
+  const amount = getResourceProcessValue(type, output);
+
+  if (amount <= 0) {
+    state.ledger.recordEvent("resource.processingRejected", {
+      resourceType: type,
+      output,
+      reason: "incompatible-resource-output",
+    }, { visible: false });
+    return false;
+  }
+
   state.components.processor.output = output;
   audio.playCargoTransfer(type);
   state.ledger.recordEvent("resource.processed", {
@@ -3675,8 +3698,7 @@ function getOreUnitValue(type) {
   const normalized = normalizeResourceType(type);
   return service?.oreValues?.[normalized]
     ?? service?.oreValues?.[type]
-    ?? CARGO_UNIT_BASE_VALUES[normalized]
-    ?? CARGO_UNIT_BASE_VALUES[type]
+    ?? getResourceTradeValue(normalized)
     ?? 0;
 }
 
@@ -4182,10 +4204,6 @@ function getCargoHoldValue() {
     (total, [type, count]) => total + getOreUnitValue(type) * count,
     0,
   );
-}
-
-function getUnitProcessValue(type) {
-  return type === "crystal" ? PROCESS_OUTPUT_AMOUNT * CRYSTAL_VALUE_MULTIPLIER : PROCESS_OUTPUT_AMOUNT;
 }
 
 function getSelectedProcessorOutput() {

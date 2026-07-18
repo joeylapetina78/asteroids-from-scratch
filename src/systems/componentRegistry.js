@@ -20,6 +20,7 @@ export const PANEL_IDS = Object.freeze([
   "processor",
   "cargo",
   "license",
+  "resource-guide",
   "contract",
   "merchant",
   "finley",
