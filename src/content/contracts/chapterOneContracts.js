@@ -108,6 +108,14 @@ export const chapterOneContracts = [
       "Interest accrues later up to a maximum of 4,500 credits.",
       "The financed hull title remains lien-held until the obligation is paid off.",
     ],
+    considerations: [
+      {
+        id: "mako-starter-ship-loan-purpose-fulfilled",
+        eventType: "ship.purchased",
+        once: true,
+        setFlag: "purposeFulfilled",
+      },
+    ],
   },
   {
     id: "mako-emergency-fuel-loan",

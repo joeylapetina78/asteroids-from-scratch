@@ -1,6 +1,7 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260716-2155-47b6461";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260717-0100-loanpurpose";
 import { depositCredits, getCredits } from "./accounts.js?v=fresh-20260716-2155-47b6461";
 import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260716-2155-47b6461";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260717-0100-loanpurpose";
 import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260716-2155-47b6461";
 import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260716-2155-47b6461";
 
@@ -54,6 +55,7 @@ export function createContractManager({ state, onChange = () => {} }) {
       status: "offered",
       runCount: completedRunCount + 1,
       deliveredAmount: 0,
+      flags: {},
       offerSource,
       offeredAt: Date.now(),
       acceptedAt: null,
@@ -114,6 +116,38 @@ export function createContractManager({ state, onChange = () => {} }) {
         fulfillContractsFromEvent(event);
       } else if (event.type === "site.undocked") {
         closeUnacceptedHubServiceOffers(event.payload.siteId);
+      }
+
+      runContractConsiderationsForEvent(event);
+    });
+  }
+
+  function runContractConsiderationsForEvent(event) {
+    Object.values(state.contracts.records)
+      .filter((contract) => contract.status === "active" && contract.considerations?.length)
+      .forEach((contract) => {
+        contract.flags ??= {};
+
+        const consideration = contract.considerations.find((candidate) =>
+          matchesEventRule(candidate, event, { state, flags: contract.flags }),
+        );
+
+        if (!consideration) {
+          return;
+        }
+
+        const considerationActions = getRuleActions(consideration, { state, flags: contract.flags });
+        applyRuleMarkers(consideration, { state, flags: contract.flags });
+        runContractActions(considerationActions, contract);
+        onChange(contract);
+      });
+  }
+
+  function runContractActions(actionList, contract) {
+    actionList.forEach((action) => {
+      if (action.type === "setContractFlag") {
+        contract.flags ??= {};
+        contract.flags[action.flag] = true;
       }
     });
   }

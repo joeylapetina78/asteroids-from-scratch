@@ -1,27 +1,29 @@
 import { resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260716-2155-47b6461";
 
-export function matchesEventRule(rule, event, { state }) {
-  if (!rule.repeatable && rule.once && state.journey.flags[rule.setFlag ?? rule.id]) {
+export function matchesEventRule(rule, event, { state, flags }) {
+  const ruleFlags = flags ?? state.journey.flags;
+
+  if (!rule.repeatable && rule.once && ruleFlags[rule.setFlag ?? rule.id]) {
     return false;
   }
 
   if (rule.repeatable && rule.cooldownMs) {
-    const lastAt = state.journey.flags[getRuleLastAtKey(rule)] ?? 0;
+    const lastAt = ruleFlags[getRuleLastAtKey(rule)] ?? 0;
 
     if (Date.now() - lastAt < rule.cooldownMs) {
       return false;
     }
   }
 
-  if (rule.maxRuns !== undefined && getRuleRunCount(rule, state) >= rule.maxRuns) {
+  if (rule.maxRuns !== undefined && getRuleRunCount(rule, ruleFlags) >= rule.maxRuns) {
     return false;
   }
 
-  if (rule.requiresFlag && !state.journey.flags[rule.requiresFlag] && !state.journey.globalFlags?.[rule.requiresFlag]) {
+  if (rule.requiresFlag && !ruleFlags[rule.requiresFlag] && !state.journey.globalFlags?.[rule.requiresFlag]) {
     return false;
   }
 
-  if (rule.requiresFlags?.some((flag) => !state.journey.flags[flag] && !state.journey.globalFlags?.[flag])) {
+  if (rule.requiresFlags?.some((flag) => !ruleFlags[flag] && !state.journey.globalFlags?.[flag])) {
     return false;
   }
 
@@ -36,9 +38,11 @@ export function matchesEventRule(rule, event, { state }) {
   return matchesConditions(rule, event, { state });
 }
 
-export function applyRuleMarkers(rule, { state }) {
+export function applyRuleMarkers(rule, { state, flags }) {
+  const ruleFlags = flags ?? state.journey.flags;
+
   if (rule.setFlag) {
-    state.journey.flags[rule.setFlag] = true;
+    ruleFlags[rule.setFlag] = true;
   }
 
   if (rule.setGlobalFlag) {
@@ -47,17 +51,18 @@ export function applyRuleMarkers(rule, { state }) {
   }
 
   if (rule.repeatable || rule.responses?.length || rule.maxRuns !== undefined) {
-    state.journey.flags[getRuleCountKey(rule)] = getRuleRunCount(rule, state) + 1;
-    state.journey.flags[getRuleLastAtKey(rule)] = Date.now();
+    ruleFlags[getRuleCountKey(rule)] = getRuleRunCount(rule, ruleFlags) + 1;
+    ruleFlags[getRuleLastAtKey(rule)] = Date.now();
   }
 }
 
-export function getRuleActions(rule, { state }) {
+export function getRuleActions(rule, { state, flags }) {
   if (!rule.responses?.length) {
     return rule.actions ?? [];
   }
 
-  const runCount = getRuleRunCount(rule, state);
+  const ruleFlags = flags ?? state.journey.flags;
+  const runCount = getRuleRunCount(rule, ruleFlags);
   const responseIndex =
     rule.responseMode === "loop"
       ? runCount % rule.responses.length
@@ -71,8 +76,8 @@ export function getRuleActions(rule, { state }) {
   ];
 }
 
-function getRuleRunCount(rule, state) {
-  return state.journey.flags[getRuleCountKey(rule)] ?? 0;
+function getRuleRunCount(rule, flags) {
+  return flags[getRuleCountKey(rule)] ?? 0;
 }
 
 function getRuleCountKey(rule) {

@@ -1,5 +1,5 @@
 import { runMissionActions } from "./missionActions.js?v=fresh-20260716-2155-47b6461";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260716-2155-47b6461";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260717-0100-loanpurpose";
 
 export function createMissionRunner({ missionDefinition, state, actions }) {
   const beatDefs = missionDefinition.beats ?? missionDefinition.steps;
@@ -133,6 +133,7 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
             goToStep(pending.nextStepId);
             actions.onChange?.();
             replayQueuedEvents(pending.queuedEvents);
+            actions.onChange?.();
           }
         }, transition.delayMs);
       } else {

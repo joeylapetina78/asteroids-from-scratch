@@ -1710,19 +1710,23 @@ body {
   line-height: 1.45;
 }
 
-.journey-panel .journey-button[hidden] {
-  display: block;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.journey-panel .journey-button {
+.journey-actions {
   position: absolute;
   bottom: 18px;
   left: 16px;
   right: 18px;
   order: 5;
+  display: flex;
+  gap: 8px;
   margin-top: 8px;
+}
+
+.journey-panel .journey-button[hidden] {
+  display: none;
+}
+
+.journey-panel .journey-button {
+  flex: 1;
   min-height: 46px;
   border-color: rgba(255, 211, 107, 0.62);
   border-radius: 6px;
@@ -1737,6 +1741,16 @@ body {
 
 .journey-panel .journey-button:hover {
   border-color: rgba(255, 211, 107, 0.92);
+  background: #222733;
+}
+
+.journey-panel .journey-button-decline {
+  border-color: rgba(120, 130, 150, 0.5);
+  color: #c8d3e6;
+}
+
+.journey-panel .journey-button-decline:hover {
+  border-color: rgba(160, 170, 190, 0.8);
   background: #222733;
 }
 

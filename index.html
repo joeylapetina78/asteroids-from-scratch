@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260716-2155-47b6461" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260717-0100-loanpurpose" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -131,7 +131,10 @@
                   <summary>Need help?</summary>
                   <span id="journey-help-text">Read the current objective and follow the next prompt.</span>
                 </details>
-                <button id="journey-accept" class="journey-button" type="button">Accept Job</button>
+                <div class="journey-actions">
+                  <button id="journey-decline" class="journey-button journey-button-decline" type="button" hidden>Not Yet</button>
+                  <button id="journey-accept" class="journey-button" type="button">Accept Job</button>
+                </div>
               </div>
             </div>
 
@@ -673,6 +676,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260716-2155-47b6461"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260717-0103-towdecline"></script>
   </body>
 </html>

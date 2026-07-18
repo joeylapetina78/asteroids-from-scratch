@@ -2,7 +2,7 @@ import { chapterOneInterviewMission } from "../content/missions/chapterOneInterv
 import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260716-2155-47b6461";
 import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260716-2155-47b6461";
 import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260716-2155-47b6461";
-import { createMissionRunner } from "./missionRunner.js?v=fresh-20260716-2155-47b6461";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260717-0102-fastcomplete";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -20,6 +20,7 @@ export function createJourneyDirector({
   runInspection = () => {},
   spawnPatrolIntercept = () => {},
   emergencyTow = () => {},
+  payLoan = () => {},
   updatePaperworkControls = () => {},
 }) {
   const journey = state.journey;
@@ -62,30 +63,51 @@ export function createJourneyDirector({
     onChange(journey);
   }
 
-  function acknowledge() {
+  function acknowledge(role = "confirm") {
     const acknowledgement = journey.pendingAcknowledgement;
+    const chosen = role === "decline" ? (acknowledgement?.decline ?? { action: "dismiss" }) : acknowledgement;
 
     if (!activeMission.acknowledge()) {
       return;
     }
 
-    if (acknowledgement?.action === "startMission") {
-      startMission(acknowledgement.missionId);
-    } else if (acknowledgement?.action === "emergencyTow") {
-      emergencyTow();
+    runAcknowledgementAction(chosen);
+
+    if (role === "decline") {
       clearMessage();
     }
 
     onChange(journey);
   }
 
-  function pressJourneyButton() {
-    if (journey.pendingAcknowledgement) {
-      acknowledge();
+  function runAcknowledgementAction(chosen) {
+    if (!chosen?.action || chosen.action === "dismiss") {
       return;
     }
 
-    if (journey.mission?.status === "offered") {
+    if (chosen.action === "startMission") {
+      startMission(chosen.missionId);
+    } else if (chosen.action === "emergencyTow") {
+      emergencyTow();
+      clearMessage();
+    } else if (chosen.action === "payLoan") {
+      payLoan(chosen.contractId, chosen.amount);
+      clearMessage();
+    }
+  }
+
+  function askConfirmation(speaker, text, acknowledgement) {
+    say(speaker, text, acknowledgement);
+    onChange(journey);
+  }
+
+  function pressJourneyButton(role = "confirm") {
+    if (journey.pendingAcknowledgement) {
+      acknowledge(role);
+      return;
+    }
+
+    if (role === "confirm" && journey.mission?.status === "offered") {
       acceptMission();
     }
   }
@@ -319,6 +341,7 @@ export function createJourneyDirector({
     startFreeMode,
     startMission,
     sayAsNpc,
+    askConfirmation,
     update,
     acceptMission,
     acknowledge,

@@ -4,7 +4,7 @@ import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260716
 import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260716-2155-47b6461";
 import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260716-2155-47b6461";
 import { Game } from "./game.js?v=fresh-20260716-2155-47b6461";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260716-2155-47b6461";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260717-0100-loanpurpose";
 import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260716-2155-47b6461";
 import { createGameAudio } from "./systems/audio.js?v=fresh-20260716-2155-47b6461";
 import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260716-2155-47b6461";
@@ -17,7 +17,7 @@ import {
 import { getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260716-2155-47b6461";
 import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260716-2155-47b6461";
 import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260716-2155-47b6461";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260716-2155-47b6461";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260717-0102-fastcomplete";
 import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260716-2155-47b6461";
 import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260716-2155-47b6461";
 import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260716-2155-47b6461";
@@ -206,6 +206,7 @@ const hubPanel = document.querySelector("[data-panel-id='hub']");
 const hubServiceMenu = document.querySelector("#hub-service-menu");
 const hubStatus = document.querySelector("#hub-status");
 const journeyAcceptButton = document.querySelector("#journey-accept");
+const journeyDeclineButton = document.querySelector("#journey-decline");
 const journeyChapter = document.querySelector("#journey-chapter");
 const journeyHelpText = document.querySelector("#journey-help-text");
 const journeyLog = document.querySelector("#journey-log");
@@ -328,6 +329,10 @@ const journeyDirector = createJourneyDirector({
   emergencyTow: () => {
     game.emergencyTow();
     updateTowEstimateDisplay();
+    updateHudDisplay();
+  },
+  payLoan: (contractId, amount) => {
+    contractManager.payLoan(contractId, amount);
     updateHudDisplay();
   },
   offerContract: (contractId) => {
@@ -516,7 +521,13 @@ scanTrigger?.addEventListener("click", () => {
 
 journeyAcceptButton.addEventListener("click", () => {
   audio.unlock();
-  journeyDirector.pressJourneyButton();
+  journeyDirector.pressJourneyButton("confirm");
+  updateHudDisplay();
+});
+
+journeyDeclineButton?.addEventListener("click", () => {
+  audio.unlock();
+  journeyDirector.pressJourneyButton("decline");
   updateHudDisplay();
 });
 
@@ -531,7 +542,25 @@ contractAcceptButton.addEventListener("click", () => {
     activeDepositContractId = null;
     contractManager.collectPayment(contract.id);
   } else if (canPayLoanContract(contract)) {
-    contractManager.payLoan(contract.id, getRequestedContractPaymentAmount(contract));
+    const purposeRequired = Boolean(contract.terms?.fundingPurpose) && contract.considerations?.length;
+    const purposeFulfilled = !purposeRequired || contract.flags?.purposeFulfilled;
+    const amount = getRequestedContractPaymentAmount(contract);
+
+    if (purposeFulfilled) {
+      contractManager.payLoan(contract.id, amount);
+    } else {
+      journeyDirector.askConfirmation(
+        contract.offerSource?.npcName ?? contract.issuer ?? "Finance",
+        "Hold on — that loan was earmarked for the starter ship, and I don't see that purchase on file yet. Pay it off anyway?",
+        {
+          label: "Pay It Off",
+          action: "payLoan",
+          contractId: contract.id,
+          amount,
+          decline: { label: "Not Yet" },
+        },
+      );
+    }
   } else if (canDepositToContract(contract)) {
     activeDepositContractId = activeDepositContractId === contract.id ? null : contract.id;
     renderContract();
@@ -879,7 +908,11 @@ function setTowAvailable(isAvailable) {
       speaker: driverName,
       text:
         `Tow request picked up. I can get a runner out to you and haul you back to ${estimate.siteName} for ${estimate.cost} credits. We'll move slow, clear the worst junk in the lane, and settle you on the tether. Accept the tow if you want me rolling.`,
-      acknowledgement: { label: `Accept Tow ${estimate.cost} cr`, action: "emergencyTow" },
+      acknowledgement: {
+        label: `Accept Tow ${estimate.cost} cr`,
+        action: "emergencyTow",
+        decline: { label: "No, I'll manage" },
+      },
     });
 
     wasTowAvailable = prompted;
@@ -2924,6 +2957,11 @@ function renderJourney(journey = state.journey) {
   journeyHelpText.textContent = journey.mission?.helpText ?? "Read the current objective and follow the next prompt.";
   journeyAcceptButton.hidden = !journey.pendingAcknowledgement && journey.mission?.status !== "offered";
   journeyAcceptButton.textContent = journey.pendingAcknowledgement?.label ?? journey.mission?.actionLabel ?? "Accept Job";
+
+  if (journeyDeclineButton) {
+    journeyDeclineButton.hidden = !journey.pendingAcknowledgement?.decline;
+    journeyDeclineButton.textContent = journey.pendingAcknowledgement?.decline?.label ?? "Not Yet";
+  }
 
   const panoramaLink = document.querySelector("#journey-panorama-link");
   if (panoramaLink) {
