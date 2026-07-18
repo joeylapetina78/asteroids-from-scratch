@@ -1,6 +1,8 @@
-import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260717-2226-d0a062a";
+import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260717-2312-49de7be";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260717-2226-d0a062a";
+import { getResourceColor } from "./resourceDefinitions.js?v=fresh-20260717-2312-49de7be";
+import { getAmbientSurvivalResourceWeights } from "./resourceField.js?v=fresh-20260717-2312-49de7be";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260717-2312-49de7be";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same
@@ -53,6 +55,9 @@ export function createAsteroidChunks(canvas, resourceField) {
       tuneAsteroidForTerrain(asteroid, terrain, random);
       chunkAsteroids.push(asteroid);
     }
+
+    createAmbientSurvivalDeposits({ centerX, centerY, chunkSize, terrain, tags: profile.tags, random, seed })
+      .forEach((asteroid) => chunkAsteroids.push(asteroid));
 
     return chunkAsteroids;
   }
@@ -217,4 +222,61 @@ function getTerrainTierForRadius(radius) {
   }
 
   return 1;
+}
+
+function createAmbientSurvivalDeposits({ centerX, centerY, chunkSize, terrain, tags, random, seed }) {
+  const chance = getAmbientDepositChance(terrain);
+  const depositCount = random() < chance ? 1 + (random() < 0.12 ? 1 : 0) : 0;
+  const weights = getAmbientSurvivalResourceWeights(tags);
+  const deposits = [];
+
+  for (let index = 0; index < depositCount; index += 1) {
+    const type = weightedPick(weights, random);
+    const x = centerX + randomRange(random, -chunkSize * 0.42, chunkSize * 0.42);
+    const y = centerY + randomRange(random, -chunkSize * 0.42, chunkSize * 0.42);
+    const asteroid = createRandomAsteroid(x, y, {
+      color: getResourceColor(type),
+      resources: { stone: 0.04, [type]: 0.96 },
+      richness: 0,
+    }, hashNumbers(seed, 7000 + index));
+
+    // These are grab-and-go travel deposits: recognizably colored, but smaller
+    // than a field's main ore bodies and quick to break into useful units.
+    scaleAsteroid(asteroid, randomRange(random, 0.36, 0.5));
+    asteroid.tier = 1;
+    asteroid.isSurvivalDeposit = true;
+    deposits.push(asteroid);
+  }
+
+  return deposits;
+}
+
+function getAmbientDepositChance(terrain) {
+  if (terrain.id === "sparse-dead") return 0.1;
+  if (terrain.id === "cluster-pocket") return 0.42;
+  if (terrain.id === "debris-stream") return 0.38;
+  return 0.32;
+}
+
+function weightedPick(weights, random) {
+  const entries = Object.entries(weights);
+  const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
+  let roll = random() * total;
+
+  for (const [resourceId, weight] of entries) {
+    roll -= weight;
+    if (roll <= 0) return resourceId;
+  }
+
+  return entries[0][0];
+}
+
+function scaleAsteroid(asteroid, scale) {
+  asteroid.radius *= scale;
+  asteroid.points = asteroid.points.map((point) => ({
+    ...point,
+    distance: point.distance * scale,
+  }));
+  asteroid.velocity.x *= 0.7;
+  asteroid.velocity.y *= 0.7;
 }

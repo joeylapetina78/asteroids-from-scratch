@@ -1,5 +1,5 @@
-import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260717-2226-d0a062a";
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260717-2226-d0a062a";
+import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260717-2312-49de7be";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260717-2312-49de7be";
 import { hashNumbers } from "./random.js";
 
 const PORTAL_WAVE_SIZES = [5, 10, 30];

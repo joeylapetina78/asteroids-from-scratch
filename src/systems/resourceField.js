@@ -1,7 +1,7 @@
 import { createValueNoise } from "./valueNoise.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260717-2226-d0a062a";
-import { getRegionProfile } from "./worldRegions.js?v=fresh-20260717-2226-d0a062a";
-import { RESOURCE_COLOR_RGB, pickFamilyMember } from "./resourceDefinitions.js?v=fresh-20260717-2226-d0a062a";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260717-2312-49de7be";
+import { getRegionProfile } from "./worldRegions.js?v=fresh-20260717-2312-49de7be";
+import { RESOURCE_COLOR_RGB, pickFamilyMember } from "./resourceDefinitions.js?v=fresh-20260717-2312-49de7be";
 
 export function createResourceField(seed = 1337) {
   const noise = createValueNoise(seed);
@@ -88,6 +88,39 @@ export function getSurvivalResourceProfile(tags = []) {
   return profile;
 }
 
+// These are the travel supplies, not a replacement for a region's dominant
+// geology. Asteroid generation uses them to seed occasional small deposits
+// into otherwise ordinary chunks, so a route can sustain a ship without every
+// zone becoming visually or economically uniform.
+export function getAmbientSurvivalResourceWeights(tags = []) {
+  const weights = {
+    "water-ice": 5,
+    "methane-ice": 2,
+    hydrogen: 1,
+    "iron-nickel": 3,
+    aluminum: 2,
+    titanium: 1,
+    silicate: 2,
+    carbonaceous: 1,
+    copper: 1,
+    cobalt: 0.5,
+    silver: 0.25,
+  };
+  const tagSet = new Set(tags);
+
+  scaleAmbientResources(tagSet, ["fuel-rich", "volatile-rich"], weights, ["water-ice", "methane-ice", "hydrogen"], 2.6);
+  scaleAmbientResources(tagSet, ["fuel-lean"], weights, ["water-ice", "methane-ice", "hydrogen"], 0.55);
+  scaleAmbientResources(tagSet, ["fuel-desert", "no-fuel"], weights, ["water-ice", "methane-ice", "hydrogen"], 0.18);
+  scaleAmbientResources(tagSet, ["charge-rich", "industrial-rich"], weights, ["iron-nickel", "aluminum", "titanium", "silicate", "carbonaceous"], 2.1);
+  scaleAmbientResources(tagSet, ["charge-lean"], weights, ["iron-nickel", "aluminum", "titanium", "silicate", "carbonaceous"], 0.55);
+  scaleAmbientResources(tagSet, ["charge-desert", "no-charges"], weights, ["iron-nickel", "aluminum", "titanium", "silicate", "carbonaceous"], 0.18);
+  scaleAmbientResources(tagSet, ["scanergy-rich", "conductor-rich"], weights, ["copper", "cobalt", "silver"], 3.2);
+  scaleAmbientResources(tagSet, ["scanergy-lean"], weights, ["copper", "cobalt", "silver"], 0.45);
+  scaleAmbientResources(tagSet, ["scanergy-desert", "no-scanergy"], weights, ["copper", "cobalt", "silver"], 0.12);
+
+  return weights;
+}
+
 function applyScarcity(tags, matchingTags, resource, multiplier, floor) {
   if (matchingTags.some((tag) => tags.has(tag))) {
     resource.multiplier *= multiplier;
@@ -100,6 +133,16 @@ function applyAbundance(tags, matchingTags, resource, multiplier, floor) {
     resource.multiplier *= multiplier;
     resource.floor = Math.max(resource.floor, floor);
   }
+}
+
+function scaleAmbientResources(tags, matchingTags, weights, resourceIds, multiplier) {
+  if (!matchingTags.some((tag) => tags.has(tag))) {
+    return;
+  }
+
+  resourceIds.forEach((resourceId) => {
+    weights[resourceId] *= multiplier;
+  });
 }
 
 function layeredNoise(noise, x, y, scale, min, max) {
