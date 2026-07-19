@@ -1,4 +1,4 @@
-import { ensureWorldRecords } from "./worldRecords.js?v=fresh-20260718-2206-313b983";
+import { ensureWorldRecords } from "./worldRecords.js?v=fresh-20260718-2258-9b2997d";
 
 // A registry is any entity's memory of other entities: a hub traffic office,
 // patrol faction, company, criminal network, or future creature intelligence.

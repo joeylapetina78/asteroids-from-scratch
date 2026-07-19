@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260718-2206-313b983";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260718-2206-313b983";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260718-2206-313b983";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260718-2206-313b983";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260718-2206-313b983";
-import { Game } from "./game.js?v=fresh-20260718-2206-313b983";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260718-2206-313b983";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260718-2206-313b983";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260718-2206-313b983";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260718-2206-313b983";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260718-2258-9b2997d";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260718-2258-9b2997d";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260718-2258-9b2997d";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260718-2258-9b2997d";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260718-2258-9b2997d";
+import { Game } from "./game.js?v=fresh-20260718-2258-9b2997d";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260718-2258-9b2997d";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260718-2258-9b2997d";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260718-2258-9b2997d";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260718-2258-9b2997d";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260718-2206-313b983";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260718-2206-313b983";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260718-2206-313b983";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260718-2206-313b983";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260718-2206-313b983";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260718-2206-313b983";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260718-2206-313b983";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260718-2206-313b983";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260718-2206-313b983";
-import { Processor } from "./systems/processor.js?v=fresh-20260718-2206-313b983";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260718-2206-313b983";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260718-2206-313b983";
-import { createGameState } from "./state/gameState.js?v=fresh-20260718-2206-313b983";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260718-2258-9b2997d";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260718-2258-9b2997d";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260718-2258-9b2997d";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260718-2258-9b2997d";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260718-2258-9b2997d";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260718-2258-9b2997d";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260718-2258-9b2997d";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260718-2258-9b2997d";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260718-2258-9b2997d";
+import { Processor } from "./systems/processor.js?v=fresh-20260718-2258-9b2997d";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260718-2258-9b2997d";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260718-2258-9b2997d";
+import { createGameState } from "./state/gameState.js?v=fresh-20260718-2258-9b2997d";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -1078,15 +1078,12 @@ function applyViewportLayout(layout) {
   if (layout === "fullscreen-background") {
     const savedLayout = loadPanelLayout();
     Object.entries(PANORAMA_PANEL_OVERRIDES).forEach(([panelId, pos]) => {
-      const saved = savedLayout.panels?.[panelId];
-      if (!saved || saved.panoramaLayoutVersion !== PANORAMA_LAYOUT_VERSION) {
+      const saved = getSavedPanelLayout(savedLayout, panelId, "panorama");
+      if (!saved || saved.layoutVersion !== PANORAMA_LAYOUT_VERSION) {
         positionPanelById(panelId, pos);
         const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
         if (panel) {
-          savePanelLayout(panel, pos, {
-            panoramaPlaced: true,
-            panoramaLayoutVersion: PANORAMA_LAYOUT_VERSION,
-          });
+          savePanelLayout(panel, pos, { layoutVersion: PANORAMA_LAYOUT_VERSION });
         }
       }
     });
@@ -4386,7 +4383,7 @@ function makePanelsDraggable() {
     }
 
     const defaultPanel = DEFAULT_PANEL_LAYOUT[panelId] ?? { x: 0, y: 0, z: 1 };
-    const savedPanel = panelId ? savedLayout.panels?.[panelId] : null;
+    const savedPanel = panelId ? getSavedPanelLayout(savedLayout, panelId) : null;
     const isInDrawer = Boolean(panel.closest("#paperwork-drawer"));
     const startsOnDeskAfterBeingFiled = !isInDrawer && savedPanel?.inDrawer;
     const offset = startsOnDeskAfterBeingFiled
@@ -4926,10 +4923,39 @@ function loadPanelLayout() {
   }
 }
 
+function getPanelLayoutMode() {
+  return state.ui.viewportLayout === "fullscreen-background" ? "panorama" : "desk";
+}
+
+function getSavedPanelLayout(layout, panelId, mode = getPanelLayoutMode()) {
+  const record = layout.panels?.[panelId];
+
+  if (!record) {
+    return null;
+  }
+
+  if (mode === "panorama") {
+    if (record.panorama) {
+      return record.panorama;
+    }
+
+    // Carry forward the one-profile panorama records created before layouts
+    // were split by mode. The next panorama save upgrades this record.
+    if (record.panoramaPlaced || record.panoramaLayoutVersion) {
+      return {
+        ...record,
+        layoutVersion: record.panoramaLayoutVersion,
+      };
+    }
+  }
+
+  return record;
+}
+
 function getSavedTopZIndex(layout) {
   const savedZIndexes = Object.entries(layout.panels ?? {})
     .filter(([panelId]) => panelId !== "journey" && panelId !== "viewport")
-    .map(([, panel]) => panel.z)
+    .map(([panelId]) => getSavedPanelLayout(layout, panelId)?.z)
     .filter((zIndex) => Number.isFinite(zIndex) && zIndex >= DESK_PANEL_MIN_Z_INDEX && zIndex <= DESK_PANEL_MAX_Z_INDEX);
   const defaultZIndexes = Object.entries(DEFAULT_PANEL_LAYOUT)
     .filter(([panelId]) => panelId !== "journey" && panelId !== "viewport")
@@ -4973,18 +4999,23 @@ function savePanelLayout(panel, offset = null, options = {}) {
   }
 
   const layout = loadPanelLayout();
-  const previousPanel = layout.panels?.[panelId] ?? {};
+  const mode = getPanelLayoutMode();
+  const previousRecord = layout.panels?.[panelId] ?? {};
+  const previousPanel = getSavedPanelLayout(layout, panelId, mode) ?? {};
   const zIndex = panelId === "journey" ? JOURNEY_PANEL_Z_INDEX : Number(panel.style.zIndex) || previousPanel.z || 1;
+  const nextPanel = {
+    x: offset?.x ?? previousPanel.x ?? 0,
+    y: offset?.y ?? previousPanel.y ?? 0,
+    z: zIndex,
+    inDrawer: Boolean(panel.closest("#paperwork-drawer")),
+    ...(options.layoutVersion ? { layoutVersion: options.layoutVersion } : {}),
+  };
 
   layout.panels = {
     ...layout.panels,
     [panelId]: {
-      x: offset?.x ?? previousPanel.x ?? 0,
-      y: offset?.y ?? previousPanel.y ?? 0,
-      z: zIndex,
-      inDrawer: Boolean(panel.closest("#paperwork-drawer")),
-      ...(options.panoramaPlaced ? { panoramaPlaced: true } : {}),
-      ...(options.panoramaLayoutVersion ? { panoramaLayoutVersion: options.panoramaLayoutVersion } : {}),
+      ...previousRecord,
+      ...(mode === "panorama" ? { panorama: nextPanel } : nextPanel),
     },
   };
 
