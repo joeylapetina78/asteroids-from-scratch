@@ -1,27 +1,27 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260718-1907-e22bb1b";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260718-1907-e22bb1b";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260718-1907-e22bb1b";
-import { Ship } from "./entities/Ship.js?v=fresh-20260718-1907-e22bb1b";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260718-1907-e22bb1b";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260718-1945-861127d";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260718-1945-861127d";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260718-1945-861127d";
+import { Ship } from "./entities/Ship.js?v=fresh-20260718-1945-861127d";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260718-1945-861127d";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260718-1907-e22bb1b";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260718-1907-e22bb1b";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260718-1907-e22bb1b";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260718-1907-e22bb1b";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260718-1907-e22bb1b";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260718-1907-e22bb1b";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260718-1907-e22bb1b";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260718-1907-e22bb1b";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260718-1907-e22bb1b";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260718-1907-e22bb1b";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260718-1907-e22bb1b";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260718-1907-e22bb1b";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260718-1907-e22bb1b";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260718-1907-e22bb1b";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260718-1907-e22bb1b";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260718-1907-e22bb1b";
-import { createGameState } from "./state/gameState.js?v=fresh-20260718-1907-e22bb1b";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260718-1907-e22bb1b";
+import { createInput } from "./systems/input.js?v=fresh-20260718-1945-861127d";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260718-1945-861127d";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260718-1945-861127d";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260718-1945-861127d";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260718-1945-861127d";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260718-1945-861127d";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260718-1945-861127d";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260718-1945-861127d";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260718-1945-861127d";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260718-1945-861127d";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260718-1945-861127d";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260718-1945-861127d";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260718-1945-861127d";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260718-1945-861127d";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260718-1945-861127d";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260718-1945-861127d";
+import { createGameState } from "./state/gameState.js?v=fresh-20260718-1945-861127d";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260718-1945-861127d";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -2975,6 +2975,9 @@ export class Game {
   }
 
   updateDebugReadout() {
+    const activePortals = this.incursionField.getActivePortals();
+    const lifeformCounts = getEntityTypeCounts(this.lifeforms.filter((lifeform) => lifeform.isAlive));
+
     this.onDebugChange({
       worldX: this.ship.position.x,
       worldY: this.ship.position.y,
@@ -2986,6 +2989,24 @@ export class Game {
       activeHunterCount: this.activeHunterCount,
       npcShipCount: this.npcShips.length,
       pickupCount: this.pickups.length,
+      population: {
+        lifeformTotal: this.lifeforms.filter((lifeform) => lifeform.isAlive).length,
+        lifeforms: lifeformCounts,
+        npcShips: this.npcShips.filter((ship) => ship.isAlive).length,
+        gateShots: this.incursionShots.length,
+        gates: activePortals.map((portal) => {
+          const guards = this.lifeforms.filter((lifeform) => lifeform.isAlive && lifeform.sourcePortalId === portal.id);
+          const devices = portal.devices?.filter((device) => device.isAlive) ?? [];
+          return {
+            guards: guards.length,
+            hunters: guards.filter((guard) => guard.type === "hunter").length,
+            fighters: guards.filter((guard) => guard.type === "fighter").length,
+            sentries: devices.filter((device) => device.type === "rift-sentry").length,
+            dragBlooms: devices.filter((device) => device.type === "drag-bloom").length,
+            waves: portal.waveCount,
+          };
+        }),
+      },
       currentSite: this.dockedSite ?? this.nearbySite,
       nearestSite: getNearestWorldSite(this.ship.position, this.worldSites)?.site ?? null,
     });
@@ -6065,6 +6086,16 @@ function getHostileEnemyType(lifeform) {
   }
 
   return lifeform.role ?? lifeform.type ?? "hostile";
+}
+
+function getEntityTypeCounts(entities) {
+  return [...entities.reduce((counts, entity) => {
+    const type = entity.type ?? "unknown";
+    counts.set(type, (counts.get(type) ?? 0) + 1);
+    return counts;
+  }, new Map()).entries()]
+    .map(([type, count]) => ({ type, count }))
+    .sort((left, right) => left.type.localeCompare(right.type));
 }
 
 function isCombatHostile(lifeform) {

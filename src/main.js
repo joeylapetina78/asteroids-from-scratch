@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260718-1907-e22bb1b";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260718-1907-e22bb1b";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260718-1907-e22bb1b";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260718-1907-e22bb1b";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260718-1907-e22bb1b";
-import { Game } from "./game.js?v=fresh-20260718-1907-e22bb1b";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260718-1907-e22bb1b";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260718-1907-e22bb1b";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260718-1907-e22bb1b";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260718-1907-e22bb1b";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260718-1945-861127d";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260718-1945-861127d";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260718-1945-861127d";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260718-1945-861127d";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260718-1945-861127d";
+import { Game } from "./game.js?v=fresh-20260718-1945-861127d";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260718-1945-861127d";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260718-1945-861127d";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260718-1945-861127d";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260718-1945-861127d";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260718-1907-e22bb1b";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260718-1907-e22bb1b";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260718-1907-e22bb1b";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260718-1907-e22bb1b";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260718-1907-e22bb1b";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260718-1907-e22bb1b";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260718-1907-e22bb1b";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260718-1907-e22bb1b";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260718-1907-e22bb1b";
-import { Processor } from "./systems/processor.js?v=fresh-20260718-1907-e22bb1b";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260718-1907-e22bb1b";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260718-1907-e22bb1b";
-import { createGameState } from "./state/gameState.js?v=fresh-20260718-1907-e22bb1b";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260718-1945-861127d";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260718-1945-861127d";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260718-1945-861127d";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260718-1945-861127d";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260718-1945-861127d";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260718-1945-861127d";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260718-1945-861127d";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260718-1945-861127d";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260718-1945-861127d";
+import { Processor } from "./systems/processor.js?v=fresh-20260718-1945-861127d";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260718-1945-861127d";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260718-1945-861127d";
+import { createGameState } from "./state/gameState.js?v=fresh-20260718-1945-861127d";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -229,7 +229,7 @@ const alphaDownButton = document.querySelector("#alpha-down");
 const alphaLabel = document.querySelector("#alpha-label");
 const ledgerStreamEvents = document.querySelector("#ledger-stream-events");
 const ledgerStreamStats = document.querySelector("#ledger-stream-stats");
-const ledgerStreamSignals = document.querySelector("#ledger-stream-signals");
+const ledgerStreamPopulation = document.querySelector("#ledger-stream-population");
 let panelAlpha = 0;
 const worldDebugFields = {
   position: document.querySelector("#debug-position"),
@@ -343,7 +343,7 @@ let contractPulledFromDrawer = false;
 let renderedLedgerVersion = -1;
 let renderedLedgerEventsKey = "";
 let renderedLedgerStatsKey = "";
-let renderedLedgerSignalsKey = "";
+let renderedLedgerPopulationKey = "";
 let renderedWorldEventLogKey = "";
 let lastAudioEventId = 0;
 let journeyTypeTimers = [];
@@ -2350,6 +2350,7 @@ function updateWorldDebugDisplay(debug) {
   worldDebugFields.lifeforms.textContent = String(debug.lifeformCount);
   worldDebugFields.activeLifeforms.textContent = String(debug.activeLifeformCount);
   worldDebugFields.pickups.textContent = String(debug.pickupCount);
+  updatePopulationDisplay(debug.population);
   updateEventLedgerDisplay();
 }
 
@@ -4047,7 +4048,7 @@ function updateEventLedgerDisplay() {
 }
 
 function updateLedgerStreamDisplay() {
-  if (!ledgerStreamEvents || !ledgerStreamStats || !ledgerStreamSignals) {
+  if (!ledgerStreamEvents || !ledgerStreamStats) {
     return;
   }
 
@@ -4096,22 +4097,48 @@ function updateLedgerStreamDisplay() {
     );
   }
 
-  const signalEntries = Object.entries(state.ledger.getSignalsSnapshot())
-    .filter(([, value]) => Boolean(value))
-    .sort(([left], [right]) => left.localeCompare(right))
-    .slice(-26);
-  const signalsKey = signalEntries.map(([key]) => key).join("|");
+}
 
-  if (renderedLedgerSignalsKey !== signalsKey) {
-    renderedLedgerSignalsKey = signalsKey;
-    ledgerStreamSignals.replaceChildren(
-      ...signalEntries.map(([key]) => {
-        const item = document.createElement("li");
-        item.textContent = key;
-        return item;
-      }),
-    );
+function updatePopulationDisplay(population) {
+  if (!ledgerStreamPopulation || !population) {
+    return;
   }
+
+  const entries = [
+    ["Life", population.lifeformTotal],
+    ...population.lifeforms.map(({ type, count }) => [formatPopulationLabel(type), count]),
+    ["NPC ships", population.npcShips],
+    ["Gates", population.gates.length],
+    ["Gate shots", population.gateShots],
+    ...population.gates.flatMap((gate, index) => [
+      [`Gate ${index + 1} guards`, gate.guards],
+      ["  hunters / fighters", `${gate.hunters} / ${gate.fighters}`],
+      ["  sentries / blooms", `${gate.sentries} / ${gate.dragBlooms}`],
+      ["  waves", gate.waves],
+    ]),
+  ];
+  const populationKey = entries.map(([label, value]) => `${label}:${value}`).join("|");
+
+  if (renderedLedgerPopulationKey === populationKey) {
+    return;
+  }
+
+  renderedLedgerPopulationKey = populationKey;
+  ledgerStreamPopulation.replaceChildren(
+    ...entries.map(([label, value]) => {
+      const item = document.createElement("li");
+      const name = document.createElement("span");
+      const count = document.createElement("strong");
+      name.textContent = label;
+      count.textContent = String(value);
+      item.append(name, count);
+      return item;
+    }),
+  );
+}
+
+function formatPopulationLabel(type) {
+  return type.replace(/(^|[-_])(\w)/g, (_, prefix, character) => `${prefix} ${character.toUpperCase()}`).trim();
 }
 
 function setTextIfChanged(element, value) {

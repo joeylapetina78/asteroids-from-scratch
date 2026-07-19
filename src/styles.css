@@ -1598,10 +1598,12 @@ body {
   font-weight: 800;
 }
 
-.ledger-stream-signals li {
-  color: rgba(218, 198, 103, 0.64);
-  font-family: "Cascadia Mono", "Consolas", monospace;
-  font-size: 0.59rem;
+.ledger-stream-population li {
+  color: rgba(160, 223, 196, 0.68);
+}
+
+.ledger-stream-population li:nth-child(n + 8) {
+  color: rgba(232, 184, 255, 0.68);
 }
 
 @keyframes ledger-line-in {
