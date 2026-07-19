@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260718-2316-3243220";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260718-2316-3243220";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260718-2316-3243220";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260718-2316-3243220";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260718-2316-3243220";
-import { Game } from "./game.js?v=fresh-20260718-2316-3243220";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260718-2316-3243220";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260718-2316-3243220";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260718-2316-3243220";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260718-2316-3243220";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260719-0017-40e07ff";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260719-0017-40e07ff";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260719-0017-40e07ff";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260719-0017-40e07ff";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260719-0017-40e07ff";
+import { Game } from "./game.js?v=fresh-20260719-0017-40e07ff";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260719-0017-40e07ff";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260719-0017-40e07ff";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260719-0017-40e07ff";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-0017-40e07ff";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260718-2316-3243220";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260718-2316-3243220";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260718-2316-3243220";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260718-2316-3243220";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260718-2316-3243220";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260718-2316-3243220";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260718-2316-3243220";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260718-2316-3243220";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260718-2316-3243220";
-import { Processor } from "./systems/processor.js?v=fresh-20260718-2316-3243220";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260718-2316-3243220";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260718-2316-3243220";
-import { createGameState } from "./state/gameState.js?v=fresh-20260718-2316-3243220";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260719-0017-40e07ff";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260719-0017-40e07ff";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260719-0017-40e07ff";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260719-0017-40e07ff";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260719-0017-40e07ff";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260719-0017-40e07ff";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-0017-40e07ff";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260719-0017-40e07ff";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260719-0017-40e07ff";
+import { Processor } from "./systems/processor.js?v=fresh-20260719-0017-40e07ff";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260719-0017-40e07ff";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260719-0017-40e07ff";
+import { createGameState } from "./state/gameState.js?v=fresh-20260719-0017-40e07ff";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -34,8 +34,11 @@ const OLD_PANEL_LAYOUT_STORAGE_KEYS = [
   "asteroids.panelLayout.v2",
   "asteroids.panelLayout.v3",
   "asteroids.panelLayout.v4",
+  "asteroids.panelLayout.v5",
 ];
-const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v5";
+// Each play mode has its own desk. Version 6 intentionally starts clean: the
+// old single-desk records were allowed to bleed positions between modes.
+const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v6";
 const JOURNEY_PANEL_Z_INDEX = 560;
 const VIEWPORT_PANEL_Z_INDEX = 10;
 const DESK_PANEL_MIN_Z_INDEX = 30;
@@ -4942,32 +4945,10 @@ function getPanelLayoutProfile() {
 function getSavedPanelLayout(layout, panelId, profile = getPanelLayoutProfile()) {
   const record = layout.panels?.[panelId];
 
-  if (!record) {
-    return null;
-  }
-
-  if (record.profiles?.[profile]) {
-    return record.profiles[profile];
-  }
-
-  if (profile === "panorama") {
-    if (record.panorama) {
-      return record.panorama;
-    }
-
-    // Carry forward the one-profile panorama records created before layouts
-    // were split by mode. The next panorama save upgrades this record.
-    if (record.panoramaPlaced || record.panoramaLayoutVersion) {
-      return {
-        ...record,
-        layoutVersion: record.panoramaLayoutVersion,
-      };
-    }
-  }
-
-  // Old layouts only belonged to the ordinary game. Explorer starts cleanly
-  // rather than inheriting a dense desktop arrangement from a different mode.
-  return profile === "explorer" ? null : record;
+  // Layouts are intentionally profile-only. Falling back to a legacy record
+  // makes switching modes overwrite a carefully arranged desk with another
+  // mode's coordinates.
+  return record?.profiles?.[profile] ?? null;
 }
 
 function getSavedTopZIndex(layout) {
