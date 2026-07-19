@@ -1,5 +1,10 @@
 const DEFAULT_HISTORY_LIMIT = 250;
 
+// Destruction events carry a `cause` naming who actually did it. Only these
+// causes belong to the controlled pilot; patrol/hub turrets and environmental
+// deaths must not feed player-facing stats or signals.
+const PLAYER_ATTRIBUTED_CAUSES = new Set(["weapon", "ramming-ship"]);
+
 // EventLedger is the central memory spine for meaningful career/world events.
 // Gameplay systems report facts here; future contracts, achievements, saves,
 // and ship logs can read the same event history and compact stats.
@@ -247,10 +252,18 @@ export function createEventLedger(options = {}) {
       incrementStat("enemy.destroyed.total");
       incrementStat(`enemy.destroyed.${event.payload.enemyType ?? "unknown"}`);
       incrementStat(`enemy.destroyed.cause.${event.payload.cause ?? "unknown"}`);
+
+      if (PLAYER_ATTRIBUTED_CAUSES.has(event.payload.cause)) {
+        incrementStat("enemy.destroyed.byPlayer");
+      }
     } else if (event.type === "npc.destroyed") {
       incrementStat("npc.destroyed.total");
       incrementStat(`npc.destroyed.${event.payload.npcType ?? "unknown"}`);
       incrementStat(`npc.destroyed.cause.${event.payload.cause ?? "unknown"}`);
+
+      if (PLAYER_ATTRIBUTED_CAUSES.has(event.payload.cause)) {
+        incrementStat("npc.destroyed.byPlayer");
+      }
     } else if (event.type === "npc.enteredViewport") {
       incrementStat("npc.enteredViewport.total");
       incrementStat(`npc.enteredViewport.${event.payload.npcType ?? "unknown"}`);
@@ -360,13 +373,19 @@ export function createEventLedger(options = {}) {
         `controlledShip.hasCollected.${event.payload.resourceType ?? "unknown"}`,
       ]);
     } else if (event.type === "enemy.destroyed") {
-      setSignalAliases(["player.hasDestroyedEnemy", "actor.hasDestroyedEnemy"]);
+      // Patrol/hub turrets and environmental deaths also record this event —
+      // only player-caused kills may set player-facing signals.
+      if (PLAYER_ATTRIBUTED_CAUSES.has(event.payload.cause)) {
+        setSignalAliases(["player.hasDestroyedEnemy", "actor.hasDestroyedEnemy"]);
 
-      if (getStat("enemy.destroyed.total") >= 3) {
-        setSignalAliases(["player.isAggressive", "actor.isAggressive"]);
+        if (getStat("enemy.destroyed.byPlayer") >= 3) {
+          setSignalAliases(["player.isAggressive", "actor.isAggressive"]);
+        }
       }
     } else if (event.type === "npc.destroyed") {
-      setSignalAliases(["player.hasDestroyedNpc", "actor.hasDestroyedNpc"]);
+      if (PLAYER_ATTRIBUTED_CAUSES.has(event.payload.cause)) {
+        setSignalAliases(["player.hasDestroyedNpc", "actor.hasDestroyedNpc"]);
+      }
     } else if (event.type === "ship.repaired") {
       setSignalAliases(["player.hasRepairedShip", "actor.hasRepairedShip", "controlledShip.hasBeenRepaired"]);
 

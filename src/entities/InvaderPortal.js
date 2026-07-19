@@ -1,5 +1,8 @@
 const PORTAL_RADIUS = 56;
 const PORTAL_MAX_HEALTH = 220;
+// The guard shield absorbs most damage but never all of it. A binary shield
+// let a portal become permanently unkillable once waves outpaced the player.
+const PORTAL_SHIELD_CHIP_FACTOR = 0.2;
 
 export class InvaderPortal {
   constructor({ id, x, y, factionId = "rift-callers", seed = 1 }) {
@@ -31,16 +34,18 @@ export class InvaderPortal {
     return this.guardIds.size > 0;
   }
 
+  // Returns true when the hit landed at full strength, false when the guard
+  // shield absorbed most of it. Shielded hits still chip health so a portal
+  // can never become permanently unkillable behind an uncleared wave.
   damage(amount) {
-    if (this.isShielded) {
-      return false;
-    }
+    const shielded = this.isShielded;
+    const appliedAmount = shielded ? amount * PORTAL_SHIELD_CHIP_FACTOR : amount;
 
-    this.health = Math.max(0, this.health - amount);
+    this.health = Math.max(0, this.health - appliedAmount);
     if (this.health === 0) {
       this.isAlive = false;
     }
-    return true;
+    return !shielded;
   }
 
   draw(context, camera) {

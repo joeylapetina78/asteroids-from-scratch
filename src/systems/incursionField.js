@@ -1,6 +1,6 @@
-import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260719-0017-40e07ff";
-import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260719-0017-40e07ff";
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260719-0017-40e07ff";
+import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260719-0052-baf9309";
+import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260719-0052-baf9309";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260719-0052-baf9309";
 import { hashNumbers } from "./random.js";
 
 const PORTAL_WAVE_SIZES = [5, 10, 30];
@@ -10,13 +10,20 @@ const MAX_WAVE_SECONDS = 105;
 const PORTAL_HUNTER_ORBIT_RADIUS = 150;
 const PORTAL_SHIELD_GUARD_RADIUS = 950;
 const PORTAL_DEVICE_TYPES = ["rift-sentry", "drag-bloom"];
+// A wave timer that fires while most of the previous wave is still alive is
+// what let portals spiral out of reach. Waves now hold until the living guard
+// count drops below a fraction of the last wave, rechecking on a short timer.
+const WAVE_HOLD_GUARD_FRACTION = 0.4;
+const WAVE_HOLD_MIN_GUARDS = 2;
+const WAVE_HOLD_RECHECK_SECONDS = 10;
+const MIN_PACED_WAVE_SIZE = 2;
 
 export function createIncursionField() {
   return {
     portals: [],
     nextPortalIndex: 1,
 
-    spawnPortal({ x, y, factionId = "rift-callers", seed = 1 } = {}) {
+    spawnPortal({ x, y, factionId = "rift-callers", seed = 1, pacing = {} } = {}) {
       const portal = new InvaderPortal({
         id: `invader-portal-${this.nextPortalIndex}`,
         x,
@@ -27,13 +34,13 @@ export function createIncursionField() {
       this.nextPortalIndex += 1;
       portal.devices = createPortalDevices(portal);
       this.portals.push(portal);
-      const spawned = spawnPortalWave(portal, getPortalWaveSize(0), 0);
+      const spawned = spawnPortalWave(portal, getPacedWaveSize(0, pacing), 0);
       portal.waveCount = 1;
-      portal.nextWaveIn = getNextWaveSeconds(portal);
+      portal.nextWaveIn = getNextWaveSeconds(portal, pacing);
       return { portal, spawned };
     },
 
-    update(deltaSeconds, lifeforms) {
+    update(deltaSeconds, lifeforms, pacing = {}) {
       const livingGuardIds = new Set(
         lifeforms
           .filter((lifeform) => {
@@ -59,11 +66,30 @@ export function createIncursionField() {
           return;
         }
 
-        const waveSize = getPortalWaveSize(portal.waveCount);
+        // Hard safety floor: the next wave waits until the previous one is
+        // mostly cleared, so a portal can never outrun a struggling player.
+        const previousWaveSize = getPortalWaveSize(Math.max(0, portal.waveCount - 1));
+        const holdThreshold = Math.max(WAVE_HOLD_MIN_GUARDS, Math.round(previousWaveSize * WAVE_HOLD_GUARD_FRACTION));
+
+        if (portal.guardIds.size > holdThreshold) {
+          portal.nextWaveIn = WAVE_HOLD_RECHECK_SECONDS;
+          events.push({
+            type: "incursion.waveHeld",
+            payload: {
+              portalId: portal.id,
+              guardCount: portal.guardIds.size,
+              holdThreshold,
+            },
+            options: { visible: false },
+          });
+          return;
+        }
+
+        const waveSize = getPacedWaveSize(portal.waveCount, pacing);
         const wave = spawnPortalWave(portal, waveSize, portal.waveCount);
         spawned.push(...wave);
         portal.waveCount += 1;
-        portal.nextWaveIn = getNextWaveSeconds(portal);
+        portal.nextWaveIn = getNextWaveSeconds(portal, pacing);
         events.push({
           type: "incursion.waveSpawned",
           payload: {
@@ -160,12 +186,19 @@ function spawnPortalWave(portal, count, waveIndex) {
   return spawned;
 }
 
-function getNextWaveSeconds(portal) {
-  return Math.min(MAX_WAVE_SECONDS, BASE_WAVE_SECONDS + portal.waveCount * WAVE_SECONDS_STEP);
+// pacing comes from the encounter director: multipliers around the authored
+// baseline, never a replacement for it. Missing fields mean "no adjustment".
+function getNextWaveSeconds(portal, pacing = {}) {
+  const baseSeconds = Math.min(MAX_WAVE_SECONDS, BASE_WAVE_SECONDS + portal.waveCount * WAVE_SECONDS_STEP);
+  return baseSeconds * (pacing.waveDelayMultiplier ?? 1);
 }
 
 function getPortalWaveSize(waveIndex) {
   return PORTAL_WAVE_SIZES[Math.min(waveIndex, PORTAL_WAVE_SIZES.length - 1)];
+}
+
+function getPacedWaveSize(waveIndex, pacing = {}) {
+  return Math.max(MIN_PACED_WAVE_SIZE, Math.round(getPortalWaveSize(waveIndex) * (pacing.waveSizeMultiplier ?? 1)));
 }
 
 function getDistance(first, second) {

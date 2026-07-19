@@ -1,7 +1,7 @@
 import { createValueNoise } from "./valueNoise.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260719-0017-40e07ff";
-import { getRegionProfile } from "./worldRegions.js?v=fresh-20260719-0017-40e07ff";
-import { RESOURCE_COLOR_RGB, pickFamilyMember } from "./resourceDefinitions.js?v=fresh-20260719-0017-40e07ff";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260719-0052-baf9309";
+import { getRegionProfile } from "./worldRegions.js?v=fresh-20260719-0052-baf9309";
+import { RESOURCE_COLOR_RGB, pickFamilyMember } from "./resourceDefinitions.js?v=fresh-20260719-0052-baf9309";
 
 export function createResourceField(seed = 1337) {
   const noise = createValueNoise(seed);

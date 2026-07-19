@@ -1,27 +1,28 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260719-0017-40e07ff";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260719-0017-40e07ff";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260719-0017-40e07ff";
-import { Ship } from "./entities/Ship.js?v=fresh-20260719-0017-40e07ff";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260719-0017-40e07ff";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260719-0052-baf9309";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260719-0052-baf9309";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260719-0052-baf9309";
+import { Ship } from "./entities/Ship.js?v=fresh-20260719-0052-baf9309";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260719-0052-baf9309";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260719-0017-40e07ff";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260719-0017-40e07ff";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260719-0017-40e07ff";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260719-0017-40e07ff";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260719-0017-40e07ff";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260719-0017-40e07ff";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260719-0017-40e07ff";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260719-0017-40e07ff";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260719-0017-40e07ff";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260719-0017-40e07ff";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260719-0017-40e07ff";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-0017-40e07ff";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260719-0017-40e07ff";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260719-0017-40e07ff";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260719-0017-40e07ff";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260719-0017-40e07ff";
-import { createGameState } from "./state/gameState.js?v=fresh-20260719-0017-40e07ff";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-0017-40e07ff";
+import { createInput } from "./systems/input.js?v=fresh-20260719-0052-baf9309";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260719-0052-baf9309";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260719-0052-baf9309";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260719-0052-baf9309";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260719-0052-baf9309";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260719-0052-baf9309";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260719-0052-baf9309";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260719-0052-baf9309";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260719-0052-baf9309";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260719-0052-baf9309";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260719-0052-baf9309";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260719-0052-baf9309";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-0052-baf9309";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260719-0052-baf9309";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260719-0052-baf9309";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260719-0052-baf9309";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260719-0052-baf9309";
+import { createGameState } from "./state/gameState.js?v=fresh-20260719-0052-baf9309";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-0052-baf9309";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -143,6 +144,11 @@ const INCURSION_AMBIENT_FIRST_SECONDS = 45;
 const INCURSION_AMBIENT_REPEAT_MIN_SECONDS = 90;
 const INCURSION_AMBIENT_REPEAT_MAX_SECONDS = 130;
 const INCURSION_MAX_ACTIVE_PORTALS = 2;
+// Defense jurisdiction is wider than patrol-creation range on purpose: ambient
+// portals spawn relative to the ship (1050-1700 out), so a patrol judging
+// threats by the old 4.2x creation radius ignored portals sitting just past
+// its idle loop. See docs/encounter-director-roadmap.md, Stage 2.
+const INCURSION_DEFENSE_JURISDICTION_FACTOR = 8;
 const INCURSION_SENTINEL_RANGE = 700;
 const INCURSION_SENTINEL_SHOT_SPEED = 245;
 const INCURSION_SENTINEL_SHOT_SECONDS = 3.2;
@@ -219,6 +225,9 @@ export class Game {
     this.incursionDirector = {
       nextSpawnIn: INCURSION_AMBIENT_FIRST_SECONDS,
     };
+    this.encounterDirector = createEncounterDirector({
+      getStat: (key, fallback) => this.state.ledger.getStat(key, fallback),
+    });
     this.lifeDisturbances = [];
     this.lifeformContacts = new Set();
     this.npcShips = createNpcRouteShips(this.worldSites);
@@ -596,11 +605,13 @@ export class Game {
   spawnIncursionPortal(position = null) {
     const objectivePosition = position ? null : this.getIncursionObjectiveSpawnPosition();
     const requestedPosition = position ?? objectivePosition ?? this.getAmbientIncursionSpawnPosition();
-    const spawnPosition = getIncursionSafePosition(requestedPosition, this.worldSites, this.ship.position);
+    const safePosition = getIncursionSafePosition(requestedPosition, this.worldSites, this.ship.position);
+    const spawnPosition = position ? safePosition : this.clampIncursionIntoHubJurisdiction(safePosition);
     const { portal, spawned } = this.incursionField.spawnPortal({
       x: spawnPosition.x,
       y: spawnPosition.y,
       seed: this.state.ledger.eventCount + 1200,
+      pacing: this.encounterDirector.getIncursionPacing(),
     });
 
     this.lifeforms.push(...spawned);
@@ -623,6 +634,33 @@ export class Game {
     return {
       x: this.ship.position.x + Math.cos(angle) * distanceFromShip,
       y: this.ship.position.y + Math.sin(angle) * distanceFromShip,
+    };
+  }
+
+  // When the player is inside a hub's patrol territory, a portal opening near
+  // them should be that hub's problem — pull it inside defense jurisdiction so
+  // the patrol actually engages instead of circling its idle loop beside it.
+  clampIncursionIntoHubJurisdiction(portalPosition) {
+    const homeHub = this.worldSites.find((site) =>
+      site.type === "hub" &&
+      distance(this.ship.position, site.position) <= site.interactionRadius * PATROL_CREATE_RANGE_FACTOR,
+    );
+
+    if (!homeHub) {
+      return portalPosition;
+    }
+
+    const jurisdictionRadius = homeHub.interactionRadius * INCURSION_DEFENSE_JURISDICTION_FACTOR;
+    const distanceToHub = distance(portalPosition, homeHub.position);
+
+    if (distanceToHub <= jurisdictionRadius) {
+      return portalPosition;
+    }
+
+    const towardPortal = normalizeVector(portalPosition.x - homeHub.position.x, portalPosition.y - homeHub.position.y);
+    return {
+      x: homeHub.position.x + towardPortal.x * jurisdictionRadius,
+      y: homeHub.position.y + towardPortal.y * jurisdictionRadius,
     };
   }
 
@@ -866,6 +904,13 @@ export class Game {
     this.updateMossHarvester(deltaSeconds);
     this.updateHubDefenses(deltaSeconds);
     this.updateLifeDisturbances(deltaSeconds);
+    // activeHunterCount is last frame's value here; one frame of staleness is
+    // fine for a pressure signal sampled every couple of seconds.
+    this.encounterDirector.update(deltaSeconds, {
+      hullIntegrity: this.state.components.hull.integrity,
+      hullMaxIntegrity: this.state.components.hull.maxIntegrity,
+      nearbyHostileCount: this.activeHunterCount,
+    });
     this.updateIncursions(deltaSeconds);
     this.updateIncursionShots(deltaSeconds);
     // Lifeforms are preserved off-screen, but only nearby ones are simulated.
@@ -2121,7 +2166,7 @@ export class Game {
   }
 
   findPatrolIncursionTarget(patrol) {
-    const jurisdictionRadius = patrol.site.interactionRadius * PATROL_CREATE_RANGE_FACTOR;
+    const jurisdictionRadius = patrol.site.interactionRadius * INCURSION_DEFENSE_JURISDICTION_FACTOR;
     const portalIdsInJurisdiction = new Set(
       this.incursionField.getActivePortals()
         .filter((portal) => distance(portal.position, patrol.site.position) <= jurisdictionRadius)
@@ -3081,6 +3126,7 @@ export class Game {
       },
       currentSite: this.dockedSite ?? this.nearbySite,
       nearestSite: getNearestWorldSite(this.ship.position, this.worldSites)?.site ?? null,
+      encounter: this.encounterDirector.getDebugSnapshot(),
     });
   }
 
@@ -3383,7 +3429,7 @@ export class Game {
 
   updateIncursions(deltaSeconds) {
     this.updateAmbientIncursionDirector(deltaSeconds);
-    const result = this.incursionField.update(deltaSeconds, this.lifeforms);
+    const result = this.incursionField.update(deltaSeconds, this.lifeforms, this.encounterDirector.getIncursionPacing());
 
     if (result.spawned.length > 0) {
       this.lifeforms.push(...result.spawned);
@@ -3391,7 +3437,7 @@ export class Game {
     }
 
     result.events.forEach((event) => {
-      this.state.ledger.recordEvent(event.type, event.payload);
+      this.state.ledger.recordEvent(event.type, event.payload, event.options ?? {});
     });
 
     this.updateIncursionDevices(deltaSeconds);
@@ -3410,8 +3456,9 @@ export class Game {
     }
 
     const portal = this.spawnIncursionPortal();
-    this.incursionDirector.nextSpawnIn = INCURSION_AMBIENT_REPEAT_MIN_SECONDS
+    const baseGapSeconds = INCURSION_AMBIENT_REPEAT_MIN_SECONDS
       + Math.random() * (INCURSION_AMBIENT_REPEAT_MAX_SECONDS - INCURSION_AMBIENT_REPEAT_MIN_SECONDS);
+    this.incursionDirector.nextSpawnIn = baseGapSeconds * this.encounterDirector.getIncursionPacing().portalGapMultiplier;
 
     this.state.ledger.recordEvent(
       "incursion.signalDetected",

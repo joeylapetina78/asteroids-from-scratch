@@ -110,6 +110,9 @@ The older delivery fields still exist for display and compatibility. Future cont
 | `npc.carefulMode` | `npcType`, `npcName`, `reason` | NPC switched route behavior. |
 | `npc.destroyed` | `npcType`, `npcName`, `cause` | NPC ship was destroyed. |
 | `enemy.destroyed` | `enemyType`, `cause` | Hostile life/enemy was destroyed. |
+| `incursion.waveHeld` | `portalId`, `guardCount`, `holdThreshold` | Portal wave deferred because too many prior guards are still alive. Hidden. |
+
+`cause` matters on destruction events: only `weapon` and `ramming-ship` are player kills. Patrol/hub turret kills (`patrol-defense`, `hub-defense`) and environmental deaths (`asteroid-collision`, `environment`) record the same event but do not set `player.*` signals or count toward `enemy.destroyed.byPlayer` / `npc.destroyed.byPlayer`. Systems judging player behavior should read the `byPlayer` stats, not the `.total` counters.
 
 ## Legal Events
 

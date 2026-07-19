@@ -47,6 +47,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/systems/hubServiceContracts.js](../src/systems/hubServiceContracts.js) | Chooses which contract a service should offer next (mission-first, prerequisites, repeatables, emergency finance). |
 | [src/systems/commsDirector.js](../src/systems/commsDirector.js) | Routes non-mission speech — hub authority, tow drivers, service NPCs, world NPCs — into the comms display with a priority queue. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. Central memory spine. |
+| [src/systems/encounterDirector.js](../src/systems/encounterDirector.js) | Session pressure score from ledger stats; paces incursion wave size/cadence and portal gaps. Not the story director — see [docs/encounter-director-roadmap.md](encounter-director-roadmap.md). |
 | [src/systems/accounts.js](../src/systems/accounts.js) | Cash account bridge. New credit changes go through this system while `state.credits` remains a compatibility mirror for current UI. |
 | [src/systems/obligations.js](../src/systems/obligations.js) | Loan/debt obligation records. Loan contracts create obligations, Finance can pay them down, and the old debt summary is derived from them. |
 | [src/systems/contractRules.js](../src/systems/contractRules.js) | Maps ledger events to contract fulfillment checks. Seed for declarative contract terms. |
