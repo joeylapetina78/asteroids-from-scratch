@@ -18,6 +18,7 @@ export class InvaderPortal {
     this.nextWaveIn = 0;
     this.guardIds = new Set();
     this.devices = [];
+    this.isWaveHeld = false;
     this.isAlive = true;
   }
 
@@ -32,6 +33,17 @@ export class InvaderPortal {
 
   get isShielded() {
     return this.guardIds.size > 0;
+  }
+
+  getEncounterState() {
+    if (this.age < 5) return { id: "forming", label: "FORMING", color: "#aeeeff" };
+    if (this.isShielded) {
+      return this.isWaveHeld
+        ? { id: "guarded", label: "GUARDS HOLD", color: "#ffb2d0" }
+        : { id: "shielded", label: "SHIELDED", color: "#ff74ae" };
+    }
+    if (this.nextWaveIn <= 12) return { id: "charging", label: "REINFORCING", color: "#ffd36b" };
+    return { id: "exposed", label: "EXPOSED", color: "#d9a7ff" };
   }
 
   // Returns true when the hit landed at full strength, false when the guard
@@ -54,11 +66,12 @@ export class InvaderPortal {
     const pulse = 0.5 + Math.sin(this.age * 4.2 + this.seed) * 0.5;
     const ringRadius = this.radius + pulse * 8;
     const healthRatio = this.maxHealth > 0 ? this.health / this.maxHealth : 0;
+    const encounterState = this.getEncounterState();
 
     context.save();
     context.translate(x, y);
 
-    context.strokeStyle = this.isShielded ? "rgba(255, 116, 174, 0.78)" : "rgba(177, 102, 255, 0.82)";
+    context.strokeStyle = encounterState.color;
     context.fillStyle = this.isShielded ? "rgba(82, 13, 42, 0.18)" : "rgba(56, 16, 92, 0.18)";
     context.lineWidth = 2.2;
     context.setLineDash(this.isShielded ? [10, 7] : []);
@@ -66,6 +79,11 @@ export class InvaderPortal {
     context.arc(0, 0, ringRadius, 0, Math.PI * 2);
     context.fill();
     context.stroke();
+
+    context.fillStyle = encounterState.color;
+    context.font = "bold 9px monospace";
+    context.textAlign = "center";
+    context.fillText(encounterState.label, 0, -this.radius - 40);
     context.setLineDash([]);
 
     context.strokeStyle = "rgba(224, 189, 255, 0.72)";
@@ -139,6 +157,25 @@ export class InvaderPortal {
         context.stroke();
         context.beginPath();
         context.arc(0, 0, 5 + pulse * 2, 0, Math.PI * 2);
+        context.stroke();
+      } else if (device.type === "rift-mine") {
+        context.strokeStyle = "rgba(124, 232, 255, 0.9)";
+        context.fillStyle = "rgba(44, 125, 178, 0.18)";
+        context.lineWidth = 1.8;
+        context.rotate((device.pulse ?? 0) * -0.55);
+        context.beginPath();
+        for (let index = 0; index < 6; index += 1) {
+          const angle = (Math.PI * 2 * index) / 6;
+          const radius = index % 2 === 0 ? 20 + pulse * 3 : 8;
+          const px = Math.cos(angle) * radius;
+          const py = Math.sin(angle) * radius;
+          if (index === 0) context.moveTo(px, py); else context.lineTo(px, py);
+        }
+        context.closePath();
+        context.fill();
+        context.stroke();
+        context.beginPath();
+        context.arc(0, 0, 4 + pulse * 2, 0, Math.PI * 2);
         context.stroke();
       } else {
         context.strokeStyle = `rgba(123, 94, 255, ${0.3 + pulse * 0.25})`;

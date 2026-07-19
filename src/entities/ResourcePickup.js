@@ -1,6 +1,6 @@
-import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260719-0052-baf9309";
+import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260719-1259-cb7d5ac";
 import { createRandom, randomRange } from "../systems/random.js";
-import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260719-0052-baf9309";
+import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260719-1259-cb7d5ac";
 
 const PICKUP_RADIUS = 10;
 const PICKUP_DRAG = 0.985;
@@ -18,12 +18,15 @@ const SHAPE_SIZE = {
 };
 
 export class ResourcePickup {
-  constructor({ x, y, type, velocity, sourceClaimId = null, sourceClaimName = null }) {
+  constructor({ x, y, type, velocity, sourceClaimId = null, sourceClaimName = null, tradeValue = null, label = null, quantity = 1 }) {
     this.position = { x, y };
     this.velocity = velocity;
     this.type = normalizeResourceType(type);
     this.sourceClaimId = sourceClaimId;
     this.sourceClaimName = sourceClaimName;
+    this.tradeValue = tradeValue;
+    this.label = label;
+    this.quantity = quantity;
     this.color = RESOURCE_COLOR[this.type] ?? "#888888";
     this.radius = PICKUP_RADIUS;
     this.shape = getResourceShape(this.type);

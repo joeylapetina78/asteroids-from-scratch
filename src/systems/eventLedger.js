@@ -202,7 +202,6 @@ export function createEventLedger(options = {}) {
     } else if (event.type === "incursion.portalDestroyed") {
       incrementStat("incursion.portalDestroyed.total");
       setStatMax("incursion.portalDestroyed.wave.max", event.payload.waveCount ?? 0);
-      incrementStat("credits.earned.incursions", event.payload.reward ?? 0);
     } else if (event.type === "site.nearby") {
       incrementStat("site.nearby.total");
       incrementStat(`site.nearby.${event.payload.siteId ?? "unknown"}`);
@@ -542,7 +541,12 @@ function getDefaultMessage(type, payload) {
   }
 
   if (type === "incursion.deviceDestroyed") {
-    return `Destroyed ${payload.deviceType === "drag-bloom" ? "drag bloom" : "rift sentry"}`;
+    const deviceName = {
+      "drag-bloom": "drag bloom",
+      "rift-sentry": "rift sentry",
+      "rift-mine": "rift mine",
+    }[payload.deviceType] ?? payload.deviceType;
+    return `Destroyed ${deviceName}`;
   }
 
   if (type === "incursion.portalDestroyed") {
@@ -550,7 +554,7 @@ function getDefaultMessage(type, payload) {
       return `${payload.siteName ?? "Hub defense"} destroyed an incursion portal`;
     }
 
-    return `Destroyed incursion portal for ${payload.reward ?? 0} credits`;
+    return `Destroyed incursion portal - rift trophy worth ${payload.trophyValue ?? 0} credits dropped`;
   }
 
   if (type === "site.nearby") {

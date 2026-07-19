@@ -1,28 +1,29 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260719-0052-baf9309";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260719-0052-baf9309";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260719-0052-baf9309";
-import { Ship } from "./entities/Ship.js?v=fresh-20260719-0052-baf9309";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260719-0052-baf9309";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260719-1259-cb7d5ac";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260719-1259-cb7d5ac";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260719-1259-cb7d5ac";
+import { Ship } from "./entities/Ship.js?v=fresh-20260719-1259-cb7d5ac";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260719-1259-cb7d5ac";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260719-0052-baf9309";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260719-0052-baf9309";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260719-0052-baf9309";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260719-0052-baf9309";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260719-0052-baf9309";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260719-0052-baf9309";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260719-0052-baf9309";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260719-0052-baf9309";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260719-0052-baf9309";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260719-0052-baf9309";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260719-0052-baf9309";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260719-0052-baf9309";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-0052-baf9309";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260719-0052-baf9309";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260719-0052-baf9309";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260719-0052-baf9309";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260719-0052-baf9309";
-import { createGameState } from "./state/gameState.js?v=fresh-20260719-0052-baf9309";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-0052-baf9309";
+import { createInput } from "./systems/input.js?v=fresh-20260719-1259-cb7d5ac";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260719-1259-cb7d5ac";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260719-1259-cb7d5ac";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260719-1259-cb7d5ac";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260719-1259-cb7d5ac";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260719-1259-cb7d5ac";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260719-1259-cb7d5ac";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260719-1259-cb7d5ac";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260719-1259-cb7d5ac";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260719-1259-cb7d5ac";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260719-1259-cb7d5ac";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260719-1259-cb7d5ac";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260719-1259-cb7d5ac";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-1259-cb7d5ac";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260719-1259-cb7d5ac";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260719-1259-cb7d5ac";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260719-1259-cb7d5ac";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260719-1259-cb7d5ac";
+import { createGameState } from "./state/gameState.js?v=fresh-20260719-1259-cb7d5ac";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-1259-cb7d5ac";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -154,6 +155,11 @@ const INCURSION_SENTINEL_SHOT_SPEED = 245;
 const INCURSION_SENTINEL_SHOT_SECONDS = 3.2;
 const INCURSION_SENTINEL_DAMAGE = 9;
 const INCURSION_DRAG_BLOOM_DAMPING = 0.34;
+const INCURSION_RIFT_MINE_RANGE = 250;
+const INCURSION_RIFT_MINE_SHOT_SPEED = 155;
+const INCURSION_RIFT_MINE_SHOT_SECONDS = 2.8;
+const INCURSION_RIFT_MINE_SHOT_DAMAGE = 6;
+const INCURSION_RIFT_MINE_COOLDOWN_SECONDS = 4.8;
 
 export class Game {
   constructor(
@@ -3120,7 +3126,9 @@ export class Game {
             fighters: guards.filter((guard) => guard.type === "fighter").length,
             sentries: devices.filter((device) => device.type === "rift-sentry").length,
             dragBlooms: devices.filter((device) => device.type === "drag-bloom").length,
+            mines: devices.filter((device) => device.type === "rift-mine").length,
             waves: portal.waveCount,
+            state: portal.getEncounterState().id,
           };
         }),
       },
@@ -3384,7 +3392,7 @@ export class Game {
 
       this.recordEnemyDestroyed(getHostileEnemyType(hitHostile), "weapon");
       this.createHunterBurst(hitHostile, bullet.velocity);
-      this.createHunterDrops(hitHostile, bullet.velocity);
+      this.createHostileDrops(hitHostile, bullet.velocity);
       if (!hitHostile.sourcePortalId) {
         this.respawnHunter();
       }
@@ -3421,7 +3429,7 @@ export class Game {
     rammingHunter.damage(rammingHunter.health);
     this.recordEnemyDestroyed(getHostileEnemyType(rammingHunter), "ramming-ship");
     this.createHunterBurst(rammingHunter, this.ship.velocity, { count: 34, sparkEvery: 2 });
-    this.createHunterDrops(rammingHunter, this.ship.velocity);
+    this.createHostileDrops(rammingHunter, this.ship.velocity);
     if (!rammingHunter.sourcePortalId) {
       this.respawnHunter();
     }
@@ -3495,6 +3503,13 @@ export class Game {
           return;
         }
 
+        if (device.type === "rift-mine") {
+          if (distance(this.ship.position, device.position) <= INCURSION_RIFT_MINE_RANGE) {
+            this.fireIncursionMineBurst(device, portal);
+          }
+          return;
+        }
+
         this.fireIncursionSentry(device, portal);
       });
     });
@@ -3522,6 +3537,29 @@ export class Game {
       damage: INCURSION_SENTINEL_DAMAGE,
     });
     device.cooldown = 2.05;
+  }
+
+  fireIncursionMineBurst(device, portal) {
+    const shotCount = 6;
+
+    for (let index = 0; index < shotCount; index += 1) {
+      const angle = (Math.PI * 2 * index) / shotCount + (device.pulse ?? 0) * 0.25;
+      this.incursionShots.push({
+        portalId: portal.id,
+        position: { ...device.position },
+        velocity: {
+          x: Math.cos(angle) * INCURSION_RIFT_MINE_SHOT_SPEED,
+          y: Math.sin(angle) * INCURSION_RIFT_MINE_SHOT_SPEED,
+        },
+        radius: 3.5,
+        age: 0,
+        maxAge: INCURSION_RIFT_MINE_SHOT_SECONDS,
+        damage: INCURSION_RIFT_MINE_SHOT_DAMAGE,
+        color: "#7ce8ff",
+      });
+    }
+
+    device.cooldown = INCURSION_RIFT_MINE_COOLDOWN_SECONDS;
   }
 
   updateIncursionShots(deltaSeconds) {
@@ -3624,13 +3662,22 @@ export class Game {
     this.incursionShots = this.incursionShots.filter((shot) => shot.portalId !== portal.id);
     this.createIncursionPortalBurst(portal);
     if (rewardCredits && reward > 0) {
-      depositCredits(this.state, reward);
+      const trophy = createPortalTrophy({ waveCount: portal.waveCount, tradeValue: reward });
+      this.pickups.push(new ResourcePickup({
+        x: portal.position.x,
+        y: portal.position.y,
+        type: trophy.type,
+        label: trophy.label,
+        tradeValue: trophy.tradeValue,
+        velocity: { x: 0, y: 0 },
+      }));
     }
     this.state.ledger.recordEvent("incursion.portalDestroyed", {
       portalId: portal.id,
       factionId: portal.factionId,
       waveCount: portal.waveCount,
-      reward: rewardCredits ? reward : 0,
+      reward: 0,
+      trophyValue: rewardCredits ? reward : 0,
       cause,
       siteId: site?.id ?? null,
       siteName: site?.name ?? null,
@@ -4103,7 +4150,7 @@ export class Game {
     this.recordEnemyDestroyed(getHostileEnemyType(hunter), cause);
     this.createHunterBurst(hunter, hunter.velocity);
     if (!((cause === "hub-defense" || cause === "patrol-defense") && hunter.sourcePortalId)) {
-      this.createHunterDrops(hunter, hunter.velocity);
+      this.createHostileDrops(hunter, hunter.velocity);
     }
     if (!hunter.sourcePortalId) {
       this.respawnHunter();
@@ -4650,13 +4697,14 @@ export class Game {
     }
   }
 
-  createHunterDrops(hunter, impactVelocity) {
-    const count = 2 + Math.floor(Math.random() * 3);
+  createHostileDrops(hunter, impactVelocity) {
+    const enemyType = getHostileEnemyType(hunter);
+    const count = getHostileLootCount(enemyType);
 
     for (let index = 0; index < count; index += 1) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 55 + Math.random() * 125;
-      const type = Math.random() < 0.18 ? "crystal-matrix" : "iron-nickel";
+      const type = rollHostileLoot(enemyType);
 
       this.pickups.push(
         new ResourcePickup({
@@ -4962,7 +5010,7 @@ export class Game {
         "resource.collected",
         {
           resourceType: pickup.type,
-          amount: 1,
+          amount: pickup.quantity ?? 1,
           x: Math.round(pickup.position.x),
           y: Math.round(pickup.position.y),
           sourceClaimId: pickup.sourceClaimId ?? null,
@@ -4974,6 +5022,9 @@ export class Game {
         type: pickup.type,
         sourceClaimId: pickup.sourceClaimId ?? null,
         sourceClaimName: pickup.sourceClaimName ?? null,
+        tradeValue: pickup.tradeValue ?? null,
+        label: pickup.label ?? null,
+        quantity: pickup.quantity ?? 1,
       });
       this.audio?.playPickup(pickup.type);
     });
@@ -5145,8 +5196,8 @@ export class Game {
       const y = shot.position.y - camera.y;
       const tail = normalizeVector(-shot.velocity.x, -shot.velocity.y, 12);
       this.context.save();
-      this.context.strokeStyle = "rgba(255, 116, 174, 0.88)";
-      this.context.fillStyle = "#ffd4eb";
+      this.context.strokeStyle = shot.color ?? "rgba(255, 116, 174, 0.88)";
+      this.context.fillStyle = shot.color ?? "#ffd4eb";
       this.context.lineWidth = 2;
       this.context.beginPath();
       this.context.moveTo(x + tail.x, y + tail.y);

@@ -1,6 +1,6 @@
-import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260719-0052-baf9309";
-import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260719-0052-baf9309";
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260719-0052-baf9309";
+import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260719-1259-cb7d5ac";
+import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260719-1259-cb7d5ac";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260719-1259-cb7d5ac";
 import { hashNumbers } from "./random.js";
 
 const PORTAL_WAVE_SIZES = [5, 10, 30];
@@ -9,7 +9,7 @@ const WAVE_SECONDS_STEP = 12;
 const MAX_WAVE_SECONDS = 105;
 const PORTAL_HUNTER_ORBIT_RADIUS = 150;
 const PORTAL_SHIELD_GUARD_RADIUS = 950;
-const PORTAL_DEVICE_TYPES = ["rift-sentry", "drag-bloom"];
+const PORTAL_DEVICE_TYPES = ["rift-sentry", "drag-bloom", "rift-mine"];
 // A wave timer that fires while most of the previous wave is still alive is
 // what let portals spiral out of reach. Waves now hold until the living guard
 // count drops below a fraction of the last wave, rechecking on a short timer.
@@ -37,6 +37,7 @@ export function createIncursionField() {
       const spawned = spawnPortalWave(portal, getPacedWaveSize(0, pacing), 0);
       portal.waveCount = 1;
       portal.nextWaveIn = getNextWaveSeconds(portal, pacing);
+      portal.isWaveHeld = false;
       return { portal, spawned };
     },
 
@@ -73,6 +74,7 @@ export function createIncursionField() {
 
         if (portal.guardIds.size > holdThreshold) {
           portal.nextWaveIn = WAVE_HOLD_RECHECK_SECONDS;
+          portal.isWaveHeld = true;
           events.push({
             type: "incursion.waveHeld",
             payload: {
@@ -87,6 +89,7 @@ export function createIncursionField() {
 
         const waveSize = getPacedWaveSize(portal.waveCount, pacing);
         const wave = spawnPortalWave(portal, waveSize, portal.waveCount);
+        portal.isWaveHeld = false;
         spawned.push(...wave);
         portal.waveCount += 1;
         portal.nextWaveIn = getNextWaveSeconds(portal, pacing);
@@ -117,9 +120,9 @@ function createPortalDevices(portal) {
   const devices = [];
 
   PORTAL_DEVICE_TYPES.forEach((type, index) => {
-    const angle = ((portal.seed % 360) * Math.PI) / 180 + index * Math.PI;
-    const distance = type === "rift-sentry" ? 132 : 190;
-    const maxHealth = type === "rift-sentry" ? 76 : 94;
+    const angle = ((portal.seed % 360) * Math.PI) / 180 + index * ((Math.PI * 2) / PORTAL_DEVICE_TYPES.length);
+    const distance = type === "rift-sentry" ? 132 : type === "drag-bloom" ? 190 : 242;
+    const maxHealth = type === "rift-sentry" ? 76 : type === "drag-bloom" ? 94 : 62;
 
     devices.push({
       id: `${portal.id}-${type}`,
@@ -128,12 +131,12 @@ function createPortalDevices(portal) {
         x: portal.position.x + Math.cos(angle) * distance,
         y: portal.position.y + Math.sin(angle) * distance,
       },
-      radius: type === "rift-sentry" ? 20 : 150,
-      hitRadius: 20,
+      radius: type === "rift-sentry" ? 20 : type === "drag-bloom" ? 150 : 22,
+      hitRadius: type === "drag-bloom" ? 20 : 22,
       maxHealth,
       health: maxHealth,
       isAlive: true,
-      cooldown: type === "rift-sentry" ? 1.8 + ((portal.seed >>> 4) % 10) * 0.08 : 0,
+      cooldown: type === "rift-sentry" ? 1.8 + ((portal.seed >>> 4) % 10) * 0.08 : type === "rift-mine" ? 2.8 : 0,
       pulse: (portal.seed % 1000) * 0.01 + index,
     });
   });

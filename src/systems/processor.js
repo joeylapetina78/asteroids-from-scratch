@@ -1,5 +1,5 @@
-import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260719-0052-baf9309";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260719-0052-baf9309";
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260719-1259-cb7d5ac";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260719-1259-cb7d5ac";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -122,6 +122,8 @@ export class Processor {
         angularVelocity: unit.angularVelocity ?? 0,
         sourceClaimId: unit.sourceClaimId ?? null,
         sourceClaimName: unit.sourceClaimName ?? null,
+        tradeValue: unit.tradeValue ?? null,
+        label: unit.label ?? null,
         quantity: unit.quantity ?? 1,
       })),
     };
@@ -144,6 +146,8 @@ export class Processor {
       angularVelocity: unit.angularVelocity ?? 0,
       sourceClaimId: unit.sourceClaimId ?? null,
       sourceClaimName: unit.sourceClaimName ?? null,
+      tradeValue: unit.tradeValue ?? null,
+      label: unit.label ?? null,
       quantity: unit.quantity ?? 1,
       size: getUnitSize(unit.quantity ?? 1),
     }));
@@ -516,13 +520,15 @@ function getUnitSize(quantity) {
 }
 
 function getStackKey(unit) {
-  return [unit.type, unit.sourceClaimId ?? "", unit.sourceClaimName ?? ""].join("|");
+  return [unit.type, unit.sourceClaimId ?? "", unit.sourceClaimName ?? "", unit.tradeValue ?? "", unit.label ?? ""].join("|");
 }
 
 function getUnitMetadata(unit) {
   return {
     sourceClaimId: unit.sourceClaimId ?? null,
     sourceClaimName: unit.sourceClaimName ?? null,
+    tradeValue: unit.tradeValue ?? null,
+    label: unit.label ?? null,
   };
 }
 

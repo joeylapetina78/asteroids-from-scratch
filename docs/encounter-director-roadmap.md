@@ -143,6 +143,26 @@ Explicitly out of scope for Stage 3: ambient hunter respawn rate, patrol aggress
 
 ---
 
+## Stage 4: readable portal encounters and physical rewards
+
+Status: built, awaiting playtest. A portal now communicates a small, readable
+state machine in the viewport: `FORMING`, `SHIELDED`, `GUARDS HOLD`,
+`REINFORCING`, and `EXPOSED`. These are descriptions of existing simulation
+facts, not a new encounter controller.
+
+Each portal carries three complementary stationary devices:
+
+- **Rift sentry:** a lead-targeting turret.
+- **Drag bloom:** a slow field that changes flight space.
+- **Rift mine:** a short-range, six-shot radial burst that creates a small
+  bullet-hell pocket without pretending to be another fighter.
+
+Loot is also declarative now. Hunters carry fuel/charge materials, flight
+fighters carry scanergy materials, and both retain a chance to drop a valuable
+crystal matrix. Destroying a portal no longer awards hidden credits; it drops a
+physical rift trophy whose sale value is the portal reward. The trophy follows
+the ordinary pickup, processor, cargo, and hub-sale path.
+
 ## What to avoid for now
 
 - Don't wire the pressure score into non-incursion systems yet (see Stage 3 scope note).
