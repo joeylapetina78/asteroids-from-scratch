@@ -1,6 +1,6 @@
-import { getCurrentShipLegal, getPilotName, updateCurrentShipLegal } from "./legalRecords.js?v=fresh-20260718-1945-861127d";
-import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260718-1945-861127d";
-import { registerHull, setActiveHull } from "./hulls.js?v=fresh-20260718-1945-861127d";
+import { getCurrentShipLegal, getPilotName, updateCurrentShipLegal } from "./legalRecords.js?v=fresh-20260718-2008-0fd02ac";
+import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260718-2008-0fd02ac";
+import { registerHull, setActiveHull } from "./hulls.js?v=fresh-20260718-2008-0fd02ac";
 import {
   WORLD_RECORD_RELATIONSHIPS,
   ensureInstitution,
@@ -9,7 +9,7 @@ import {
   getShipAssetId,
   issueWorldDocument,
   upsertWorldRelationship,
-} from "./worldRecords.js?v=fresh-20260718-1945-861127d";
+} from "./worldRecords.js?v=fresh-20260718-2008-0fd02ac";
 
 const YARD_EXCHANGE_AUTHORITY_ID = "institution:yard-exchange-authority";
 const YARD_EXCHANGE_FINANCE_ID = "institution:yard-exchange-finance";
