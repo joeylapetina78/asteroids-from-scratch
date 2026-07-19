@@ -525,6 +525,9 @@ function drawHunter(context, lifeform) {
       : "rgba(255, 93, 108, 0.24)";
   const strokeColor = isPirate ? "#ffb24d" : isInvader ? "#b166ff" : LIFE_COLORS.hunter;
 
+  const scale = lifeform.radius / 24;
+  context.save();
+  context.scale(scale, scale);
   context.fillStyle = fillColor;
   context.strokeStyle = strokeColor;
   context.lineWidth = 2;
@@ -548,6 +551,7 @@ function drawHunter(context, lifeform) {
   }
   context.fillStyle = isPirate ? "#1b0e10" : isInvader ? "#ffffff" : "#ffffff";
   context.fillRect(5, -1.5, isPirate ? 6 : 4, 3);
+  context.restore();
 }
 
 function drawThreadling(context, lifeform) {
@@ -641,7 +645,7 @@ function drawLantern(context, lifeform) {
 
 function getRadius(type) {
   if (type === "hunter") {
-    return 24;
+    return 21;
   }
 
   if (type === "threadling") {
