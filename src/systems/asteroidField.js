@@ -1,8 +1,8 @@
-import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260718-2258-9b2997d";
+import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260718-2316-3243220";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getResourceColor } from "./resourceDefinitions.js?v=fresh-20260718-2258-9b2997d";
-import { getAmbientSurvivalResourceWeights } from "./resourceField.js?v=fresh-20260718-2258-9b2997d";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260718-2258-9b2997d";
+import { getResourceColor } from "./resourceDefinitions.js?v=fresh-20260718-2316-3243220";
+import { getAmbientSurvivalResourceWeights } from "./resourceField.js?v=fresh-20260718-2316-3243220";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260718-2316-3243220";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same
