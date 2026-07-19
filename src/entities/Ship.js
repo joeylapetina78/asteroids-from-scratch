@@ -1,4 +1,4 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260718-2008-0fd02ac";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260718-2206-313b983";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_THRUST_POWER = 95;
@@ -70,11 +70,14 @@ export class Ship {
     this.engine = engine;
     this.shipFrame = shipFrame;
     this.isThrusting = false;
+    this.isCloaked = false;
+    this.cloakConfig = null;
   }
 
   update(deltaSeconds, input) {
     const canThrust = this.engine.powered && input.isDown("KeyW") && this.engine.fuel > 0;
-    if (canThrust) {
+    const canStrafe = this.engine.powered && this.engine.fuel > 0 && this.hasLateralThrusters();
+    if (canThrust || (canStrafe && (input.isDown("KeyQ") || input.isDown("KeyE")))) {
       this.engine.fuel = Math.max(0, this.engine.fuel - this.getFuelBurnRate() * deltaSeconds);
     }
 
@@ -86,11 +89,13 @@ export class Ship {
         thrust: canThrust,
         brake: this.engine.powered && input.isDown("KeyS"),
         reverse: this.engine.thrustMode === "reverse",
+        strafe: canStrafe ? (input.isDown("KeyQ") ? -1 : input.isDown("KeyE") ? 1 : 0) : 0,
       },
       {
         rotationSpeed: this.getRotationSpeed(),
         thrustPower: this.getThrustPower(),
         reverseThrustMultiplier: this.getReverseThrustMultiplier(),
+        lateralThrustMultiplier: this.getLateralThrustMultiplier(),
         maxSpeed: this.getMaxSpeed(),
       },
     );
@@ -113,11 +118,25 @@ export class Ship {
   }
 
   getFuelBurnRate() {
-    return this.engine.fuelBurnRate ?? DEFAULT_FUEL_BURN_RATE;
+    const cloakMultiplier = this.isCloaked ? (this.cloakConfig?.fuelBurnMultiplier ?? 1.35) : 1;
+    return (this.engine.fuelBurnRate ?? DEFAULT_FUEL_BURN_RATE) * cloakMultiplier;
   }
 
   getMaxSpeed() {
-    return this.engine.maxSpeed ?? DEFAULT_MAX_SPEED;
+    const cloakMultiplier = this.isCloaked ? (this.cloakConfig?.maxSpeedMultiplier ?? 0.78) : 1;
+    return (this.engine.maxSpeed ?? DEFAULT_MAX_SPEED) * cloakMultiplier;
+  }
+
+  hasLateralThrusters() {
+    return this.engine.upgrades?.includes("lateral-thrusters-mk1") ?? false;
+  }
+
+  getLateralThrustMultiplier() {
+    return this.hasLateralThrusters() ? (this.engine.lateralThrustMultiplier ?? 0.62) : 0;
+  }
+
+  isVisiblyPowered() {
+    return this.engine.powered && !this.isCloaked;
   }
 
   limitSpeed() {
@@ -133,8 +152,8 @@ export class Ship {
     context.rotate(this.angle);
 
     context.lineWidth = 2.5;
-    context.strokeStyle = this.engine.powered ? "#00e8a0" : "#2a3d45";
-    context.fillStyle = this.engine.powered ? "rgba(0, 232, 160, 0.06)" : "rgba(0, 0, 0, 0)";
+    context.strokeStyle = this.isVisiblyPowered() ? "#00e8a0" : "#2a3d45";
+    context.fillStyle = this.isVisiblyPowered() ? "rgba(0, 232, 160, 0.06)" : "rgba(0, 0, 0, 0)";
 
     this.drawFrame(context);
 
@@ -167,8 +186,8 @@ export class Ship {
     }
 
     context.save();
-    context.globalAlpha = this.engine.powered ? 0.9 : 0.3;
-    context.strokeStyle = this.engine.powered ? "#80ffdd" : "#3a4d55";
+    context.globalAlpha = this.isVisiblyPowered() ? 0.9 : 0.3;
+    context.strokeStyle = this.isVisiblyPowered() ? "#80ffdd" : "#3a4d55";
     context.beginPath();
     context.arc(frame.cockpit.x, frame.cockpit.y, frame.cockpit.radius, 0, Math.PI * 2);
     context.stroke();
@@ -181,8 +200,8 @@ export class Ship {
     }
 
     context.save();
-    context.globalAlpha = this.engine.powered ? 0.75 : 0.28;
-    context.strokeStyle = this.engine.powered ? "#9ee8ff" : "#68717f";
+    context.globalAlpha = this.isVisiblyPowered() ? 0.75 : 0.28;
+    context.strokeStyle = this.isVisiblyPowered() ? "#9ee8ff" : "#68717f";
     context.lineWidth = 1.35;
 
     frame.details.lines?.forEach(([from, to]) => {
@@ -210,7 +229,9 @@ export class Ship {
     const originX = direction > 0 ? 18 : -17;
     const tipX = originX + direction * (length + Math.random() * length * 0.55);
 
-    context.strokeStyle = color;
+    context.save();
+    context.globalAlpha = this.isCloaked ? 0.3 : 1;
+    context.strokeStyle = this.isCloaked ? "#40565b" : color;
     context.beginPath();
 
     if (visual.style === "bubble-string") {
@@ -231,5 +252,6 @@ export class Ship {
     }
 
     context.stroke();
+    context.restore();
   }
 }

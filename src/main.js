@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260718-2008-0fd02ac";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260718-2008-0fd02ac";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260718-2008-0fd02ac";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260718-2008-0fd02ac";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260718-2008-0fd02ac";
-import { Game } from "./game.js?v=fresh-20260718-2008-0fd02ac";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260718-2008-0fd02ac";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260718-2008-0fd02ac";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260718-2008-0fd02ac";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260718-2008-0fd02ac";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260718-2206-313b983";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260718-2206-313b983";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260718-2206-313b983";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260718-2206-313b983";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260718-2206-313b983";
+import { Game } from "./game.js?v=fresh-20260718-2206-313b983";
+import { createContractManager } from "./systems/contractManager.js?v=fresh-20260718-2206-313b983";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260718-2206-313b983";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260718-2206-313b983";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260718-2206-313b983";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260718-2008-0fd02ac";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260718-2008-0fd02ac";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260718-2008-0fd02ac";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260718-2008-0fd02ac";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260718-2008-0fd02ac";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260718-2008-0fd02ac";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260718-2008-0fd02ac";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260718-2008-0fd02ac";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260718-2008-0fd02ac";
-import { Processor } from "./systems/processor.js?v=fresh-20260718-2008-0fd02ac";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260718-2008-0fd02ac";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260718-2008-0fd02ac";
-import { createGameState } from "./state/gameState.js?v=fresh-20260718-2008-0fd02ac";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260718-2206-313b983";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260718-2206-313b983";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260718-2206-313b983";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260718-2206-313b983";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260718-2206-313b983";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260718-2206-313b983";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260718-2206-313b983";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260718-2206-313b983";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260718-2206-313b983";
+import { Processor } from "./systems/processor.js?v=fresh-20260718-2206-313b983";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260718-2206-313b983";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260718-2206-313b983";
+import { createGameState } from "./state/gameState.js?v=fresh-20260718-2206-313b983";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -80,6 +80,8 @@ const DEFAULT_PANEL_LAYOUT = {
   "tow-cable": { x: 760, y: 760, z: 55 },
   "moss-harvester": { x: 760, y: 580, z: 56 },
   "moss-seeder": { x: 760, y: 400, z: 57 },
+  shield: { x: 760, y: 220, z: 58 },
+  cloak: { x: 980, y: 300, z: 59 },
   contract: { x: -300, y: 340, z: 95 },
   document: { x: -40, y: 240, z: 96 },
   "resource-guide": { x: -40, y: 440, z: 94 },
@@ -220,6 +222,12 @@ const mossSeederCount = document.querySelector("#moss-seeder-count");
 const mossSeederStatus = document.querySelector("#moss-seeder-status");
 const tractorFieldButton = document.querySelector("#tractor-field-button");
 const tractorFieldStatus = document.querySelector("#tractor-field-status");
+const shieldButton = document.querySelector("#shield-button");
+const shieldCharges = document.querySelector("#shield-charges");
+const shieldStatus = document.querySelector("#shield-status");
+const cloakButton = document.querySelector("#cloak-button");
+const cloakStatus = document.querySelector("#cloak-status");
+const engineStrafeHint = document.querySelector("#engine-strafe-hint");
 const viewportRegion = document.querySelector("#viewport-region");
 const zoomInButton = document.querySelector("#zoom-in");
 const zoomOutButton = document.querySelector("#zoom-out");
@@ -259,6 +267,9 @@ const _hud = {
   fuelFraction: null,
   ammo: null,
   tractorActive: null,
+  shieldKey: null,
+  cloakKey: null,
+  hasLateralThrusters: null,
   towCableKey: null,
   mossHarvesterKey: null,
   mossSeederKey: null,
@@ -445,6 +456,34 @@ tractorFieldButton.addEventListener("pointerup", (event) => {
 tractorFieldButton.addEventListener("click", (event) => event.preventDefault());
 tractorFieldButton.addEventListener("pointercancel", () => setTractorFieldActive(false));
 tractorFieldButton.addEventListener("lostpointercapture", () => setTractorFieldActive(false));
+
+shieldButton.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0) {
+    return;
+  }
+
+  event.preventDefault();
+  shieldButton.setPointerCapture(event.pointerId);
+  setShieldActive(true);
+});
+
+shieldButton.addEventListener("pointerup", (event) => {
+  if (shieldButton.hasPointerCapture(event.pointerId)) {
+    shieldButton.releasePointerCapture(event.pointerId);
+  }
+
+  setShieldActive(false);
+  shieldButton.blur();
+});
+
+shieldButton.addEventListener("click", (event) => event.preventDefault());
+shieldButton.addEventListener("pointercancel", () => setShieldActive(false));
+shieldButton.addEventListener("lostpointercapture", () => setShieldActive(false));
+
+cloakButton.addEventListener("click", () => {
+  game.setCloakActive(!state.components.cloak.isActive);
+  updateHudDisplay();
+});
 
 towCableFireButton.addEventListener("click", () => {
   game.fireTowCable();
@@ -741,6 +780,31 @@ function updateHudDisplay() {
     _hud.tractorActive = tractorActive;
     tractorFieldStatus.textContent = tractorActive ? "Pulling" : "Idle";
     tractorFieldButton.setAttribute("aria-pressed", String(tractorActive));
+  }
+
+  const shieldActive = game.isShieldActive();
+  const shieldKey = `${shieldActive}|${Math.floor(state.components.miner.ammo)}`;
+  if (shieldKey !== _hud.shieldKey) {
+    _hud.shieldKey = shieldKey;
+    shieldCharges.textContent = String(Math.floor(state.components.miner.ammo));
+    shieldStatus.textContent = shieldActive ? "Holding" : "Idle";
+    shieldButton.setAttribute("aria-pressed", String(shieldActive));
+  }
+
+  const cloakActive = state.components.cloak.isActive;
+  const cloakKey = `${cloakActive}|${state.components.engine.powered}|${state.components.engine.fuel > 0}`;
+  if (cloakKey !== _hud.cloakKey) {
+    _hud.cloakKey = cloakKey;
+    cloakStatus.textContent = cloakActive ? "Masked" : "Offline";
+    cloakButton.textContent = cloakActive ? "Disengage Cloak" : "Engage Cloak";
+    cloakButton.setAttribute("aria-pressed", String(cloakActive));
+    cloakButton.disabled = !state.components.engine.powered || state.components.engine.fuel <= 0;
+  }
+
+  const hasLateralThrusters = state.components.engine.upgrades?.includes("lateral-thrusters-mk1") ?? false;
+  if (hasLateralThrusters !== _hud.hasLateralThrusters) {
+    _hud.hasLateralThrusters = hasLateralThrusters;
+    engineStrafeHint.hidden = !hasLateralThrusters;
   }
 
   const towCableDisplay = game.getTowCableDisplay();
@@ -3569,6 +3633,16 @@ function setTractorFieldActive(isActive) {
   }
 
   state.components.collector.isActive = isActive;
+  updateHudDisplay();
+}
+
+function setShieldActive(isActive) {
+  const shield = state.components.shield;
+  if (shield.isActive === isActive) {
+    return;
+  }
+
+  shield.isActive = isActive;
   updateHudDisplay();
 }
 

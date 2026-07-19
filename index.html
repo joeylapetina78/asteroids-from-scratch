@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260718-2008-0fd02ac" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260718-2206-313b983" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -51,7 +51,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260718-2008-0fd02ac</span>
+      <span class="build-tag">build: fresh-20260718-2206-313b983</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -165,6 +165,7 @@
                 <span>A/D rotate</span>
                 <span>W thrust</span>
                 <span>S brake</span>
+                <span id="engine-strafe-hint" hidden>Q/E strafe</span>
               </div>
             </div>
 
@@ -258,6 +259,34 @@
               </div>
               <button id="tractor-field-button" class="tractor-button" type="button">Hold Field</button>
               <span>Field: <strong id="tractor-field-status">Idle</strong></span>
+            </div>
+
+            <div class="component-panel shield-panel" data-panel-id="shield" aria-label="Shield projector component">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Shield</strong>
+                  <span>hold to absorb impacts</span>
+                </div>
+              </div>
+              <button id="shield-button" class="shield-button" type="button">Hold Shield</button>
+              <div class="system-readout" aria-live="polite">
+                <span>Charges: <strong id="shield-charges">0</strong></span>
+                <span>Field: <strong id="shield-status">Idle</strong></span>
+              </div>
+            </div>
+
+            <div class="component-panel cloak-panel" data-panel-id="cloak" aria-label="Shade cloak component">
+              <div class="component-panel-title">
+                <div>
+                  <strong>Shade Cloak</strong>
+                  <span>masks a powered signature</span>
+                </div>
+              </div>
+              <button id="cloak-button" class="cloak-button" type="button" aria-pressed="false">Engage Cloak</button>
+              <div class="system-readout" aria-live="polite">
+                <span>Status: <strong id="cloak-status">Offline</strong></span>
+                <span>Cost: <strong>+35% fuel / -22% speed</strong></span>
+              </div>
             </div>
 
             <div class="component-panel tow-cable-panel" data-panel-id="tow-cable" aria-label="Tow cable component">
@@ -689,6 +718,6 @@
 
     <div id="attention-callouts" class="attention-callouts" aria-hidden="true"></div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260718-2008-0fd02ac"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260718-2206-313b983"></script>
   </body>
 </html>

@@ -363,6 +363,8 @@ body {
 .scanner-panel,
 .miner-panel,
 .collector-panel,
+.shield-panel,
+.cloak-panel,
 .docking-panel,
 .hub-panel,
 .contract-panel,
@@ -663,6 +665,8 @@ body {
 .sell-button,
 .repair-button,
 .tractor-button,
+.shield-button,
+.cloak-button,
 .contract-button,
 .journey-button {
   border: 1px solid #4b5566;
@@ -680,6 +684,8 @@ body {
 .sell-button:hover,
 .repair-button:hover,
 .tractor-button:hover,
+.shield-button:hover,
+.cloak-button:hover,
 .contract-button:hover,
 .journey-button:hover {
   border-color: #7f8aa3;
@@ -1600,6 +1606,50 @@ body {
 
 .ledger-stream-population li {
   color: rgba(160, 223, 196, 0.68);
+}
+
+.shield-panel,
+.cloak-panel {
+  width: 220px;
+}
+
+.shield-button,
+.cloak-button {
+  min-height: 48px;
+  border: 1px solid #315a72;
+  border-radius: 6px;
+  background: #101d28;
+  color: #c9f1ff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.shield-button[aria-pressed="true"] {
+  border-color: #9ee8ff;
+  background: #123044;
+  box-shadow: 0 0 24px rgba(115, 210, 255, 0.28);
+}
+
+.cloak-panel {
+  border-color: #3d5366;
+}
+
+.cloak-button {
+  border-color: #536477;
+  color: #d5e7f7;
+}
+
+.cloak-button[aria-pressed="true"] {
+  border-color: #8aa9b8;
+  background: #1a2830;
+  color: #f1f8ff;
+  box-shadow: 0 0 20px rgba(116, 164, 184, 0.2);
+}
+
+.shield-button:disabled,
+.cloak-button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .ledger-stream-population li:nth-child(n + 8) {

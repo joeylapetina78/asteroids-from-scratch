@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260718-2008-0fd02ac";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260718-2008-0fd02ac";
+import { getNpcName } from "../npcs.js?v=fresh-20260718-2206-313b983";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260718-2206-313b983";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
@@ -213,6 +213,45 @@ export const hubServiceDefinitions = {
           tags: ["Uses crawler cargo", "Rear launcher", "Colonizes rocks"],
           purchaseMessage:
             "Moss Seeder is wired in. Put crawler stock in cargo, line up a rock behind you, and plant the weird little future.",
+        },
+        {
+          id: "shield-projector-mk1",
+          stockGroup: "restock-1",
+          componentId: "shield",
+          componentName: "Shield Projector",
+          price: 1100,
+          title: "Shield Projector Mk I",
+          description:
+            "Hold the field up to spend mining charges and burst incoming rocks, ships, and hostile fire before they touch the hull.",
+          tags: ["Hold to shield", "Uses charges", "Absorbs impacts"],
+        },
+        {
+          id: "shade-cloak-mk1",
+          stockGroup: "restock-1",
+          componentId: "cloak",
+          componentName: "Shade Cloak",
+          price: 1200,
+          title: "Shade Cloak Mk I",
+          description:
+            "Makes a powered ship read like a cold hull. Travel slower and burn more fuel while the field is active.",
+          tags: ["Masks powered signature", "Fuel hungry", "Reduced speed"],
+        },
+        {
+          id: "lateral-thrusters-mk1",
+          stockGroup: "restock-1",
+          componentId: "engine",
+          componentName: "Lateral Thruster Pods",
+          upgradeId: "lateral-thrusters-mk1",
+          price: 1050,
+          title: "Lateral Thruster Pods",
+          description:
+            "Adds Q/E side thrust for keeping a firing line without giving up your heading.",
+          tags: ["Engine upgrade", "Q/E side thrust", "Combat handling"],
+          apply: {
+            engine: {
+              lateralThrustMultiplier: 0.62,
+            },
+          },
         },
       ],
     },

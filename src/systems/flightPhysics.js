@@ -4,6 +4,7 @@ export function advanceFlightBody(body, deltaSeconds, controls, flight = {}) {
   const rotationSpeed = flight.rotationSpeed ?? 2.6;
   const thrustPower = flight.thrustPower ?? 95;
   const reverseThrustMultiplier = flight.reverseThrustMultiplier ?? 0.2;
+  const lateralThrustMultiplier = flight.lateralThrustMultiplier ?? 0;
   const maxSpeed = flight.maxSpeed ?? 105;
   const brakeDrag = flight.brakeDrag ?? 0.92;
   const spaceDrag = flight.spaceDrag ?? DEFAULT_SPACE_DRAG;
@@ -15,11 +16,18 @@ export function advanceFlightBody(body, deltaSeconds, controls, flight = {}) {
     body.angle += rotationSpeed * deltaSeconds;
   }
 
-  body.isThrusting = Boolean(controls.thrust);
-  if (body.isThrusting) {
+  body.isThrusting = Boolean(controls.thrust || controls.strafe);
+  if (controls.thrust) {
     const effectivePower = thrustPower * (controls.reverse ? reverseThrustMultiplier : 1);
     body.velocity.x += Math.cos(body.angle) * effectivePower * thrustDirection * deltaSeconds;
     body.velocity.y += Math.sin(body.angle) * effectivePower * thrustDirection * deltaSeconds;
+  }
+
+  if (controls.strafe && lateralThrustMultiplier > 0) {
+    const lateralAngle = body.angle + controls.strafe * Math.PI * 0.5;
+    const lateralPower = thrustPower * lateralThrustMultiplier;
+    body.velocity.x += Math.cos(lateralAngle) * lateralPower * deltaSeconds;
+    body.velocity.y += Math.sin(lateralAngle) * lateralPower * deltaSeconds;
   }
 
   if (controls.brake) {

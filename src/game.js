@@ -1,27 +1,27 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260718-2008-0fd02ac";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260718-2008-0fd02ac";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260718-2008-0fd02ac";
-import { Ship } from "./entities/Ship.js?v=fresh-20260718-2008-0fd02ac";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260718-2008-0fd02ac";
+import { Bullet } from "./entities/Bullet.js?v=fresh-20260718-2206-313b983";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260718-2206-313b983";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260718-2206-313b983";
+import { Ship } from "./entities/Ship.js?v=fresh-20260718-2206-313b983";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260718-2206-313b983";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260718-2008-0fd02ac";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260718-2008-0fd02ac";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260718-2008-0fd02ac";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260718-2008-0fd02ac";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260718-2008-0fd02ac";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260718-2008-0fd02ac";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260718-2008-0fd02ac";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260718-2008-0fd02ac";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260718-2008-0fd02ac";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260718-2008-0fd02ac";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260718-2008-0fd02ac";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260718-2008-0fd02ac";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260718-2008-0fd02ac";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260718-2008-0fd02ac";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260718-2008-0fd02ac";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260718-2008-0fd02ac";
-import { createGameState } from "./state/gameState.js?v=fresh-20260718-2008-0fd02ac";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260718-2008-0fd02ac";
+import { createInput } from "./systems/input.js?v=fresh-20260718-2206-313b983";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260718-2206-313b983";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260718-2206-313b983";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260718-2206-313b983";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260718-2206-313b983";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260718-2206-313b983";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260718-2206-313b983";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260718-2206-313b983";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260718-2206-313b983";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260718-2206-313b983";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260718-2206-313b983";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260718-2206-313b983";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260718-2206-313b983";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260718-2206-313b983";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260718-2206-313b983";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260718-2206-313b983";
+import { createGameState } from "./state/gameState.js?v=fresh-20260718-2206-313b983";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260718-2206-313b983";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -382,11 +382,79 @@ export class Game {
     }
 
     if (!isPowered) {
+      this.setCloakActive(false);
       this.input.clearGameKeys();
       this.fireCooldown = 0;
       this.state.components.collector.isActive = false;
       this.ship.stopThrusting();
     }
+  }
+
+  setCloakActive(isActive) {
+    const cloak = this.state.components.cloak;
+    const canCloak = cloak.installed && this.state.components.engine.powered && !this.shipDestroyed;
+    const nextState = Boolean(isActive && canCloak);
+
+    if (cloak.isActive === nextState) {
+      return;
+    }
+
+    cloak.isActive = nextState;
+    this.ship.isCloaked = nextState;
+    this.state.ledger.recordEvent(
+      nextState ? "cloak.engaged" : "cloak.disengaged",
+      { x: Math.round(this.ship.position.x), y: Math.round(this.ship.position.y) },
+      { visible: false },
+    );
+    this.onHudChange(this.state);
+  }
+
+  isShieldActive() {
+    const shield = this.state.components.shield;
+    return Boolean(
+      shield.installed &&
+        shield.isActive &&
+        this.state.components.engine.powered &&
+        !this.shipDestroyed &&
+        this.state.components.miner.ammo > 0,
+    );
+  }
+
+  isShipDetectable() {
+    return this.state.components.engine.powered && !this.state.components.cloak.isActive && !this.shipDestroyed;
+  }
+
+  getShipCollisionRadius() {
+    return this.isShieldActive() ? this.state.components.shield.radius : SHIP_COLLISION_RADIUS;
+  }
+
+  updateShield(deltaSeconds) {
+    const shield = this.state.components.shield;
+    const miner = this.state.components.miner;
+
+    if (!this.isShieldActive()) {
+      shield.isActive = false;
+      return;
+    }
+
+    miner.ammo = Math.max(0, miner.ammo - shield.chargeBurnRate * deltaSeconds);
+    if (miner.ammo === 0) {
+      shield.isActive = false;
+    }
+  }
+
+  absorbShieldImpact(impactBody, type) {
+    if (!this.isShieldActive()) {
+      return false;
+    }
+
+    this.createShieldSparks(impactBody);
+    this.state.ledger.recordEvent(
+      "shield.absorbedImpact",
+      { type, x: Math.round(this.ship.position.x), y: Math.round(this.ship.position.y) },
+      { visible: false },
+    );
+    return true;
   }
 
   cycleBeacon() {
@@ -763,13 +831,17 @@ export class Game {
     this.tetherStrainCooldown = Math.max(0, this.tetherStrainCooldown - deltaSeconds);
     const previousFuel = this.state.components.engine.fuel;
     const previousScanergy = this.state.components.scanner.scanergy;
+    const previousAmmo = this.state.components.miner.ammo;
     // Order matters: ship/world state is advanced first, then collisions and UI
     // readouts are derived from the updated world.
+    this.ship.cloakConfig = this.state.components.cloak;
+    this.ship.isCloaked = Boolean(this.state.components.cloak.isActive);
     this.ship.update(deltaSeconds, this.input);
     if (previousFuel > 0 && this.state.components.engine.fuel <= 0 && this.state.components.engine.powered) {
       this.setShipPowered(false);
     }
     this.updateBeaconRecovery(deltaSeconds);
+    this.updateShield(deltaSeconds);
     this.audio?.updateEngine({
       powered: this.state.components.engine.powered && !this.shipDestroyed,
       thrusting: this.ship.isThrusting && !this.shipDestroyed,
@@ -778,7 +850,7 @@ export class Game {
     this.updateMovementEvent();
     this.updateWorldSiteInteraction();
     this.updateZoneTitle();
-    if (this.state.components.engine.fuel !== previousFuel) {
+    if (this.state.components.engine.fuel !== previousFuel || this.state.components.miner.ammo !== previousAmmo) {
       this.onHudChange(this.state);
     }
     this.updateLowFuelEvent(previousFuel);
@@ -811,7 +883,7 @@ export class Game {
         asteroids: activeAsteroids,
         lifeforms: activeLifeforms,
         ship: this.ship,
-        shipPowered: this.state.components.engine.powered,
+        shipPowered: this.isShipDetectable(),
         disturbances: this.lifeDisturbances,
         portalPosition: lifeform.sourcePortalId
           ? this.incursionField.getActivePortals().find((portal) => portal.id === lifeform.sourcePortalId)?.position
@@ -1034,7 +1106,8 @@ export class Game {
       );
     }
 
-    if (this.input.wasPressed("KeyE") && this.nearbySite && this.state.components.docking.installed) {
+    const hasLateralThrusters = this.state.components.engine.upgrades?.includes("lateral-thrusters-mk1");
+    if (this.input.wasPressed("KeyE") && !hasLateralThrusters && this.nearbySite && this.state.components.docking.installed) {
       this.setDockedSite(this.dockedSite ? null : this.nearbySite);
     }
   }
@@ -3207,17 +3280,21 @@ export class Game {
       const shipHitAsteroid = this.asteroids.find(
         (asteroid) =>
           !hitAsteroids.has(asteroid) &&
-          circlesOverlap(this.ship.position, SHIP_COLLISION_RADIUS, asteroid.position, asteroid.radius),
+          circlesOverlap(this.ship.position, this.getShipCollisionRadius(), asteroid.position, asteroid.radius),
       );
 
       if (shipHitAsteroid) {
         const impactDamage = this.getImpactDamage(shipHitAsteroid);
 
         this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
-        this.recordShipCollision("asteroid", shipHitAsteroid, impactDamage);
-        this.damageHull(impactDamage);
-        this.triggerImpactFeedback(impactDamage);
-        this.createShipSparks(shipHitAsteroid);
+        if (this.absorbShieldImpact(shipHitAsteroid, "asteroid")) {
+          this.recordShipCollision("shielded-asteroid", shipHitAsteroid, 0);
+        } else {
+          this.recordShipCollision("asteroid", shipHitAsteroid, impactDamage);
+          this.damageHull(impactDamage);
+          this.triggerImpactFeedback(impactDamage);
+          this.createShipSparks(shipHitAsteroid);
+        }
         hitAsteroids.add(shipHitAsteroid);
         newAsteroids.push(...this.breakAsteroid(shipHitAsteroid, this.ship.velocity));
       }
@@ -3276,7 +3353,7 @@ export class Game {
         lifeform.type === "hunter" &&
         lifeform.isAlive &&
         !hitHostiles.has(lifeform) &&
-        circlesOverlap(this.ship.position, SHIP_COLLISION_RADIUS, lifeform.position, lifeform.radius),
+        circlesOverlap(this.ship.position, this.getShipCollisionRadius(), lifeform.position, lifeform.radius),
     );
 
     if (!rammingHunter) {
@@ -3287,10 +3364,14 @@ export class Game {
     const hullDamage = Math.min(16, Math.max(6, impactDamage * 0.38));
 
     this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
-    this.recordShipCollision(getHostileEnemyType(rammingHunter), rammingHunter, hullDamage);
-    this.damageHull(hullDamage);
-    this.triggerImpactFeedback(hullDamage);
-    this.createShipSparks(rammingHunter);
+    if (this.absorbShieldImpact(rammingHunter, getHostileEnemyType(rammingHunter))) {
+      this.recordShipCollision(`shielded-${getHostileEnemyType(rammingHunter)}`, rammingHunter, 0);
+    } else {
+      this.recordShipCollision(getHostileEnemyType(rammingHunter), rammingHunter, hullDamage);
+      this.damageHull(hullDamage);
+      this.triggerImpactFeedback(hullDamage);
+      this.createShipSparks(rammingHunter);
+    }
     rammingHunter.damage(rammingHunter.health);
     this.recordEnemyDestroyed(getHostileEnemyType(rammingHunter), "ramming-ship");
     this.createHunterBurst(rammingHunter, this.ship.velocity, { count: 34, sparkEvery: 2 });
@@ -3361,7 +3442,7 @@ export class Game {
         if (
           device.cooldown > 0
           || this.shipDestroyed
-          || !this.state.components.engine.powered
+          || !this.isShipDetectable()
           || distance(this.ship.position, device.position) > INCURSION_SENTINEL_RANGE
         ) {
           return;
@@ -3406,7 +3487,7 @@ export class Game {
         return;
       }
 
-      if (!circlesOverlap(shot.position, shot.radius, this.ship.position, SHIP_COLLISION_RADIUS)) {
+      if (!circlesOverlap(shot.position, shot.radius, this.ship.position, this.getShipCollisionRadius())) {
         return;
       }
 
@@ -3416,9 +3497,11 @@ export class Game {
       }
 
       this.shipHitCooldown = SHIP_HIT_COOLDOWN_SECONDS;
-      this.damageHull(shot.damage);
-      this.triggerImpactFeedback(shot.damage);
-      this.createShipSparks({ position: shot.position, velocity: shot.velocity });
+      if (!this.absorbShieldImpact({ position: shot.position, velocity: shot.velocity }, "incursion-shot")) {
+        this.damageHull(shot.damage);
+        this.triggerImpactFeedback(shot.damage);
+        this.createShipSparks({ position: shot.position, velocity: shot.velocity });
+      }
       this.state.ledger.recordEvent(
         "incursion.sentryHit",
         {
@@ -3535,7 +3618,7 @@ export class Game {
     this.threadwyrms.forEach((threadwyrm) => {
       threadwyrm.update(deltaSeconds, {
         ship: this.ship,
-        shipPowered: this.state.components.engine.powered,
+        shipPowered: this.isShipDetectable(),
         disturbances: this.lifeDisturbances,
       });
 
@@ -3557,9 +3640,11 @@ export class Game {
         },
         { visible: false },
       );
-      this.damageHull(hit.damage);
-      this.triggerImpactFeedback(hit.damage);
-      this.createShipSparks(threadwyrm);
+      if (!this.absorbShieldImpact(threadwyrm, "threadwyrm")) {
+        this.damageHull(hit.damage);
+        this.triggerImpactFeedback(hit.damage);
+        this.createShipSparks(threadwyrm);
+      }
     });
   }
 
@@ -4908,11 +4993,37 @@ export class Game {
     this.bullets.forEach((bullet) => bullet.draw(this.context, drawCamera));
     drawVector(this.context, this.ship.position, this.ship.velocity, drawCamera);
     this.scanner.draw(this.context, drawCamera, this.ship);
+    this.drawShield(drawCamera);
     this.ship.draw(this.context, drawCamera);
     this.context.restore();
 
     this.drawDamageFlash();
     this.drawViewportTitle();
+  }
+
+  createShieldSparks(impactBody) {
+    const angleToImpact = Math.atan2(impactBody.position.y - this.ship.position.y, impactBody.position.x - this.ship.position.x);
+    const radius = this.getShipCollisionRadius();
+
+    for (let index = 0; index < 18; index += 1) {
+      const angle = angleToImpact + (Math.random() - 0.5) * 1.15;
+      const speed = 85 + Math.random() * 185;
+      this.particles.push({
+        type: "spark",
+        position: {
+          x: this.ship.position.x + Math.cos(angleToImpact) * radius,
+          y: this.ship.position.y + Math.sin(angleToImpact) * radius,
+        },
+        velocity: {
+          x: Math.cos(angle) * speed,
+          y: Math.sin(angle) * speed,
+        },
+        color: index % 3 === 0 ? "#ffffff" : "#73d2ff",
+        size: 1 + Math.random() * 2.4,
+        life: 0.22 + Math.random() * 0.35,
+        maxLife: 0.6,
+      });
+    }
   }
 
   drawMossHarvester(camera = this.camera, canvas = this.canvas) {
@@ -5763,6 +5874,26 @@ export class Game {
     this.context.lineWidth = 2;
     this.context.beginPath();
     this.context.arc(screenX, screenY, this.getCollectorRadius(), 0, Math.PI * 2);
+    this.context.fill();
+    this.context.stroke();
+    this.context.restore();
+  }
+
+  drawShield(camera = this.camera) {
+    if (!this.isShieldActive()) {
+      return;
+    }
+
+    const screenX = this.ship.position.x - camera.x;
+    const screenY = this.ship.position.y - camera.y;
+    this.context.save();
+    this.context.strokeStyle = "rgba(115, 210, 255, 0.82)";
+    this.context.fillStyle = "rgba(115, 210, 255, 0.08)";
+    this.context.lineWidth = 2;
+    this.context.setLineDash([6, 6]);
+    this.context.lineDashOffset = -performance.now() * 0.035;
+    this.context.beginPath();
+    this.context.arc(screenX, screenY, this.getShipCollisionRadius(), 0, Math.PI * 2);
     this.context.fill();
     this.context.stroke();
     this.context.restore();
