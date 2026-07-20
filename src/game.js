@@ -1,31 +1,31 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260719-2101-381ce20";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260719-2101-381ce20";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260719-2101-381ce20";
-import { Ship } from "./entities/Ship.js?v=fresh-20260719-2101-381ce20";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260719-2101-381ce20";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260719-2120-67e79b8";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260719-2120-67e79b8";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260719-2120-67e79b8";
+import { Ship } from "./entities/Ship.js?v=fresh-20260719-2120-67e79b8";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260719-2120-67e79b8";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260719-2101-381ce20";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260719-2101-381ce20";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260719-2101-381ce20";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260719-2101-381ce20";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260719-2101-381ce20";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260719-2101-381ce20";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260719-2101-381ce20";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260719-2101-381ce20";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260719-2101-381ce20";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260719-2101-381ce20";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260719-2101-381ce20";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260719-2101-381ce20";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260719-2101-381ce20";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260719-2101-381ce20";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-2101-381ce20";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260719-2101-381ce20";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260719-2101-381ce20";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260719-2101-381ce20";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260719-2101-381ce20";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260719-2101-381ce20";
-import { createGameState } from "./state/gameState.js?v=fresh-20260719-2101-381ce20";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-2101-381ce20";
+import { createInput } from "./systems/input.js?v=fresh-20260719-2120-67e79b8";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260719-2120-67e79b8";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260719-2120-67e79b8";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260719-2120-67e79b8";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260719-2120-67e79b8";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260719-2120-67e79b8";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260719-2120-67e79b8";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260719-2120-67e79b8";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260719-2120-67e79b8";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260719-2120-67e79b8";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260719-2120-67e79b8";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260719-2120-67e79b8";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260719-2120-67e79b8";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260719-2120-67e79b8";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-2120-67e79b8";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260719-2120-67e79b8";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260719-2120-67e79b8";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260719-2120-67e79b8";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260719-2120-67e79b8";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260719-2120-67e79b8";
+import { createGameState } from "./state/gameState.js?v=fresh-20260719-2120-67e79b8";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-2120-67e79b8";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -3330,6 +3330,7 @@ export class Game {
     }
 
     this.unarmedFireAttempts = 0;
+    this.setCloakActive(false);
     miner.ammo -= AMMO_PER_SHOT;
     this.state.ledger.recordEvent(
       "weapon.fired",
@@ -3602,6 +3603,7 @@ export class Game {
 
     this.incursionShots.push({
       portalId: portal.id,
+      sourceType: "rift-sentry",
       position: { ...device.position },
       velocity: {
         x: direction.x * INCURSION_SENTINEL_SHOT_SPEED,
@@ -3622,6 +3624,7 @@ export class Game {
       const angle = (Math.PI * 2 * index) / shotCount + (device.pulse ?? 0) * 0.25;
       this.incursionShots.push({
         portalId: portal.id,
+        sourceType: "rift-mine",
         position: { ...device.position },
         velocity: {
           x: Math.cos(angle) * INCURSION_RIFT_MINE_SHOT_SPEED,
@@ -3639,12 +3642,33 @@ export class Game {
   }
 
   updateIncursionShots(deltaSeconds) {
+    const destroyedAsteroids = new Set();
+    const asteroidFragments = [];
+
     this.incursionShots.forEach((shot) => {
       shot.age += deltaSeconds;
       shot.position.x += shot.velocity.x * deltaSeconds;
       shot.position.y += shot.velocity.y * deltaSeconds;
 
       if (shot.age >= shot.maxAge || this.shipDestroyed) {
+        return;
+      }
+
+      const hitAsteroid = this.asteroids.find((asteroid) =>
+        circlesOverlap(shot.position, shot.radius, asteroid.position, asteroid.radius),
+      );
+
+      if (hitAsteroid) {
+        shot.age = shot.maxAge;
+
+        if (shot.sourceType === "fighter") {
+          if (!destroyedAsteroids.has(hitAsteroid)) {
+            destroyedAsteroids.add(hitAsteroid);
+            asteroidFragments.push(...this.breakAsteroid(hitAsteroid, shot.velocity));
+          }
+        } else {
+          this.createIncursionShotImpactSparks(shot);
+        }
         return;
       }
 
@@ -3672,6 +3696,11 @@ export class Game {
         { visible: false },
       );
     });
+
+    if (destroyedAsteroids.size > 0) {
+      this.asteroids = this.asteroids.filter((asteroid) => !destroyedAsteroids.has(asteroid));
+      this.asteroids.push(...asteroidFragments);
+    }
 
     this.incursionShots = this.incursionShots.filter((shot) => shot.age < shot.maxAge);
   }
@@ -4719,6 +4748,30 @@ export class Game {
         drag: 0.95,
         life: 0.2 + Math.random() * 0.34,
         maxLife: 0.54,
+      });
+    }
+  }
+
+  createIncursionShotImpactSparks(shot) {
+    const heading = Math.atan2(shot.velocity.y, shot.velocity.x);
+    const color = shot.color ?? "#ff74ae";
+
+    for (let index = 0; index < 9; index += 1) {
+      const angle = heading + Math.PI + (Math.random() - 0.5) * 1.45;
+      const speed = 40 + Math.random() * 130;
+
+      this.particles.push({
+        type: "spark",
+        position: { ...shot.position },
+        velocity: {
+          x: Math.cos(angle) * speed,
+          y: Math.sin(angle) * speed,
+        },
+        color,
+        size: 1 + Math.random() * 2.1,
+        drag: 0.95,
+        life: 0.16 + Math.random() * 0.2,
+        maxLife: 0.36,
       });
     }
   }

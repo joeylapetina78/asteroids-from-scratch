@@ -1,5 +1,5 @@
 import { createRandom, hashNumbers } from "./random.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260719-2101-381ce20";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260719-2120-67e79b8";
 
 // Terrain is the flight-feel layer. Zones say what kind of place this is;
 // terrain says how a chunk should arrange rocks inside that place.
