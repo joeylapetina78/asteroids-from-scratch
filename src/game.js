@@ -1,31 +1,31 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260719-2003-2d72582";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260719-2003-2d72582";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260719-2003-2d72582";
-import { Ship } from "./entities/Ship.js?v=fresh-20260719-2003-2d72582";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260719-2003-2d72582";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260719-2051-2f47cca";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260719-2051-2f47cca";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260719-2051-2f47cca";
+import { Ship } from "./entities/Ship.js?v=fresh-20260719-2051-2f47cca";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260719-2051-2f47cca";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260719-2003-2d72582";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260719-2003-2d72582";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260719-2003-2d72582";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260719-2003-2d72582";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260719-2003-2d72582";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260719-2003-2d72582";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260719-2003-2d72582";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260719-2003-2d72582";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260719-2003-2d72582";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260719-2003-2d72582";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260719-2003-2d72582";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260719-2003-2d72582";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260719-2003-2d72582";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260719-2003-2d72582";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-2003-2d72582";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260719-2003-2d72582";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260719-2003-2d72582";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260719-2003-2d72582";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260719-2003-2d72582";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260719-2003-2d72582";
-import { createGameState } from "./state/gameState.js?v=fresh-20260719-2003-2d72582";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-2003-2d72582";
+import { createInput } from "./systems/input.js?v=fresh-20260719-2051-2f47cca";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260719-2051-2f47cca";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260719-2051-2f47cca";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260719-2051-2f47cca";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260719-2051-2f47cca";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260719-2051-2f47cca";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260719-2051-2f47cca";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260719-2051-2f47cca";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260719-2051-2f47cca";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260719-2051-2f47cca";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260719-2051-2f47cca";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260719-2051-2f47cca";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260719-2051-2f47cca";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260719-2051-2f47cca";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-2051-2f47cca";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260719-2051-2f47cca";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260719-2051-2f47cca";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260719-2051-2f47cca";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260719-2051-2f47cca";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260719-2051-2f47cca";
+import { createGameState } from "./state/gameState.js?v=fresh-20260719-2051-2f47cca";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-2051-2f47cca";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -401,6 +401,7 @@ export class Game {
     if (!isPowered) {
       this.setCloakActive(false);
       this.input.clearGameKeys();
+      this.ship.stopBoosting();
       this.fireCooldown = 0;
       this.state.components.collector.isActive = false;
       this.ship.stopThrusting();
@@ -903,6 +904,7 @@ export class Game {
     const previousFuel = this.state.components.engine.fuel;
     const previousScanergy = this.state.components.scanner.scanergy;
     const previousAmmo = this.state.components.miner.ammo;
+    this.tryForwardBoost(directInputSuspended);
     // Order matters: ship/world state is advanced first, then collisions and UI
     // readouts are derived from the updated world.
     this.ship.cloakConfig = this.state.components.cloak;
@@ -1188,6 +1190,50 @@ export class Game {
     if (this.input.wasPressed("KeyE") && !hasLateralThrusters && this.nearbySite && this.state.components.docking.installed) {
       this.setDockedSite(this.dockedSite ? null : this.nearbySite);
     }
+  }
+
+  tryForwardBoost(directInputSuspended) {
+    const wantsBoost = this.input.wasPressed("ShiftLeft") || this.input.wasPressed("ShiftRight");
+
+    if (!wantsBoost || directInputSuspended || this.dockedSite || this.shipDestroyed) {
+      return;
+    }
+
+    const maxDistance = this.getVisibleForwardBoostDistance();
+    if (!this.ship.startForwardBoost(maxDistance)) {
+      return;
+    }
+
+    this.state.ledger.recordEvent(
+      "engine.boosted",
+      {
+        maxDistance: Math.round(maxDistance),
+        fuelCost: this.ship.getBoostFuelCost(),
+      },
+      { visible: false },
+    );
+  }
+
+  getVisibleForwardBoostDistance() {
+    const screenX = this.ship.position.x - this.camera.x;
+    const screenY = this.ship.position.y - this.camera.y;
+    const directionX = Math.cos(this.ship.angle);
+    const directionY = Math.sin(this.ship.angle);
+    const horizontalDistance = directionX > 0
+      ? (this.canvas.width - screenX) / directionX
+      : directionX < 0
+        ? -screenX / directionX
+        : Infinity;
+    const verticalDistance = directionY > 0
+      ? (this.canvas.height - screenY) / directionY
+      : directionY < 0
+        ? -screenY / directionY
+        : Infinity;
+    const visibleAhead = Math.max(0, Math.min(horizontalDistance, verticalDistance));
+
+    // Leave a clear margin at the viewport edge so Shift remains a dash, not
+    // a blind launch into space the player cannot inspect yet.
+    return clamp(visibleAhead * 0.62, 150, 420);
   }
 
   updateMovementEvent() {

@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260719-2003-2d72582";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260719-2003-2d72582";
+import { getNpcName } from "../npcs.js?v=fresh-20260719-2051-2f47cca";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260719-2051-2f47cca";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
@@ -251,6 +251,27 @@ export const hubServiceDefinitions = {
           apply: {
             engine: {
               lateralThrustMultiplier: 0.62,
+            },
+          },
+        },
+        {
+          id: "forward-boost-mk1",
+          stockGroup: "restock-1",
+          componentId: "engine",
+          componentName: "Forward Boost Drive",
+          upgradeId: "forward-boost-mk1",
+          price: 1250,
+          title: "Burst Drive Mk I",
+          description:
+            "Adds a Shift-key forward dash. It spends fuel for a fast, capped burst that stays within the space ahead of your current view.",
+          tags: ["Engine upgrade", "Shift dash", "Combat escape"],
+          apply: {
+            engine: {
+              boostPower: 520,
+              boostMaxSpeed: 265,
+              boostFuelCost: 18,
+              boostCooldownSeconds: 1.2,
+              boostInitialImpulse: 150,
             },
           },
         },

@@ -1,10 +1,14 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260719-2003-2d72582";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260719-2051-2f47cca";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_THRUST_POWER = 95;
 const DEFAULT_REVERSE_THRUST_MULTIPLIER = 0.2;
 const DEFAULT_FUEL_BURN_RATE = 6;
 const DEFAULT_MAX_SPEED = 105;
+const DEFAULT_BOOST_POWER = 520;
+const DEFAULT_BOOST_MAX_SPEED = 265;
+const DEFAULT_BOOST_FUEL_COST = 18;
+const DEFAULT_BOOST_COOLDOWN_SECONDS = 1.2;
 const SHIP_FRAMES = {
   "yard-skiff": {
     points: [
@@ -72,15 +76,20 @@ export class Ship {
     this.isThrusting = false;
     this.isCloaked = false;
     this.cloakConfig = null;
+    this.boostDistanceRemaining = 0;
+    this.boostCooldown = 0;
   }
 
   update(deltaSeconds, input) {
+    this.boostCooldown = Math.max(0, this.boostCooldown - deltaSeconds);
     const canThrust = this.engine.powered && input.isDown("KeyW") && this.engine.fuel > 0;
     const canStrafe = this.engine.powered && this.engine.fuel > 0 && this.hasLateralThrusters();
+    const isBoosting = this.engine.powered && this.engine.fuel > 0 && this.boostDistanceRemaining > 0;
     if (canThrust || (canStrafe && (input.isDown("KeyQ") || input.isDown("KeyE")))) {
       this.engine.fuel = Math.max(0, this.engine.fuel - this.getFuelBurnRate() * deltaSeconds);
     }
 
+    const startPosition = { ...this.position };
     advanceFlightBody(
       this,
       deltaSeconds,
@@ -90,19 +99,46 @@ export class Ship {
         brake: this.engine.powered && input.isDown("KeyS"),
         reverse: this.engine.thrustMode === "reverse",
         strafe: canStrafe ? (input.isDown("KeyQ") ? -1 : input.isDown("KeyE") ? 1 : 0) : 0,
+        boost: isBoosting,
       },
       {
         rotationSpeed: this.getRotationSpeed(),
         thrustPower: this.getThrustPower(),
         reverseThrustMultiplier: this.getReverseThrustMultiplier(),
         lateralThrustMultiplier: this.getLateralThrustMultiplier(),
+        boostPower: this.getBoostPower(),
+        boostMaxSpeed: this.getBoostMaxSpeed(),
         maxSpeed: this.getMaxSpeed(),
       },
     );
+
+    if (isBoosting) {
+      this.boostDistanceRemaining = Math.max(0, this.boostDistanceRemaining - Math.hypot(
+        this.position.x - startPosition.x,
+        this.position.y - startPosition.y,
+      ));
+    }
+  }
+
+  startForwardBoost(maxDistance) {
+    if (!this.hasForwardBoost() || !this.engine.powered || this.engine.fuel < this.getBoostFuelCost() || this.boostCooldown > 0) {
+      return false;
+    }
+
+    this.engine.fuel = Math.max(0, this.engine.fuel - this.getBoostFuelCost());
+    this.boostDistanceRemaining = Math.max(0, maxDistance);
+    this.boostCooldown = this.getBoostCooldownSeconds();
+    this.velocity.x += Math.cos(this.angle) * this.getBoostInitialImpulse();
+    this.velocity.y += Math.sin(this.angle) * this.getBoostInitialImpulse();
+    return true;
   }
 
   stopThrusting() {
     this.isThrusting = false;
+  }
+
+  stopBoosting() {
+    this.boostDistanceRemaining = 0;
   }
 
   getRotationSpeed() {
@@ -129,6 +165,30 @@ export class Ship {
 
   hasLateralThrusters() {
     return this.engine.upgrades?.includes("lateral-thrusters-mk1") ?? false;
+  }
+
+  hasForwardBoost() {
+    return this.engine.upgrades?.includes("forward-boost-mk1") ?? false;
+  }
+
+  getBoostPower() {
+    return this.hasForwardBoost() ? (this.engine.boostPower ?? DEFAULT_BOOST_POWER) : 0;
+  }
+
+  getBoostMaxSpeed() {
+    return this.hasForwardBoost() ? (this.engine.boostMaxSpeed ?? DEFAULT_BOOST_MAX_SPEED) : this.getMaxSpeed();
+  }
+
+  getBoostFuelCost() {
+    return this.engine.boostFuelCost ?? DEFAULT_BOOST_FUEL_COST;
+  }
+
+  getBoostCooldownSeconds() {
+    return this.engine.boostCooldownSeconds ?? DEFAULT_BOOST_COOLDOWN_SECONDS;
+  }
+
+  getBoostInitialImpulse() {
+    return this.engine.boostInitialImpulse ?? 150;
   }
 
   getLateralThrustMultiplier() {
