@@ -1,8 +1,8 @@
-# Project Map
+﻿# Project Map
 
-This document is the re-entry map for the Asteroids RPG prototype. The game is a custom browser Canvas project, not p5.js or a larger framework. The core idea is a space simulation where the player navigates an institutional world — banks, registries, mining authorities, employers, patrol organizations, factions — through documents, contracts, ships, and components. Mining is one profession within that world, not the definition of it.
+This document is the re-entry map for the Asteroids RPG prototype. The game is a custom browser Canvas project, not p5.js or a larger framework. The core idea is a space simulation where the player navigates an institutional world  banks, registries, mining authorities, employers, patrol organizations, factions  through documents, contracts, ships, and components. Mining is one profession within that world, not the definition of it.
 
-See [README.md](../README.md) for the design direction and run instructions. See [docs/agent-map.md](agent-map.md) for the short future-agent re-entry map. See [docs/world-structure.md](world-structure.md) for the Region/Zone split. See [docs/authority-model.md](authority-model.md) for the Place/Actor/Power/Right/Action authority spine. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status. See [docs/resource-design.md](resource-design.md) for the resource family taxonomy and scarcity model. See [docs/lifeform-design.md](lifeform-design.md) for ambient ecology and future creature direction.
+See [README.md](../README.md) for the design direction and run instructions. See [docs/agent-map.md](agent-map.md) for the short future-agent re-entry map. See [docs/world-structure.md](world-structure.md) for the Region/Zone split. See [docs/authority-model.md](authority-model.md) for the Place/Actor/Power/Right/Action authority spine. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status. See [docs/resource-design.md](resource-design.md) for the resource family taxonomy and scarcity model. See [docs/lifeform-design.md](lifeform-design.md) for ambient ecology and future creature direction. See [docs/ship-workbench-roadmap.md](ship-workbench-roadmap.md) for the physical-console and responsive-layout direction. See [docs/comms-attention-roadmap.md](comms-attention-roadmap.md) for Journey, viewport comms, and attention-target direction. See [docs/tag-registry.md](tag-registry.md) before authoring a world tag.
 
 ## How The Project Runs
 
@@ -19,10 +19,10 @@ python -m http.server 8123
 
 The game is split into four rough layers:
 
-1. **Page shell and controls** — HTML panels, buttons, readouts, radio controls, and canvases.
-2. **App wiring** — `main.js` creates shared state, starts systems, updates UI, persists panel layout, reacts to button clicks, and handles global event listeners (tow chatter, hub authority messages, Rook follow-up offers).
-3. **Game simulation** — `Game` updates the ship, camera, asteroids, lifeforms, bullets, pickups, scanner, docking, particles, and collisions.
-4. **Small systems and entities** — focused modules for asteroids, resources, lifeforms, camera, scanner, processor physics, world zones, sites, and input.
+1. **Page shell and controls**  HTML panels, buttons, readouts, radio controls, and canvases.
+2. **App wiring**  `main.js` creates shared state, starts systems, updates UI, persists panel layout, reacts to button clicks, and handles global event listeners (tow chatter, hub authority messages, Rook follow-up offers).
+3. **Game simulation**  `Game` updates the ship, camera, asteroids, lifeforms, bullets, pickups, scanner, docking, particles, and collisions.
+4. **Small systems and entities**  focused modules for asteroids, resources, lifeforms, camera, scanner, processor physics, world zones, sites, and input.
 
 The ship position is world-space. The viewport camera follows the ship and converts world-space entities into screen-space drawing.
 
@@ -45,9 +45,9 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/systems/hubServices.js](../src/systems/hubServices.js) | Resolves docked hub service definitions by site ID. |
 | [src/systems/hubServiceBehaviors.js](../src/systems/hubServiceBehaviors.js) | Maps hub service types to their UI behavior (which panel to open, what to show). |
 | [src/systems/hubServiceContracts.js](../src/systems/hubServiceContracts.js) | Chooses which contract a service should offer next (mission-first, prerequisites, repeatables, emergency finance). |
-| [src/systems/commsDirector.js](../src/systems/commsDirector.js) | Routes non-mission speech — hub authority, tow drivers, service NPCs, world NPCs — into the comms display with a priority queue. |
+| [src/systems/commsDirector.js](../src/systems/commsDirector.js) | Routes non-mission speech  hub authority, tow drivers, service NPCs, world NPCs  into the comms display with a priority queue. |
 | [src/systems/eventLedger.js](../src/systems/eventLedger.js) | Records meaningful events and derives compact career/world stats. Central memory spine. |
-| [src/systems/encounterDirector.js](../src/systems/encounterDirector.js) | Session pressure score from ledger stats; paces incursion wave size/cadence and portal gaps. Not the story director — see [docs/encounter-director-roadmap.md](encounter-director-roadmap.md). |
+| [src/systems/encounterDirector.js](../src/systems/encounterDirector.js) | Session pressure score from ledger stats; paces incursion wave size/cadence and portal gaps. Not the story director  see [docs/encounter-director-roadmap.md](encounter-director-roadmap.md). |
 | [src/systems/accounts.js](../src/systems/accounts.js) | Cash account bridge. New credit changes go through this system while `state.credits` remains a compatibility mirror for current UI. |
 | [src/systems/obligations.js](../src/systems/obligations.js) | Loan/debt obligation records. Loan contracts create obligations, Finance can pay them down, and the old debt summary is derived from them. |
 | [src/systems/contractRules.js](../src/systems/contractRules.js) | Maps ledger events to contract fulfillment checks. Seed for declarative contract terms. |
@@ -85,12 +85,12 @@ npm run validate:content
 
 ```
 state = {
-  ledger,           // eventLedger — event recording, stats, signals
+  ledger,           // eventLedger  event recording, stats, signals
   journey,          // mission state, flags, messages, currentStepId
   contracts,        // { currentContractId, records }
   ui: {
     panels,         // panel availability (from componentRegistry)
-    attention,      // { targets } — UI highlight targets
+    attention,      // { targets }  UI highlight targets
   },
   hubServices,      // { unlocked, flags }
   character,        // { controlledPersonEntityId, currentLicenseId, activeHullVin }
@@ -105,11 +105,11 @@ state = {
 }
 ```
 
-`state.components` contains only physical ship hardware. UI state lives under `state.ui`. Legal/document compatibility state lives under `state.legal`. The more general world model lives under `state.worldRecords`: entities, documents, places, authority grants, registries, and relationships. Pilot money now lives in `state.accounts`, with `state.credits` kept as a compatibility mirror for existing UI code. Panel availability is `state.ui.panels` — not a ship system.
+`state.components` contains only physical ship hardware. UI state lives under `state.ui`. Legal/document compatibility state lives under `state.legal`. The more general world model lives under `state.worldRecords`: entities, documents, places, authority grants, registries, and relationships. Pilot money now lives in `state.accounts`, with `state.credits` kept as a compatibility mirror for existing UI code. Panel availability is `state.ui.panels`  not a ship system.
 
 ## Mission Beat System
 
-Missions are authored as a list of **beats** — discrete story units each with an objective, help text, entry actions, event-driven transitions, and an optional `onEnd` hook.
+Missions are authored as a list of **beats**  discrete story units each with an objective, help text, entry actions, event-driven transitions, and an optional `onEnd` hook.
 
 ```js
 {
@@ -129,7 +129,7 @@ Missions are authored as a list of **beats** — discrete story units each with 
       once: true,
     }
   ],
-  considerations: [...]   // local to this beat (rare — prefer mission-level)
+  considerations: [...]   // local to this beat (rare  prefer mission-level)
 }
 ```
 
@@ -148,9 +148,9 @@ Missions are authored as a list of **beats** — discrete story units each with 
 }
 ```
 
-`missionRunner.js` builds a `beatIndexById` map and filters active considerations by current beat index on every event. Beat order in the `beats` array defines the range — the linear index is authoritative.
+`missionRunner.js` builds a `beatIndexById` map and filters active considerations by current beat index on every event. Beat order in the `beats` array defines the range  the linear index is authoritative.
 
-**`onEnd`** fires when a transition resolves with no `nextStepId` — the intentional chain end. Existing missions put `completeMission` in transition actions directly; `onEnd` is available as a cleaner semantic slot.
+**`onEnd`** fires when a transition resolves with no `nextStepId`  the intentional chain end. Existing missions put `completeMission` in transition actions directly; `onEnd` is available as a cleaner semantic slot.
 
 Backward compatibility: `missionRunner.js` reads `beats ?? steps` and `startBeatId ?? startStepId` so older mission files still load.
 
@@ -158,32 +158,32 @@ Backward compatibility: `missionRunner.js` reads `beats ?? steps` and `startBeat
 
 ### chapter-1-yard-exchange-delivery (Interview)
 
-13 beats: `show-hull` → `drag-panels` → `file-license` → `offer-contract` → `show-viewport` → `show-scanner` → `try-scanner` → `show-engine` → `power-on` → `first-thrust` → `find-yard-exchange` → `dock-yard-exchange` → `complete-delivery-contract`
+13 beats: `show-hull`  `drag-panels`  `file-license`  `offer-contract`  `show-viewport`  `show-scanner`  `try-scanner`  `show-engine`  `power-on`  `first-thrust`  `find-yard-exchange`  `dock-yard-exchange`  `complete-delivery-contract`
 
 Beats `try-scanner`, `power-on`, `first-thrust`, and `find-yard-exchange` all shortcut directly to `dock-yard-exchange` on `site.nearby` or `site.enteredViewport` so a player who reaches Yard Exchange early doesn't get stuck mid-tutorial.
 
-Mission considerations: 9 total — 2 scoped to `drag-panels` (panel drag feedback), 7 scoped from `show-scanner` through mission end (flight commentary: rocks, haulers, zone exits, wrong hub docking).
+Mission considerations: 9 total  2 scoped to `drag-panels` (panel drag feedback), 7 scoped from `show-scanner` through mission end (flight commentary: rocks, haulers, zone exits, wrong hub docking).
 
 ### chapter-1-new-ship (A New Ship?)
 
-7 beats: `find-barvis` → `show-merchant` → `offer-loan` → `read-loan-contract` → `return-to-barvis` → `buy-starter-ship` → `find-rook`
+7 beats: `find-barvis`  `show-merchant`  `offer-loan`  `read-loan-contract`  `return-to-barvis`  `buy-starter-ship`  `find-rook`
 
 No mission-level considerations. This mission is primarily hub service navigation.
 
 ### chapter-1-red-work (First Red Run)
 
-2 beats: `offer-red-contract` → `mine-red-resources`
+2 beats: `offer-red-contract`  `mine-red-resources`
 
-Mission considerations: 7 items scoped from `mine-red-resources` through end — mining feedback, low fuel warnings, arm miner reminder, red teeth zone warning, hunter commentary, stranded dispatch, tow events.
+Mission considerations: 7 items scoped from `mine-red-resources` through end  mining feedback, low fuel warnings, arm miner reminder, red teeth zone warning, hunter commentary, stranded dispatch, tow events.
 
 Completion requires an explicit acknowledgement ("Got It") so the message stays up until dismissed rather than auto-clearing.
 
 ## Global Tow Chatter
 
-The tow system is global — not tied to any mission. Three distinct voices in `main.js`:
+The tow system is global  not tied to any mission. Three distinct voices in `main.js`:
 
-- `setTowAvailable()` — polls stranded state each frame; the tow driver calls through with an offer and an accept button when the ship is stranded
-- `updateTowChatter()` — ledger-event driven; the same driver speaks on `tow.attached` and `ship.towed`
+- `setTowAvailable()`  polls stranded state each frame; the tow driver calls through with an offer and an accept button when the ship is stranded
+- `updateTowChatter()`  ledger-event driven; the same driver speaks on `tow.attached` and `ship.towed`
 
 Driver name is derived from `TOW_DRIVER_NAMES` using a hash of `siteId.length + cost` so the same driver name appears across all three moments of a tow.
 
@@ -191,28 +191,28 @@ Driver name is derived from `TOW_DRIVER_NAMES` using a hash of `siteId.length + 
 
 The current compatibility pass lives in `state.legal` and `legalRecords.js`:
 
-- Pilot license (RTC–109–P provisional, issued by Reach Transit Commission)
+- Pilot license (RTC109P provisional, issued by Reach Transit Commission)
 - Current ship legal summary (VIN, title holder, registration status)
 - Visited zone log (foundation for zone enforcement)
 - Paperwork records (filed documents by component ID)
 
 The intended direction is a general document framework where documents are issued by institutions, held by entities (people, ships, companies), apply to assets by VIN or ID, grant permissions, create obligations, expire, and can be inspected by hubs or patrols. `state.worldRecords` is the first shared record store for that shape. `state.legal` remains a compatibility summary for current UI/gameplay code, while pilot licenses and ship purchases now also write entity/document/relationship records.
 
-`paperworkInspections.js` is the first reader of that record layer. When a hub reviews a docked ship, it uses the same general inspection system that future patrols, employers, repo crews, companies, NPCs, or players can use. The report comes from both compatibility state and `worldRecords`: what ship VIN was presented, which pilot license is held, which documents apply to the ship, whether title is lien-held, and whether a flight registration exists. The interaction is still automatic for now, but the data shape is ready for future “click the VIN / click your license / present registration” flows.
+`paperworkInspections.js` is the first reader of that record layer. When a hub reviews a docked ship, it uses the same general inspection system that future patrols, employers, repo crews, companies, NPCs, or players can use. The report comes from both compatibility state and `worldRecords`: what ship VIN was presented, which pilot license is held, which documents apply to the ship, whether title is lien-held, and whether a flight registration exists. The interaction is still automatic for now, but the data shape is ready for future click the VIN / click your license / present registration flows.
 
-The RTC issues flight licenses. Rook Industries holds a mining permit (RI–7A3). The player's mining rights flow through Rook's permit. Zone violations are logged to `state.legal` and fire visible ledger events for future enforcement systems.
+The RTC issues flight licenses. Rook Industries holds a mining permit (RI7A3). The player's mining rights flow through Rook's permit. Zone violations are logged to `state.legal` and fire visible ledger events for future enforcement systems.
 
 The next authority layer lives in `state.worldRecords.places` and `state.worldRecords.authorityGrants`. It uses the vocabulary in [docs/authority-model.md](authority-model.md): Place, Actor, Power, Right, and Action. `authoritySeeds.js` currently turns `worldRegions.js` region rights into first-class authority grants. The rule checker is not yet the mandatory gate for contracts, docking, mining, or patrols, but new systems should prefer asking `canActorDoAction()` over adding player-only flags.
 
 ## Contract System
 
-`contractManager.js` listens to ledger events and updates contract records. Fulfillment logic lives in `contractRules.js` (first step toward declarative contract predicates). Contract lifecycle: offered → accepted → fulfilled → paid.
+`contractManager.js` listens to ledger events and updates contract records. Fulfillment logic lives in `contractRules.js` (first step toward declarative contract predicates). Contract lifecycle: offered  accepted  fulfilled  paid.
 
 Current contracts in `chapterOneContracts.js`:
 
-- `rook-yard-exchange-delivery` — delivery contract, requires VIN `YRDSKF-01-7A3` docked at Yard Exchange, pays 500 credits
-- `mako-starter-ship-loan` — loan, deposits 20,000 credits, tracks debt state
-- `rook-red-resource-run` — repeatable resource delivery, requires 5 red units at Yard Exchange, pays 100 credits/unit
+- `rook-yard-exchange-delivery`  delivery contract, requires VIN `YRDSKF-01-7A3` docked at Yard Exchange, pays 500 credits
+- `mako-starter-ship-loan`  loan, deposits 20,000 credits, tracks debt state
+- `rook-red-resource-run`  repeatable resource delivery, requires 5 red units at Yard Exchange, pays 100 credits/unit
 
 ## Hub Services
 
@@ -224,7 +224,7 @@ Current Yard Exchange services: Rook Industries, Yard Exchange Shipyard (Barvis)
 
 ### Ship
 
-[src/entities/Ship.js](../src/entities/Ship.js) — `position`, `velocity`, `angle`, reference to engine component state, reference to `state.ship` for frame/shape. Power from `state.components.engine.powered`. Starter frame is `yard-skiff`.
+[src/entities/Ship.js](../src/entities/Ship.js)  `position`, `velocity`, `angle`, reference to engine component state, reference to `state.ship` for frame/shape. Power from `state.components.engine.powered`. Starter frame is `yard-skiff`.
 
 ### Component Dictionary
 
@@ -245,25 +245,25 @@ Non-hardware panels (Contract, Merchant, Hub, World) are UI panels with availabi
 
 ### Asteroid
 
-[src/entities/Asteroid.js](../src/entities/Asteroid.js) — `origin`, `position`, `velocity`, `radius`, `tier`, `color`, `resources`, irregular outline `points`. Spring back toward origin to keep fields locally stable.
+[src/entities/Asteroid.js](../src/entities/Asteroid.js)  `origin`, `position`, `velocity`, `radius`, `tier`, `color`, `resources`, irregular outline `points`. Spring back toward origin to keep fields locally stable.
 
 ### NPC Ship
 
-[src/entities/NpcShip.js](../src/entities/NpcShip.js) — Route-following ship actors. Current haulers follow hub-to-hub routes, avoid rocks, can take damage. Foundation for traders, escorts, piracy, and patrol.
+[src/entities/NpcShip.js](../src/entities/NpcShip.js)  Route-following ship actors. Current haulers follow hub-to-hub routes, avoid rocks, can take damage. Foundation for traders, escorts, piracy, and patrol.
 
 ### Lifeform
 
-[src/entities/Lifeform.js](../src/entities/Lifeform.js) — `hunter`, `threadling`, `grazer`, `skitter`, `lantern`. Steering behavior: seek, flee, separate, align, cohere, wander, orbit.
+[src/entities/Lifeform.js](../src/entities/Lifeform.js)  `hunter`, `threadling`, `grazer`, `skitter`, `lantern`. Steering behavior: seek, flee, separate, align, cohere, wander, orbit.
 
-[src/entities/Threadwyrm.js](../src/entities/Threadwyrm.js) — segmented route-based megafauna that follows asteroid corridor loops. It is not a normal point-steering `Lifeform`; it is a larger world creature that can strike if the ship cuts too close through its body.
+[src/entities/Threadwyrm.js](../src/entities/Threadwyrm.js)  segmented route-based megafauna that follows asteroid corridor loops. It is not a normal point-steering `Lifeform`; it is a larger world creature that can strike if the ship cuts too close through its body.
 
-[src/entities/DriftMouth.js](../src/entities/DriftMouth.js) — rare anomaly-scale life/event. It stays nearly invisible at range, reveals as a circular distortion when approached, and gently pulls ships, pickups, and nearby life.
+[src/entities/DriftMouth.js](../src/entities/DriftMouth.js)  rare anomaly-scale life/event. It stays nearly invisible at range, reveals as a circular distortion when approached, and gently pulls ships, pickups, and nearby life.
 
 ## System Dictionary
 
 ### Event Ledger
 
-[src/systems/eventLedger.js](../src/systems/eventLedger.js) — central memory spine. Records meaningful events, derives compact career stats, tracks signals (booleans), and supports recent-event queries with time-window matching. Systems report to the ledger; other systems read from it. The mission runner polls the ledger every frame for new events.
+[src/systems/eventLedger.js](../src/systems/eventLedger.js)  central memory spine. Records meaningful events, derives compact career stats, tracks signals (booleans), and supports recent-event queries with time-window matching. Systems report to the ledger; other systems read from it. The mission runner polls the ledger every frame for new events.
 
 Key events: `site.docked`, `site.nearby`, `zone.entered`, `ship.thrusted`, `ship.collision`, `ship.stranded`, `ship.towed`, `tow.attached`, `contract.accepted`, `contract.fulfilled`, `contract.paid`, `loan.disbursed`, `ship.purchased`, `resource.collected`, `resource.mined`, `enemy.destroyed`, `mission.accepted`, `mission.completed`, `component.dragged`, `component.filed`.
 
@@ -281,44 +281,44 @@ Each animation frame in `game.js`:
 
 ### Camera
 
-[src/systems/camera.js](../src/systems/camera.js) — spring-like follow. Intentional lag gives speed feel.
+[src/systems/camera.js](../src/systems/camera.js)  spring-like follow. Intentional lag gives speed feel.
 
 ### World Zones
 
-[src/systems/worldZones.js](../src/systems/worldZones.js) — organic overlapping circular zones: Starter Drift, Red Teeth, Blue Glint, Scrap Wake, Dead Strip, Open Space fallback. `getZoneProfile(x, y)` blends nearby zones with smooth falloff.
+[src/systems/worldZones.js](../src/systems/worldZones.js)  organic overlapping circular zones: Starter Drift, Red Teeth, Blue Glint, Scrap Wake, Dead Strip, Open Space fallback. `getZoneProfile(x, y)` blends nearby zones with smooth falloff.
 
 Important direction: this file currently mixes some Region-like and Zone-like responsibilities. See [docs/world-structure.md](world-structure.md). New code should prefer `worldRegions.js` for economy/ecology/resource identity and keep zone/navigation profiles focused on flight experience.
 
 ### World Regions / Plots
 
-[src/systems/worldRegions.js](../src/systems/worldRegions.js) â€” first region layer. Regions define geology, economy, institutions, resource identity, faction pressure, and default rights by type: transit, mining, patrol, salvage, construction, trade, and enforcement.
+[src/systems/worldRegions.js](../src/systems/worldRegions.js)  first region layer. Regions define geology, economy, institutions, resource identity, faction pressure, and default rights by type: transit, mining, patrol, salvage, construction, trade, and enforcement.
 
-[src/systems/claimField.js](../src/systems/claimField.js) â€” deterministic plot/claim scaffold. It can draw a panorama map overlay and can return a lightweight plot record for a world coordinate. Plots currently inherit region rights/resource identity plus zone navigation context, but they do not yet drive contracts, resources, or patrol law.
+[src/systems/claimField.js](../src/systems/claimField.js)  deterministic plot/claim scaffold. It can draw a panorama map overlay and can return a lightweight plot record for a world coordinate. Plots currently inherit region rights/resource identity plus zone navigation context, but they do not yet drive contracts, resources, or patrol law.
 
 ### Resource Field / Asteroid Field / Life Field
 
-`resourceField.js` — deterministic profiles from value noise + zone modifiers.
-`worldTerrain.js` — deterministic chunk terrain profiles for flight feel and rock arrangement.
-`asteroidField.js` — streamed deterministic asteroid chunks from resource and terrain samples.
-`lifeField.js` — lifeforms anchored near asteroids, weighted by zone profile.
-`threadwyrmField.js` — rare route-based threadwyrms seeded from corridor-friendly asteroid anchors.
-`driftMouthField.js` — rare Mouth in the Drift anomalies seeded from strange/dangerous zone profiles.
+`resourceField.js`  deterministic profiles from value noise + zone modifiers.
+`worldTerrain.js`  deterministic chunk terrain profiles for flight feel and rock arrangement.
+`asteroidField.js`  streamed deterministic asteroid chunks from resource and terrain samples.
+`lifeField.js`  lifeforms anchored near asteroids, weighted by zone profile.
+`threadwyrmField.js`  rare route-based threadwyrms seeded from corridor-friendly asteroid anchors.
+`driftMouthField.js`  rare Mouth in the Drift anomalies seeded from strange/dangerous zone profiles.
 
 Asteroids are chunk-streamed around the ship. Dynamic fragments remain live until normal gameplay removes them.
 
 ### Processor And Cargo Hold
 
-[src/systems/processor.js](../src/systems/processor.js) — small square-unit physics sandbox used for both processor (clickable, crushes into output) and cargo hold (stores for delivery). Collected pickups route through processor if installed, directly into cargo if not.
+[src/systems/processor.js](../src/systems/processor.js)  small square-unit physics sandbox used for both processor (clickable, crushes into output) and cargo hold (stores for delivery). Collected pickups route through processor if installed, directly into cargo if not.
 
 ### Save Manager
 
-[src/systems/saveManager.js](../src/systems/saveManager.js) — temporary browser-local playtest save in `localStorage`. Stores components, credits, debt, contracts, ship frame, journey mission pointer, cargo, world position. Not a durable account system. Save key may be bumped during architecture cleanup.
+[src/systems/saveManager.js](../src/systems/saveManager.js)  temporary browser-local playtest save in `localStorage`. Stores components, credits, debt, contracts, ship frame, journey mission pointer, cargo, world position. Not a durable account system. Save key may be bumped during architecture cleanup.
 
 ## Resource And Economy Flow
 
-1. Bullets or ship impacts break resource rocks → small square pickups
-2. Flying over pickups or tractor field → processor canvas
-3. Click unit in processor → fuel / charges / scanergy / cargo
+1. Bullets or ship impacts break resource rocks  small square pickups
+2. Flying over pickups or tractor field  processor canvas
+3. Click unit in processor  fuel / charges / scanergy / cargo
 4. Cargo units stored in cargo hold
 5. While docked: cargo sold for credits, hull repaired for credits
 
@@ -337,7 +337,7 @@ Current values: fuel cargo 15 cr, crystal cargo 75 cr, repair 2 cr/hull point, d
 **Active pressure points:**
 - `game.js` is doing many jobs: simulation loop, collision, docking, particles, economy hooks, title cards, debug. Needs extraction passes.
 - `main.js` is doing many browser jobs: DOM binding, HUD, economy UI, layout persistence, global event listeners. Needs extraction passes.
-- `requiresCondition` is a JS function in some mission transitions — blocks JSON serialization needed for the mission designer backend. Needs a declarative replacement (e.g. `requiresPayloadField`).
+- `requiresCondition` is a JS function in some mission transitions  blocks JSON serialization needed for the mission designer backend. Needs a declarative replacement (e.g. `requiresPayloadField`).
 - Cache-busted `?v=` import strings must be kept aligned manually when changing modules.
 - Event ledger is in-memory only. Future profile saves should decide which stats and how much history persists.
 

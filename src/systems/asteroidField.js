@@ -1,8 +1,8 @@
-import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260719-1259-cb7d5ac";
+﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260719-2003-2d72582";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getResourceColor } from "./resourceDefinitions.js?v=fresh-20260719-1259-cb7d5ac";
-import { getAmbientSurvivalResourceWeights } from "./resourceField.js?v=fresh-20260719-1259-cb7d5ac";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260719-1259-cb7d5ac";
+import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260719-2003-2d72582";
+import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260719-2003-2d72582";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260719-2003-2d72582";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same
@@ -12,7 +12,7 @@ const CHUNK_LOAD_RADIUS = 3;
 
 export function createAsteroidChunks(canvas, resourceField) {
   const chunkSize = canvas.width;
-  const loadedChunks = new Map(); // "cx,cy" â†’ Asteroid[]
+  const loadedChunks = new Map(); // "cx,cy"  Asteroid[]
 
   function toChunkCoords(worldX, worldY) {
     return [Math.floor(worldX / chunkSize), Math.floor(worldY / chunkSize)];
@@ -41,10 +41,12 @@ export function createAsteroidChunks(canvas, resourceField) {
       terrain.maxCommonCount ?? Infinity,
     );
     const clusters = createTerrainClusters(centerX, centerY, chunkSize, terrain, random);
+    const oreClusterSeeds = getNearbyOreClusterSeeds(cx, cy, chunkSize, resourceField);
 
     for (let i = 0; i < asteroidCount; i++) {
       const position = getTerrainPosition({ centerX, centerY, chunkSize, terrain, clusters, random, index: i, count: asteroidCount });
-      const asteroid = createRandomAsteroid(position.x, position.y, resourceField.getProfile(position.x, position.y), hashNumbers(seed, i));
+      const baseProfile = resourceField.getProfile(position.x, position.y);
+      const asteroid = createRandomAsteroid(position.x, position.y, getOreClusterProfile(position, baseProfile, oreClusterSeeds), hashNumbers(seed, i));
       tuneAsteroidForTerrain(asteroid, terrain, random);
       chunkAsteroids.push(asteroid);
     }
@@ -135,6 +137,127 @@ function getCommonAsteroidCount(density, commonRockBias, random, multiplier = 1,
 
 function clampCount(value, minimum, maximum) {
   return Math.max(minimum, Math.min(maximum, value));
+}
+
+// Ore-cluster identity layer. Each chunk contributes a few identity seeds and
+// every resource rock takes the identity of its nearest seed  including seeds
+// from neighboring chunks, so ore bodies can span chunk borders. Zone/region
+// weights still decide which identities are common, but they now express as
+// "most clusters around here are iron" instead of every rock carrying the same
+// blended mixture. Minority ore bodies stay visible inside majority space.
+// Seeds use their own RNG namespace so rock positions/counts are unaffected.
+const ORE_CLUSTER_SEED_NAMESPACE = 9100;
+
+function getOreClusterSeeds(cx, cy, chunkSize, resourceField) {
+  const random = createRandom(hashNumbers(ORE_CLUSTER_SEED_NAMESPACE, cx, cy));
+  const count = 2 + Math.floor(random() * 3);
+  const centerX = cx * chunkSize;
+  const centerY = cy * chunkSize;
+  const seeds = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const x = centerX + randomRange(random, -chunkSize * 0.5, chunkSize * 0.5);
+    const y = centerY + randomRange(random, -chunkSize * 0.5, chunkSize * 0.5);
+    const profile = resourceField.getProfile(x, y);
+
+    seeds.push({ x, y, resourceId: pickOreClusterResource(profile.resources, random) });
+  }
+
+  return seeds;
+}
+
+// World-read helper for contract generation and any system that needs to know
+// what ore actually exists in an area  the same seeds chunk generation uses,
+// so answers always match the rocks a player will find there.
+export function getOreClusterSeedsInRadius(x, y, radius, chunkSize, resourceField) {
+  const minCX = Math.floor((x - radius) / chunkSize);
+  const maxCX = Math.floor((x + radius) / chunkSize);
+  const minCY = Math.floor((y - radius) / chunkSize);
+  const maxCY = Math.floor((y + radius) / chunkSize);
+  const seeds = [];
+
+  for (let cx = minCX; cx <= maxCX; cx += 1) {
+    for (let cy = minCY; cy <= maxCY; cy += 1) {
+      for (const seed of getOreClusterSeeds(cx, cy, chunkSize, resourceField)) {
+        if (Math.hypot(seed.x - x, seed.y - y) <= radius) {
+          seeds.push(seed);
+        }
+      }
+    }
+  }
+
+  return seeds;
+}
+
+function getNearbyOreClusterSeeds(cx, cy, chunkSize, resourceField) {
+  const seeds = [];
+
+  for (let dx = -1; dx <= 1; dx += 1) {
+    for (let dy = -1; dy <= 1; dy += 1) {
+      seeds.push(...getOreClusterSeeds(cx + dx, cy + dy, chunkSize, resourceField));
+    }
+  }
+
+  return seeds;
+}
+
+// Charge is fed by two families (structural + industrial), so an unweighted
+// pick would hand charge two entries per roll and put it back on top. These
+// multipliers keep cluster frequency on the fuel > charge > scanergy survival
+// hierarchy that the field-level rebalance established.
+const ORE_CLUSTER_ROLE_WEIGHT = {
+  volatile: 1.6,
+  structural: 0.65,
+  industrial: 0.65,
+};
+
+function pickOreClusterResource(resources, random) {
+  const entries = Object.entries(resources)
+    .filter(([resourceId]) => resourceId !== "stone")
+    .map(([resourceId, weight]) => [resourceId, weight * (ORE_CLUSTER_ROLE_WEIGHT[getResourceFamily(resourceId)] ?? 1)]);
+  const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
+  let roll = random() * (total || 1);
+
+  for (const [resourceId, weight] of entries) {
+    roll -= weight;
+    if (roll <= 0) return resourceId;
+  }
+
+  return entries[0]?.[0] ?? "iron-nickel";
+}
+
+function getOreClusterProfile(position, baseProfile, seeds) {
+  let nearest = null;
+  let nearestDistance = Infinity;
+
+  for (const seed of seeds) {
+    const distance = Math.hypot(seed.x - position.x, seed.y - position.y);
+
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearest = seed;
+    }
+  }
+
+  if (!nearest) {
+    return baseProfile;
+  }
+
+  const resources = boostClusterResource(baseProfile.resources, nearest.resourceId);
+
+  return { ...baseProfile, resources, color: mixResourceColor(resources) };
+}
+
+// The cluster identity dominates without erasing the local blend, so ore rocks
+// still shed stone and trace materials when broken.
+function boostClusterResource(resources, resourceId) {
+  const boosted = { ...resources };
+
+  boosted[resourceId] = Math.max(boosted[resourceId] ?? 0, 0.08) * 4 + 0.3;
+
+  const total = Object.values(boosted).reduce((sum, value) => sum + value, 0);
+
+  return Object.fromEntries(Object.entries(boosted).map(([id, value]) => [id, value / total]));
 }
 
 function createTerrainClusters(centerX, centerY, chunkSize, terrain, random) {

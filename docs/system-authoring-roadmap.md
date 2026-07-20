@@ -69,6 +69,7 @@ Next improvement:
 - Refine message priority, expiration, and interruption rules.
 - Let low-priority flavor wait until approval-required mission messages are clear.
 - Add source-specific styling or portraits without putting that logic into missions.
+- Follow [comms-attention-roadmap.md](comms-attention-roadmap.md) for the separate attention-target contract, viewport banner prototype, and responsive anchoring rules.
 
 ### 4. Hub Service Controllers
 

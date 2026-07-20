@@ -1,7 +1,7 @@
 import { createValueNoise } from "./valueNoise.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260719-1259-cb7d5ac";
-import { getRegionProfile } from "./worldRegions.js?v=fresh-20260719-1259-cb7d5ac";
-import { RESOURCE_COLOR_RGB, pickFamilyMember } from "./resourceDefinitions.js?v=fresh-20260719-1259-cb7d5ac";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260719-2003-2d72582";
+import { getRegionProfile } from "./worldRegions.js?v=fresh-20260719-2003-2d72582";
+import { RESOURCE_COLOR_RGB, pickFamilyMember } from "./resourceDefinitions.js?v=fresh-20260719-2003-2d72582";
 
 export function createResourceField(seed = 1337) {
   const noise = createValueNoise(seed);
@@ -16,10 +16,13 @@ export function createResourceField(seed = 1337) {
       const density = clamp(densityNoise * zoneProfile.asteroidDensityMultiplier, 0, 1.35);
 
       // One noise channel per family. Exponent controls rarity — higher = rarer.
-      const volatileRaw   = Math.max(survival.volatile.floor, Math.pow(layeredNoise(noise, x + 2400,   y - 8100,  3800, 0, 1), 1.8) * combineBias(zoneProfile.volatileBias, regionProfile.volatileBias) * survival.volatile.multiplier);
-      const structuralRaw = Math.max(survival.structural.floor, Math.pow(layeredNoise(noise, x + 9000,   y + 1200,  2600, 0, 1), 1.6) * combineBias(zoneProfile.structuralBias, regionProfile.structuralBias) * survival.structural.multiplier);
-      const industrialRaw = Math.max(survival.industrial.floor, Math.pow(layeredNoise(noise, x + 1500,   y + 3000,  1800, 0, 1), 1.2) * combineBias(zoneProfile.industrialBias, regionProfile.industrialBias) * survival.industrial.multiplier);
-      const conductorRaw  = Math.max(survival.conductor.floor, Math.pow(layeredNoise(noise, x - 7000,   y + 5400,  3200, 0, 1), 2.1) * combineBias(zoneProfile.conductorBias, regionProfile.conductorBias) * survival.conductor.multiplier);
+      // Survival-role hierarchy: fuel (volatile) most abundant, charge
+      // (structural + industrial combined) a step behind, scanergy (conductor)
+      // scarce enough that each find is worth grabbing but never a soft-lock.
+      const volatileRaw   = Math.max(survival.volatile.floor, Math.pow(layeredNoise(noise, x + 2400,   y - 8100,  3800, 0, 1), 1.35) * combineBias(zoneProfile.volatileBias, regionProfile.volatileBias) * survival.volatile.multiplier);
+      const structuralRaw = Math.max(survival.structural.floor, Math.pow(layeredNoise(noise, x + 9000,   y + 1200,  2600, 0, 1), 1.9) * combineBias(zoneProfile.structuralBias, regionProfile.structuralBias) * survival.structural.multiplier);
+      const industrialRaw = Math.max(survival.industrial.floor, Math.pow(layeredNoise(noise, x + 1500,   y + 3000,  1800, 0, 1), 1.75) * combineBias(zoneProfile.industrialBias, regionProfile.industrialBias) * survival.industrial.multiplier);
+      const conductorRaw  = Math.max(survival.conductor.floor, Math.pow(layeredNoise(noise, x - 7000,   y + 5400,  3200, 0, 1), 2.05) * combineBias(zoneProfile.conductorBias, regionProfile.conductorBias) * survival.conductor.multiplier);
       const energyRaw     = Math.pow(layeredNoise(noise, x + 5000,   y - 12000, 4200, 0, 1), 3.5) * combineBias(zoneProfile.energyBias, regionProfile.energyBias);
       const advancedRaw   = Math.pow(layeredNoise(noise, x - 12000,  y - 6000,  4500, 0, 1), 2.8) * combineBias(zoneProfile.advancedBias, regionProfile.advancedBias);
       const strangeRaw    = Math.pow(layeredNoise(noise, x - 15000,  y + 8000,  5500, 0, 1), 4.5) * combineBias(zoneProfile.strangeBias, regionProfile.strangeBias);
@@ -67,11 +70,14 @@ function combineBias(zoneBias, regionBias) {
 }
 
 export function getSurvivalResourceProfile(tags = []) {
+  // Floors follow the survival-role hierarchy: volatile alone feeds fuel, but
+  // structural AND industrial both feed charge, so their combined floor must
+  // stay below the volatile floor for fuel to read as the most common find.
   const profile = {
-    volatile: { floor: 0.12, multiplier: 1 },
-    structural: { floor: 0.11, multiplier: 1 },
-    industrial: { floor: 0.09, multiplier: 1 },
-    conductor: { floor: 0.035, multiplier: 1 },
+    volatile: { floor: 0.15, multiplier: 1 },
+    structural: { floor: 0.07, multiplier: 1 },
+    industrial: { floor: 0.06, multiplier: 1 },
+    conductor: { floor: 0.05, multiplier: 1 },
   };
   const tagSet = new Set(tags);
 
@@ -97,14 +103,14 @@ export function getAmbientSurvivalResourceWeights(tags = []) {
     "water-ice": 5,
     "methane-ice": 2,
     hydrogen: 1,
-    "iron-nickel": 3,
-    aluminum: 2,
-    titanium: 1,
-    silicate: 2,
-    carbonaceous: 1,
-    copper: 1,
-    cobalt: 0.5,
-    silver: 0.25,
+    "iron-nickel": 2,
+    aluminum: 1.25,
+    titanium: 0.5,
+    silicate: 1.25,
+    carbonaceous: 0.75,
+    copper: 1.5,
+    cobalt: 0.75,
+    silver: 0.35,
   };
   const tagSet = new Set(tags);
 
@@ -162,7 +168,7 @@ function normalizeResources(resources) {
   );
 }
 
-function mixResourceColor(resources) {
+export function mixResourceColor(resources) {
   const mixed = [0, 0, 0];
   const sharpened = sharpenResources(resources);
   const dominant = getDominantNonStoneResource(resources);

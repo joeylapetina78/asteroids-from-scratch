@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260719-1259-cb7d5ac";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260719-1259-cb7d5ac";
+import { getNpcName } from "../npcs.js?v=fresh-20260719-2003-2d72582";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260719-2003-2d72582";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
@@ -20,6 +20,7 @@ export const hubServiceDefinitions = {
         "rook-copper-run-10": ["rook-red-resource-run-5"],
         "rook-red-teeth-claim-run-50": ["rook-copper-run-10"],
       },
+      proceduralSurveyContracts: true,
       defaultUnlocked: false,
       greeting: "Got work if you want it. Check what's in the contract tray and let me know.",
       singleActiveContract: true,
@@ -270,6 +271,20 @@ export const hubServiceDefinitions = {
   ],
   "the-ledge": [
     {
+      id: "ledge-work-board",
+      npcId: "cress",
+      npcName: getNpcName("cress"),
+      organization: "The Ledge Work Board",
+      serviceType: "contracts",
+      label: "Work Board",
+      description: "Survey runs posted from local field reads.",
+      defaultUnlocked: true,
+      singleActiveContract: true,
+      proceduralSurveyContracts: true,
+      greeting: "Cress keeps the board too. Three runs posted from the last survey sweep — pick one and it's yours.",
+      busyMessage: "You've already got a run out. Bring it in before you take another.",
+    },
+    {
       id: "ledge-supply",
       npcId: "cress",
       npcName: getNpcName("cress"),
@@ -307,6 +322,20 @@ export const hubServiceDefinitions = {
     },
   ],
   "ore-station-one": [
+    {
+      id: "ore-station-work-board",
+      npcId: "dov",
+      npcName: getNpcName("dov"),
+      organization: "Ore Station One Work Orders",
+      serviceType: "contracts",
+      label: "Work Orders",
+      description: "Industrial haul orders from current survey data.",
+      defaultUnlocked: true,
+      singleActiveContract: true,
+      proceduralSurveyContracts: true,
+      greeting: "Dov. Work orders are current. Take one, fill it, get paid.",
+      busyMessage: "One order at a time. Finish what you carry.",
+    },
     {
       id: "ore-station-supply",
       npcId: "dov",
@@ -346,6 +375,20 @@ export const hubServiceDefinitions = {
   ],
   "coldwater-depot": [
     {
+      id: "coldwater-work-board",
+      npcId: "pella",
+      npcName: getNpcName("pella"),
+      organization: "Coldwater Haul Board",
+      serviceType: "contracts",
+      label: "Haul Board",
+      description: "Mid-route hauls flagged by depot surveys.",
+      defaultUnlocked: true,
+      singleActiveContract: true,
+      proceduralSurveyContracts: true,
+      greeting: "Pella here. Board's fresh — the depot always needs something hauled in.",
+      busyMessage: "You've got a haul open with us already. One at a time keeps the ledger clean.",
+    },
+    {
       id: "coldwater-supply",
       npcId: "pella",
       npcName: getNpcName("pella"),
@@ -384,6 +427,20 @@ export const hubServiceDefinitions = {
   ],
   "deep-research": [
     {
+      id: "deep-research-work-board",
+      npcId: "taske",
+      npcName: getNpcName("taske"),
+      organization: "Deep Research Requisitions",
+      serviceType: "contracts",
+      label: "Requisitions",
+      description: "Sample requisitions from the outpost's field surveys.",
+      defaultUnlocked: true,
+      singleActiveContract: true,
+      proceduralSurveyContracts: true,
+      greeting: "Dr. Taske. The station posts requisitions for field samples — the survey data is rigorous, the pay is fair.",
+      busyMessage: "Your current requisition is still open. We log one collection at a time.",
+    },
+    {
       id: "deep-research-supply",
       npcId: "taske",
       npcName: getNpcName("taske"),
@@ -421,6 +478,20 @@ export const hubServiceDefinitions = {
     },
   ],
   [storySites.originHub.id]: [
+    {
+      id: "scrap-porch-work-board",
+      npcId: "sal",
+      npcName: getNpcName("sal"),
+      organization: "Scrap Porch Odd Jobs",
+      serviceType: "contracts",
+      label: "Odd Jobs",
+      description: "Whatever the porch needs hauled in this week.",
+      defaultUnlocked: true,
+      singleActiveContract: true,
+      proceduralSurveyContracts: true,
+      greeting: "Sal. Porch always needs something. Board's got three — take your pick.",
+      busyMessage: "Finish the one you took first. Porch rules.",
+    },
     {
       id: "scrap-porch-supply",
       npcId: "sal",

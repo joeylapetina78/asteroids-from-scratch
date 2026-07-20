@@ -1,8 +1,11 @@
-import { getContractRequirementDefinition } from "./contractRules.js?v=fresh-20260719-1259-cb7d5ac";
-import { COMPONENT_STATE_BY_PANEL_ID, PANEL_IDS } from "./componentRegistry.js?v=fresh-20260719-1259-cb7d5ac";
-import { HUB_SERVICE_BEHAVIOR_BY_TYPE } from "./hubServiceBehaviors.js?v=fresh-20260719-1259-cb7d5ac";
-import { getMissionActionDefinition } from "./missionActions.js?v=fresh-20260719-1259-cb7d5ac";
-import { createGameState } from "../state/gameState.js?v=fresh-20260719-1259-cb7d5ac";
+import { getContractRequirementDefinition } from "./contractRules.js?v=fresh-20260719-2003-2d72582";
+import { COMPONENT_STATE_BY_PANEL_ID, PANEL_IDS } from "./componentRegistry.js?v=fresh-20260719-2003-2d72582";
+import { HUB_SERVICE_BEHAVIOR_BY_TYPE } from "./hubServiceBehaviors.js?v=fresh-20260719-2003-2d72582";
+import { getMissionActionDefinition } from "./missionActions.js?v=fresh-20260719-2003-2d72582";
+import { createGameState } from "../state/gameState.js?v=fresh-20260719-2003-2d72582";
+import { validateTagList } from "./tagRegistry.js?v=fresh-20260719-2003-2d72582";
+import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260719-2003-2d72582";
+import { WORLD_ZONES } from "./worldZones.js?v=fresh-20260719-2003-2d72582";
 
 export function validateMissionDefinition(missionDefinition, context = createValidationContext()) {
   const issues = [];
@@ -166,6 +169,21 @@ export function validateContent({ missions = [], contracts = [], hubServiceDefin
     ...missions.flatMap((mission) => validateMissionDefinition(mission, context)),
     ...contracts.flatMap((contract) => validateContractDefinition(contract)),
     ...validateHubServiceDefinitions(hubServiceDefinitions, context),
+    ...validateWorldTagDefinitions(),
+  ];
+}
+
+// Zones and regions are authored content too. Keeping their tag vocabulary in
+// the regular validation pass prevents a typo from quietly creating a place
+// that no world system can ever read.
+export function validateWorldTagDefinitions({ zones = WORLD_ZONES, regions = WORLD_REGIONS } = {}) {
+  return [
+    ...zones.flatMap((zone) =>
+      validateTagList(zone.tags, `zone '${zone.id}'`).map((message) => createIssue("world-tag", message)),
+    ),
+    ...regions.flatMap((region) =>
+      validateTagList(region.tags, `region '${region.id}'`).map((message) => createIssue("world-tag", message)),
+    ),
   ];
 }
 

@@ -1,6 +1,6 @@
-import { DriftMouth } from "../entities/DriftMouth.js?v=fresh-20260719-1259-cb7d5ac";
+import { DriftMouth } from "../entities/DriftMouth.js?v=fresh-20260719-2003-2d72582";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { WORLD_ZONES } from "./worldZones.js?v=fresh-20260719-1259-cb7d5ac";
+import { WORLD_ZONES } from "./worldZones.js?v=fresh-20260719-2003-2d72582";
 
 const MAX_MOUTHS = 2;
 
@@ -40,7 +40,7 @@ export function createDriftMouthField() {
 function getMouthZoneWeight(zone) {
   const strangeWeight = zone.profile.strangeBias ?? 0;
   const dangerWeight = zone.profile.danger ?? 0;
-  const anomalyBonus = zone.tags.includes("anomaly") || zone.tags.includes("strange") ? 1.8 : 1;
+  const anomalyBonus = zone.tags.includes("anomaly") || zone.tags.includes("strange") || zone.tags.includes("strange-life") ? 1.8 : 1;
   const starterPenalty = zone.tags.includes("starter") || zone.tags.includes("safe") ? 0 : 1;
 
   return starterPenalty * anomalyBonus * (strangeWeight * 0.9 + dangerWeight * 1.1);

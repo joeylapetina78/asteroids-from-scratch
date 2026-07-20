@@ -16,6 +16,9 @@ Asteroids RPG is a world-centric institutional space sim. The player controls on
 - `docs/project-map.md` is the deeper map.
 - `docs/systems-direction.md` is the philosophy and architecture direction.
 - `docs/authority-model.md` is the Place / Actor / Power / Right / Action authority model.
+- `docs/ship-workbench-roadmap.md` is the console-rack, hull-slot, and responsive-workbench direction. Read it before adding a permanent ship panel.
+- `docs/comms-attention-roadmap.md` is the source of truth for Journey, viewport chatter, target arrows, and visual attention. Read it before adding a prompt, highlight, or UI callout.
+- `docs/tag-registry.md` defines the world-tag vocabulary and its live system readers. Read it before adding or repurposing a zone or region tag.
 
 ## Important Invariants
 

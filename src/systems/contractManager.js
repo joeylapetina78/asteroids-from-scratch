@@ -1,14 +1,22 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260719-1259-cb7d5ac";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260719-1259-cb7d5ac";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260719-1259-cb7d5ac";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260719-1259-cb7d5ac";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260719-1259-cb7d5ac";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260719-1259-cb7d5ac";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260719-1259-cb7d5ac";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260719-1259-cb7d5ac";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260719-1259-cb7d5ac";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260719-2003-2d72582";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260719-2003-2d72582";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260719-2003-2d72582";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260719-2003-2d72582";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260719-2003-2d72582";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260719-2003-2d72582";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260719-2003-2d72582";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260719-2003-2d72582";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260719-2003-2d72582";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
+
+// Generated contracts (e.g. hub survey runs) register here at offer time.
+// Their full definition is spread into the contract record, so a definition
+// only needs to exist in this map for the offerContract call itself — active
+// records loaded from a save never look definitions up again.
+export function registerContractDefinition(definition) {
+  CONTRACT_DEFINITIONS.set(definition.id, definition);
+}
 
 export function createContractManager({ state, onChange = () => {} }) {
   let lastEventId = 0;

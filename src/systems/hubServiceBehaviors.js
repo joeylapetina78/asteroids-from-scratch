@@ -5,7 +5,7 @@ export const HUB_SERVICE_BEHAVIOR_BY_TYPE = {
   },
   contracts: {
     panelId: "contract",
-    prompt: "open contracts are handled here. Rook offers one job from the board at a time.",
+    prompt: "open contracts are handled here. Rook keeps a small job board for independent runs.",
     offersContracts: true,
   },
   finance: {

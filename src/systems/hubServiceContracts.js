@@ -44,9 +44,36 @@ export function getAllHubServiceContractIds(service, { state }) {
 }
 
 export function getInProgressServiceContractId(service, state) {
-  return (service.contractIds ?? []).find((contractId) => {
+  const authoredId = (service.contractIds ?? []).find((contractId) => {
     const contract = state.contracts.records[contractId];
     return contract && IN_PROGRESS_CONTRACT_STATUSES.includes(contract.status);
+  });
+
+  if (authoredId) {
+    return authoredId;
+  }
+
+  // Generated contracts (survey runs) are not in the authored id list, but
+  // they carry this service as their offer source and count as its work.
+  return Object.values(state.contracts.records).find(
+    (contract) =>
+      contract.offerSource?.serviceId === service.id &&
+      !(service.contractIds ?? []).includes(contract.id) &&
+      IN_PROGRESS_CONTRACT_STATUSES.includes(contract.status),
+  )?.id;
+}
+
+// The authored ladder is complete once every listed contract has been paid at
+// least once — that is when a service can move from scripted runs to
+// world-generated survey work.
+export function isServiceContractLadderComplete(service, state) {
+  if (!isMissionFirstContractResolved(service, state)) {
+    return false;
+  }
+
+  return (service.contractIds ?? []).every((contractId) => {
+    const record = state.contracts.records[contractId];
+    return Boolean(record && (record.status === "paid" || (record.runCount ?? 0) > 1));
   });
 }
 

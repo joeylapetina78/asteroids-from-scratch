@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 // bump-cache.js
 // Run after browser-facing JS/CSS/HTML edits: npm run bump:cache
 // Replaces every ?v= query string in JS imports, CSS links, and HTML script tags
@@ -6,7 +6,7 @@
 // Also updates the visible build tag in index.html so testers can confirm which
 // build actually loaded.
 //
-// Then reload the browser â€” every module URL is new, so nothing is served from cache.
+// Then reload the browser  every module URL is new, so nothing is served from cache.
 
 import { execSync } from "child_process";
 import { readFileSync, writeFileSync, readdirSync, statSync } from "fs";

@@ -4,7 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asteroids From Scratch</title>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260719-1259-cb7d5ac" />
+    <script>
+      const devStart = new URLSearchParams(window.location.search).get("devStart");
+      if (devStart === "explorer" || devStart === "panorama") {
+        document.documentElement.classList.add("is-free-play-start");
+      }
+    </script>
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260719-2003-2d72582" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -51,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260719-1259-cb7d5ac</span>
+      <span class="build-tag">build: fresh-20260719-2003-2d72582</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -528,6 +534,17 @@
               <div id="hub-service-menu" class="hub-service-menu" aria-label="Hub service menu"></div>
             </div>
 
+            <div class="component-panel rook-jobs-panel is-component-locked" data-panel-id="rook-jobs" aria-label="Hub job board" aria-hidden="true">
+              <div class="component-panel-title">
+                <div>
+                  <strong id="job-board-org">Work Board</strong>
+                  <span>independent work board</span>
+                </div>
+                <button class="component-close-button" type="button" data-close-panel="rook-jobs" aria-label="Close job board window">x</button>
+              </div>
+              <section id="rook-job-board" class="rook-job-board" aria-label="Hub job board listings" hidden></section>
+            </div>
+
             <div class="component-panel world-panel" data-panel-id="world" aria-label="World debug component">
               <div class="component-panel-title">
                 <div>
@@ -718,6 +735,6 @@
 
     <div id="attention-callouts" class="attention-callouts" aria-hidden="true"></div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260719-1259-cb7d5ac"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260719-2003-2d72582"></script>
   </body>
 </html>

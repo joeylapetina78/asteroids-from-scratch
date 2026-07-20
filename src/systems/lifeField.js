@@ -1,6 +1,6 @@
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260719-1259-cb7d5ac";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260719-2003-2d72582";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260719-1259-cb7d5ac";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260719-2003-2d72582";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.
@@ -249,8 +249,9 @@ function getAmbientAnchorWeight(anchor) {
   const densityWeight = 0.4 + zone.asteroidDensityMultiplier * 0.6;
   const dangerPenalty = 1 - zone.danger * 0.12;
   const sparsePenalty = zone.tags.includes("sparse") || zone.tags.includes("low-life") ? 0.45 : 1;
+  const ambientBonus = zone.tags.includes("ambient-life") ? 1.3 : 1;
 
-  return zone.ambientLifeBias * densityWeight * dangerPenalty * sparsePenalty;
+  return zone.ambientLifeBias * densityWeight * dangerPenalty * sparsePenalty * ambientBonus;
 }
 
 function getLanternAnchorWeight(anchor) {

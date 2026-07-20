@@ -1,34 +1,43 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260719-1259-cb7d5ac";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260719-1259-cb7d5ac";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260719-1259-cb7d5ac";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260719-1259-cb7d5ac";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260719-1259-cb7d5ac";
-import { Game } from "./game.js?v=fresh-20260719-1259-cb7d5ac";
-import { createContractManager } from "./systems/contractManager.js?v=fresh-20260719-1259-cb7d5ac";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260719-1259-cb7d5ac";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260719-1259-cb7d5ac";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-1259-cb7d5ac";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260719-2003-2d72582";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260719-2003-2d72582";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260719-2003-2d72582";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260719-2003-2d72582";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260719-2003-2d72582";
+import { Game } from "./game.js?v=fresh-20260719-2003-2d72582";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260719-2003-2d72582";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260719-2003-2d72582";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260719-2003-2d72582";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-2003-2d72582";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260719-1259-cb7d5ac";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId } from "./systems/hubServiceContracts.js?v=fresh-20260719-1259-cb7d5ac";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260719-1259-cb7d5ac";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260719-1259-cb7d5ac";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260719-1259-cb7d5ac";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260719-1259-cb7d5ac";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-1259-cb7d5ac";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260719-1259-cb7d5ac";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260719-1259-cb7d5ac";
-import { Processor } from "./systems/processor.js?v=fresh-20260719-1259-cb7d5ac";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260719-1259-cb7d5ac";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260719-1259-cb7d5ac";
-import { createGameState } from "./state/gameState.js?v=fresh-20260719-1259-cb7d5ac";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260719-2003-2d72582";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260719-2003-2d72582";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260719-2003-2d72582";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260719-2003-2d72582";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260719-2003-2d72582";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260719-2003-2d72582";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-2003-2d72582";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260719-2003-2d72582";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260719-2003-2d72582";
+import { Processor } from "./systems/processor.js?v=fresh-20260719-2003-2d72582";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260719-2003-2d72582";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260719-2003-2d72582";
+import { createGameState } from "./state/gameState.js?v=fresh-20260719-2003-2d72582";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
+
+// Uncaught boot errors kill module evaluation silently — the page half-renders
+// with no console.* trail. Surface them so a broken init is always loud.
+window.addEventListener("error", (event) => {
+  console.error(`[boot] ${event.message} (${event.filename?.split("/").pop() ?? "?"}:${event.lineno})`);
+});
+window.addEventListener("unhandledrejection", (event) => {
+  console.error(`[boot] unhandled rejection: ${event.reason}`);
+});
 const OLD_PANEL_LAYOUT_STORAGE_KEYS = [
   "asteroids.panelLayout.v1",
   "asteroids.panelLayout.v2",
@@ -97,6 +106,7 @@ const DEFAULT_PANEL_LAYOUT = {
   hull: { x: -300, y: 580, z: 50 },
   world: { x: 980, y: 20, z: 40 },
   hub: { x: -300, y: 340, z: 110 },
+  "rook-jobs": { x: 80, y: 140, z: 116 },
   processor: { x: 0, y: 0, z: 48 },
   cargo: { x: 0, y: 0, z: 46 },
 };
@@ -180,11 +190,24 @@ const hubDetail = document.querySelector("#hub-detail");
 const hubName = document.querySelector("#hub-name");
 const hubPanel = document.querySelector("[data-panel-id='hub']");
 const hubServiceMenu = document.querySelector("#hub-service-menu");
+const rookJobBoard = document.querySelector("#rook-job-board");
+const rookJobsPanel = document.querySelector("[data-panel-id='rook-jobs']");
 const hubStatus = document.querySelector("#hub-status");
 const journeyAcceptButton = document.querySelector("#journey-accept");
 const journeyDeclineButton = document.querySelector("#journey-decline");
 const journeyChapter = document.querySelector("#journey-chapter");
 const journeyHelpText = document.querySelector("#journey-help-text");
+
+// The board's contents are replaced whenever its state changes. Keep one
+// listener on the stable board container so a card click survives that redraw.
+rookJobBoard?.addEventListener("click", (event) => {
+  const jobButton = event.target.closest("[data-rook-job-id]");
+  if (!jobButton || !rookJobBoard.contains(jobButton)) {
+    return;
+  }
+
+  selectRookJob(jobButton.dataset.rookJobId);
+});
 const journeyLog = document.querySelector("#journey-log");
 const journeyMissionObjective = document.querySelector("#journey-mission-objective");
 const journeyMissionTitle = document.querySelector("#journey-mission-title");
@@ -283,6 +306,7 @@ const _hud = {
 };
 const state = createGameState();
 const initialDevStart = getDevStart();
+const isFreePlayStart = initialDevStart === "explorer" || initialDevStart === "panorama";
 
 if (shouldResetSave() || initialDevStart || peekSavedDevStartId()) {
   clearSavedProfile();
@@ -294,6 +318,11 @@ wireAudioUnlockGestures();
 const processor = new Processor(processorCanvas, processUnit, { enableCompaction: true, getUnitFlags: getResourceUnitFlags });
 const cargoHold = new Processor(cargoCanvas, handleCargoUnitClick, { isClickable: true, getUnitFlags: getCargoUnitFlags });
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio, updateLedgerDrivenSystems);
+
+// Dev hook: the running game and state, reachable from the console for
+// debugging and automated playtests. window.game is shadowed by the canvas
+// element (DOM id), so this lives under a distinct name.
+window.__asteroids = { game, state };
 const contractManager = createContractManager({
   state,
   onChange: (contract) => {
@@ -365,6 +394,9 @@ let _renderedMessageId = null;
 let currentSiteState = null;
 let activeDepositContractId = null;
 let activeHubServiceId = null;
+// Render signature for the hub job board; see renderRookJobBoard. Declared
+// here because dev-start boot code reaches that render during module eval.
+let lastRookJobBoardSignature = null;
 let isCargoSellModeActive = false;
 let wasTowAvailable = false;
 let saveTimer = null;
@@ -684,7 +716,7 @@ makePanelsDraggable();
 setupPaperworkControls();
 renderResourceGuide();
 wirePanelControlSounds();
-if (initialDevStart === "explorer" || initialDevStart === "panorama") {
+if (isFreePlayStart) {
   journeyDirector.startFreeMode();
 } else {
   journeyDirector.start();
@@ -704,6 +736,10 @@ const PANORAMA_PANEL_OVERRIDES = {
   license:          { x: 1000, y: 100, z: 95 },
   contract:         { x: 1240, y: 180, z: 95 },
 };
+// Supply-window cleanup can run during dev-start setup through the hub display.
+// Keep this initialized before any start mode calls into that display path.
+let activePump = null; // { type, intervalId }
+
 if (state.ui.viewportLayout === "fullscreen-background") {
   applyViewportLayout("fullscreen-background");
 }
@@ -1059,14 +1095,14 @@ function applyDevStart(devStartId) {
   if (devStartId === "explorer") {
     setupExplorerStart();
     spawnExplorerIncursionPortal();
-    licenseApplication.classList.add("is-dismissed");
+    dismissLicenseApplication();
     updateHudDisplay();
   }
 
   if (devStartId === "panorama") {
     setupExplorerStart();
     spawnExplorerIncursionPortal();
-    licenseApplication.classList.add("is-dismissed");
+    dismissLicenseApplication();
     applyViewportLayout("fullscreen-background");
     updateHudDisplay();
   }
@@ -1234,6 +1270,26 @@ function setupExplorerStart() {
   );
   state.hubServices.skipMissionFirstContracts[yardExchangeServices.finance] = true;
   state.hubServices.flags.yardCoreSeenDocked = true;
+  // Explorer begins after the authored Rook ladder, so its first Rook visit
+  // is the ongoing three-choice board rather than another tutorial file.
+  const rookService = getHubService(chapterOneRoute.destinationSite.id, yardExchangeServices.rook);
+  (rookService?.contractIds ?? []).forEach((contractId) => {
+    state.contracts.records[contractId] ??= {
+      id: contractId,
+      status: "paid",
+      runCount: 1,
+      paidAt: Date.now(),
+    };
+  });
+  state.hubServices.jobBoards = {};
+
+  // Free play begins close enough to dock, but already tethered starts make
+  // the ship inherit the placement velocity and immediately break the line.
+  // Let the player choose when to dock with Rook instead.
+  game.placeShipNearSite(chapterOneRoute.destinationSite.id, { x: 0, y: -110 });
+  game.ship.velocity.x = 0;
+  game.ship.velocity.y = 0;
+  game.setDockedSite(null);
 
   depositCredits(state, 1000);
 
@@ -1407,6 +1463,7 @@ function updateHubServiceDisplay(siteState) {
     hubStatus.textContent = "service window";
     hubDetail.textContent = "Dock to access services";
     renderHubServiceMenu(null);
+    renderRookJobBoard(null);
     return;
   }
 
@@ -1422,6 +1479,7 @@ function updateHubServiceDisplay(siteState) {
   hubStatus.textContent = activeService?.organization ?? "service menu";
   hubDetail.textContent = activeService ? `${activeService.npcName}: ${getHubServicePrompt(activeService)}` : "Choose a service window.";
   renderHubServiceMenu(site);
+  renderRookJobBoard(site);
 }
 
 function syncContractPanelVisibility() {
@@ -1682,6 +1740,216 @@ function renderHubServiceMenu(site) {
   );
 }
 
+// Any contracts service flagged proceduralSurveyContracts runs a survey job
+// board once its authored ladder (if any) is complete. Rook was the first;
+// every hub work board goes through the same panel.
+function getActiveSurveyBoardService(site) {
+  const service = site && activeHubServiceId ? getHubService(site.id, activeHubServiceId) : null;
+
+  return service?.proceduralSurveyContracts ? service : null;
+}
+
+// This render is reached from the per-frame site readout. Rebuilding the DOM
+// every frame destroys a job button between the player's mousedown and
+// mouseup, so no click can ever complete on it. The signature check makes the
+// rebuild happen only when the board's visible state actually changed.
+// (Its `let` lives with the other module state near the top of the file —
+// dev-start boot code runs mid-file and reaches this render before this line.)
+function renderRookJobBoard(site) {
+  if (!rookJobBoard || !rookJobsPanel) {
+    return;
+  }
+
+  const service = getActiveSurveyBoardService(site);
+
+  if (!site || !service || !isServiceContractLadderComplete(service, state)) {
+    if (lastRookJobBoardSignature !== "hidden") {
+      lastRookJobBoardSignature = "hidden";
+      rookJobBoard.hidden = true;
+      rookJobBoard.replaceChildren();
+      setComponentAvailable("rook-jobs", false);
+      rookJobsPanel.setAttribute("aria-hidden", "true");
+    }
+
+    return;
+  }
+
+  setComponentAvailable("rook-jobs", true);
+  rookJobsPanel.setAttribute("aria-hidden", "false");
+  const board = getOrCreateRookJobBoard(site, service);
+  const selectedContract = board.selectedContractId ? state.contracts.records[board.selectedContractId] : null;
+
+  if (selectedContract && selectedContract.status !== "paid") {
+    const signature = `assignment:${service.id}:${selectedContract.id}:${selectedContract.status}:${selectedContract.deliveredAmount ?? 0}`;
+
+    if (signature === lastRookJobBoardSignature) {
+      return;
+    }
+
+    lastRookJobBoardSignature = signature;
+    setJobBoardTitle(service);
+    rookJobBoard.hidden = false;
+    rookJobBoard.replaceChildren(createRookBoardHeader("Current Assignment"), createRookCurrentAssignment(selectedContract));
+    return;
+  }
+
+  const signature = `board:${site.id}:${service.id}:${board.jobs.map((job) => job.id).join(",")}`;
+
+  if (signature === lastRookJobBoardSignature) {
+    return;
+  }
+
+  lastRookJobBoardSignature = signature;
+  setJobBoardTitle(service);
+  rookJobBoard.hidden = false;
+  rookJobBoard.replaceChildren(
+    createRookBoardHeader("Job Board"),
+    ...board.jobs.map((job) => createRookJobButton(job)),
+  );
+}
+
+function setJobBoardTitle(service) {
+  const title = document.querySelector("#job-board-org");
+
+  if (title) {
+    title.textContent = service.organization ?? service.label ?? "Work Board";
+  }
+}
+
+function createRookBoardHeader(title) {
+  const header = document.createElement("div");
+  const heading = document.createElement("strong");
+  const detail = document.createElement("span");
+
+  header.className = "rook-job-board-header";
+  heading.textContent = title;
+  detail.textContent = "Choose one run. Fresh briefs arrive after it pays out.";
+  header.append(heading, detail);
+  return header;
+}
+
+function createRookJobButton(job) {
+  const button = document.createElement("button");
+  const tier = document.createElement("span");
+  const title = document.createElement("strong");
+  const detail = document.createElement("span");
+  const payout = document.createElement("em");
+
+  button.type = "button";
+  button.className = "rook-job-option";
+  button.dataset.rookJobId = job.id;
+  tier.textContent = job.jobTierLabel;
+  title.textContent = job.title;
+  detail.textContent = `${job.terms.amount} ${job.terms.resourceName} - ${job.summary}`;
+  payout.textContent = `Accept - ${job.reward.credits.toLocaleString()} cr`;
+  button.append(tier, title, detail, payout);
+  return button;
+}
+
+function createRookCurrentAssignment(contract) {
+  const card = document.createElement("div");
+  const title = document.createElement("strong");
+  const detail = document.createElement("span");
+  const button = document.createElement("button");
+
+  card.className = "rook-current-assignment";
+  title.textContent = contract.title;
+  detail.textContent = `${contract.deliveredAmount ?? 0}/${contract.terms.amount} ${contract.terms.resourceName} delivered`;
+  button.type = "button";
+  button.textContent = "Open Contract";
+  button.addEventListener("click", () => pullContractToCenter(contract.id));
+  card.append(title, detail, button);
+  return card;
+}
+
+function getOrCreateRookJobBoard(site, service) {
+  const boards = state.hubServices.jobBoards ??= {};
+  const boardId = `${site.id}:${service.id}`;
+  const existingBoard = boards[boardId];
+  const selectedContract = existingBoard?.selectedContractId ? state.contracts.records[existingBoard.selectedContractId] : null;
+
+  if (existingBoard && (!existingBoard.selectedContractId || selectedContract?.status !== "paid")) {
+    (existingBoard.jobs ?? []).forEach(registerContractDefinition);
+    return existingBoard;
+  }
+
+  // A saved or legacy run may already be active even if it predates the job
+  // board. Adopt it instead of placing a second Rook offer beside it.
+  const inProgressContractId = getInProgressServiceContractId(service, state);
+  if (inProgressContractId) {
+    const board = {
+      id: boardId,
+      createdAt: Date.now(),
+      selectedContractId: inProgressContractId,
+      jobs: [],
+    };
+    boards[boardId] = board;
+    return board;
+  }
+
+  const jobs = game.generateSurveyJobBoard(site, service.organization);
+  const board = {
+    id: boardId,
+    createdAt: Date.now(),
+    selectedContractId: null,
+    jobs,
+  };
+
+  jobs.forEach(registerContractDefinition);
+  boards[boardId] = board;
+  return board;
+}
+
+function selectRookJob(jobId) {
+  const site = currentSiteState?.dockedSite;
+  const service = getActiveSurveyBoardService(site);
+
+  if (!site || !service || !isServiceContractLadderComplete(service, state)) {
+    return;
+  }
+
+  const board = getOrCreateRookJobBoard(site, service);
+  const job = board.jobs.find((candidate) => candidate.id === jobId);
+
+  if (!job || board.selectedContractId) {
+    return;
+  }
+
+  // Store the selection before offering the contract. Offering synchronously
+  // refreshes the HUD, and the redraw needs to see this board as committed.
+  board.selectedContractId = job.id;
+  registerContractDefinition(job);
+  contractManager.offerContract(job.id, {
+    type: "hub-service",
+    siteId: site.id,
+    siteName: site.name,
+    serviceId: service.id,
+    serviceType: service.serviceType,
+    npcId: service.npcId,
+    npcName: service.npcName,
+    organization: service.organization,
+  });
+
+  const offeredContract = state.contracts.records[job.id];
+  if (!offeredContract || offeredContract.status !== "offered") {
+    board.selectedContractId = null;
+    renderRookJobBoard(site);
+    return;
+  }
+
+  // Choosing a board brief is the explicit acceptance action. The active
+  // contract still appears as paperwork, but the player never has to chase a
+  // second accept button after committing to one of Rook's three jobs.
+  if (!contractManager.acceptContract(job.id)) {
+    board.selectedContractId = null;
+    renderRookJobBoard(site);
+    return;
+  }
+  setComponentAvailable("contract", true);
+  pullContractToCenter(job.id);
+  renderRookJobBoard(site);
+}
+
 function renderEcologyBeaconButton(ecologyBeaconCount) {
   const button = document.createElement("button");
   const label = document.createElement("strong");
@@ -1831,6 +2099,13 @@ function openHubService(serviceId) {
   }
 
   if (behavior.offersContracts) {
+    if (service.proceduralSurveyContracts && isServiceContractLadderComplete(service, state)) {
+      syncContractPanelVisibility();
+      renderRookJobBoard(dockedSite);
+      focusPanelById("rook-jobs");
+      return;
+    }
+
     setComponentAvailable("contract", true);
     if (service.offersAllContracts) {
       offerAllHubServiceContracts(dockedSite, service);
@@ -1863,6 +2138,17 @@ function openHubService(serviceId) {
 }
 
 function closeDriveThroughPanel(panelId) {
+  if (panelId === "rook-jobs") {
+    setComponentAvailable("rook-jobs", false);
+
+    if (getActiveSurveyBoardService(currentSiteState?.dockedSite)) {
+      activeHubServiceId = null;
+      renderHubServiceMenu(currentSiteState?.dockedSite);
+    }
+
+    return;
+  }
+
   if (panelId === "merchant") {
     setComponentAvailable("merchant", false);
 
@@ -1931,6 +2217,10 @@ function isActiveServiceUsingPanel(panelId) {
 }
 
 function closeDriveThroughWindows({ keepServiceType = null } = {}) {
+  if (!shouldKeepServiceWindowOpen(keepServiceType, "rook-jobs")) {
+    setComponentAvailable("rook-jobs", false);
+  }
+
   if (!shouldKeepServiceWindowOpen(keepServiceType, "merchant")) {
     setComponentAvailable("merchant", false);
   }
@@ -1955,6 +2245,15 @@ function closeDriveThroughWindows({ keepServiceType = null } = {}) {
 }
 
 function offerHubServiceContract(site, service) {
+  if (service.id === yardExchangeServices.rook && isServiceContractLadderComplete(service, state)) {
+    renderRookJobBoard(site);
+    return;
+  }
+
+  if (offerSurveyContract(site, service)) {
+    return;
+  }
+
   const contractId = getNextHubServiceContractId(service, { state });
 
   if (!contractId) {
@@ -1987,6 +2286,58 @@ function offerHubServiceContract(site, service) {
     npcName: service.npcName,
     organization: service.organization,
   });
+}
+
+// Once a service's authored contract ladder is fully paid out, it switches to
+// world-generated survey runs: the hub reads the ore clusters that actually
+// exist around it and writes a contract for one of them. Returns true when it
+// handled the interaction (offer, refocus, or busy), false to fall through to
+// the authored contract flow.
+function offerSurveyContract(site, service) {
+  if (!service.proceduralSurveyContracts || !isServiceContractLadderComplete(service, state)) {
+    return false;
+  }
+
+  const inProgressId = getInProgressServiceContractId(service, state);
+  const inProgress = inProgressId ? state.contracts.records[inProgressId] : null;
+
+  if (inProgress?.status === "offered") {
+    contractManager.focusContract(inProgressId);
+    return true;
+  }
+
+  if (inProgress) {
+    contractManager.focusContract(inProgressId);
+
+    if (service.busyMessage) {
+      commsDirector.say({
+        source: COMMS_SOURCES.serviceNpc,
+        speaker: service.npcName,
+        text: service.busyMessage,
+      });
+    }
+
+    return true;
+  }
+
+  const definition = game.generateSurveyContract(site, service.organization);
+
+  if (!definition) {
+    return false;
+  }
+
+  registerContractDefinition(definition);
+  contractManager.offerContract(definition.id, {
+    type: "hub-service",
+    siteId: site.id,
+    siteName: site.name,
+    serviceId: service.id,
+    serviceType: service.serviceType,
+    npcId: service.npcId,
+    npcName: service.npcName,
+    organization: service.organization,
+  });
+  return true;
 }
 
 function offerAllHubServiceContracts(site, service) {
@@ -2130,6 +2481,11 @@ function updateRookFollowupOffers() {
     const service = site ? getHubService(site.id, activeHubServiceId) : null;
 
     if (!site || service?.id !== yardExchangeServices.rook) {
+      return;
+    }
+
+    if (service.id === yardExchangeServices.rook && isServiceContractLadderComplete(service, state)) {
+      renderRookJobBoard(site);
       return;
     }
 
@@ -3863,8 +4219,6 @@ function renderFinleyPanel(siteState = currentSiteState) {
   if (activePump?.type !== "scan") finleyScanButton.disabled = !canScan;
 }
 
-let activePump = null; // { type, intervalId }
-
 function toggleSupplyPump(type) {
   if (activePump?.type === type) {
     stopSupplyPump();
@@ -5033,11 +5387,17 @@ function savePanelLayout(panel, offset = null, options = {}) {
 }
 
 function initLicenseApplication() {
+  if (isFreePlayStart) {
+    dismissLicenseApplication();
+    applyIssuedLicense(getPilotLicense(state));
+    return;
+  }
+
   const existingLicense = getPilotLicense(state);
 
   if (existingLicense.licenseId) {
     applyIssuedLicense(existingLicense);
-    licenseApplication.classList.add("is-dismissed");
+    dismissLicenseApplication();
     renderContract();
     return;
   }
@@ -5079,11 +5439,16 @@ function initLicenseApplication() {
 
     applyIssuedLicense(license);
     setComponentAvailable("license", true);
-    licenseApplication.classList.add("is-dismissed");
+    dismissLicenseApplication();
     journeyDirector.acceptMission();
     renderContract();
     saveNow();
   });
+}
+
+function dismissLicenseApplication() {
+  licenseForm?.reset();
+  licenseApplication?.classList.add("is-dismissed");
 }
 
 function applyIssuedLicense(pilot) {

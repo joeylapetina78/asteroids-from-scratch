@@ -29,7 +29,7 @@ export function getProcessorOutputs(components) {
       label: "Scanergy",
       amountLabel: "matching materials",
       acceptedShapes: ["hexagon", "diamond"],
-      color: "#49e1b8",
+      color: "#a066ff",
     });
   }
 

@@ -29,7 +29,7 @@ const DEFAULT_REGION = {
   center: { x: 0, y: 0 },
   radius: 0,
   falloff: 0,
-  tags: ["deep-space", "unclaimed"],
+  tags: ["unclaimed"],
   institutions: ["frontier-transit-office"],
   dominantFamilies: ["stone"],
   rights: DEFAULT_RIGHTS,
@@ -56,7 +56,7 @@ export const WORLD_REGIONS = [
     center: { x: 0, y: 0 },
     radius: 2600,
     falloff: 1600,
-    tags: ["starter", "outer-frontier", "rook-industry", "poor"],
+    tags: ["starter"],
     institutions: ["rook-industries", "yard-exchange-authority", "yard-exchange-finance-office"],
     dominantFamilies: ["industrial", "stone", "structural"],
     rights: {
@@ -88,7 +88,7 @@ export const WORLD_REGIONS = [
     center: { x: 2400, y: -850 },
     radius: 2200,
     falloff: 1700,
-    tags: ["structural", "mining-rush", "dangerous", "rook-claims"],
+    tags: ["mining-rush", "dangerous", "rook-claims"],
     institutions: ["rook-industries", "independent-miners-guild", "yard-exchange-authority"],
     dominantFamilies: ["structural", "industrial"],
     rights: {
@@ -120,7 +120,7 @@ export const WORLD_REGIONS = [
     center: { x: -2200, y: -2100 },
     radius: 1800,
     falloff: 1400,
-    tags: ["conductor", "trade", "prospecting"],
+    tags: ["trade", "prospecting"],
     institutions: ["yard-exchange-authority", "barvis-holdings", "copperline-prospectors"],
     dominantFamilies: ["conductor", "industrial"],
     rights: {
@@ -151,7 +151,7 @@ export const WORLD_REGIONS = [
     center: { x: -2600, y: 1200 },
     radius: 1700,
     falloff: 1300,
-    tags: ["volatile", "thin-infrastructure", "frontier"],
+    tags: ["frontier"],
     institutions: ["yard-exchange-authority", "coldreach-patrol-office"],
     dominantFamilies: ["volatile", "industrial"],
     rights: {
@@ -184,7 +184,22 @@ export function getRegionProfile(x, y) {
   })).filter(({ influence }) => influence > 0);
 
   const strongest = regionInfluences.reduce(
-    (best, current) => (current.influence > best.influence ? current : best),
+    (best, current) => {
+      if (current.influence > best.influence) {
+        return current;
+      }
+
+      // Region cores can overlap while their profiles blend. Resolve an equal
+      // full-strength influence by nearest center so one place still owns the
+      // legal/economic identity instead of whichever definition came first.
+      if (current.influence === best.influence) {
+        const currentDistance = Math.hypot(x - current.region.center.x, y - current.region.center.y);
+        const bestDistance = Math.hypot(x - best.region.center.x, y - best.region.center.y);
+        return currentDistance < bestDistance ? current : best;
+      }
+
+      return best;
+    },
     { region: DEFAULT_REGION, influence: 0 },
   );
   const regionWeight = regionInfluences.reduce((sum, { influence }) => sum + influence, 0);
@@ -230,15 +245,12 @@ export function getRegionInfluence(region, x, y) {
 }
 
 function getBlendedTags(regionInfluences, strongest) {
-  const tags = new Set(DEFAULT_REGION.tags);
-
-  regionInfluences.forEach(({ region, influence }) => {
-    if (influence >= 0.25 || region.id === strongest.region.id) {
-      region.tags.forEach((tag) => tags.add(tag));
-    }
-  });
-
-  return [...tags];
+  // Region identity is intentionally firmer than zone navigation. Nearby
+  // regions may blend numeric profiles across a border, but their authority,
+  // economy, and danger labels should not all claim the same location. The
+  // strongest region alone owns the semantic tag set; only its numeric
+  // profile is allowed to blend through the transition band.
+  return [...strongest.region.tags];
 }
 
 function cloneRights(rights) {

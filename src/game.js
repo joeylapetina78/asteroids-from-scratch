@@ -1,29 +1,31 @@
-import { Bullet } from "./entities/Bullet.js?v=fresh-20260719-1259-cb7d5ac";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260719-1259-cb7d5ac";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260719-1259-cb7d5ac";
-import { Ship } from "./entities/Ship.js?v=fresh-20260719-1259-cb7d5ac";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260719-1259-cb7d5ac";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260719-2003-2d72582";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260719-2003-2d72582";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260719-2003-2d72582";
+import { Ship } from "./entities/Ship.js?v=fresh-20260719-2003-2d72582";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260719-2003-2d72582";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260719-1259-cb7d5ac";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260719-1259-cb7d5ac";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260719-1259-cb7d5ac";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260719-1259-cb7d5ac";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260719-1259-cb7d5ac";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260719-1259-cb7d5ac";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260719-1259-cb7d5ac";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260719-1259-cb7d5ac";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260719-1259-cb7d5ac";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260719-1259-cb7d5ac";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260719-1259-cb7d5ac";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260719-1259-cb7d5ac";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260719-1259-cb7d5ac";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-1259-cb7d5ac";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260719-1259-cb7d5ac";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260719-1259-cb7d5ac";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260719-1259-cb7d5ac";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260719-1259-cb7d5ac";
-import { createGameState } from "./state/gameState.js?v=fresh-20260719-1259-cb7d5ac";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-1259-cb7d5ac";
+import { createInput } from "./systems/input.js?v=fresh-20260719-2003-2d72582";
+import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260719-2003-2d72582";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260719-2003-2d72582";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260719-2003-2d72582";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260719-2003-2d72582";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260719-2003-2d72582";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260719-2003-2d72582";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260719-2003-2d72582";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260719-2003-2d72582";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260719-2003-2d72582";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260719-2003-2d72582";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260719-2003-2d72582";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260719-2003-2d72582";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260719-2003-2d72582";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-2003-2d72582";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260719-2003-2d72582";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260719-2003-2d72582";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260719-2003-2d72582";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260719-2003-2d72582";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260719-2003-2d72582";
+import { createGameState } from "./state/gameState.js?v=fresh-20260719-2003-2d72582";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-2003-2d72582";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -31,9 +33,9 @@ import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits
 // Cargo transfer trail color per resource family (volatile = blue, strange = purple, else orange).
 const CARGO_TRAIL_COLOR = {
   "water-ice":      "#b8eaff",
-  "methane-ice":    "#d0f0a0",
-  "hydrogen":       "#fffdc0",
-  "crystal-matrix": "#de6fff",
+  "methane-ice":    "#7cd9e8",
+  "hydrogen":       "#6fb5ff",
+  "crystal-matrix": "#ff6fd8",
   "anomaly-shard":  "#ff3080",
 };
 
@@ -608,16 +610,38 @@ export class Game {
     return targets;
   }
 
+  // Contract-reads-world: a hub service asks for a survey contract and gets
+  // one written from the ore clusters that actually exist around the site.
+  generateSurveyContract(site, issuer = null) {
+    return generateSurveyContractDefinition({
+      site,
+      issuer,
+      resourceField: this.resourceField,
+      chunkSize: this.canvas.width,
+    });
+  }
+
+  generateSurveyJobBoard(site, issuer = null) {
+    return generateSurveyJobBoardDefinitions({
+      site,
+      issuer,
+      resourceField: this.resourceField,
+      chunkSize: this.canvas.width,
+    });
+  }
+
   spawnIncursionPortal(position = null) {
     const objectivePosition = position ? null : this.getIncursionObjectiveSpawnPosition();
     const requestedPosition = position ?? objectivePosition ?? this.getAmbientIncursionSpawnPosition();
     const safePosition = getIncursionSafePosition(requestedPosition, this.worldSites, this.ship.position);
     const spawnPosition = position ? safePosition : this.clampIncursionIntoHubJurisdiction(safePosition);
+    const encounterContext = getIncursionWorldContext(spawnPosition);
     const { portal, spawned } = this.incursionField.spawnPortal({
       x: spawnPosition.x,
       y: spawnPosition.y,
       seed: this.state.ledger.eventCount + 1200,
       pacing: this.encounterDirector.getIncursionPacing(),
+      encounterContext,
     });
 
     this.lifeforms.push(...spawned);
@@ -626,6 +650,9 @@ export class Game {
       factionId: portal.factionId,
       waveCount: portal.waveCount,
       enemyCount: spawned.length,
+      zoneId: encounterContext.zoneId,
+      regionId: encounterContext.regionId,
+      zoneTags: encounterContext.tags,
       x: Math.round(portal.position.x),
       y: Math.round(portal.position.y),
     });
@@ -644,7 +671,7 @@ export class Game {
   }
 
   // When the player is inside a hub's patrol territory, a portal opening near
-  // them should be that hub's problem — pull it inside defense jurisdiction so
+  // them should be that hub's problem  pull it inside defense jurisdiction so
   // the patrol actually engages instead of circling its idle loop beside it.
   clampIncursionIntoHubJurisdiction(portalPosition) {
     const homeHub = this.worldSites.find((site) =>
@@ -1646,7 +1673,7 @@ export class Game {
       return false;
     }
 
-    // No patrol yet — create one directly in transit mode.
+    // No patrol yet  create one directly in transit mode.
     const waypoints = this.generatePatrolWaypoints(site);
     const directionToShip = normalizeVector(this.ship.position.x - site.position.x, this.ship.position.y - site.position.y);
     const side = { x: -directionToShip.y, y: directionToShip.x };
@@ -1708,7 +1735,7 @@ export class Game {
       return false;
     }
 
-    // Return to drift rather than departing — patrol belongs to the hub.
+    // Return to drift rather than departing  patrol belongs to the hub.
     patrol.phase = "return";
     patrol.waypointIndex = this.nearestWaypointIndex(patrol);
     patrol.hasScanned = false;
@@ -1777,7 +1804,7 @@ export class Game {
     patrol.pulse += deltaSeconds;
     patrol.weaponCooldown = Math.max(0, (patrol.weaponCooldown ?? 0) - deltaSeconds);
 
-    // â"€â"€ DEPART â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // "" DEPART """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
     if (patrol.phase === "depart") {
       const target = patrol.departTarget ?? { x: patrol.site.position.x, y: patrol.site.position.y };
       this.steerPatrolIntercept(patrol, target, PATROL_DEPART_SPEED, deltaSeconds);
@@ -1789,7 +1816,7 @@ export class Game {
       return;
     }
 
-    // â"€â"€ RETURN TO DRIFT â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // "" RETURN TO DRIFT """""""""""""""""""""""""""""""""""""""""""""""""""""
     if (this.updatePatrolIncursionDefense(patrol, deltaSeconds)) {
       return;
     }
@@ -1806,7 +1833,7 @@ export class Game {
       return;
     }
 
-    // â"€â"€ DRIFT â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // "" DRIFT """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
     if (patrol.phase === "drift") {
       // Passive scan ping when patrol passes near player.
       patrol.passiveScanTimer += deltaSeconds;
@@ -1829,7 +1856,7 @@ export class Game {
 
           const exemptSiteIds = this.state.journey?.mission?.patrolExemptSiteIds ?? [];
           if (!this.hubInspectionCache.has(cacheKey) && !exemptSiteIds.includes(patrol.site.id)) {
-            // Jump directly to orbiting distance — patrol has short-range intercept capability.
+            // Jump directly to orbiting distance  patrol has short-range intercept capability.
             this.jumpPatrolToInterceptPosition(patrol);
             patrol.flybyTarget = null;
             patrol.requiresManualClearance = false;
@@ -1872,7 +1899,7 @@ export class Game {
       return;
     }
 
-    // â"€â"€ FLY-BY â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // "" FLY-BY """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
     if (patrol.phase === "flyby") {
       const target = patrol.flybyTarget;
 
@@ -1882,7 +1909,7 @@ export class Game {
         return;
       }
 
-      // Always steer toward the snapshot position — never chase a live ship.
+      // Always steer toward the snapshot position  never chase a live ship.
       const targetPos = target.position;
       this.steerPatrolIntercept(patrol, targetPos, PATROL_DRIFT_SPEED * 1.8, deltaSeconds);
 
@@ -1905,7 +1932,7 @@ export class Game {
         }
       }
 
-      // Leave immediately after scanning — don't linger on the target.
+      // Leave immediately after scanning  don't linger on the target.
       if (patrol.flybyHasScanned) {
         patrol.flybyTarget = null;
         patrol.phase = "return";
@@ -1915,15 +1942,15 @@ export class Game {
       return;
     }
 
-    // â"€â"€ STANDOFF â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // "" STANDOFF """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
     // Patrol holds the approach line aimed at the player. Tether is active.
     // After a short dwell the patrol begins orbiting (approach phase).
     if (patrol.phase === "standoff") {
-      // Tether player immediately — they cannot flee during standoff.
+      // Tether player immediately  they cannot flee during standoff.
       this.ship.velocity.x *= PATROL_TETHER_DAMPING;
       this.ship.velocity.y *= PATROL_TETHER_DAMPING;
 
-      // Hold fixed position on the standoff angle — aimed straight at player.
+      // Hold fixed position on the standoff angle  aimed straight at player.
       const holdTarget = {
         x: this.ship.position.x + Math.cos(patrol.standoffOrbitAngle) * PATROL_ORBIT_RADIUS * 1.8,
         y: this.ship.position.y + Math.sin(patrol.standoffOrbitAngle) * PATROL_ORBIT_RADIUS * 1.8,
@@ -1941,7 +1968,7 @@ export class Game {
       return;
     }
 
-    // â"€â"€ TRANSIT â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // "" TRANSIT """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
     // Transit is only used for mission-scripted intercepts (spawnPatrolIntercept
     // from a beat). Hub-triggered intercepts use jumpPatrolToInterceptPosition
     // instead and skip transit entirely, going straight to standoff.
@@ -1957,7 +1984,7 @@ export class Game {
       return;
     }
 
-    // â"€â"€ APPROACH / HOLD (intercept) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // "" APPROACH / HOLD (intercept) """""""""""""""""""""""""""""""""""""""""
     if (patrol.orbitAngle === null) {
       patrol.orbitAngle = Math.atan2(patrol.position.y - this.ship.position.y, patrol.position.x - this.ship.position.x);
     }
@@ -2049,7 +2076,7 @@ export class Game {
   }
 
   jumpPatrolToInterceptPosition(patrol) {
-    // Jump to the approach trajectory — directly on the line from hub to player,
+    // Jump to the approach trajectory  directly on the line from hub to player,
     // at orbit radius distance, aimed straight at the ship. Tether applies immediately.
     const dx = this.ship.position.x - patrol.site.position.x;
     const dy = this.ship.position.y - patrol.site.position.y;
@@ -2062,7 +2089,7 @@ export class Game {
     patrol.velocity.x = -toShip.x * 20;
     patrol.velocity.y = -toShip.y * 20;
     patrol.heading = Math.atan2(-toShip.y, -toShip.x);
-    // Lock the orbit angle on the approach trajectory — patrol holds this line in standoff.
+    // Lock the orbit angle on the approach trajectory  patrol holds this line in standoff.
     patrol.orbitAngle = Math.atan2(patrol.position.y - this.ship.position.y, patrol.position.x - this.ship.position.x);
     patrol.standoffOrbitAngle = patrol.orbitAngle;
     patrol.standoffTimer = 0;
@@ -2082,7 +2109,7 @@ export class Game {
   findPatrolFlybyTarget(patrol) {
     const patrolRadius = patrol.site.interactionRadius * PATROL_WAYPOINT_RADIUS_FACTOR;
 
-    // Prefer nearby NPC ships — haulers passing through the patrol zone.
+    // Prefer nearby NPC ships  haulers passing through the patrol zone.
     const nearbyShip = this.npcShips.find((ship) => {
       if (!ship.isAlive) return false;
       const distFromHub = distance(ship.position, patrol.site.position);
@@ -3463,10 +3490,13 @@ export class Game {
       return;
     }
 
+    const worldContext = getIncursionWorldContext(this.ship.position);
     const portal = this.spawnIncursionPortal();
     const baseGapSeconds = INCURSION_AMBIENT_REPEAT_MIN_SECONDS
       + Math.random() * (INCURSION_AMBIENT_REPEAT_MAX_SECONDS - INCURSION_AMBIENT_REPEAT_MIN_SECONDS);
-    this.incursionDirector.nextSpawnIn = baseGapSeconds * this.encounterDirector.getIncursionPacing().portalGapMultiplier;
+    this.incursionDirector.nextSpawnIn = baseGapSeconds
+      * this.encounterDirector.getIncursionPacing().portalGapMultiplier
+      * worldContext.pacing.portalGapMultiplier;
 
     this.state.ledger.recordEvent(
       "incursion.signalDetected",
@@ -4099,7 +4129,7 @@ export class Game {
         const playerInPatrolRange = distance(this.ship.position, site.position) <= patrolCreateRadius;
 
         if (!playerInPatrolRange) {
-          // Player left patrol territory — depart any patrol belonging to this hub.
+          // Player left patrol territory  depart any patrol belonging to this hub.
           if (isPatrolForThisHub) {
             this.departHubPatrol(site.id);
           }
@@ -5507,7 +5537,7 @@ export class Game {
 
     ctx.save();
 
-    // â"€â"€ Hex fills: ore density drives brightness, zone color drives hue â"€â"€â"€â"€â"€â"€
+    // "" Hex fills: ore density drives brightness, zone color drives hue """"""
     // Dark empty space stays near-invisible; rich ore pockets glow neon.
     network.plots.forEach((plot) => {
       const claim = this.claimField.getClaimAt(plot.center.x, plot.center.y);
@@ -5515,7 +5545,7 @@ export class Game {
       if (intensity < 0.06) return;
 
       const oreGlow = this.state.ui?.mapGlow ?? 0.20;
-      const exponent = 0.3 + oreGlow * 1.2; // 0.3 flat â†’ 1.5 high-contrast
+      const exponent = 0.3 + oreGlow * 1.2; // 0.3 flat  1.5 high-contrast
       const glow = Math.pow(intensity, exponent);
       const [cr, cg, cb] = claim.color;
 
@@ -5543,7 +5573,7 @@ export class Game {
       ctx.fill();
     });
 
-    // â"€â"€ Dashed edges and vertex dots (unchanged from Codex) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // "" Dashed edges and vertex dots (unchanged from Codex) """"""""""""""""""
     ctx.globalAlpha = 0.58;
     ctx.strokeStyle = "rgba(126, 162, 178, 0.72)";
     ctx.lineWidth = 1.1;
@@ -6036,6 +6066,10 @@ function distance(firstPosition, secondPosition) {
   return Math.hypot(firstPosition.x - secondPosition.x, firstPosition.y - secondPosition.y);
 }
 
+function clamp(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, value));
+}
+
 function closestPointOnSegment(point, start, end) {
   const segment = {
     x: end.x - start.x,
@@ -6332,6 +6366,51 @@ function isCombatHostile(lifeform) {
 
 function getIncursionPortalReward(waveCount) {
   return Math.round(INCURSION_PORTAL_BASE_REWARD * Math.pow(1.75, Math.max(0, waveCount - 1)));
+}
+
+// Incursions consume the same authored place tags as terrain and resources.
+// This remains a small local modifier layered on top of the encounter
+// director, so authored danger changes the character of a place without
+// bypassing the session-pressure safety system.
+function getIncursionWorldContext(position) {
+  const zone = getZoneProfile(position.x, position.y);
+  const region = getRegionProfile(position.x, position.y);
+  const tags = [...new Set([...zone.tags, ...region.tags])];
+  let waveSizeMultiplier = 1;
+  let waveDelayMultiplier = 1;
+  let portalGapMultiplier = 1;
+
+  if (tags.includes("starter")) {
+    waveSizeMultiplier *= 0.8;
+    waveDelayMultiplier *= 1.2;
+    portalGapMultiplier *= 1.35;
+  }
+  if (tags.includes("safe")) {
+    waveSizeMultiplier *= 0.75;
+    waveDelayMultiplier *= 1.2;
+    portalGapMultiplier *= 1.4;
+  }
+  if (tags.includes("dangerous")) {
+    waveSizeMultiplier *= 1.15;
+    waveDelayMultiplier *= 0.9;
+    portalGapMultiplier *= 0.8;
+  }
+  if (tags.includes("hunters")) {
+    waveSizeMultiplier *= 1.15;
+    waveDelayMultiplier *= 0.9;
+    portalGapMultiplier *= 0.85;
+  }
+
+  return {
+    zoneId: zone.strongestZoneId,
+    regionId: region.strongestRegionId,
+    tags,
+    pacing: {
+      waveSizeMultiplier: clamp(waveSizeMultiplier, 0.55, 1.45),
+      waveDelayMultiplier: clamp(waveDelayMultiplier, 0.7, 1.6),
+      portalGapMultiplier: clamp(portalGapMultiplier, 0.6, 2),
+    },
+  };
 }
 
 function getIncursionSafePosition(requestedPosition, worldSites, fallbackPosition) {

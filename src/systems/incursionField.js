@@ -1,6 +1,6 @@
-import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260719-1259-cb7d5ac";
-import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260719-1259-cb7d5ac";
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260719-1259-cb7d5ac";
+import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260719-2003-2d72582";
+import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260719-2003-2d72582";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260719-2003-2d72582";
 import { hashNumbers } from "./random.js";
 
 const PORTAL_WAVE_SIZES = [5, 10, 30];
@@ -23,7 +23,7 @@ export function createIncursionField() {
     portals: [],
     nextPortalIndex: 1,
 
-    spawnPortal({ x, y, factionId = "rift-callers", seed = 1, pacing = {} } = {}) {
+    spawnPortal({ x, y, factionId = "rift-callers", seed = 1, pacing = {}, encounterContext = null } = {}) {
       const portal = new InvaderPortal({
         id: `invader-portal-${this.nextPortalIndex}`,
         x,
@@ -32,11 +32,13 @@ export function createIncursionField() {
         seed: hashNumbers(x, y, seed, this.nextPortalIndex),
       });
       this.nextPortalIndex += 1;
+      portal.encounterContext = encounterContext;
       portal.devices = createPortalDevices(portal);
       this.portals.push(portal);
-      const spawned = spawnPortalWave(portal, getPacedWaveSize(0, pacing), 0);
+      const portalPacing = getPortalPacing(portal, pacing);
+      const spawned = spawnPortalWave(portal, getPacedWaveSize(0, portalPacing), 0);
       portal.waveCount = 1;
-      portal.nextWaveIn = getNextWaveSeconds(portal, pacing);
+      portal.nextWaveIn = getNextWaveSeconds(portal, portalPacing);
       portal.isWaveHeld = false;
       return { portal, spawned };
     },
@@ -87,12 +89,13 @@ export function createIncursionField() {
           return;
         }
 
-        const waveSize = getPacedWaveSize(portal.waveCount, pacing);
+        const portalPacing = getPortalPacing(portal, pacing);
+        const waveSize = getPacedWaveSize(portal.waveCount, portalPacing);
         const wave = spawnPortalWave(portal, waveSize, portal.waveCount);
         portal.isWaveHeld = false;
         spawned.push(...wave);
         portal.waveCount += 1;
-        portal.nextWaveIn = getNextWaveSeconds(portal, pacing);
+        portal.nextWaveIn = getNextWaveSeconds(portal, portalPacing);
         events.push({
           type: "incursion.waveSpawned",
           payload: {
@@ -113,6 +116,15 @@ export function createIncursionField() {
     getActivePortals() {
       return this.portals.filter((portal) => portal.isAlive);
     },
+  };
+}
+
+function getPortalPacing(portal, pacing = {}) {
+  const local = portal.encounterContext?.pacing ?? {};
+
+  return {
+    waveSizeMultiplier: (pacing.waveSizeMultiplier ?? 1) * (local.waveSizeMultiplier ?? 1),
+    waveDelayMultiplier: (pacing.waveDelayMultiplier ?? 1) * (local.waveDelayMultiplier ?? 1),
   };
 }
 

@@ -15,25 +15,30 @@ export const FAMILIES = {
 // Resource records are the shared material vocabulary for the world. Systems
 // ask these records about use, value, and appearance instead of maintaining
 // per-resource switch statements in UI, contracts, or shops.
+// Survival-role color lanes: every material that feeds a survival need shares
+// a hue family, so a rock's role reads at a glance without the field guide —
+// fuel (volatile) = icy/cool blues, charge (structural + industrial) = warm
+// reds/ambers/browns, scanergy (conductor) = electric violets. Members vary
+// shade within their lane; keep new materials inside their role's lane.
 export const FAMILY_MEMBERS = {
   volatile: [
     { id: "water-ice",   color: "#b8eaff", weight: 3, value: 30, processOutputs: { fuel: 250 } },
-    { id: "methane-ice", color: "#d0f0a0", weight: 2, value: 50, processOutputs: { fuel: 320 } },
-    { id: "hydrogen",    color: "#fffdc0", weight: 1, value: 80, processOutputs: { fuel: 400 } },
+    { id: "methane-ice", color: "#7cd9e8", weight: 2, value: 50, processOutputs: { fuel: 320 } },
+    { id: "hydrogen",    color: "#6fb5ff", weight: 1, value: 80, processOutputs: { fuel: 400 } },
   ],
   structural: [
     { id: "iron-nickel", color: "#ff7452", weight: 3, value: 20, processOutputs: { ammo: 250 } },
-    { id: "aluminum",    color: "#c8d4e0", weight: 2, value: 35, processOutputs: { ammo: 300 } },
-    { id: "titanium",    color: "#7898c0", weight: 1, value: 60, processOutputs: { ammo: 400 } },
+    { id: "aluminum",    color: "#f0b46a", weight: 2, value: 35, processOutputs: { ammo: 300 } },
+    { id: "titanium",    color: "#c07840", weight: 1, value: 60, processOutputs: { ammo: 400 } },
   ],
   industrial: [
     { id: "silicate",     color: "#d4b896", weight: 3, value: 15, processOutputs: { ammo: 180 } },
     { id: "carbonaceous", color: "#8a7060", weight: 2, value: 25, processOutputs: { ammo: 220, fuel: 100 } },
   ],
   conductor: [
-    { id: "copper", color: "#49e1b8", weight: 3, value: 50, processOutputs: { scanergy: 250 } },
-    { id: "cobalt", color: "#4a7fd4", weight: 2, value: 80, processOutputs: { scanergy: 350 } },
-    { id: "silver", color: "#e8d090", weight: 1, value: 120, processOutputs: { scanergy: 450 } },
+    { id: "copper", color: "#a066ff", weight: 3, value: 50, processOutputs: { scanergy: 250 } },
+    { id: "cobalt", color: "#6a48e0", weight: 2, value: 80, processOutputs: { scanergy: 350 } },
+    { id: "silver", color: "#cdb4ff", weight: 1, value: 120, processOutputs: { scanergy: 450 } },
   ],
   energy: [
     { id: "uranium", color: "#a0e040", weight: 2, value: 90, processOutputs: { fuel: 650 } },
@@ -45,7 +50,7 @@ export const FAMILY_MEMBERS = {
     { id: "platinum",   color: "#d8e8f8", weight: 1, value: 300, processOutputs: {} },
   ],
   strange: [
-    { id: "crystal-matrix", color: "#de6fff", weight: 2, value: 200, processOutputs: {} },
+    { id: "crystal-matrix", color: "#ff6fd8", weight: 2, value: 200, processOutputs: {} },
     { id: "anomaly-shard",  color: "#ff3080", weight: 1, value: 450, processOutputs: {} },
     { id: "rift-trophy", color: "#ffd86f", weight: 0, value: 0, processOutputs: {} },
     { id: "rockmoss-crawler", color: "#72ffc9", weight: 0, value: 0, processOutputs: {} },

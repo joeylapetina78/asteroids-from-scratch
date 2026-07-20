@@ -1,8 +1,8 @@
-const PROFILE_FIELDS = [
+﻿const PROFILE_FIELDS = [
   "asteroidDensityMultiplier",
   "commonRockBias",
   // One bias per resource family. Controls how strong that family's noise
-  // channel is in this region — higher = more likely to dominate.
+  // channel is in this region  higher = more likely to dominate.
   "volatileBias",
   "structuralBias",
   "industrialBias",
@@ -39,7 +39,7 @@ const DEFAULT_PROFILE = {
 };
 
 export const WORLD_ZONES = [
-  // â"€â"€ STARTER CLUSTER — tight pack near origin, multiple zones visible at once â"€â"€
+  // "" STARTER CLUSTER  tight pack near origin, multiple zones visible at once ""
   {
     id: "starter-drift",
     name: "First Reach",
@@ -47,7 +47,7 @@ export const WORLD_ZONES = [
     center: { x: 0, y: 0 },
     radius: 900,
     falloff: 800,
-    tags: ["starter", "safe", "ambient-life", "stony", "open-drift"],
+    tags: ["starter", "safe", "ambient-life", "open-drift"],
     profile: {
       asteroidDensityMultiplier: 0.85,
       commonRockBias:  1.35,
@@ -71,7 +71,7 @@ export const WORLD_ZONES = [
     center: { x: 2000, y: -1000 },
     radius: 1000,
     falloff: 900,
-    tags: ["structural", "dense-rocks", "hunters", "metallic", "maze-corridor", "fuel-lean"],
+    tags: ["metallic", "dense-rocks", "hunters", "maze-corridor", "fuel-lean"],
     profile: {
       asteroidDensityMultiplier: 1.45,
       commonRockBias:  0.8,
@@ -95,7 +95,7 @@ export const WORLD_ZONES = [
     center: { x: -1400, y: -2000 },
     radius: 800,
     falloff: 700,
-    tags: ["conductor", "teal-rocks", "medium-density", "cluster-pocket", "scanergy-rich", "charge-lean"],
+    tags: ["cluster-pocket", "scanergy-rich", "charge-lean"],
     conductorMember: "copper",
     profile: {
       asteroidDensityMultiplier: 1.1,
@@ -120,7 +120,7 @@ export const WORLD_ZONES = [
     center: { x: -2200, y: 900 },
     radius: 800,
     falloff: 700,
-    tags: ["volatile", "blue-rocks", "ambient-life", "open-drift", "fuel-rich"],
+    tags: ["volatile", "ambient-life", "open-drift", "fuel-rich"],
     profile: {
       asteroidDensityMultiplier: 0.9,
       commonRockBias:  1.1,
@@ -144,7 +144,7 @@ export const WORLD_ZONES = [
     center: { x: -3800, y: 1800 },
     radius: 1200,
     falloff: 1000,
-    tags: ["scrap", "common-rocks", "ambient-life", "debris-stream", "charge-rich"],
+    tags: ["scrap", "ambient-life", "debris-stream", "charge-rich"],
     profile: {
       asteroidDensityMultiplier: 1.05,
       commonRockBias:  1.5,
@@ -162,7 +162,7 @@ export const WORLD_ZONES = [
     },
   },
 
-  // â"€â"€ NEAR-FIELD CONNECTORS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+  // "" NEAR-FIELD CONNECTORS """""""""""""""""""""""""""""""""""""""""""""""""""""
   {
     id: "shatter-belt",
     name: "Shatter Belt",
@@ -170,7 +170,7 @@ export const WORLD_ZONES = [
     center: { x: 4200, y: -2500 },
     radius: 900,
     falloff: 800,
-    tags: ["structural", "dense-rocks", "stone-wall", "maze-corridor"],
+    tags: ["metallic", "dense-rocks", "stone-wall", "maze-corridor"],
     profile: {
       asteroidDensityMultiplier: 1.55,
       commonRockBias:  0.85,
@@ -290,7 +290,7 @@ export const WORLD_ZONES = [
     center: { x: 1000, y: 5500 },
     radius: 800,
     falloff: 700,
-    tags: ["stony", "cluster-pocket", "debris-stream"],
+    tags: ["cluster-pocket", "debris-stream"],
     profile: {
       asteroidDensityMultiplier: 1.25,
       commonRockBias:  1.4,
@@ -308,7 +308,7 @@ export const WORLD_ZONES = [
     },
   },
 
-  // â"€â"€ MID-RANGE â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+  // "" MID-RANGE """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
   {
     id: "blue-glint",
     name: "Blue Glint",
@@ -316,7 +316,7 @@ export const WORLD_ZONES = [
     center: { x: -9000, y: -12000 },
     radius: 2000,
     falloff: 1800,
-    tags: ["strange", "rare-pocket", "scanner-interest", "cluster-pocket"],
+    tags: ["strange", "scanner-interest", "cluster-pocket"],
     profile: {
       asteroidDensityMultiplier: 0.75,
       commonRockBias:  0.6,
@@ -340,7 +340,7 @@ export const WORLD_ZONES = [
     center: { x: 10000, y: -4500 },
     radius: 2500,
     falloff: 2000,
-    tags: ["structural", "metallic", "dense-rocks", "industrial", "stone-wall"],
+    tags: ["metallic", "dense-rocks", "industrial", "stone-wall"],
     profile: {
       asteroidDensityMultiplier: 1.5,
       commonRockBias:  0.7,
@@ -382,7 +382,7 @@ export const WORLD_ZONES = [
     },
   },
 
-  // â"€â"€ OUTER ZONES â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+  // "" OUTER ZONES """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
   {
     id: "old-iron-run",
     name: "Old Iron Run",
@@ -438,7 +438,7 @@ export const WORLD_ZONES = [
     center: { x: 42000, y: 28000 },
     radius: 9000,
     falloff: 7000,
-    tags: ["volatile", "water-ice", "cold", "sparse", "strategic", "open-drift", "sparse-dead"],
+    tags: ["volatile", "sparse", "open-drift", "sparse-dead"],
     profile: {
       asteroidDensityMultiplier: 0.55,
       commonRockBias:  0.75,
@@ -462,7 +462,7 @@ export const WORLD_ZONES = [
     center: { x: -44000, y: 32000 },
     radius: 4000,
     falloff: 5000,
-    tags: ["anomaly", "strange", "story", "dangerous", "cluster-pocket", "maze-corridor"],
+    tags: ["anomaly", "strange", "dangerous", "cluster-pocket", "maze-corridor"],
     profile: {
       asteroidDensityMultiplier: 0.9,
       commonRockBias:  0.45,

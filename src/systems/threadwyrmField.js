@@ -1,6 +1,6 @@
-import { Threadwyrm } from "../entities/Threadwyrm.js?v=fresh-20260719-1259-cb7d5ac";
+import { Threadwyrm } from "../entities/Threadwyrm.js?v=fresh-20260719-2003-2d72582";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260719-1259-cb7d5ac";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260719-2003-2d72582";
 
 const THREADWYRM_ATTEMPTS = 14;
 const MAX_THREADWYRMS = 3;
@@ -102,7 +102,7 @@ function getThreadwyrmAnchorWeight(asteroid) {
   const dangerWeight = 0.35 + zone.danger * 1.35;
   const ambientWeight = 0.35 + zone.ambientLifeBias * 0.55;
   const sparsePenalty = zone.tags.includes("sparse") ? 0.35 : 1;
-  const corridorBonus = zone.tags.includes("dense") || zone.tags.includes("high-life") ? 1.25 : 1;
+  const corridorBonus = zone.tags.includes("dense-rocks") || zone.tags.includes("ambient-life") ? 1.25 : 1;
 
   return densityWeight * dangerWeight * ambientWeight * sparsePenalty * corridorBonus;
 }
