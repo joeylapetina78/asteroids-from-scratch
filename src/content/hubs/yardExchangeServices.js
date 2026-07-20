@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260719-2120-67e79b8";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260719-2120-67e79b8";
+import { getNpcName } from "../npcs.js?v=fresh-20260719-2129-6f18a9a";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260719-2129-6f18a9a";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
@@ -263,15 +263,15 @@ export const hubServiceDefinitions = {
           price: 1250,
           title: "Burst Drive Mk I",
           description:
-            "Adds a Shift-key forward dash. It spends fuel for a fast, capped burst that stays within the space ahead of your current view.",
+            "Adds a Shift-key thrust burst. Shift multiplies your active forward, lateral, or combined thrust for a split second.",
           tags: ["Engine upgrade", "Shift dash", "Combat escape"],
           apply: {
             engine: {
-              boostPower: 520,
-              boostMaxSpeed: 265,
+              boostThrustMultiplier: 4.2,
+              boostMaxSpeedMultiplier: 2.2,
+              boostDurationSeconds: 0.3,
               boostFuelCost: 18,
               boostCooldownSeconds: 1.2,
-              boostInitialImpulse: 150,
             },
           },
         },
