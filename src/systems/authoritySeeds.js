@@ -1,7 +1,7 @@
-import { POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260719-2129-6f18a9a";
-import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260719-2129-6f18a9a";
-import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260719-2129-6f18a9a";
-import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260719-2129-6f18a9a";
+import { POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260721-2114-33b9943";
+import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260721-2114-33b9943";
+import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260721-2114-33b9943";
+import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260721-2114-33b9943";
 
 const RIGHT_TO_POWER = Object.freeze({
   [RIGHT_TYPES.TRANSIT]: POWER_TYPES.AUTHORIZE_WORK,

@@ -2,8 +2,9 @@ const DEFAULT_HISTORY_LIMIT = 250;
 
 // Destruction events carry a `cause` naming who actually did it. Only these
 // causes belong to the controlled pilot; patrol/hub turrets and environmental
-// deaths must not feed player-facing stats or signals.
-const PLAYER_ATTRIBUTED_CAUSES = new Set(["weapon", "ramming-ship"]);
+// deaths must not feed player-facing stats or signals. Exported so bounty
+// contracts credit kills by the exact same attribution rule.
+export const PLAYER_ATTRIBUTED_CAUSES = new Set(["weapon", "ramming-ship"]);
 
 // EventLedger is the central memory spine for meaningful career/world events.
 // Gameplay systems report facts here; future contracts, achievements, saves,

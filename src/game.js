@@ -1,31 +1,35 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260719-2129-6f18a9a";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260719-2129-6f18a9a";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260719-2129-6f18a9a";
-import { Ship } from "./entities/Ship.js?v=fresh-20260719-2129-6f18a9a";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260719-2129-6f18a9a";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260721-2114-33b9943";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260721-2114-33b9943";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260721-2114-33b9943";
+import { Ship } from "./entities/Ship.js?v=fresh-20260721-2114-33b9943";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260721-2114-33b9943";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260719-2129-6f18a9a";
-import { createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260719-2129-6f18a9a";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260719-2129-6f18a9a";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260719-2129-6f18a9a";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260719-2129-6f18a9a";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260719-2129-6f18a9a";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260719-2129-6f18a9a";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260719-2129-6f18a9a";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260719-2129-6f18a9a";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260719-2129-6f18a9a";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260719-2129-6f18a9a";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260719-2129-6f18a9a";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260719-2129-6f18a9a";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260719-2129-6f18a9a";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-2129-6f18a9a";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260719-2129-6f18a9a";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260719-2129-6f18a9a";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260719-2129-6f18a9a";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260719-2129-6f18a9a";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260719-2129-6f18a9a";
-import { createGameState } from "./state/gameState.js?v=fresh-20260719-2129-6f18a9a";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-2129-6f18a9a";
+import { createInput } from "./systems/input.js?v=fresh-20260721-2114-33b9943";
+import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260721-2114-33b9943";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260721-2114-33b9943";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260721-2114-33b9943";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260721-2114-33b9943";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260721-2114-33b9943";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260721-2114-33b9943";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260721-2114-33b9943";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260721-2114-33b9943";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260721-2114-33b9943";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260721-2114-33b9943";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260721-2114-33b9943";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260721-2114-33b9943";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260721-2114-33b9943";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260721-2114-33b9943";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260721-2114-33b9943";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260721-2114-33b9943";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260721-2114-33b9943";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260721-2114-33b9943";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260721-2114-33b9943";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260721-2114-33b9943";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260721-2114-33b9943";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260721-2114-33b9943";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260721-2114-33b9943";
+import { createGameState } from "./state/gameState.js?v=fresh-20260721-2114-33b9943";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260721-2114-33b9943";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -134,6 +138,17 @@ const LIFEFORM_CONTACT_RANGES = {
   threadwyrm: 210,
   "drift-mouth": 720,
 };
+// Streaming ambient-life director. Keeps a target population of creatures near
+// the ship wherever it flies (target scales with the local zone's life bias),
+// and despawns procedural creatures the ship has left far behind so the array
+// stays bounded over a long session.
+const AMBIENT_LIFE_INTERVAL_SECONDS = 1.2;
+const AMBIENT_LIFE_BASE = 12;
+const AMBIENT_LIFE_SCALE = 24; // target ≈ 26 in default space, ≈ 45 in lively zones
+const AMBIENT_LIFE_FLOCKS_PER_TICK = 3;
+const AMBIENT_LIFE_KEEP_RADIUS = 1500; // tighter, so flocks read as dense on-screen
+const AMBIENT_LIFE_DESPAWN_RADIUS = 3600;
+const AMBIENT_LIFE_TYPES = new Set(["grazer", "skitter", "threadling", "lantern", "hunter"]);
 const ROCKMOSS_CRAWLER_TYPE = "rockmoss-crawler";
 const ROCKMOSS_WORK_DISTANCE_PER_PATCH = 170;
 const ROCKMOSS_MIN_PATCHES = 1;
@@ -226,6 +241,8 @@ export class Game {
     const { added: initialAsteroids } = this.chunkManager.update(0, 0);
     this.asteroids = initialAsteroids;
     this.lifeforms = createLifeField(this.asteroids);
+    this.ambientLifeTimer = 0;
+    this.ambientLifeSeed = 4200;
     this.threadwyrms = createThreadwyrmField(this.asteroids);
     this.driftMouths = createDriftMouthField();
     this.incursionField = createIncursionField();
@@ -262,6 +279,10 @@ export class Game {
     this.viewportTitleTimer = 0;
     this.discoveredSiteIds = new Set();
     this.currentZoneId = null;
+    this.currentSectorId = null;
+    this.environmentSample = null;
+    this.environmentFeedbackTimer = 0;
+    this.inEnvironmentFieldId = null;
     this.hasRecordedPlayerThrust = false;
     this.tetherStrainCooldown = 0;
     this.hubInspectionCache = new Set();
@@ -623,12 +644,38 @@ export class Game {
   }
 
   generateSurveyJobBoard(site, issuer = null) {
-    return generateSurveyJobBoardDefinitions({
+    const surveyJobs = generateSurveyJobBoardDefinitions({
       site,
       issuer,
       resourceField: this.resourceField,
       chunkSize: this.canvas.width,
     });
+
+    // Combat sibling of the survey board: qualifying tiers with a real danger
+    // pocket nearby swap their ore brief for a proof-of-kill bounty. Cargo runs
+    // then take some of the tiers bounty left alone, routing freight to a real
+    // hub. Order matters - cargo only swaps jobs still typed resource-delivery.
+    const withBounties = injectBountyJobs({ site, issuer, jobs: surveyJobs });
+    const jobs = injectCargoRuns({ site, issuer, jobs: withBounties, sites: this.worldSites });
+
+    // A board that came out all-mining reads as three near-identical "get ore,
+    // sell here" briefs. Force one tier into a freight run (which routes to
+    // ANOTHER hub) so every board offers more than digging when a hub is
+    // reachable. random: () => 0 forces the swap past the usual chance gate.
+    if (jobs.length > 0 && jobs.every((job) => job.type === "resource-delivery")) {
+      for (const index of [1, 2, 0]) {
+        if (!jobs[index]) {
+          continue;
+        }
+        const [forced] = injectCargoRuns({ site, issuer, jobs: [jobs[index]], sites: this.worldSites, random: () => 0 });
+        if (forced.type === "cargo-run") {
+          jobs[index] = forced;
+          break;
+        }
+      }
+    }
+
+    return jobs;
   }
 
   spawnIncursionPortal(position = null) {
@@ -923,6 +970,8 @@ export class Game {
     this.updateMovementEvent();
     this.updateWorldSiteInteraction();
     this.updateZoneTitle();
+    this.updateSectorTitle();
+    this.updateEnvironmentalHazards(deltaSeconds);
     if (this.state.components.engine.fuel !== previousFuel || this.state.components.miner.ammo !== previousAmmo) {
       this.onHudChange(this.state);
     }
@@ -948,6 +997,7 @@ export class Game {
     });
     this.updateIncursions(deltaSeconds);
     this.updateIncursionShots(deltaSeconds);
+    this.updateAmbientLife(deltaSeconds);
     // Lifeforms are preserved off-screen, but only nearby ones are simulated.
     // That keeps the field feeling persistent without paying every steering
     // cost for every distant creature each frame.
@@ -989,7 +1039,7 @@ export class Game {
     this.updateEmergencyTow(deltaSeconds);
     this.updateNpcBulletHits();
     this.bullets = this.bullets.filter((bullet) => bullet.isAlive);
-    this.lifeforms = this.lifeforms.filter((lifeform) => lifeform.isAlive);
+    this.lifeforms = this.lifeforms.filter((lifeform) => lifeform.isAlive && !this.shouldDespawnAmbientLife(lifeform));
     this.npcShips = this.npcShips.filter((ship) => ship.isAlive);
     this.pickups.forEach((pickup) => pickup.update(deltaSeconds));
     this.updateRockmossSpores();
@@ -2349,6 +2399,90 @@ export class Game {
       tags: zoneProfile.tags,
     });
     this.showViewportTitle(zoneProfile.strongestZoneName, "zone entered", "zone", VIEWPORT_TITLE_SECONDS, "left");
+  }
+
+  // Procedural area-entry banner for everywhere the authored zones don't cover.
+  // Purely cosmetic: it never touches the legal/visited-zone machinery, so
+  // crossing open space can't be mistaken for entering a licensable zone.
+  updateSectorTitle() {
+    const designation = getSectorDesignation(this.ship.position.x, this.ship.position.y);
+
+    if (designation.id === this.currentSectorId) {
+      return;
+    }
+
+    const isFirstPlacement = this.currentSectorId === null;
+    this.currentSectorId = designation.id;
+
+    // A strongly-authored zone already announced itself by name; and the first
+    // placement at spawn should not race the mission intro with a code banner.
+    const zoneProfile = getZoneProfile(this.ship.position.x, this.ship.position.y);
+    if (isFirstPlacement || zoneProfile.influence >= 0.55) {
+      return;
+    }
+
+    this.showViewportTitle(designation.code, designation.feature, "zone", VIEWPORT_TITLE_SECONDS, "left");
+  }
+
+  // Environment fields: colored regions of space (corrosive/mending/wind/slick)
+  // that act on the ship each frame. Only the strongest field at the ship's
+  // position applies. Effects are gentle and telegraphed (fog is always drawn,
+  // plus an entry banner); a harmful field's worst case routes through the
+  // existing destroyShip → stranded/tow flow, adding no new soft-lock.
+  // Suppressed while docked, towed, or already destroyed.
+  updateEnvironmentalHazards(deltaSeconds) {
+    if (this.shipDestroyed || this.dockedSite || this.activeTow) {
+      this.environmentSample = null;
+      this.inEnvironmentFieldId = null;
+      return;
+    }
+
+    const sample = sampleEnvironment(this.ship.position.x, this.ship.position.y);
+    this.environmentSample = sample;
+
+    if (!sample) {
+      this.inEnvironmentFieldId = null;
+      return;
+    }
+
+    const { field, intensity } = sample;
+
+    // Hysteresis so the entry banner doesn't flicker at a field's edge.
+    if (this.inEnvironmentFieldId !== field.id && intensity > 0.1) {
+      this.inEnvironmentFieldId = field.id;
+      this.showViewportTitle(field.label, field.hint, "hazard", VIEWPORT_TITLE_SECONDS, "left");
+    }
+
+    const hull = this.state.components.hull;
+    if (!hull.installed) {
+      return;
+    }
+
+    const hullBefore = hull.integrity;
+    field.effect({
+      ship: this.ship,
+      hull,
+      intensity,
+      deltaSeconds,
+      flowAngle: field.flow ? getFlowAngle(this.ship.position.x, this.ship.position.y) : 0,
+      maxSpeed: this.ship.getMaxSpeed(),
+    });
+
+    // Only refresh the HUD (and, for a harmful field, hiss) when hull moved.
+    if (hull.integrity !== hullBefore) {
+      this.environmentFeedbackTimer -= deltaSeconds;
+      if (this.environmentFeedbackTimer <= 0) {
+        this.environmentFeedbackTimer = 0.45;
+        this.onHudChange(this.state);
+        if (field.harmful) {
+          this.audio?.playHullHit(1.5);
+        }
+      }
+    }
+
+    if (hull.integrity === 0 && !this.shipDestroyed) {
+      this.destroyShip();
+    }
   }
 
   showViewportTitle(title, subtitle, kind = "event", duration = VIEWPORT_TITLE_SECONDS, side = "left") {
@@ -3978,6 +4112,60 @@ export class Game {
     }
   }
 
+  // Keep space alive everywhere: top the local area up to a life target that
+  // scales with the zone's ambient-life bias, spawning off-screen around the
+  // ship. Throttled, and it stops once the target is met, so it never floods.
+  updateAmbientLife(deltaSeconds) {
+    this.ambientLifeTimer -= deltaSeconds;
+
+    if (this.ambientLifeTimer > 0) {
+      return;
+    }
+
+    this.ambientLifeTimer = AMBIENT_LIFE_INTERVAL_SECONDS;
+
+    const zone = getZoneProfile(this.ship.position.x, this.ship.position.y);
+    const target = Math.round(AMBIENT_LIFE_BASE + (zone.ambientLifeBias ?? 0.6) * AMBIENT_LIFE_SCALE);
+    const shipX = this.ship.position.x;
+    const shipY = this.ship.position.y;
+
+    let nearby = 0;
+    this.lifeforms.forEach((lifeform) => {
+      if (!lifeform.isAlive || lifeform.sourcePortalId || !AMBIENT_LIFE_TYPES.has(lifeform.type)) {
+        return;
+      }
+      if (Math.hypot(lifeform.position.x - shipX, lifeform.position.y - shipY) <= AMBIENT_LIFE_KEEP_RADIUS) {
+        nearby += 1;
+      }
+    });
+
+    if (nearby >= target) {
+      return;
+    }
+
+    this.ambientLifeSeed += 1;
+    const spawned = createAmbientLifeBatch({
+      ship: this.ship,
+      asteroids: this.asteroids,
+      count: AMBIENT_LIFE_FLOCKS_PER_TICK,
+      seed: this.ambientLifeSeed,
+    });
+
+    this.lifeforms.push(...spawned);
+  }
+
+  // Procedural creatures the ship has left far behind are recycled; streaming
+  // re-seeds fresh life if the ship returns. Portal guards and non-ambient
+  // types (fighters) are never despawned this way.
+  shouldDespawnAmbientLife(lifeform) {
+    if (lifeform.sourcePortalId || !AMBIENT_LIFE_TYPES.has(lifeform.type)) {
+      return false;
+    }
+
+    const dist = Math.hypot(lifeform.position.x - this.ship.position.x, lifeform.position.y - this.ship.position.y);
+    return dist > AMBIENT_LIFE_DESPAWN_RADIUS;
+  }
+
   spawnHunterNearShip(reason = "story") {
     this.hunterRespawnSeed += 1;
     const hunter = createHunterNearShip(this.ship, this.hunterRespawnSeed);
@@ -5154,6 +5342,7 @@ export class Game {
     this.context.save();
     this.context.scale(drawScale, drawScale);
     drawGrid(this.context, drawCanvas, drawCamera);
+    this.drawHazardClouds(drawCamera, drawCanvas);
     this.drawWorldSites(drawCamera, drawCanvas);
     this.drawDeployedBeacons(drawCamera, drawCanvas);
     this.drawContractClaimTargets(drawCamera, drawCanvas);
@@ -5679,6 +5868,74 @@ export class Game {
     ctx.restore();
   }
 
+  // Environment fields as world-anchored fog, each in its own color. Sample
+  // points align to a world grid (like drawGrid) so fog scrolls with space, not
+  // the screen. Most of space is field-free, so nearly every cell exits early.
+  // Each cell also emits a drifting mote so a field reads as alive and obvious;
+  // wind motes stream along the field's flow direction, showing which way it
+  // carries you.
+  drawHazardClouds(camera, canvas) {
+    const STEP = 165;
+    const startX = Math.floor(camera.x / STEP) * STEP;
+    const startY = Math.floor(camera.y / STEP) * STEP;
+    const context = this.context;
+    const time = (typeof performance !== "undefined" ? performance.now() : Date.now()) / 1000;
+
+    context.save();
+    for (let wx = startX; wx <= camera.x + canvas.width + STEP; wx += STEP) {
+      for (let wy = startY; wy <= camera.y + canvas.height + STEP; wy += STEP) {
+        const sample = sampleEnvironment(wx, wy);
+
+        if (!sample || sample.intensity <= 0.04) {
+          continue;
+        }
+
+        const [r, g, b] = sample.field.color;
+        const sx = wx - camera.x;
+        const sy = wy - camera.y;
+        const radius = STEP * 1.55;
+        // Overlapping soft cells compound, so per-cell alpha stays modest — a
+        // haze you can fly and see rocks through, not an opaque wall — but high
+        // enough to read at zoomed-out panorama scale. A brighter core makes
+        // the field obvious without turning the edges into a wall.
+        const alpha = Math.min(0.42, sample.intensity * 0.46);
+        const gradient = context.createRadialGradient(sx, sy, 0, sx, sy, radius);
+
+        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`);
+        gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${alpha * 0.5})`);
+        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        context.fillStyle = gradient;
+        context.fillRect(sx - radius, sy - radius, radius * 2, radius * 2);
+
+        // Drifting mote: appears, travels along the field's drift direction,
+        // and fades out (alpha 0 at the ends, so no teleport when it recycles).
+        const hx = pseudoHash(wx, wy, 1.7);
+        const hy = pseudoHash(wx, wy, 9.1);
+        const angle = sample.field.flow ? getFlowAngle(wx, wy) : hx * Math.PI * 2;
+        const speed = sample.field.flow ? 0.4 : 0.16;
+        const progress = (time * speed + hx) % 1;
+        const travel = STEP * 2.4;
+        const baseX = sx + (hx - 0.5) * STEP;
+        const baseY = sy + (hy - 0.5) * STEP;
+        const moteAlpha = Math.min(0.75, sample.intensity * 0.85) * Math.sin(progress * Math.PI);
+
+        if (moteAlpha > 0.03) {
+          context.fillStyle = `rgba(${Math.min(255, r + 45)}, ${Math.min(255, g + 45)}, ${Math.min(255, b + 45)}, ${moteAlpha})`;
+          context.beginPath();
+          context.arc(
+            baseX + Math.cos(angle) * (progress - 0.5) * travel,
+            baseY + Math.sin(angle) * (progress - 0.5) * travel,
+            1.9,
+            0,
+            Math.PI * 2,
+          );
+          context.fill();
+        }
+      }
+    }
+    context.restore();
+  }
+
   getViewportDrawScale() {
     return this.state.ui?.viewportLayout === "fullscreen-background"
       ? (this.state.ui?.viewportZoom ?? 1.0)
@@ -6141,6 +6398,13 @@ function isNearSimulationArea(entity, canvas, camera, ship, margin) {
 
 function distance(firstPosition, secondPosition) {
   return Math.hypot(firstPosition.x - secondPosition.x, firstPosition.y - secondPosition.y);
+}
+
+// Cheap deterministic 0..1 hash from world coordinates, for scattering
+// environment-field motes without per-particle state. `salt` picks a channel.
+function pseudoHash(x, y, salt) {
+  const value = Math.sin(x * 12.9898 + y * 78.233 + salt) * 43758.5453;
+  return value - Math.floor(value);
 }
 
 function clamp(value, minimum, maximum) {

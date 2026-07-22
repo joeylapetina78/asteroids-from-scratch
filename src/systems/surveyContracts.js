@@ -1,7 +1,7 @@
-﻿import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260719-2129-6f18a9a";
-import { getResourceDefinition, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260719-2129-6f18a9a";
-import { getRegionProfile } from "./worldRegions.js?v=fresh-20260719-2129-6f18a9a";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260719-2129-6f18a9a";
+﻿import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260721-2114-33b9943";
+import { getResourceDefinition, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260721-2114-33b9943";
+import { getRegionProfile } from "./worldRegions.js?v=fresh-20260721-2114-33b9943";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260721-2114-33b9943";
 
 // Survey contracts are the contract-reads-world layer: instead of authored
 // resource runs naming a fixed ore and place, the issuing hub surveys the ore
@@ -58,10 +58,11 @@ export function generateSurveyContractDefinition({ site, issuer, resourceField, 
     id: `survey-${site.id}-${picked.resourceId}-${Date.now().toString(36)}-${surveyCounter}`,
     type: "resource-delivery",
     group: "hub-survey-run",
+    jobKind: "mining",
     repeatable: false,
-    title: `${context.titlePrefix}Field Survey: ${toTitleCase(resourceName)}`,
+    title: `Mine ${context.titlePrefix}${toTitleCase(resourceName)}`,
     issuer: issuer ?? "Rook",
-    summary: `Deliver ${amount} ${resourceName} to ${site.name}. Survey flags ${withArticle(resourceName)} concentration ${rangeLabel} to the ${bearing}. ${context.summary}`,
+    summary: `Mine ${amount} ${resourceName} from a field nearby and haul it back to ${site.name}. Survey flags a concentration ${rangeLabel} to the ${bearing}. ${context.summary}`,
     terms: {
       resourceType: picked.resourceId,
       resourceName,
@@ -79,10 +80,10 @@ export function generateSurveyContractDefinition({ site, issuer, resourceField, 
       credits: amount * contextualCreditsPerUnit,
     },
     clauses: [
-      `Terms are satisfied when ${amount} units of ${resourceName} are delivered from cargo at ${site.name}.`,
-      "Payment releases when the completed contract is confirmed.",
+      `Terms are satisfied when ${amount} units of ${resourceName} are mined and delivered to ${site.name}.`,
+      "This is extraction work: the hub buys ore you cut from the field, it does not hand you cargo.",
       context.clause,
-      "Resources must be in the cargo hold, not loose in space.",
+      "Mined resources must be in the cargo hold, not loose in space.",
       `Survey data is current as of this offer - the concentration sits roughly ${bearing} of the hub, ${rangeLabel}.`,
       "Return for a fresh survey once this job pays out.",
     ],
@@ -129,12 +130,13 @@ function createSurveyJobDefinition({ site, issuer, picked, tier }) {
     id: `survey-${site.id}-${tier.id}-${picked.resourceId}-${Date.now().toString(36)}-${surveyCounter}`,
     type: "resource-delivery",
     group: "hub-survey-run",
+    jobKind: "mining",
     repeatable: false,
     jobTier: tier.id,
     jobTierLabel: tier.label,
-    title: `${tier.label}: ${context.titlePrefix}${toTitleCase(resourceName)}`,
+    title: `${tier.label}: Mine ${context.titlePrefix}${toTitleCase(resourceName)}`,
     issuer: issuer ?? "Rook",
-    summary: `Deliver ${amount} ${resourceName} to ${site.name}. Survey flags ${withArticle(resourceName)} concentration ${rangeLabel} to the ${bearing}. ${tier.risk}`,
+    summary: `Mine ${amount} ${resourceName} from a field nearby and haul it back to ${site.name}. Survey flags a concentration ${rangeLabel} to the ${bearing}. ${tier.risk}`,
     terms: {
       resourceType: picked.resourceId,
       resourceName,
@@ -149,10 +151,10 @@ function createSurveyJobDefinition({ site, issuer, picked, tier }) {
     },
     reward: { creditsPerUnit: payoutPerUnit, credits: amount * payoutPerUnit },
     clauses: [
-      `Terms are satisfied when ${amount} units of ${resourceName} are delivered from cargo at ${site.name}.`,
-      "Payment releases when the completed contract is confirmed.",
+      `Terms are satisfied when ${amount} units of ${resourceName} are mined and delivered to ${site.name}.`,
+      "This is extraction work: the hub buys ore you cut from the field, it does not hand you cargo.",
       context.clause,
-      "Resources must be in the cargo hold, not loose in space.",
+      "Mined resources must be in the cargo hold, not loose in space.",
       `Survey data is current: the concentration sits roughly ${bearing} of the hub, ${rangeLabel}.`,
       "Return to Rook Industries for a fresh board once this job pays out.",
     ],

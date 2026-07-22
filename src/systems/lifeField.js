@@ -1,6 +1,6 @@
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260719-2129-6f18a9a";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260721-2114-33b9943";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260719-2129-6f18a9a";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260721-2114-33b9943";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.
@@ -79,6 +79,104 @@ export function createHunterNearShip(ship, seed) {
     },
     seed: hashNumbers(x, y, seed),
   });
+}
+
+// Streaming ambient life. createLifeField only seeds the start area once; this
+// keeps space alive everywhere by spawning creatures off-screen around the
+// ship as it travels into new space, weighted by the LOCAL zone profile (which
+// now exists everywhere, including The Black). The game's life director calls
+// this whenever the area around the ship is under its target population.
+// MIN sits inside the ~480px screen half-width on purpose: a larger no-spawn
+// ring leaves the ship in a life-free bubble that fills the whole view. Flocks
+// spawn near anchor rocks (many on-screen), so new life reads as emerging from
+// the rocks rather than popping into empty space.
+const AMBIENT_STREAM_MIN_DIST = 320;
+const AMBIENT_STREAM_MAX_DIST = 1300; // kept near the view so life reads on-screen
+
+// `count` here is a number of FLOCKS. Each flock is a cluster of same-type
+// creatures near one anchor rock, so life reads as dense schools you fly past
+// — the way the start area feels — instead of lone dots spread too thin to
+// notice.
+export function createAmbientLifeBatch({ ship, asteroids, random = Math.random, count = 2, seed = 0 }) {
+  const ringAnchors = asteroids.filter((asteroid) => {
+    const dist = Math.hypot(asteroid.position.x - ship.position.x, asteroid.position.y - ship.position.y);
+    return dist >= AMBIENT_STREAM_MIN_DIST && dist <= AMBIENT_STREAM_MAX_DIST;
+  });
+
+  if (ringAnchors.length === 0) {
+    return [];
+  }
+
+  // Far rocks outnumber near ones ~30:1, so proximity weighting alone still
+  // spawns most flocks off-screen. Instead: guarantee the first flock lands at
+  // one of the few NEAREST rocks (reliably on/near screen), and spread the rest
+  // by proximity-weighted pick for a natural feel.
+  const nearest = [...ringAnchors]
+    .sort((a, b) => distanceToShip(a, ship) - distanceToShip(b, ship))
+    .slice(0, 5);
+  const weighted = ringAnchors.map((asteroid) => {
+    const proximity = 1 / (1 + distanceToShip(asteroid, ship) / 320);
+    return { asteroid, weight: (getAmbientAnchorWeight(asteroid) + 0.05) * proximity };
+  });
+  const lifeforms = [];
+
+  for (let flock = 0; flock < count; flock += 1) {
+    const anchor = flock === 0
+      ? nearest[Math.floor(random() * nearest.length)]
+      : pickWeightedAnchor(weighted, random);
+
+    if (!anchor) {
+      break;
+    }
+
+    const zone = getZoneProfile(anchor.position.x, anchor.position.y);
+    const type = pickAmbientType(zone, anchor, random);
+    const flockSize = getAmbientFlockSize(type, random);
+    const spread = type === "threadling" ? 210 : 240;
+
+    for (let member = 0; member < flockSize; member += 1) {
+      lifeforms.push(createLifeformNear(type, anchor, random, spread, hashNumbers(seed, flock * 40 + member, Math.round(anchor.position.x))));
+    }
+  }
+
+  return lifeforms;
+}
+
+function distanceToShip(asteroid, ship) {
+  return Math.hypot(asteroid.position.x - ship.position.x, asteroid.position.y - ship.position.y);
+}
+
+function getAmbientFlockSize(type, random) {
+  if (type === "threadling") return 6 + Math.floor(random() * 6); // 6–11, tight schools
+  if (type === "skitter") return 3 + Math.floor(random() * 5); // 3–7
+  if (type === "lantern") return 3 + Math.floor(random() * 4); // 3–6
+  return 2 + Math.floor(random() * 4); // grazers 2–5
+}
+
+// Ambient streaming seeds PEACEFUL life only. Predators stay governed by the
+// existing danger-based hunter systems (createLifeField packs in dangerous
+// zones + respawn-on-death), so The Black fills with grazing life without
+// turning every far corner into a running gunfight. `zone` is kept for future
+// per-zone creature mixes.
+function pickAmbientType(zone, anchor, random) {
+  const resourceScore = getResourceScore(anchor);
+  const weights = [
+    ["grazer", 1.0],
+    ["skitter", 0.85],
+    ["threadling", 1.15],
+    ["lantern", 0.35 + Math.min(0.9, resourceScore * 1.3)],
+  ];
+  const total = weights.reduce((sum, [, weight]) => sum + weight, 0);
+  let roll = random() * total;
+
+  for (const [type, weight] of weights) {
+    roll -= weight;
+    if (roll <= 0) {
+      return type;
+    }
+  }
+
+  return "grazer";
 }
 
 function addHunters(lifeforms, anchors, random) {

@@ -1,12 +1,13 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260719-2129-6f18a9a";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260719-2129-6f18a9a";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260719-2129-6f18a9a";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260719-2129-6f18a9a";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260719-2129-6f18a9a";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260719-2129-6f18a9a";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260719-2129-6f18a9a";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260719-2129-6f18a9a";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260719-2129-6f18a9a";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260721-2114-33b9943";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260721-2114-33b9943";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260721-2114-33b9943";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260721-2114-33b9943";
+import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260721-2114-33b9943";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260721-2114-33b9943";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260721-2114-33b9943";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260721-2114-33b9943";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260721-2114-33b9943";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260721-2114-33b9943";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -216,6 +217,8 @@ export function createContractManager({ state, onChange = () => {} }) {
         fulfillContractsFromEvent(event);
       } else if (event.type === "site.undocked") {
         closeUnacceptedHubServiceOffers(event.payload.siteId);
+      } else if (event.type === "enemy.destroyed") {
+        progressBountiesFromEvent(event);
       }
 
       runContractConsiderationsForEvent(event);
@@ -364,6 +367,79 @@ export function createContractManager({ state, onChange = () => {} }) {
     }
 
     return unitsDeposited;
+  }
+
+  // Bounties are the kill-counting sibling of resource delivery: instead of
+  // cargo deposited at a hub, they tally the pilot's own hostile kills. Only
+  // player-attributed causes count (same rule the ledger uses for kill stats),
+  // and a bounty fulfills in the field on the final kill - the pilot then
+  // collects at the contract panel like any fulfilled run.
+  function progressBountiesFromEvent(event) {
+    if (!PLAYER_ATTRIBUTED_CAUSES.has(event.payload.cause)) {
+      return;
+    }
+
+    const enemyType = event.payload.enemyType;
+
+    Object.values(state.contracts.records)
+      .filter((contract) => contract.type === "bounty" && contract.status === "active")
+      .forEach((contract) => {
+        if (contract.terms.targetType && contract.terms.targetType !== enemyType) {
+          return;
+        }
+
+        const requiredAmount = contract.terms.amount ?? 0;
+
+        if ((contract.killCount ?? 0) >= requiredAmount) {
+          return;
+        }
+
+        contract.killCount = (contract.killCount ?? 0) + 1;
+        state.ledger.recordEvent(
+          "contract.bountyProgress",
+          {
+            contractId: contract.id,
+            contractTitle: contract.title,
+            contractGroup: contract.group,
+            targetType: enemyType,
+            killCount: contract.killCount,
+            requiredAmount,
+          },
+          { visible: false },
+        );
+
+        if (contract.killCount >= requiredAmount) {
+          fulfillContract(contract, {
+            destinationSiteId: contract.terms.destinationSiteId,
+            targetType: enemyType,
+            unitsDelivered: requiredAmount,
+          });
+        } else {
+          onChange(contract);
+        }
+      });
+  }
+
+  // Cargo runs are delivered by a manual unload at the destination hub (main.js
+  // pulls the sealed container from the hold and calls this). Fulfills in place
+  // so the pilot then collects at the contract panel, same as any delivery.
+  function deliverCargoRun(contractId, siteId) {
+    const contract = state.contracts.records[contractId];
+
+    if (!contract || contract.type !== "cargo-run" || contract.status !== "active") {
+      return false;
+    }
+
+    if (contract.terms.destinationSiteId !== siteId) {
+      return false;
+    }
+
+    fulfillContract(contract, {
+      destinationSiteId: contract.terms.destinationSiteId,
+      resourceName: contract.terms.commodityName,
+      unitsDelivered: contract.terms.amount,
+    });
+    return true;
   }
 
   function collectPayment(contractId = state.contracts.currentContractId) {
@@ -523,6 +599,7 @@ export function createContractManager({ state, onChange = () => {} }) {
     acceptContract,
     closeUnacceptedHubServiceOffers,
     collectPayment,
+    deliverCargoRun,
     depositResourceUnit,
     focusContract,
     getCurrentContract,

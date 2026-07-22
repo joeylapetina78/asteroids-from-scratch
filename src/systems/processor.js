@@ -1,5 +1,5 @@
-import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260719-2129-6f18a9a";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260719-2129-6f18a9a";
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260721-2114-33b9943";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260721-2114-33b9943";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -48,8 +48,10 @@ export class Processor {
     this.units.push({
       type,
       ...metadata,
-      color: RESOURCE_COLOR[type] ?? "#ff7452",
-      shape: getResourceShape(type),
+      // Metadata may override appearance (e.g. a sealed freight container that
+      // isn't a real resource type); fall back to the resource lookups.
+      color: metadata.color ?? RESOURCE_COLOR[type] ?? "#ff7452",
+      shape: metadata.shape ?? getResourceShape(type),
       x: this.canvas.width / 2 - spacing * 2 + slot * spacing,
       y: 30,
       vx: (slot - 1.5) * 12,
@@ -57,7 +59,7 @@ export class Processor {
       angle: (Math.random() - 0.5) * 0.5,
       angularVelocity: (Math.random() - 0.5) * 0.9,
       quantity,
-      size: getUnitSize(quantity),
+      size: metadata.size ?? getUnitSize(quantity),
     });
   }
 
@@ -125,6 +127,11 @@ export class Processor {
         tradeValue: unit.tradeValue ?? null,
         label: unit.label ?? null,
         quantity: unit.quantity ?? 1,
+        // Persist explicit appearance so overridden units (freight containers)
+        // survive reload instead of reverting to their type's default look.
+        color: unit.color ?? null,
+        shape: unit.shape ?? null,
+        size: unit.size ?? null,
       })),
     };
   }
@@ -136,8 +143,8 @@ export class Processor {
 
     this.units = snapshot.units.map((unit) => ({
       type: unit.type,
-      color: RESOURCE_COLOR[unit.type] ?? "#ff7452",
-      shape: getResourceShape(unit.type),
+      color: unit.color ?? RESOURCE_COLOR[unit.type] ?? "#ff7452",
+      shape: unit.shape ?? getResourceShape(unit.type),
       x: unit.x,
       y: unit.y,
       vx: unit.vx,
@@ -149,7 +156,7 @@ export class Processor {
       tradeValue: unit.tradeValue ?? null,
       label: unit.label ?? null,
       quantity: unit.quantity ?? 1,
-      size: getUnitSize(unit.quantity ?? 1),
+      size: unit.size ?? getUnitSize(unit.quantity ?? 1),
     }));
   }
 

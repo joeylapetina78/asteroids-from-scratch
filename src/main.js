@@ -1,31 +1,31 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260719-2129-6f18a9a";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260719-2129-6f18a9a";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260719-2129-6f18a9a";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260719-2129-6f18a9a";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260719-2129-6f18a9a";
-import { Game } from "./game.js?v=fresh-20260719-2129-6f18a9a";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260719-2129-6f18a9a";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260719-2129-6f18a9a";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260719-2129-6f18a9a";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260719-2129-6f18a9a";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260721-2114-33b9943";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260721-2114-33b9943";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260721-2114-33b9943";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260721-2114-33b9943";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260721-2114-33b9943";
+import { Game } from "./game.js?v=fresh-20260721-2114-33b9943";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260721-2114-33b9943";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260721-2114-33b9943";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260721-2114-33b9943";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260721-2114-33b9943";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260719-2129-6f18a9a";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260719-2129-6f18a9a";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260719-2129-6f18a9a";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260719-2129-6f18a9a";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260719-2129-6f18a9a";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260719-2129-6f18a9a";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260719-2129-6f18a9a";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260719-2129-6f18a9a";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260719-2129-6f18a9a";
-import { Processor } from "./systems/processor.js?v=fresh-20260719-2129-6f18a9a";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260719-2129-6f18a9a";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260719-2129-6f18a9a";
-import { createGameState } from "./state/gameState.js?v=fresh-20260719-2129-6f18a9a";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260721-2114-33b9943";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260721-2114-33b9943";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260721-2114-33b9943";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260721-2114-33b9943";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260721-2114-33b9943";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260721-2114-33b9943";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260721-2114-33b9943";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260721-2114-33b9943";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260721-2114-33b9943";
+import { Processor } from "./systems/processor.js?v=fresh-20260721-2114-33b9943";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260721-2114-33b9943";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260721-2114-33b9943";
+import { createGameState } from "./state/gameState.js?v=fresh-20260721-2114-33b9943";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -611,6 +611,10 @@ contractAcceptButton.addEventListener("click", () => {
   } else if (canDepositToContract(contract)) {
     activeDepositContractId = activeDepositContractId === contract.id ? null : contract.id;
     renderContract();
+  } else if (isCargoLoadable(contract)) {
+    loadCargoManifest(contract);
+  } else if (isCargoDeliverable(contract)) {
+    deliverCargoManifest(contract);
   } else {
     contractManager.acceptContract();
   }
@@ -1787,7 +1791,7 @@ function renderRookJobBoard(site) {
   const selectedContract = board.selectedContractId ? state.contracts.records[board.selectedContractId] : null;
 
   if (selectedContract && selectedContract.status !== "paid") {
-    const signature = `assignment:${service.id}:${selectedContract.id}:${selectedContract.status}:${selectedContract.deliveredAmount ?? 0}`;
+    const signature = `assignment:${service.id}:${selectedContract.id}:${selectedContract.status}:${selectedContract.deliveredAmount ?? 0}:${selectedContract.killCount ?? 0}:${selectedContract.type === "cargo-run" ? (isManifestLoaded(selectedContract) ? "loaded" : "empty") : ""}`;
 
     if (signature === lastRookJobBoardSignature) {
       return;
@@ -1835,6 +1839,23 @@ function createRookBoardHeader(title) {
   return header;
 }
 
+// The board mixes three job kinds that all read as "get N of X" at a glance;
+// a kind label keeps mining (dig here, sell here) legible next to freight
+// (haul to another hub) and bounty. Falls back to type for any legacy job
+// missing jobKind (e.g. a board cached in an old save).
+function getJobKind(job) {
+  if (job.jobKind) {
+    return job.jobKind;
+  }
+  if (job.type === "cargo-run") return "freight";
+  if (job.type === "bounty") return "bounty";
+  return "mining";
+}
+
+function getJobKindLabel(job) {
+  return { mining: "Mining", freight: "Freight", bounty: "Bounty" }[getJobKind(job)] ?? "Work";
+}
+
 function createRookJobButton(job) {
   const button = document.createElement("button");
   const tier = document.createElement("span");
@@ -1845,9 +1866,11 @@ function createRookJobButton(job) {
   button.type = "button";
   button.className = "rook-job-option";
   button.dataset.rookJobId = job.id;
-  tier.textContent = job.jobTierLabel;
+  button.dataset.jobKind = getJobKind(job);
+  tier.textContent = `${getJobKindLabel(job)} · ${job.jobTierLabel}`;
   title.textContent = job.title;
-  detail.textContent = `${job.terms.amount} ${job.terms.resourceName} - ${job.summary}`;
+  const jobUnitLabel = job.terms.resourceName ?? job.terms.targetName ?? job.terms.commodityName ?? "cargo";
+  detail.textContent = `${job.terms.amount} ${jobUnitLabel} - ${job.summary}`;
   payout.textContent = `Accept - ${job.reward.credits.toLocaleString()} cr`;
   button.append(tier, title, detail, payout);
   return button;
@@ -1861,7 +1884,19 @@ function createRookCurrentAssignment(contract) {
 
   card.className = "rook-current-assignment";
   title.textContent = contract.title;
-  detail.textContent = `${contract.deliveredAmount ?? 0}/${contract.terms.amount} ${contract.terms.resourceName} delivered`;
+  if (contract.type === "cargo-run") {
+    const delivered = contract.status === "fulfilled" || contract.status === "paid";
+    detail.textContent = delivered
+      ? `delivered to ${contract.terms.destinationName}`
+      : isManifestLoaded(contract)
+        ? `en route to ${contract.terms.destinationName}`
+        : `load manifest at ${contract.terms.originName}`;
+  } else {
+    const isBounty = contract.type === "bounty";
+    const assignmentDone = isBounty ? contract.killCount ?? 0 : contract.deliveredAmount ?? 0;
+    const assignmentUnit = contract.terms.resourceName ?? contract.terms.targetName ?? "units";
+    detail.textContent = `${assignmentDone}/${contract.terms.amount} ${assignmentUnit} ${isBounty ? "cleared" : "delivered"}`;
+  }
   button.type = "button";
   button.textContent = "Open Contract";
   button.addEventListener("click", () => pullContractToCenter(contract.id));
@@ -2946,6 +2981,14 @@ function getContractFileMeta(contract) {
     return `${contract.deliveredAmount ?? 0}/${contract.terms.amount ?? 0} ${contract.terms.resourceName}`;
   }
 
+  if (contract.type === "bounty") {
+    return `${contract.killCount ?? 0}/${contract.terms.amount ?? 0} ${contract.terms.targetName ?? "targets"}`;
+  }
+
+  if (contract.type === "cargo-run") {
+    return `→ ${contract.terms.destinationName}`;
+  }
+
   if (contract.type === "delivery") {
     return contract.terms.destinationName ?? contract.issuer;
   }
@@ -3007,6 +3050,30 @@ function renderContractTerms(contract) {
     return;
   }
 
+  if (contract.type === "bounty") {
+    contractPrimaryLabel.textContent = "Target";
+    contractVin.textContent = `${contract.terms.amount} ${contract.terms.targetName ?? "targets"}`;
+    contractSecondaryLabel.textContent = "Reported";
+    contractDestination.textContent = [contract.terms.hotspotRange, contract.terms.hotspotBearing ? `to the ${contract.terms.hotspotBearing}` : null]
+      .filter(Boolean)
+      .join(" ") || contract.terms.destinationName;
+    contractTertiaryLabel.textContent = "Reward";
+    contractReward.textContent = `${contract.reward.credits ?? 0} cr (${contract.reward.creditsPerUnit} cr/kill)`;
+    return;
+  }
+
+  if (contract.type === "cargo-run") {
+    contractPrimaryLabel.textContent = "Manifest";
+    contractVin.textContent = `${contract.terms.amount} ${contract.terms.commodityName ?? "cargo"}`;
+    contractSecondaryLabel.textContent = "Destination";
+    contractDestination.textContent = [contract.terms.destinationName, contract.terms.destinationBearing ? `(${contract.terms.destinationBearing})` : null]
+      .filter(Boolean)
+      .join(" ");
+    contractTertiaryLabel.textContent = "Reward";
+    contractReward.textContent = `${contract.reward.credits ?? 0} cr`;
+    return;
+  }
+
   contractPrimaryLabel.textContent = "VIN";
   contractVin.textContent = contract.terms.deliverShipVin;
   contractSecondaryLabel.textContent = "Destination";
@@ -3038,6 +3105,17 @@ function renderContractProgress(contract) {
     return;
   }
 
+  if (contract.type === "cargo-run") {
+    const isComplete = contract.status === "fulfilled" || contract.status === "paid";
+    const loaded = isManifestLoaded(contract);
+
+    contractProgress.hidden = false;
+    contractProgressLabel.textContent = "Freight";
+    contractProgressCount.textContent = isComplete ? "delivered" : loaded ? "in transit" : "awaiting pickup";
+    contractProgressFill.style.width = isComplete ? "100%" : loaded ? "50%" : "0%";
+    return;
+  }
+
   if (contract.type === "resource-delivery") {
     const requiredAmount = contract.terms.amount ?? 0;
     const deliveredAmount = contract.deliveredAmount ?? 0;
@@ -3046,6 +3124,18 @@ function renderContractProgress(contract) {
     contractProgress.hidden = false;
     contractProgressLabel.textContent = "Delivered";
     contractProgressCount.textContent = `${deliveredAmount} / ${requiredAmount}`;
+    contractProgressFill.style.width = `${progressPercent}%`;
+    return;
+  }
+
+  if (contract.type === "bounty") {
+    const requiredAmount = contract.terms.amount ?? 0;
+    const killCount = contract.killCount ?? 0;
+    const progressPercent = requiredAmount > 0 ? Math.min(100, (killCount / requiredAmount) * 100) : 0;
+
+    contractProgress.hidden = false;
+    contractProgressLabel.textContent = "Cleared";
+    contractProgressCount.textContent = `${killCount} / ${requiredAmount}`;
     contractProgressFill.style.width = `${progressPercent}%`;
     return;
   }
@@ -3124,6 +3214,23 @@ function getContractButtonLabel(contract) {
     return "Dock to Deposit";
   }
 
+  if (contract.type === "bounty" && contract.status === "active") {
+    return "Hunt in Progress";
+  }
+
+  if (contract.type === "cargo-run" && contract.status === "active") {
+    if (isCargoLoadable(contract)) {
+      return "Load Manifest";
+    }
+    if (isCargoDeliverable(contract)) {
+      return `Unload at ${contract.terms.destinationName}`;
+    }
+    if (isManifestLoaded(contract)) {
+      return `Carrying to ${contract.terms.destinationName}`;
+    }
+    return `Return to ${contract.terms.originName} to Load`;
+  }
+
   if (contract.status === "active") {
     return "Accepted";
   }
@@ -3144,7 +3251,9 @@ function isContractButtonEnabled(contract) {
     contract.status === "offered" ||
     contract.status === "fulfilled" ||
     canPayLoanContract(contract) ||
-    canDepositToContract(contract)
+    canDepositToContract(contract) ||
+    isCargoLoadable(contract) ||
+    isCargoDeliverable(contract)
   );
 }
 
@@ -3167,6 +3276,79 @@ function canDepositToContract(contract) {
       dockedSite.id === contract.terms.destinationSiteId &&
       (contract.deliveredAmount ?? 0) < (contract.terms.amount ?? 0),
   );
+}
+
+// A cargo run's manifest rides in the hold as a single sealed container, keyed
+// by contract id so it survives save/reload (only the unit `type` persists) and
+// never merges with another run's freight.
+const MANIFEST_CONTAINER_COLOR = "#d8b24a"; // warm courier gold, distinct from ore
+const MANIFEST_CONTAINER_SIZE = 34; // between a single unit (22) and a stack (~37): reads as a crate
+
+function getManifestUnitType(contractId) {
+  return `manifest:${contractId}`;
+}
+
+function isManifestLoaded(contract) {
+  return (cargoHold.getUnitCounts()[getManifestUnitType(contract.id)] ?? 0) > 0;
+}
+
+function isCargoLoadable(contract) {
+  return Boolean(
+    contract?.type === "cargo-run" &&
+      contract.status === "active" &&
+      currentSiteState?.dockedSite?.id === contract.terms.originSiteId &&
+      !isManifestLoaded(contract),
+  );
+}
+
+function isCargoDeliverable(contract) {
+  return Boolean(
+    contract?.type === "cargo-run" &&
+      contract.status === "active" &&
+      currentSiteState?.dockedSite?.id === contract.terms.destinationSiteId &&
+      isManifestLoaded(contract),
+  );
+}
+
+function loadCargoManifest(contract) {
+  if (!isCargoLoadable(contract)) {
+    return;
+  }
+
+  const unitType = getManifestUnitType(contract.id);
+  cargoHold.addUnit(unitType, {
+    quantity: 1,
+    tradeValue: 0, // sealed freight: not sellable, not refinable
+    label: `${contract.terms.amount} ${contract.terms.commodityName}`,
+    color: MANIFEST_CONTAINER_COLOR,
+    shape: "square",
+    size: MANIFEST_CONTAINER_SIZE,
+  });
+  setComponentAvailable("cargo", true);
+  game.createCargoTransferTrail(unitType);
+  state.ledger.recordEvent(
+    "cargo.manifestLoaded",
+    { contractId: contract.id, contractTitle: contract.title, originSiteId: contract.terms.originSiteId, commodity: contract.terms.commodityName },
+    { visible: true },
+  );
+  renderContract();
+  updateHudDisplay();
+  scheduleSave();
+}
+
+function deliverCargoManifest(contract) {
+  if (!isCargoDeliverable(contract)) {
+    return;
+  }
+
+  const unitType = getManifestUnitType(contract.id);
+  cargoHold.removeUnits(unitType, 1);
+  game.createCargoTransferTrail(unitType);
+  contractManager.deliverCargoRun(contract.id, currentSiteState?.dockedSite?.id);
+  renderContract();
+  updateHudDisplay();
+  game.updateSiteReadout();
+  scheduleSave();
 }
 
 function canPayLoanContract(contract) {
