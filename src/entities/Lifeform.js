@@ -4,6 +4,8 @@ const LIFE_COLORS = {
   grazer: "#8cf0b2",
   skitter: "#d9b3ff",
   lantern: "#ffe98a",
+  bloom: "#ff9ed6", // round pulsing drifter — soft rose, fertile/calm zones
+  filament: "#c6ff70", // wiggling anchored hairs — alien lime, strange/scanergy zones
 };
 
 // A single Lifeform class covers the current autonomous agents. The type chooses
@@ -11,7 +13,7 @@ const LIFE_COLORS = {
 // grazers orbit rocks, lanterns drift around rich rocks, and skitters dart
 // around danger.
 export class Lifeform {
-  constructor({ type, x, y, velocity, seed, role = null, name = null }) {
+  constructor({ type, x, y, velocity, seed, role = null, name = null, birthSeconds = 0 }) {
     this.type = type;
     this.role = role;
     this.name = name;
@@ -21,6 +23,11 @@ export class Lifeform {
     this.seed = seed;
     this.wanderAngle = seed * 0.013;
     this.pulse = seed * 0.021;
+    // Emerge animation: age counts up from birth; while age < birthSeconds the
+    // creature scales and fades up out of its rock instead of snapping in.
+    // birthSeconds 0 = born fully formed (initial seeding, hunters, incursions).
+    this.age = 0;
+    this.birthSeconds = birthSeconds;
     this.radius = getRadius(type);
     this.maxSpeed = getMaxSpeed(type);
     this.maxForce = getMaxForce(type);
@@ -32,6 +39,7 @@ export class Lifeform {
 
   update(deltaSeconds, world) {
     this.pulse += deltaSeconds;
+    this.age += deltaSeconds;
 
     if (this.type === "hunter") {
       this.updateHunter(deltaSeconds, world);
@@ -41,6 +49,10 @@ export class Lifeform {
       this.updateGrazer(deltaSeconds, world);
     } else if (this.type === "lantern") {
       this.updateLantern(deltaSeconds, world);
+    } else if (this.type === "bloom") {
+      this.updateBloom(deltaSeconds, world);
+    } else if (this.type === "filament") {
+      this.updateFilament(deltaSeconds, world);
     } else {
       this.updateSkitter(deltaSeconds, world);
     }
@@ -143,6 +155,34 @@ export class Lifeform {
     this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 95), 52), 0.9);
     this.applySteer(this.wander(deltaSeconds * 1.6), 1.0);
     this.avoidAsteroids(world.asteroids, 5.6);
+  }
+
+  // Blooms drift in open water in loose schools, pulsing. They part gently as
+  // the ship approaches rather than bolting — dreamy, not skittish.
+  updateBloom(deltaSeconds, world) {
+    const school = nearbyLifeforms(this, world.lifeforms, 260, "bloom");
+
+    if (school.length > 0) {
+      this.applySteer(cohere(this, school), 0.2);
+      this.applySteer(separate(this, school, 96), 0.7);
+    }
+
+    this.applySteer(this.wander(deltaSeconds), 0.5);
+    this.applySteer(fleeIfClose(this, world.ship.position, 260, this.maxSpeed * 1.2), 0.9);
+    this.applySteer(fleeDisturbances(this, world.disturbances ?? [], this.maxSpeed * 1.5), 1.8);
+    this.avoidAsteroids(world.asteroids, 3.2);
+  }
+
+  // Filaments are near-rooted: they hover close to a rock and spread into a
+  // field. The wiggle lives in the draw, so they read as waving hairs even
+  // while nearly still; they only recoil slightly when the ship is close.
+  updateFilament(deltaSeconds, world) {
+    this.applySteer(orbitNearestAsteroid(this, world.asteroids, 460, 70, deltaSeconds), 0.5);
+    this.applySteer(this.wander(deltaSeconds * 0.6), 0.3);
+    this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 90, "filament"), 46), 0.9);
+    this.applySteer(fleeIfClose(this, world.ship.position, 200, this.maxSpeed * 1.1), 0.8);
+    this.applySteer(fleeDisturbances(this, world.disturbances ?? [], this.maxSpeed * 1.6), 1.6);
+    this.avoidAsteroids(world.asteroids, 3.0);
   }
 
   rememberWebTrail(deltaSeconds) {
@@ -254,6 +294,16 @@ export class Lifeform {
     context.translate(screenX, screenY);
     context.rotate(heading);
 
+    // Surfacing: scale up from tiny + fade in over birthSeconds so the creature
+    // reads as emerging from the rock rather than popping in at full size.
+    if (this.birthSeconds > 0 && this.age < this.birthSeconds) {
+      const t = this.age / this.birthSeconds;
+      const eased = 1 - (1 - t) * (1 - t); // ease-out
+      context.globalAlpha = eased;
+      const emergeScale = 0.15 + 0.85 * eased;
+      context.scale(emergeScale, emergeScale);
+    }
+
     if (this.type === "hunter") {
       drawHunter(context, this);
     } else if (this.type === "threadling") {
@@ -262,6 +312,10 @@ export class Lifeform {
       drawGrazer(context, this);
     } else if (this.type === "lantern") {
       drawLantern(context, this);
+    } else if (this.type === "bloom") {
+      drawBloom(context, this);
+    } else if (this.type === "filament") {
+      drawFilament(context, this);
     } else {
       drawSkitter(context, this);
     }
@@ -643,6 +697,77 @@ function drawLantern(context, lifeform) {
   context.fill();
 }
 
+function drawBloom(context, lifeform) {
+  const beat = 0.5 + Math.sin(lifeform.pulse * 2.4 + lifeform.seed) * 0.5; // 0..1 heartbeat
+  const bell = 9 + beat * 6;
+
+  // soft outer glow
+  context.fillStyle = `rgba(255, 158, 214, ${0.05 + beat * 0.1})`;
+  context.beginPath();
+  context.arc(0, 0, bell + 8, 0, Math.PI * 2);
+  context.fill();
+
+  // translucent bell
+  context.fillStyle = `rgba(255, 158, 214, ${0.14 + beat * 0.16})`;
+  context.strokeStyle = LIFE_COLORS.bloom;
+  context.lineWidth = 2;
+  context.beginPath();
+  context.arc(0, 0, bell, 0, Math.PI * 2);
+  context.fill();
+  context.stroke();
+
+  // bright core
+  context.fillStyle = "rgba(255, 224, 242, 0.8)";
+  context.beginPath();
+  context.arc(0, 0, 2.4 + beat * 1.2, 0, Math.PI * 2);
+  context.fill();
+
+  // trailing tentacles (behind the direction of travel, at -x after heading rotate)
+  context.strokeStyle = "rgba(255, 158, 214, 0.55)";
+  context.lineWidth = 1.5;
+  const tentacles = 4;
+  for (let index = 0; index < tentacles; index += 1) {
+    const angle = Math.PI + (index - (tentacles - 1) / 2) * 0.34;
+    const sway = Math.sin(lifeform.pulse * 3 + index + lifeform.seed) * 3;
+    const baseX = Math.cos(angle) * bell;
+    const baseY = Math.sin(angle) * bell;
+    context.beginPath();
+    context.moveTo(baseX, baseY);
+    context.quadraticCurveTo(baseX * 1.6 + sway, baseY * 1.6, baseX * 2.3, baseY * 2.3 + sway);
+    context.stroke();
+  }
+}
+
+function drawFilament(context, lifeform) {
+  const strands = 5;
+  const length = 15;
+
+  context.strokeStyle = LIFE_COLORS.filament;
+  context.lineWidth = 1.6;
+  for (let strand = 0; strand < strands; strand += 1) {
+    const base = (strand - (strands - 1) / 2) * 3.4;
+    context.beginPath();
+    context.moveTo(0, base);
+    const segments = 4;
+    for (let segment = 1; segment <= segments; segment += 1) {
+      const t = segment / segments;
+      const wave = Math.sin(lifeform.pulse * 3.5 + strand * 0.9 + lifeform.seed + t * 3) * (3 + t * 3);
+      context.lineTo(length * t, base + wave);
+    }
+    context.stroke();
+  }
+
+  // glowing holdfast base
+  context.fillStyle = "rgba(198, 255, 112, 0.5)";
+  context.beginPath();
+  context.arc(0, 0, 3, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = "rgba(230, 255, 200, 0.9)";
+  context.beginPath();
+  context.arc(0, 0, 1.5, 0, Math.PI * 2);
+  context.fill();
+}
+
 function getRadius(type) {
   if (type === "hunter") {
     return 21;
@@ -654,6 +779,14 @@ function getRadius(type) {
 
   if (type === "lantern") {
     return 22;
+  }
+
+  if (type === "bloom") {
+    return 24;
+  }
+
+  if (type === "filament") {
+    return 16;
   }
 
   return 20;
@@ -676,6 +809,14 @@ function getMaxSpeed(type) {
     return 72;
   }
 
+  if (type === "bloom") {
+    return 46; // languid drift
+  }
+
+  if (type === "filament") {
+    return 34; // near-rooted
+  }
+
   return 154;
 }
 
@@ -696,6 +837,14 @@ function getMaxForce(type) {
     return 0.11;
   }
 
+  if (type === "bloom") {
+    return 0.09;
+  }
+
+  if (type === "filament") {
+    return 0.08;
+  }
+
   return 0.24;
 }
 
@@ -710,6 +859,14 @@ function getPerception(type) {
 
   if (type === "lantern") {
     return 155;
+  }
+
+  if (type === "bloom") {
+    return 150;
+  }
+
+  if (type === "filament") {
+    return 130;
   }
 
   return 145;

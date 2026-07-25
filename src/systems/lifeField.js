@@ -1,6 +1,6 @@
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260721-2114-33b9943";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260724-2215-9e3a5f2";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260721-2114-33b9943";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260724-2215-9e3a5f2";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.
@@ -132,10 +132,9 @@ export function createAmbientLifeBatch({ ship, asteroids, random = Math.random, 
     const zone = getZoneProfile(anchor.position.x, anchor.position.y);
     const type = pickAmbientType(zone, anchor, random);
     const flockSize = getAmbientFlockSize(type, random);
-    const spread = type === "threadling" ? 210 : 240;
 
     for (let member = 0; member < flockSize; member += 1) {
-      lifeforms.push(createLifeformNear(type, anchor, random, spread, hashNumbers(seed, flock * 40 + member, Math.round(anchor.position.x))));
+      lifeforms.push(createEmergingLifeformNear(type, anchor, random, hashNumbers(seed, flock * 40 + member, Math.round(anchor.position.x))));
     }
   }
 
@@ -150,6 +149,8 @@ function getAmbientFlockSize(type, random) {
   if (type === "threadling") return 6 + Math.floor(random() * 6); // 6–11, tight schools
   if (type === "skitter") return 3 + Math.floor(random() * 5); // 3–7
   if (type === "lantern") return 3 + Math.floor(random() * 4); // 3–6
+  if (type === "bloom") return 3 + Math.floor(random() * 4); // 3–6, loose drifting school
+  if (type === "filament") return 5 + Math.floor(random() * 6); // 5–10, a field of hairs
   return 2 + Math.floor(random() * 4); // grazers 2–5
 }
 
@@ -160,11 +161,18 @@ function getAmbientFlockSize(type, random) {
 // per-zone creature mixes.
 function pickAmbientType(zone, anchor, random) {
   const resourceScore = getResourceScore(anchor);
+  const tags = zone.tags ?? [];
+  // Blooms belong to calm, fertile water; filaments to strange scanergy/cluster
+  // pockets. Zone-driven so you can read a place by the life drifting through it.
+  const isFertile = tags.includes("ambient-life") || tags.includes("safe");
+  const isStrange = tags.includes("scanergy-rich") || tags.includes("cluster-pocket") || tags.includes("strange");
   const weights = [
     ["grazer", 1.0],
     ["skitter", 0.85],
     ["threadling", 1.15],
     ["lantern", 0.35 + Math.min(0.9, resourceScore * 1.3)],
+    ["bloom", 0.3 + (isFertile ? 1.0 : 0) + Math.max(0, (zone.ambientLifeBias ?? 0.6) - 0.6) * 0.8],
+    ["filament", 0.15 + (isStrange ? 1.1 : 0) + Math.min(0.6, resourceScore * 0.8)],
   ];
   const total = weights.reduce((sum, [, weight]) => sum + weight, 0);
   let roll = random() * total;
@@ -282,6 +290,32 @@ function seedRockmoss(anchors, random) {
       coverage: clamp(0.22 + mossWeight * 0.22 + resourceScore * 0.12 + randomRange(random, -0.08, 0.14), 0.18, 0.72),
       glow: clamp(0.34 + resourceScore * 0.2 + randomRange(random, -0.08, 0.18), 0.25, 0.9),
     };
+  });
+}
+
+// Ambient life surfaces from under a rock: spawn INSIDE the anchor's silhouette
+// (not the loose 210-240 ring createLifeformNear uses) and flag a short emerge
+// so it scales/fades up instead of snapping in. Existing per-type steering
+// (orbit, flock, flee) fans the flock back out from the rock on its own.
+const AMBIENT_EMERGE_SECONDS = 0.7;
+const AMBIENT_MIN_UNDER_RADIUS = 40; // pebbles still get a small huddle
+
+function createEmergingLifeformNear(type, anchor, random, seedOffset) {
+  const underRadius = Math.max(anchor.radius ?? AMBIENT_MIN_UNDER_RADIUS, AMBIENT_MIN_UNDER_RADIUS) * 0.8;
+  const angle = random() * Math.PI * 2;
+  const distance = randomRange(random, 0, underRadius);
+  const speed = randomRange(random, 20, 70);
+
+  return new Lifeform({
+    type,
+    x: anchor.position.x + Math.cos(angle) * distance,
+    y: anchor.position.y + Math.sin(angle) * distance,
+    velocity: {
+      x: Math.cos(angle + Math.PI / 2) * speed,
+      y: Math.sin(angle + Math.PI / 2) * speed,
+    },
+    seed: hashNumbers(anchor.position.x, anchor.position.y, seedOffset),
+    birthSeconds: AMBIENT_EMERGE_SECONDS,
   });
 }
 
