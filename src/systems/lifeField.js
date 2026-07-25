@@ -1,6 +1,7 @@
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260724-2215-9e3a5f2";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260724-2244-667e995";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260724-2215-9e3a5f2";
+import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260724-2244-667e995";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260724-2244-667e995";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.
@@ -277,19 +278,42 @@ function addSkitters(lifeforms, anchors, random) {
 }
 
 function seedRockmoss(anchors, random) {
-  anchors.forEach((anchor, index) => {
-    const mossWeight = getRockmossAnchorWeight(anchor);
+  anchors.forEach((anchor) => {
+    seedRockmossOnAsteroid(anchor, random);
+  });
+}
 
-    if (mossWeight <= 0.18 || random() > clamp(mossWeight * 0.18, 0.02, 0.38)) {
+// Zone-weighted roll for one rock: sets asteroid.rockmoss (with a zone-picked
+// strain) if it qualifies, returns whether it seeded. Shared by the start field
+// and by chunk streaming so deep space grows the same varied rock-life.
+export function seedRockmossOnAsteroid(asteroid, random) {
+  const mossWeight = getRockmossAnchorWeight(asteroid);
+
+  if (mossWeight <= 0.18 || random() > clamp(mossWeight * 0.18, 0.02, 0.38)) {
+    return false;
+  }
+
+  const resourceScore = getResourceScore(asteroid);
+  asteroid.rockmoss = {
+    seed: hashNumbers(asteroid.position.x, asteroid.position.y, 9100),
+    coverage: clamp(0.22 + mossWeight * 0.22 + resourceScore * 0.12 + randomRange(random, -0.08, 0.14), 0.18, 0.72),
+    glow: clamp(0.34 + resourceScore * 0.2 + randomRange(random, -0.08, 0.18), 0.25, 0.9),
+    strain: pickRockmossStrain(getAnchorZoneProfile(asteroid), random),
+  };
+  return true;
+}
+
+// Seed strained rock-life on freshly streamed chunk rocks so varieties appear as
+// you fly, not just near the start. Deterministic per rock position (same rock
+// looks the same each visit); skips rocks that already carry moss (e.g. inherited).
+export function seedChunkRockmoss(asteroids) {
+  asteroids.forEach((asteroid) => {
+    if (asteroid.rockmoss) {
       return;
     }
 
-    const resourceScore = getResourceScore(anchor);
-    anchor.rockmoss = {
-      seed: hashNumbers(anchor.position.x, anchor.position.y, 9100 + index),
-      coverage: clamp(0.22 + mossWeight * 0.22 + resourceScore * 0.12 + randomRange(random, -0.08, 0.14), 0.18, 0.72),
-      glow: clamp(0.34 + resourceScore * 0.2 + randomRange(random, -0.08, 0.18), 0.25, 0.9),
-    };
+    const random = createRandom(hashNumbers(Math.round(asteroid.position.x), Math.round(asteroid.position.y), 4242));
+    seedRockmossOnAsteroid(asteroid, random);
   });
 }
 

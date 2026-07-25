@@ -1,35 +1,36 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260724-2215-9e3a5f2";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260724-2215-9e3a5f2";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260724-2215-9e3a5f2";
-import { Ship } from "./entities/Ship.js?v=fresh-20260724-2215-9e3a5f2";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260724-2215-9e3a5f2";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260724-2244-667e995";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260724-2244-667e995";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260724-2244-667e995";
+import { Ship } from "./entities/Ship.js?v=fresh-20260724-2244-667e995";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260724-2244-667e995";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260724-2215-9e3a5f2";
-import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField } from "./systems/lifeField.js?v=fresh-20260724-2215-9e3a5f2";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260724-2215-9e3a5f2";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260724-2215-9e3a5f2";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260724-2215-9e3a5f2";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260724-2215-9e3a5f2";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260724-2215-9e3a5f2";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260724-2215-9e3a5f2";
-import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260724-2215-9e3a5f2";
-import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260724-2215-9e3a5f2";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260724-2215-9e3a5f2";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260724-2215-9e3a5f2";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260724-2215-9e3a5f2";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260724-2215-9e3a5f2";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260724-2215-9e3a5f2";
-import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260724-2215-9e3a5f2";
-import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260724-2215-9e3a5f2";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260724-2215-9e3a5f2";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260724-2215-9e3a5f2";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260724-2215-9e3a5f2";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260724-2215-9e3a5f2";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260724-2215-9e3a5f2";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260724-2215-9e3a5f2";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260724-2215-9e3a5f2";
-import { createGameState } from "./state/gameState.js?v=fresh-20260724-2215-9e3a5f2";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260724-2215-9e3a5f2";
+import { createInput } from "./systems/input.js?v=fresh-20260724-2244-667e995";
+import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260724-2244-667e995";
+import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260724-2244-667e995";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260724-2244-667e995";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260724-2244-667e995";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260724-2244-667e995";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260724-2244-667e995";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260724-2244-667e995";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260724-2244-667e995";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260724-2244-667e995";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260724-2244-667e995";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260724-2244-667e995";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260724-2244-667e995";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260724-2244-667e995";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260724-2244-667e995";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260724-2244-667e995";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260724-2244-667e995";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260724-2244-667e995";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260724-2244-667e995";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260724-2244-667e995";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260724-2244-667e995";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260724-2244-667e995";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260724-2244-667e995";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260724-2244-667e995";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260724-2244-667e995";
+import { createGameState } from "./state/gameState.js?v=fresh-20260724-2244-667e995";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260724-2244-667e995";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -152,6 +153,12 @@ const AMBIENT_LIFE_TYPES = new Set(["grazer", "skitter", "threadling", "lantern"
 const ROCKMOSS_CRAWLER_TYPE = "rockmoss-crawler";
 const ROCKMOSS_WORK_DISTANCE_PER_PATCH = 170;
 const ROCKMOSS_MIN_PATCHES = 1;
+// Pod-strain self-spread guardrails: a mature pod seeds one nearby bare rock at
+// most this often, within this range, and only until the neighbourhood hits the
+// density cap — so it colonizes gradually instead of blanketing the field.
+const ROCKMOSS_SPREAD_INTERVAL = 28;
+const ROCKMOSS_SPREAD_RANGE = 720;
+const ROCKMOSS_SPREAD_DENSITY_CAP = 6;
 const INCURSION_PORTAL_BULLET_DAMAGE = 38;
 const INCURSION_PORTAL_BASE_REWARD = 180;
 const INCURSION_HUB_EXCLUSION_BUFFER = 180;
@@ -2822,6 +2829,7 @@ export class Game {
         x: launchPosition.x,
         y: launchPosition.y,
         type: ROCKMOSS_CRAWLER_TYPE,
+        strain: unitMetadata.strain ?? "moss",
         sourceClaimId: unitMetadata.sourceClaimId ?? null,
         sourceClaimName: unitMetadata.sourceClaimName ?? null,
         velocity: {
@@ -4210,6 +4218,12 @@ export class Game {
     if (added.length > 0 || removedSet.size > 0) {
       this.asteroids = [...this.asteroids.filter((a) => !removedSet.has(a)), ...added];
     }
+
+    if (added.length > 0) {
+      // Grow zone-appropriate rock-life on newly streamed rocks so varieties
+      // appear as the ship explores, not just in the start field.
+      seedChunkRockmoss(added);
+    }
   }
 
   updateHubDefenses(deltaSeconds) {
@@ -4598,6 +4612,7 @@ export class Game {
           patches: inheritedPatches,
           crawlers: inheritedPatches,
           work: parentMoss.work * 0.35,
+          strain: parentMoss.strain ?? "moss",
         };
       });
     }
@@ -4628,6 +4643,7 @@ export class Game {
         moss.crawlers = patchCap;
         moss.work = 0;
         moss.coverage = Math.max(moss.coverage, moss.patches / Math.max(1, patchCap));
+        this.updateRockmossSpread(asteroid, moss, deltaSeconds);
         return;
       }
 
@@ -4642,6 +4658,70 @@ export class Game {
         moss.glow = Math.min(1, moss.glow + 0.035);
       }
     });
+  }
+
+  // Only the pod strain self-spreads: a pod that has fully covered its rock ticks
+  // a timer and, when it fires, seeds one nearby BARE rock with a fresh pod. The
+  // timer's lazy seed-based offset staggers pods so they don't all fire at once.
+  updateRockmossSpread(asteroid, moss, deltaSeconds) {
+    if (moss.strain !== "pod") {
+      return;
+    }
+
+    moss.spreadTimer = (moss.spreadTimer ?? pseudoRandom(moss.seed, 7) * ROCKMOSS_SPREAD_INTERVAL) + deltaSeconds;
+
+    if (moss.spreadTimer < ROCKMOSS_SPREAD_INTERVAL) {
+      return;
+    }
+
+    moss.spreadTimer = 0;
+    this.trySpreadPod(asteroid);
+  }
+
+  trySpreadPod(sourceAsteroid) {
+    let nearbyMoss = 0;
+    const candidates = [];
+
+    for (const rock of this.asteroids) {
+      if (rock === sourceAsteroid || !rock.points?.length) {
+        continue;
+      }
+
+      const gap = distance(rock.position, sourceAsteroid.position);
+      if (gap > ROCKMOSS_SPREAD_RANGE) {
+        continue;
+      }
+
+      if (rock.rockmoss) {
+        nearbyMoss += 1;
+        continue;
+      }
+
+      candidates.push(rock);
+    }
+
+    // Density guardrail: stop seeding an already-mossy neighbourhood.
+    if (nearbyMoss >= ROCKMOSS_SPREAD_DENSITY_CAP || candidates.length === 0) {
+      return;
+    }
+
+    const target = candidates[Math.floor(Math.random() * candidates.length)];
+    const patchCap = this.getRockmossPatchCap(target);
+    target.rockmoss = {
+      seed: Math.round((target.position.x + 30000) * 17 + (target.position.y + 30000) * 31),
+      coverage: 1 / Math.max(1, patchCap),
+      glow: 0.42,
+      patches: 1,
+      crawlers: 1,
+      work: 0,
+      strain: "pod",
+    };
+    this.createRockmossBurst(target, { x: 0, y: 0 }, 8);
+    this.state.ledger.recordEvent(
+      "lifeform.rockmossColonized",
+      { x: Math.round(target.position.x), y: Math.round(target.position.y), spread: true },
+      { visible: false },
+    );
   }
 
   updateRockmossSpores() {
@@ -4704,6 +4784,7 @@ export class Game {
       patches: 1,
       crawlers: 1,
       work: 0,
+      strain: pickup.strain ?? "moss",
     };
 
     this.createRockmossBurst(asteroid, { x: pickup.velocity.x * 0.2, y: pickup.velocity.y * 0.2 }, 8);
@@ -4784,6 +4865,7 @@ export class Game {
           x: asteroid.position.x + Math.cos(angle) * asteroid.radius * 0.55,
           y: asteroid.position.y + Math.sin(angle) * asteroid.radius * 0.55,
           type: ROCKMOSS_CRAWLER_TYPE,
+          strain: moss.strain ?? "moss",
           velocity: {
             x: asteroid.velocity.x * 0.2 + Math.cos(angle) * speed + impactVelocity.x * 0.02,
             y: asteroid.velocity.y * 0.2 + Math.sin(angle) * speed + impactVelocity.y * 0.02,
@@ -5320,6 +5402,7 @@ export class Game {
         tradeValue: pickup.tradeValue ?? null,
         label: pickup.label ?? null,
         quantity: pickup.quantity ?? 1,
+        strain: pickup.strain ?? null,
       });
       this.audio?.playPickup(pickup.type);
     });
@@ -5546,6 +5629,7 @@ export class Game {
     }
 
     const moss = asteroid.rockmoss;
+    const style = ROCKMOSS_STRAINS[moss.strain] ?? ROCKMOSS_STRAINS.moss;
     const screenX = asteroid.position.x - camera.x;
     const screenY = asteroid.position.y - camera.y;
     const patchCount = Math.max(ROCKMOSS_MIN_PATCHES, Math.min(asteroid.points.length, moss.patches ?? Math.round(asteroid.points.length * moss.coverage)));
@@ -5567,26 +5651,116 @@ export class Game {
       const size = 4 + asteroid.radius * 0.035 + pseudoRandom(moss.seed + 123, index) * 5;
       const glow = moss.glow * (0.55 + pseudoRandom(moss.seed + 171, index) * 0.45) * pulse;
 
-      this.context.fillStyle = `rgba(107, 255, 178, ${0.08 + glow * 0.18})`;
-      this.context.strokeStyle = `rgba(152, 255, 205, ${0.25 + glow * 0.35})`;
-      this.context.beginPath();
-      this.context.ellipse(x, y, size * 1.45, size * 0.75, angle + Math.PI / 2, 0, Math.PI * 2);
-      this.context.fill();
-      this.context.stroke();
-
-      if (index % 3 === 0) {
-        this.context.fillStyle = `rgba(213, 255, 188, ${0.3 + glow * 0.45})`;
-        this.context.beginPath();
-        this.context.arc(x + Math.cos(angle) * size, y + Math.sin(angle) * size, 1.8, 0, Math.PI * 2);
-        this.context.fill();
-      }
+      this.drawRockmossPatch(style, x, y, size, angle, glow, index, moss.seed);
     }
 
-    this.drawRockmossCrawlers(asteroid, moss);
+    this.drawRockmossCrawlers(asteroid, moss, style);
     this.context.restore();
   }
 
-  drawRockmossCrawlers(asteroid, moss) {
+  // One rock-life patch, drawn in the strain's growth-shape at (x,y) with `angle`
+  // pointing outward from the rock. Colours come from the strain style.
+  drawRockmossPatch(style, x, y, size, angle, glow, index, seed) {
+    const ctx = this.context;
+    const { color, accent } = style;
+
+    if (style.shape === "crystal") {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.fillStyle = mossRgba(color, 0.14 + glow * 0.22);
+      ctx.strokeStyle = mossRgba(accent, 0.4 + glow * 0.4);
+      const spikeLength = size * 1.9;
+      const spikeWidth = size * 0.7;
+      ctx.beginPath();
+      ctx.moveTo(spikeLength, 0);
+      ctx.lineTo(spikeWidth * 0.4, -spikeWidth);
+      ctx.lineTo(-spikeWidth * 0.4, 0);
+      ctx.lineTo(spikeWidth * 0.4, spikeWidth);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
+    if (style.shape === "tube") {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.strokeStyle = mossRgba(color, 0.42 + glow * 0.4);
+      ctx.lineWidth = 2;
+      const length = size * 2.3;
+      const time = performance.now() / 320 + index + seed * 0.01;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      for (let segment = 1; segment <= 3; segment += 1) {
+        const fraction = segment / 3;
+        const wobble = Math.sin(time + fraction * 3) * size * 0.55;
+        ctx.lineTo(length * fraction, wobble);
+      }
+      ctx.stroke();
+      ctx.fillStyle = mossRgba(accent, 0.55 + glow * 0.3);
+      ctx.beginPath();
+      ctx.arc(length, Math.sin(time + 3) * size * 0.55, 1.9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    if (style.shape === "crust") {
+      ctx.fillStyle = mossRgba(color, 0.1 + glow * 0.12);
+      ctx.strokeStyle = mossRgba(accent, 0.14 + glow * 0.18);
+      ctx.beginPath();
+      ctx.ellipse(x, y, size * 1.95, size * 0.5, angle + Math.PI / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      return;
+    }
+
+    if (style.shape === "glow") {
+      ctx.fillStyle = mossRgba(color, 0.06 + glow * 0.16);
+      ctx.beginPath();
+      ctx.arc(x, y, size * 1.9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = mossRgba(accent, 0.35 + glow * 0.5);
+      ctx.beginPath();
+      ctx.arc(x, y, size * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+
+    if (style.shape === "pod") {
+      const breathe = 0.82 + Math.sin(performance.now() / 620 + index + seed * 0.01) * 0.18;
+      ctx.fillStyle = mossRgba(color, 0.14 + glow * 0.2);
+      ctx.strokeStyle = mossRgba(accent, 0.32 + glow * 0.35);
+      ctx.beginPath();
+      ctx.arc(x, y, size * breathe, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = mossRgba(accent, 0.5);
+      ctx.beginPath();
+      ctx.arc(x - size * 0.28, y - size * 0.28, size * 0.24, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+
+    // default: the original soft moss blob
+    ctx.fillStyle = mossRgba(color, 0.08 + glow * 0.18);
+    ctx.strokeStyle = mossRgba(accent, 0.25 + glow * 0.35);
+    ctx.beginPath();
+    ctx.ellipse(x, y, size * 1.45, size * 0.75, angle + Math.PI / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    if (index % 3 === 0) {
+      ctx.fillStyle = mossRgba(accent, 0.3 + glow * 0.45);
+      ctx.beginPath();
+      ctx.arc(x + Math.cos(angle) * size, y + Math.sin(angle) * size, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  drawRockmossCrawlers(asteroid, moss, style = ROCKMOSS_STRAINS.moss) {
     const crawlerCount = Math.max(ROCKMOSS_MIN_PATCHES, Math.min(5, moss.crawlers ?? Math.floor(moss.coverage * 7)));
     const now = performance.now();
 
@@ -5629,14 +5803,14 @@ export class Game {
       this.context.translate(x, y);
       this.context.rotate(heading);
       this.context.scale(scale, scale);
-      this.context.fillStyle = "rgba(197, 255, 175, 0.72)";
-      this.context.strokeStyle = "rgba(96, 255, 170, 0.82)";
+      this.context.fillStyle = mossRgba(style.accent, 0.72);
+      this.context.strokeStyle = mossRgba(style.color, 0.82);
       this.context.lineWidth = 1.25;
       this.context.beginPath();
       this.context.ellipse(0, 0, 4.4, 2.5, 0, 0, Math.PI * 2);
       this.context.fill();
       this.context.stroke();
-      this.context.strokeStyle = "rgba(198, 255, 220, 0.52)";
+      this.context.strokeStyle = mossRgba(style.accent, 0.52);
       this.context.beginPath();
       this.context.moveTo(-3.4, -2.2);
       this.context.lineTo(-6.2, -4.2);
@@ -6808,6 +6982,10 @@ function getLifeformLabel(type) {
       "drift-mouth": "Drift Mouth",
     }[type] ?? "unknown lifeform"
   );
+}
+
+function mossRgba(rgb, alpha) {
+  return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
 }
 
 function pseudoRandom(seed, index) {

@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260724-2215-9e3a5f2";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260724-2215-9e3a5f2";
+import { getNpcName } from "../npcs.js?v=fresh-20260724-2244-667e995";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260724-2244-667e995";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
