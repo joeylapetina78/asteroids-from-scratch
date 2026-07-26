@@ -18,7 +18,9 @@ export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
       outerShoulderDensity: 0.38,
       slipstreamSpeedMultiplier: 1.2,
       slipstreamThrustMultiplier: 1.1,
-      boostPatchProgress: [0.18, 0.43, 0.68, 0.88],
+      // Bracket the two major bends so either direction receives its impulse
+      // after completing a turn instead of while entering one.
+      boostPatchProgress: [0.17, 0.35, 0.6, 0.82],
       seed: 4187,
       coursePoints: [
         { progress: 0, along: 0, lateral: 0 },

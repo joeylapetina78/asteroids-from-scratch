@@ -101,7 +101,7 @@ function createBoostPatches(corridorId, samples, progressValues) {
     const previous = samples[sampleIndex - 1];
     const next = samples[sampleIndex + 1];
     const tangentLength = Math.hypot(next.x - previous.x, next.y - previous.y) || 1;
-    return { id: `${corridorId}:boost:${index}`, position: { ...samples[sampleIndex] }, tangent: { x: (next.x - previous.x) / tangentLength, y: (next.y - previous.y) / tangentLength }, radius: 72 };
+    return { id: `${corridorId}:boost:${index}`, progress, position: { ...samples[sampleIndex] }, tangent: { x: (next.x - previous.x) / tangentLength, y: (next.y - previous.y) / tangentLength }, radius: 72 };
   });
 }
 

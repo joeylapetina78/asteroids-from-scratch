@@ -442,6 +442,7 @@ test("a configured transport connection creates a curved, cleared physical corri
   const directionChanges = lateralSigns.slice(1).filter((sign, index) => sign !== lateralSigns[index]).length;
   assert.ok(directionChanges >= 4);
   assert.equal(corridors[0].boostPatches.length, 4);
+  assert.deepEqual(corridors[0].boostPatches.map((patch) => patch.progress), [0.17, 0.35, 0.6, 0.82]);
   assert.equal(getCorridorClearance(corridors[0].samples[12], 40, corridors)?.corridor.id, "corridor-yard-ledge");
   assert.equal(getCorridorClearance({ x: 4200, y: 3000 }, 40, corridors), null);
 });

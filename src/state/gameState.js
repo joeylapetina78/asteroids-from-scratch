@@ -1,13 +1,13 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260726-1200-60c79a1";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260726-1200-60c79a1";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260726-1200-60c79a1";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260726-1200-60c79a1";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260726-1200-60c79a1";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260726-1200-60c79a1";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260726-1200-60c79a1";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260726-1200-60c79a1";
-import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260726-1200-60c79a1";
-import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260726-1200-60c79a1";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260726-1210-08b46ba";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260726-1210-08b46ba";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260726-1210-08b46ba";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260726-1210-08b46ba";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260726-1210-08b46ba";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260726-1210-08b46ba";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260726-1210-08b46ba";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260726-1210-08b46ba";
+import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260726-1210-08b46ba";
+import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260726-1210-08b46ba";
 
 export function createGameState() {
   const state = {
