@@ -307,6 +307,22 @@ test("accelerated development wear sends the oldest Cinder craft to service afte
   assert.equal(manager.getState().ships[worker.id].pendingIssue, "structural-fatigue");
 });
 
+test("idle Cinder craft report unfunded work once instead of failing silently", () => {
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(1_000);
+  for (const siteId of ["yard-exchange", "scrap-forge", "the-ledge"]) state.logistics.institutions[siteId].accounts.operating.balance = 0;
+  const game = { worldSites: [
+    { id: "yard-exchange", position: { x: 380, y: -180 } },
+    { id: "scrap-porch", position: { x: -1180, y: 860 } },
+    { id: "the-ledge", position: { x: 7000, y: -4500 } },
+  ], addWorkerShip: () => {} };
+  const manager = createMiningOperation({ state, game, now: () => 1_000 });
+  const initialEvents = state.ledger.getRecentEvents(20).filter((event) => event.type === "mining.waitingForFundedWork");
+  assert.equal(initialEvents.length, 3);
+  manager.update();
+  assert.equal(state.ledger.getRecentEvents(20).filter((event) => event.type === "mining.waitingForFundedWork").length, 3);
+});
+
 test("a mining worker tractors eligible loose resources toward its collector", () => {
   const worker = new MiningWorkerShip({ id: "worker:test", name: "Test Worker", institutionId: "miner:test", controllerInstitutionId: "person:test", x: 0, y: 0 });
   worker.assign({ allocationId: "allocation:test", contractId: "mine:test", resourceId: "iron-nickel", quantity: 1, destination: { x: 0, y: 0 } });
@@ -511,6 +527,35 @@ test("player evergreen mining delivery enters the same freight inventory used by
   harness.manager.update();
   assert.equal(Object.values(harness.state.logistics.shipments).filter((shipment) => shipment.commodity === "iron-nickel").length, 2);
   assert.equal(buyer.inventories["iron-nickel"], 1);
+});
+
+test("an unfunded evergreen mining order rejects delivery without consuming material", () => {
+  const harness = createLogisticsHarness();
+  const definition = getStandingMiningJobsForSite("yard-exchange", "Yard Exchange")[0];
+  registerContractDefinition(definition);
+  const contracts = createContractManager({ state: harness.state });
+  contracts.offerContract(definition.id, { siteId: "yard-exchange" });
+  contracts.acceptContract(definition.id);
+  const buyer = harness.state.logistics.institutions["yard-exchange"];
+  buyer.accounts.operating.balance = 0;
+  buyer.inventories["iron-nickel"] = 0;
+  assert.equal(contracts.depositResourceUnit({ contractId: definition.id, resourceType: "iron-nickel", siteId: "yard-exchange", amount: 3 }), false);
+  assert.equal(buyer.inventories["iron-nickel"], 0);
+  assert.equal(harness.state.contracts.records[definition.id].deliveredAmount ?? 0, 0);
+  assert.ok(harness.state.ledger.getRecentEvents(10).some((event) => event.type === "contract.resourceRejected" && event.payload.reason === "buyer-cannot-fund"));
+});
+
+test("an unfunded short haul cannot mask a worn carrier's return to maintenance", () => {
+  const harness = createLogisticsHarness();
+  const shipId = "hauler-yard-scrap";
+  harness.state.logistics.institutions["scrap-forge"].accounts.operating.balance = 0;
+  harness.state.logistics.institutions["ship:hauler-yard-scrap"].wear = 4.2;
+  harness.ships[0].wear = 4.2;
+  harness.manager.update();
+  const hauler = harness.state.logistics.haulers[shipId];
+  assert.equal(hauler.status, "returning-maintenance");
+  assert.ok(hauler.activeMovementId);
+  assert.equal(Object.values(harness.state.logistics.responses).some((response) => response.status === "blocked" && response.lastOutcome?.type === "execution-route-rejected"), false);
 });
 
 test("the known transportation network finds a multi-destination path without authored route logic", () => {

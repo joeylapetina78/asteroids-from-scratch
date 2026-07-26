@@ -1,6 +1,6 @@
 import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260726-1502-ed63a1c";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260726-1502-ed63a1c";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260726-1508-27b32b6";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260726-1508-27b32b6";
 
 export const STANDING_FREIGHT_TEMPLATES = Object.freeze([
   { id: "standing-water-scrap-yard", originSiteId: "scrap-porch", originName: "Scrap Porch", destinationSiteId: "yard-exchange", destinationName: "Yard Exchange", commodity: "water-ice", commodityName: "Water Ice", amount: 1, payment: 90, issuerInstitutionId: "yard-exchange", sourceInstitutionId: "scrap-forge", destinationInstitutionId: "yard-exchange" },
@@ -131,7 +131,12 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const candidates = STANDING_FREIGHT_TEMPLATES
       .filter((entry) => entry.originSiteId === hauler.currentSiteId && countActiveForTemplate(entry.id) < 1)
       .filter((entry) => (logistics.institutions[entry.sourceInstitutionId]?.inventories?.[entry.commodity] ?? 0) >= entry.amount)
-      .map((template) => ({ template, plan: evaluateTransportPlan({ network: transportationNetwork, originId: template.originSiteId, destinationId: template.destinationSiteId, payment: template.payment, currentWear: shipInstitution.wear ?? 0, policy: carrier.policies?.transportation, repairOptions: carrier.repairOptions }) }));
+      .map((template) => {
+        const plan = evaluateTransportPlan({ network: transportationNetwork, originId: template.originSiteId, destinationId: template.destinationSiteId, payment: template.payment, currentWear: shipInstitution.wear ?? 0, policy: carrier.policies?.transportation, repairOptions: carrier.repairOptions });
+        const issuer = logistics.institutions[template.issuerInstitutionId];
+        const funding = evaluateAffordability({ account: issuer.accounts.operating, policy: { protectedCash: 0 }, cost: template.payment });
+        return { template, plan: plan.eligible && !funding.affordable ? { ...plan, eligible: false, reason: "payer-cannot-fund", funding } : plan };
+      });
     candidates.filter((candidate) => !candidate.plan.eligible).forEach((candidate) => appendHistory("freight.declined", { shipId, templateId: candidate.template.id, reason: candidate.plan.reason }));
     const selected = candidates.filter((candidate) => candidate.plan.eligible).sort((a, b) => b.plan.score - a.plan.score)[0];
     if (!selected) {

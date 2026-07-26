@@ -1,4 +1,4 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1502-ed63a1c";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1508-27b32b6";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
@@ -46,7 +46,8 @@ export function settleStandingMiningOrder({ state, orderId, resourceId, amount, 
   const delivered = Math.min(Math.max(0, amount ?? 0), order?.amount ?? 0);
   const buyer = state.logistics?.institutions?.[order?.buyerInstitutionId];
   if (!order || !buyer || order.resourceId !== resourceId || delivered <= 0) return null;
-  const payment = Math.min(delivered * order.paymentPerUnit, buyer.accounts.operating.balance);
+  const payment = delivered * order.paymentPerUnit;
+  if ((buyer.accounts.operating.balance ?? 0) < payment) return null;
   buyer.inventories[resourceId] = (buyer.inventories[resourceId] ?? 0) + delivered;
   buyer.accounts.operating.balance -= payment;
   if (supplierAccount) {
@@ -54,6 +55,14 @@ export function settleStandingMiningOrder({ state, orderId, resourceId, amount, 
     supplierAccount.transactions?.push({ id: `MIN-TX-${referenceId ?? now}`, at: now, type: "mining-income", amount: payment, balance: supplierAccount.balance, referenceId });
   }
   return { order, buyer, delivered, payment };
+}
+
+export function canFundStandingMiningOrder({ state, orderId, amount = null }) {
+  const order = STANDING_MINING_ORDERS.find((candidate) => candidate.id === orderId);
+  const buyer = state.logistics?.institutions?.[order?.buyerInstitutionId];
+  if (!order || !buyer) return false;
+  const units = Math.min(Math.max(0, amount ?? order.amount), order.amount);
+  return (buyer.accounts.operating.balance ?? 0) >= units * order.paymentPerUnit;
 }
 
 export function createMiningOperation({ state, game, now = () => Date.now() }) {
@@ -98,7 +107,7 @@ export function createMiningOperation({ state, game, now = () => Date.now() }) {
       if (shipRecord.maintenanceStatus !== "available") return;
       if (worker.assignment) return;
       const order = chooseOrder();
-      if (!order) return;
+      if (!order) { publishIdleDecision(shipRecord); return; }
       const destination = sites.get(order.siteId)?.position;
       if (!destination) return;
       const allocation = {
@@ -111,6 +120,7 @@ export function createMiningOperation({ state, game, now = () => Date.now() }) {
         acceptedAt: now(),
       };
       operation.allocations[allocation.id] = allocation;
+      shipRecord.lastDecisionKey = null;
       worker.assign({ allocationId: allocation.id, contractId: order.id, resourceId: order.resourceId, quantity: order.amount, destination });
       operation.nextOrderIndex = (STANDING_MINING_ORDERS.indexOf(order) + 1) % STANDING_MINING_ORDERS.length;
       record("mining.contractAccepted", `${operation.controller.name} dispatched ${worker.name} for ${order.amount} ${order.resourceName} at ${order.siteName}.`, { orderId: order.id, allocationId: allocation.id, siteId: order.siteId, resourceId: order.resourceId, quantity: order.amount, shipInstitutionId: worker.id, shipName: worker.name });
@@ -125,6 +135,18 @@ export function createMiningOperation({ state, game, now = () => Date.now() }) {
       if (!alreadyAssigned && (buyer?.accounts?.operating?.balance ?? 0) >= order.amount * order.paymentPerUnit) return order;
     }
     return null;
+  }
+
+  function publishIdleDecision(shipRecord) {
+    const reasons = STANDING_MINING_ORDERS.map((order) => {
+      const occupied = Object.values(operation.allocations).some((allocation) => allocation.orderId === order.id && allocation.status === "active");
+      const balance = state.logistics?.institutions?.[order.buyerInstitutionId]?.accounts?.operating?.balance ?? 0;
+      return `${order.id}:${occupied ? "allocated" : balance < order.amount * order.paymentPerUnit ? "unfunded" : "open"}`;
+    });
+    const key = reasons.join("|");
+    if (shipRecord.lastDecisionKey === key) return;
+    shipRecord.lastDecisionKey = key;
+    record("mining.waitingForFundedWork", `${shipRecord.name} is idle: available mining orders are already allocated or their buyers cannot fund the posted price.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, reasons });
   }
 
   function completeDelivery({ allocationId, contractId, resourceId, amount, ship }) {
@@ -223,5 +245,5 @@ function createInitialState(now) {
 }
 
 function createWorkerRecord(defaults) {
-  return { id: defaults.id, name: defaults.name, archetypeId: "mining-worker", ownerInstitutionId: "miner:cinder-contracting", referenceId: defaults.referenceId, currentSiteId: defaults.currentSiteId, status: "idle", cargo: {}, wear: defaults.initialWear ?? 0, issueCount: 0, pendingIssue: null, maintenanceStatus: "available", capabilities: { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } } };
+  return { id: defaults.id, name: defaults.name, archetypeId: "mining-worker", ownerInstitutionId: "miner:cinder-contracting", referenceId: defaults.referenceId, currentSiteId: defaults.currentSiteId, status: "idle", cargo: {}, wear: defaults.initialWear ?? 0, issueCount: 0, pendingIssue: null, maintenanceStatus: "available", lastDecisionKey: null, capabilities: { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } } };
 }
