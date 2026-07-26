@@ -56,7 +56,7 @@ export function applyCorridorMaintenance(asteroid, corridors, deltaSeconds) {
   const normal = { x: -tangent.y * side, y: tangent.x * side };
   const halfWidth = clearance.width * 0.5;
   const centerPressure = 1 - clearance.nearest.distance / Math.max(1, halfWidth);
-  const push = 4 + centerPressure * 8;
+  const push = 4.1 + centerPressure * 8;
   asteroid.velocity.x += normal.x * push * deltaSeconds;
   asteroid.velocity.y += normal.y * push * deltaSeconds;
   const targetDistance = halfWidth + asteroid.radius + 28;
@@ -75,24 +75,83 @@ function createCorridor(connection, from, to) {
   const length = Math.hypot(dx, dy);
   const normal = { x: -dy / length, y: dx / length };
   const random = seededRandom(config.seed ?? 1);
-  const bend = length * (config.curvature ?? 0.12) * (random() < 0.5 ? -1 : 1);
-  const secondary = length * (config.secondaryCurvature ?? 0.045) * (random() * 2 - 1);
+  const coursePoints = config.coursePoints ?? generateCourseProfile(config.generator, config.seed ?? 1, length, config.sampleSpacing ?? 180);
   const variationPhase = random() * Math.PI * 2;
   const sampleCount = Math.max(24, Math.ceil(length / (config.sampleSpacing ?? 180)));
   const samples = Array.from({ length: sampleCount + 1 }, (_, index) => {
     const t = index / sampleCount;
-    const authoredPoint = config.coursePoints ? sampleCourseProfile(config.coursePoints, t) : null;
-    const authoredLateral = authoredPoint ? authoredPoint.lateral * length : null;
+    const authoredPoint = sampleCourseProfile(coursePoints, t);
+    const authoredLateral = authoredPoint.lateral * length;
     const naturalVariation = Math.sin(Math.PI * t) * Math.sin(Math.PI * 7 * t + variationPhase) * (config.naturalVariation ?? 0);
-    const baseLateral = authoredLateral ?? (Math.sin(Math.PI * t) * bend + Math.sin(Math.PI * 2 * t) * Math.sin(Math.PI * t) * secondary);
-    const lateral = baseLateral + naturalVariation;
-    const along = authoredPoint?.along ?? t;
+    const lateral = authoredLateral + naturalVariation;
+    const along = authoredPoint.along;
     return { x: mix(from.position.x, to.position.x, along) + normal.x * lateral, y: mix(from.position.y, to.position.y, along) + normal.y * lateral };
   });
   const waypoints = samplePolylineByDistance(samples, config.waypointSpacing ?? 520);
   const courseLength = polylineLength(samples);
   const id = config.id ?? `corridor:${connection.id}`;
-  return { id, connectionId: connection.id, name: config.name ?? `${from.name}–${to.name} Freight Corridor`, fromId: from.id, toId: to.id, width: config.width ?? 480, endpointWidth: config.endpointWidth ?? 720, shoulderDensity: config.shoulderDensity ?? 0, outerShoulderDensity: config.outerShoulderDensity ?? 0, slipstreamSpeedMultiplier: config.slipstreamSpeedMultiplier ?? 1, slipstreamThrustMultiplier: config.slipstreamThrustMultiplier ?? 1, boostPatches: createBoostPatches(id, samples, config.boostPatchProgress ?? []), seed: config.seed ?? 1, samples, waypoints, length: courseLength, directLength: length };
+  const boostProgress = config.boostPatchProgress ?? deriveBoostPatchProgress(samples, config.boostPads);
+  return { id, archetypeId: config.archetypeId ?? null, connectionId: connection.id, name: config.name ?? `${from.name}–${to.name} Freight Corridor`, fromId: from.id, toId: to.id, width: config.width ?? 480, endpointWidth: config.endpointWidth ?? 720, shoulderDensity: config.shoulderDensity ?? 0, outerShoulderDensity: config.outerShoulderDensity ?? 0, slipstreamSpeedMultiplier: config.slipstreamSpeedMultiplier ?? 1, slipstreamThrustMultiplier: config.slipstreamThrustMultiplier ?? 1, boostPatches: createBoostPatches(id, samples, boostProgress), seed: config.seed ?? 1, samples, waypoints, length: courseLength, directLength: length, generation: { procedural: !config.coursePoints, coursePoints } };
+}
+
+function generateCourseProfile(generator = {}, seed, directLength, sampleSpacing) {
+  const candidateCount = generator.candidateCount ?? 16;
+  let best = null;
+  for (let candidateIndex = 0; candidateIndex < candidateCount; candidateIndex += 1) {
+    const random = seededRandom((seed + candidateIndex * 2654435761) >>> 0);
+    const pointCount = generator.controlPointCount ?? 9;
+    const points = Array.from({ length: pointCount }, (_, index) => {
+      const progress = index / (pointCount - 1);
+      if (index === 0 || index === pointCount - 1) return { progress, along: progress, lateral: 0 };
+      const envelope = Math.sin(Math.PI * progress);
+      const alternating = index % 2 === 0 ? 1 : -1;
+      const lateral = envelope * (generator.lateralScale ?? 0.1) * (0.38 + random() * 0.62) * (random() < 0.72 ? alternating : -alternating);
+      const alongJitter = (random() * 2 - 1) * 0.018 * envelope;
+      return { progress, along: Math.max(0, Math.min(1, progress + alongJitter)), lateral };
+    });
+    const evaluation = evaluateCourseProfile(points, directLength, sampleSpacing, generator);
+    if (!best || evaluation.score < best.score) best = { points, ...evaluation };
+  }
+  return best.points;
+}
+
+function evaluateCourseProfile(points, directLength, sampleSpacing, generator) {
+  const sampleCount = Math.max(32, Math.ceil(directLength / sampleSpacing));
+  const normalized = Array.from({ length: sampleCount + 1 }, (_, index) => sampleCourseProfile(points, index / sampleCount));
+  const lengthRatio = polylineLength(normalized.map((point) => ({ x: point.along, y: point.lateral })));
+  const lateralSigns = normalized.map((point) => Math.sign(point.lateral)).filter(Boolean);
+  const lateralTurns = lateralSigns.slice(1).filter((sign, index) => sign !== lateralSigns[index]).length;
+  const maximumTurn = maximumPolylineTurn(normalized);
+  const rangePenalty = Math.max(0, (generator.minimumLengthRatio ?? 1.08) - lengthRatio) * 30 + Math.max(0, lengthRatio - (generator.maximumLengthRatio ?? 1.45)) * 30;
+  const turnPenalty = Math.max(0, (generator.minimumLateralTurns ?? 2) - lateralTurns) * 2 + Math.max(0, lateralTurns - (generator.maximumLateralTurns ?? 8)) * 2;
+  const sharpnessPenalty = Math.max(0, maximumTurn - (generator.maximumSampleTurn ?? 0.4)) * 20;
+  return { score: Math.abs(lengthRatio - (generator.targetLengthRatio ?? 1.22)) + rangePenalty + turnPenalty + sharpnessPenalty };
+}
+
+function deriveBoostPatchProgress(samples, boostPads = {}) {
+  const desiredCount = boostPads?.count ?? 0;
+  if (desiredCount <= 0) return [];
+  const turnCount = Math.max(1, boostPads.turnCount ?? Math.ceil(desiredCount / 2));
+  const minimumSpacing = boostPads.minimumTurnSpacing ?? 0.18;
+  const window = Math.max(2, Math.round(samples.length * 0.025));
+  const candidates = [];
+  for (let index = window; index < samples.length - window; index += 1) {
+    const progress = index / (samples.length - 1);
+    if (progress < 0.1 || progress > 0.9) continue;
+    const before = samples[index - window];
+    const center = samples[index];
+    const after = samples[index + window];
+    const firstAngle = Math.atan2(center.y - before.y, center.x - before.x);
+    const secondAngle = Math.atan2(after.y - center.y, after.x - center.x);
+    candidates.push({ progress, curvature: Math.abs(normalizeAngle(secondAngle - firstAngle)) });
+  }
+  const selected = [];
+  candidates.sort((a, b) => b.curvature - a.curvature).forEach((candidate) => {
+    if (selected.length >= turnCount || selected.some((turn) => Math.abs(turn.progress - candidate.progress) < minimumSpacing)) return;
+    selected.push(candidate);
+  });
+  const offset = boostPads.turnExitOffset ?? 0.05;
+  return selected.flatMap((turn) => [Math.max(0.04, turn.progress - offset), Math.min(0.96, turn.progress + offset)]).sort((a, b) => a - b).slice(0, desiredCount).map((progress) => Number(progress.toFixed(4)));
 }
 
 function createBoostPatches(corridorId, samples, progressValues) {
@@ -134,6 +193,23 @@ function samplePolylineByDistance(samples, spacing) {
 
 function polylineLength(samples) {
   return samples.slice(1).reduce((total, point, index) => total + Math.hypot(point.x - samples[index].x, point.y - samples[index].y), 0);
+}
+
+function maximumPolylineTurn(samples) {
+  let maximum = 0;
+  for (let index = 1; index < samples.length - 1; index += 1) {
+    const before = samples[index - 1];
+    const center = samples[index];
+    const after = samples[index + 1];
+    const incoming = Math.atan2(center.lateral - before.lateral, center.along - before.along);
+    const outgoing = Math.atan2(after.lateral - center.lateral, after.along - center.along);
+    maximum = Math.max(maximum, Math.abs(normalizeAngle(outgoing - incoming)));
+  }
+  return maximum;
+}
+
+function normalizeAngle(angle) {
+  return Math.atan2(Math.sin(angle), Math.cos(angle));
 }
 
 function catmullRom(first, start, end, last, amount) {

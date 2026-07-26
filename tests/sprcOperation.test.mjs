@@ -442,7 +442,12 @@ test("a configured transport connection creates a curved, cleared physical corri
   const directionChanges = lateralSigns.slice(1).filter((sign, index) => sign !== lateralSigns[index]).length;
   assert.ok(directionChanges >= 4);
   assert.equal(corridors[0].boostPatches.length, 4);
-  assert.deepEqual(corridors[0].boostPatches.map((patch) => patch.progress), [0.17, 0.35, 0.6, 0.82]);
+  assert.equal(corridors[0].archetypeId, "frontier-freight-road");
+  assert.equal(corridors[0].generation.procedural, true);
+  const boostProgress = corridors[0].boostPatches.map((patch) => patch.progress);
+  assert.ok(boostProgress.every((progress, index) => index === 0 || progress > boostProgress[index - 1]));
+  assert.ok(boostProgress[1] - boostProgress[0] < 0.13);
+  assert.ok(boostProgress[3] - boostProgress[2] < 0.13);
   assert.equal(getCorridorClearance(corridors[0].samples[12], 40, corridors)?.corridor.id, "corridor-yard-ledge");
   assert.equal(getCorridorClearance({ x: 4200, y: 3000 }, 40, corridors), null);
 });
@@ -471,6 +476,24 @@ test("corridor infrastructure provides slipstream tuning and pushes debris off t
   ship.update(1 / 60, { isDown: () => false });
   assert.ok(Math.hypot(ship.velocity.x, ship.velocity.y) < 200);
   assert.ok(Math.hypot(ship.velocity.x, ship.velocity.y) > 126);
+});
+
+test("the same corridor archetype generates a deterministic outer freight road", () => {
+  const destinations = [
+    { id: "the-ledge", name: "The Ledge", position: { x: 7000, y: -4500 } },
+    { id: "ore-station-one", name: "Ore Station One", position: { x: 40000, y: -24000 } },
+  ];
+  const first = createTransportCorridors({ destinations, connections: FIRST_REACH_TRANSPORT_CONNECTIONS })[0];
+  const second = createTransportCorridors({ destinations, connections: FIRST_REACH_TRANSPORT_CONNECTIONS })[0];
+  assert.equal(first.id, "corridor-ledge-ore-station");
+  assert.equal(first.archetypeId, "frontier-freight-road");
+  assert.equal(first.generation.procedural, true);
+  assert.deepEqual(first.samples, second.samples);
+  assert.deepEqual(first.boostPatches, second.boostPatches);
+  assert.ok(first.length > first.directLength * 1.12);
+  assert.ok(first.length < first.directLength * 1.43);
+  assert.equal(first.boostPatches.length, 4);
+  assert.ok(first.waypoints.length > 100);
 });
 
 test("generated corridor shoulder rocks are anchored where they spawn", () => {
