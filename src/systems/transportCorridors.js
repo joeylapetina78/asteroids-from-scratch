@@ -55,15 +55,53 @@ function createCorridor(connection, from, to) {
   const random = seededRandom(config.seed ?? 1);
   const bend = length * (config.curvature ?? 0.12) * (random() < 0.5 ? -1 : 1);
   const secondary = length * (config.secondaryCurvature ?? 0.045) * (random() * 2 - 1);
-  const sampleCount = Math.max(24, Math.ceil(length / 180));
+  const variationPhase = random() * Math.PI * 2;
+  const sampleCount = Math.max(24, Math.ceil(length / (config.sampleSpacing ?? 180)));
   const samples = Array.from({ length: sampleCount + 1 }, (_, index) => {
     const t = index / sampleCount;
-    const lateral = Math.sin(Math.PI * t) * bend + Math.sin(Math.PI * 2 * t) * Math.sin(Math.PI * t) * secondary;
+    const authoredLateral = config.coursePoints ? sampleCourseProfile(config.coursePoints, t) * length : null;
+    const naturalVariation = Math.sin(Math.PI * t) * Math.sin(Math.PI * 7 * t + variationPhase) * (config.naturalVariation ?? 0);
+    const baseLateral = authoredLateral ?? (Math.sin(Math.PI * t) * bend + Math.sin(Math.PI * 2 * t) * Math.sin(Math.PI * t) * secondary);
+    const lateral = baseLateral + naturalVariation;
     return { x: mix(from.position.x, to.position.x, t) + normal.x * lateral, y: mix(from.position.y, to.position.y, t) + normal.y * lateral };
   });
-  const waypointStep = Math.max(1, Math.round((config.waypointSpacing ?? 520) / (length / sampleCount)));
-  const waypoints = samples.filter((_, index) => index > 0 && index < sampleCount && index % waypointStep === 0);
-  return { id: config.id ?? `corridor:${connection.id}`, connectionId: connection.id, name: config.name ?? `${from.name}–${to.name} Freight Corridor`, fromId: from.id, toId: to.id, width: config.width ?? 480, endpointWidth: config.endpointWidth ?? 720, samples, waypoints, length };
+  const waypoints = samplePolylineByDistance(samples, config.waypointSpacing ?? 520);
+  const courseLength = polylineLength(samples);
+  return { id: config.id ?? `corridor:${connection.id}`, connectionId: connection.id, name: config.name ?? `${from.name}–${to.name} Freight Corridor`, fromId: from.id, toId: to.id, width: config.width ?? 480, endpointWidth: config.endpointWidth ?? 720, samples, waypoints, length: courseLength, directLength: length };
+}
+
+function sampleCourseProfile(points, progress) {
+  const segmentIndex = Math.max(0, Math.min(points.length - 2, points.findIndex((point) => point.progress >= progress) - 1));
+  const first = points[Math.max(0, segmentIndex - 1)];
+  const start = points[segmentIndex];
+  const end = points[segmentIndex + 1];
+  const last = points[Math.min(points.length - 1, segmentIndex + 2)];
+  const amount = (progress - start.progress) / Math.max(0.0001, end.progress - start.progress);
+  return catmullRom(first.lateral, start.lateral, end.lateral, last.lateral, amount);
+}
+
+function samplePolylineByDistance(samples, spacing) {
+  const waypoints = [];
+  let distanceSinceWaypoint = 0;
+  for (let index = 1; index < samples.length; index += 1) {
+    const segmentLength = Math.hypot(samples[index].x - samples[index - 1].x, samples[index].y - samples[index - 1].y);
+    distanceSinceWaypoint += segmentLength;
+    if (distanceSinceWaypoint >= spacing && index < samples.length - 1) {
+      waypoints.push(samples[index]);
+      distanceSinceWaypoint = 0;
+    }
+  }
+  return waypoints;
+}
+
+function polylineLength(samples) {
+  return samples.slice(1).reduce((total, point, index) => total + Math.hypot(point.x - samples[index].x, point.y - samples[index].y), 0);
+}
+
+function catmullRom(first, start, end, last, amount) {
+  const amountSquared = amount * amount;
+  const amountCubed = amountSquared * amount;
+  return 0.5 * ((2 * start) + (-first + end) * amount + (2 * first - 5 * start + 4 * end - last) * amountSquared + (-first + 3 * start - 3 * end + last) * amountCubed);
 }
 
 function nearestPointOnPolyline(point, samples) {

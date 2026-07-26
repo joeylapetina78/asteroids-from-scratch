@@ -251,7 +251,19 @@ export class NpcShip {
   }
 
   getMaxSpeed() {
-    return this.isCarefulMode ? MAX_SPEED * CAREFUL_SPEED_MULTIPLIER : MAX_SPEED;
+    const carefulMultiplier = this.isCarefulMode ? CAREFUL_SPEED_MULTIPLIER : 1;
+    return MAX_SPEED * carefulMultiplier * this.getTurnSpeedMultiplier();
+  }
+
+  getTurnSpeedMultiplier() {
+    const current = this.route[this.routeIndex];
+    const previous = this.route[this.routeIndex - 1];
+    const next = this.route[this.routeIndex + 1];
+    if (current?.type !== "corridor-waypoint" || !previous?.position || !next?.position) return 1;
+    const incoming = normalize(current.position.x - previous.position.x, current.position.y - previous.position.y, 1);
+    const outgoing = normalize(next.position.x - current.position.x, next.position.y - current.position.y, 1);
+    const turnAngle = Math.acos(Math.max(-1, Math.min(1, incoming.x * outgoing.x + incoming.y * outgoing.y)));
+    return Math.max(0.54, 1 - turnAngle / Math.PI * 0.72);
   }
 
   getAvoidanceWeight() {
@@ -373,7 +385,9 @@ export class NpcShip {
     this.navigationMetrics.distanceTraveled += traveled;
     if (this.isCarefulMode) this.navigationMetrics.carefulDistance += traveled;
     if (this.operationalStatus === "available") {
-      const wearIncrement = traveled * (this.isCarefulMode ? 0.00034 : 0.00016);
+      const corridorWearRate = this.isCarefulMode ? 0.00022 : 0.0001;
+      const openFieldWearRate = this.isCarefulMode ? 0.00034 : 0.00016;
+      const wearIncrement = traveled * (this.activeCorridorId ? corridorWearRate : openFieldWearRate);
       this.wear += wearIncrement;
       if (this.isCarefulMode) this.carefulWearSinceIssue += wearIncrement;
       this.emitWearIssueIfNeeded();
