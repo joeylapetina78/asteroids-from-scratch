@@ -287,6 +287,24 @@ test("Cinder Contracting dispatches three independent workers to distinct open o
   assert.equal(manager.workers.length, 3);
   assert.equal(new Set(manager.workers.map((worker) => worker.assignment.contractId)).size, 3);
   assert.ok(manager.workers.every((worker) => worker.capabilities.tractorField.powerSource === "evergreen"));
+  assert.deepEqual(manager.workers.map((worker) => manager.getState().ships[worker.id].wear), [0.65, 0.25, 0]);
+});
+
+test("accelerated development wear sends the oldest Cinder craft to service after its first completed job", () => {
+  const state = createGameState();
+  state._devStartId = "panorama";
+  state.logistics = createInitialLogisticsState(1_000);
+  const game = { worldSites: [
+    { id: "yard-exchange", position: { x: 380, y: -180 } },
+    { id: "scrap-porch", position: { x: -1180, y: 860 } },
+    { id: "the-ledge", position: { x: 7000, y: -4500 } },
+  ], addWorkerShip: () => {} };
+  const manager = createMiningOperation({ state, game, now: () => 1_000 });
+  const worker = manager.worker;
+  worker.cargo[worker.assignment.resourceId] = worker.assignment.quantity;
+  worker.deliver();
+  assert.equal(manager.getState().ships[worker.id].maintenanceStatus, "returning-for-service");
+  assert.equal(manager.getState().ships[worker.id].pendingIssue, "structural-fatigue");
 });
 
 test("a mining worker tractors eligible loose resources toward its collector", () => {
@@ -346,6 +364,7 @@ test("an unregistered Cinder craft receives paid technology service through SPRC
   const worker = mining.worker;
   const workerRecord = mining.getState().ships[worker.id];
   workerRecord.issueCount = 1;
+  workerRecord.wear = 0.2;
   const minerCashBefore = mining.getState().institution.accounts.operating.balance;
   const sprcCashBefore = state.sprc.account.balance;
 

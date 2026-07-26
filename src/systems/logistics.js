@@ -1,6 +1,6 @@
 import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260726-1439-ea664d3";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260726-1439-ea664d3";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260726-1502-ed63a1c";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260726-1502-ed63a1c";
 
 export const STANDING_FREIGHT_TEMPLATES = Object.freeze([
   { id: "standing-water-scrap-yard", originSiteId: "scrap-porch", originName: "Scrap Porch", destinationSiteId: "yard-exchange", destinationName: "Yard Exchange", commodity: "water-ice", commodityName: "Water Ice", amount: 1, payment: 90, issuerInstitutionId: "yard-exchange", sourceInstitutionId: "scrap-forge", destinationInstitutionId: "yard-exchange" },
@@ -18,10 +18,10 @@ export function createInitialLogisticsState(now = Date.now()) {
       "the-ledge": { id: "the-ledge", archetypeId: "frontier-outpost", accounts: { operating: { balance: 4200, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 0 }, renewableResources: ["silicate"] },
       "carrier:yard-hauler": { id: "carrier:yard-hauler", name: "Quill Independent Freight", referenceId: "FR-CARR-014", archetypeId: "hauling-business", controllerInstitutionId: "person:yard-hauler-operator", accounts: { operating: { id: "FR-ACCT-014", balance: 400, committed: 0, transactions: [] } }, policies: { transportation: { ...FIRST_REACH_CARRIER_POLICY, minimumOperatingCash: 180 } }, repairOptions: FIRST_REACH_REPAIR_OPTIONS.map((entry) => ({ ...entry })) },
       "person:yard-hauler-operator": { id: "person:yard-hauler-operator", name: "Dara Quill", referenceId: "HLC-001-HAULER-YARD-SCRAP", archetypeId: "person", controls: ["carrier:yard-hauler"], license: { id: "HLC-001-HAULER-YARD-SCRAP", class: "commercial-hauler", status: "active" } },
-      "ship:hauler-yard-scrap": { id: "ship:hauler-yard-scrap", name: "Yard Hauler", referenceId: "HAUL-01-HAULER-YARD-SCRAP", archetypeId: "cargo-ship", controllerInstitutionId: "carrier:yard-hauler", wear: 0, issueCount: 0 },
+      "ship:hauler-yard-scrap": { id: "ship:hauler-yard-scrap", name: "Yard Hauler", referenceId: "HAUL-01-HAULER-YARD-SCRAP", archetypeId: "cargo-ship", controllerInstitutionId: "carrier:yard-hauler", wear: 0.4, issueCount: 0 },
       "carrier:porch-runner": { id: "carrier:porch-runner", name: "Mara Venn Freight", referenceId: "FR-CARR-022", archetypeId: "hauling-business", controllerInstitutionId: "person:hauler-scrap-yard-operator", accounts: { operating: { id: "FR-ACCT-022", balance: 350, committed: 0, transactions: [] } }, policies: { transportation: { ...FIRST_REACH_CARRIER_POLICY, minimumOperatingCash: 180 } }, repairOptions: FIRST_REACH_REPAIR_OPTIONS.map((entry) => ({ ...entry })) },
       "person:hauler-scrap-yard-operator": { id: "person:hauler-scrap-yard-operator", archetypeId: "person", name: "Mara Venn", referenceId: "HLC-002-HAULER-SCRAP-YARD", controls: ["carrier:porch-runner"], license: { id: "HLC-002-HAULER-SCRAP-YARD", class: "commercial-hauler", status: "active" } },
-      "ship:hauler-scrap-yard": { id: "ship:hauler-scrap-yard", name: "Porch Runner Two", referenceId: "HAUL-02-HAULER-SCRAP-YARD", archetypeId: "cargo-ship", controllerInstitutionId: "carrier:porch-runner", wear: 0, issueCount: 0 },
+      "ship:hauler-scrap-yard": { id: "ship:hauler-scrap-yard", name: "Porch Runner Two", referenceId: "HAUL-02-HAULER-SCRAP-YARD", archetypeId: "cargo-ship", controllerInstitutionId: "carrier:porch-runner", wear: 1.8, issueCount: 0 },
     },
     haulers: {
       "hauler-yard-scrap": { shipInstitutionId: "ship:hauler-yard-scrap", carrierInstitutionId: "carrier:yard-hauler", currentSiteId: "yard-exchange", activeShipmentId: null, activeMovementId: null, maintenanceRequested: false, lastDecisionKey: null, status: "seeking-work" },

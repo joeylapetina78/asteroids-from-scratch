@@ -1,4 +1,4 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1439-ea664d3";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1502-ed63a1c";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
@@ -7,9 +7,9 @@ export const STANDING_MINING_ORDERS = Object.freeze([
 ]);
 
 const MINING_WORKER_DEFAULTS = Object.freeze([
-  { id: "worker:cinder-one", name: "Cinder One", referenceId: "MW-031-CINDER", currentSiteId: "scrap-porch", offset: { x: -100, y: 80 } },
-  { id: "worker:cinder-two", name: "Cinder Two", referenceId: "MW-032-CINDER", currentSiteId: "yard-exchange", offset: { x: -90, y: -90 } },
-  { id: "worker:cinder-three", name: "Cinder Three", referenceId: "MW-033-CINDER", currentSiteId: "the-ledge", offset: { x: 100, y: 80 } },
+  { id: "worker:cinder-one", name: "Cinder One", referenceId: "MW-031-CINDER", currentSiteId: "scrap-porch", initialWear: 0.65, offset: { x: -100, y: 80 } },
+  { id: "worker:cinder-two", name: "Cinder Two", referenceId: "MW-032-CINDER", currentSiteId: "yard-exchange", initialWear: 0.25, offset: { x: -90, y: -90 } },
+  { id: "worker:cinder-three", name: "Cinder Three", referenceId: "MW-033-CINDER", currentSiteId: "the-ledge", initialWear: 0, offset: { x: 100, y: 80 } },
 ]);
 
 const MINING_ISSUES = Object.freeze([
@@ -19,7 +19,7 @@ const MINING_ISSUES = Object.freeze([
   { issueType: "preventive-calibration", requiredCapabilities: ["field-control"] },
 ]);
 const NORMAL_WORK_WEAR = 0.125;
-const ACCELERATED_WORK_WEAR = 0.5;
+const ACCELERATED_WORK_WEAR = 0.4;
 const MINING_SERVICE_PRICE = 220;
 const MINING_PROTECTED_CASH = 120;
 
@@ -144,7 +144,7 @@ export function createMiningOperation({ state, game, now = () => Date.now() }) {
     shipRecord.wear = Math.min(1, (shipRecord.wear ?? 0) + workWear);
     operation.completedContracts += 1;
     operation.wear = Object.values(operation.ships).reduce((sum, record) => sum + (record.wear ?? 0), 0) / Object.keys(operation.ships).length;
-    record("mining.contractFulfilled", `${ship.name} delivered ${delivered} ${order.resourceName} to ${order.siteName}, earned ${payment} cr, and added it to the hub's freight inventory.`, { orderId: order.id, siteId: order.siteId, resourceId, quantity: delivered, payment, accountBalance: operation.institution.accounts.operating.balance, wear: operation.wear, shipInstitutionId: ship.id, shipName: ship.name });
+    record("mining.contractFulfilled", `${ship.name} delivered ${delivered} ${order.resourceName} to ${order.siteName}, earned ${payment} cr, and added it to the hub's freight inventory. Wear is now ${shipRecord.wear.toFixed(2)}.`, { orderId: order.id, siteId: order.siteId, resourceId, quantity: delivered, payment, accountBalance: operation.institution.accounts.operating.balance, wear: operation.wear, shipWear: shipRecord.wear, shipInstitutionId: ship.id, shipName: ship.name });
     if (shipRecord.wear >= 1 && shipRecord.maintenanceStatus === "available") beginMaintenance(shipRecord, ship);
   }
 
@@ -223,5 +223,5 @@ function createInitialState(now) {
 }
 
 function createWorkerRecord(defaults) {
-  return { id: defaults.id, name: defaults.name, archetypeId: "mining-worker", ownerInstitutionId: "miner:cinder-contracting", referenceId: defaults.referenceId, currentSiteId: defaults.currentSiteId, status: "idle", cargo: {}, wear: 0, issueCount: 0, pendingIssue: null, maintenanceStatus: "available", capabilities: { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } } };
+  return { id: defaults.id, name: defaults.name, archetypeId: "mining-worker", ownerInstitutionId: "miner:cinder-contracting", referenceId: defaults.referenceId, currentSiteId: defaults.currentSiteId, status: "idle", cargo: {}, wear: defaults.initialWear ?? 0, issueCount: 0, pendingIssue: null, maintenanceStatus: "available", capabilities: { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } } };
 }
