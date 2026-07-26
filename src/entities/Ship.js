@@ -1,4 +1,4 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260726-1149-12a9b04";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260726-1200-60c79a1";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_THRUST_POWER = 95;
@@ -81,7 +81,7 @@ export class Ship {
     this.boostCooldown = 0;
     this.environmentMaxSpeedMultiplier = 1;
     this.environmentThrustMultiplier = 1;
-    this.corridorBoostDurationRemaining = 0;
+    this.hasKineticOverspeed = false;
   }
 
   update(deltaSeconds, input) {
@@ -113,12 +113,12 @@ export class Ship {
         lateralThrustMultiplier: this.getLateralThrustMultiplier(),
         boostThrustMultiplier: this.getBoostThrustMultiplier(),
         boostMaxSpeedMultiplier: this.getBoostMaxSpeedMultiplier(),
-        maxSpeed: this.getMaxSpeed(),
+        maxSpeed: this.getFlightVelocityLimit(),
       },
     );
 
     this.boostDurationRemaining = Math.max(0, this.boostDurationRemaining - deltaSeconds);
-    this.corridorBoostDurationRemaining = Math.max(0, this.corridorBoostDurationRemaining - deltaSeconds);
+    if (Math.hypot(this.velocity.x, this.velocity.y) <= this.getMaxSpeed()) this.hasKineticOverspeed = false;
   }
 
   startForwardBoost() {
@@ -145,8 +145,7 @@ export class Ship {
   }
 
   getThrustPower() {
-    const patchMultiplier = this.corridorBoostDurationRemaining > 0 ? 1.75 : 1;
-    return (this.engine.thrustPower ?? DEFAULT_THRUST_POWER) * this.environmentThrustMultiplier * patchMultiplier;
+    return (this.engine.thrustPower ?? DEFAULT_THRUST_POWER) * this.environmentThrustMultiplier;
   }
 
   getReverseThrustMultiplier() {
@@ -160,12 +159,18 @@ export class Ship {
 
   getMaxSpeed() {
     const cloakMultiplier = this.isCloaked ? (this.cloakConfig?.maxSpeedMultiplier ?? 0.78) : 1;
-    const patchMultiplier = this.corridorBoostDurationRemaining > 0 ? 1.5 : 1;
-    return (this.engine.maxSpeed ?? DEFAULT_MAX_SPEED) * cloakMultiplier * this.environmentMaxSpeedMultiplier * patchMultiplier;
+    return (this.engine.maxSpeed ?? DEFAULT_MAX_SPEED) * cloakMultiplier * this.environmentMaxSpeedMultiplier;
   }
 
-  triggerCorridorBoost(durationSeconds = 1.2) {
-    this.corridorBoostDurationRemaining = Math.max(this.corridorBoostDurationRemaining, durationSeconds);
+  applyKineticVelocityMultiplier(multiplier = 2) {
+    this.velocity.x *= multiplier;
+    this.velocity.y *= multiplier;
+    this.hasKineticOverspeed = Math.hypot(this.velocity.x, this.velocity.y) > this.getMaxSpeed();
+  }
+
+  getFlightVelocityLimit() {
+    if (!this.hasKineticOverspeed) return this.getMaxSpeed();
+    return Math.max(this.getMaxSpeed(), Math.hypot(this.velocity.x, this.velocity.y));
   }
 
   hasLateralThrusters() {

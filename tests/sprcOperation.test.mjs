@@ -462,9 +462,14 @@ test("corridor infrastructure provides slipstream tuning and pushes debris off t
   ship.environmentMaxSpeedMultiplier = corridors[0].slipstreamSpeedMultiplier;
   ship.environmentThrustMultiplier = corridors[0].slipstreamThrustMultiplier;
   assert.equal(ship.getMaxSpeed(), 126);
-  ship.triggerCorridorBoost();
-  assert.equal(ship.getMaxSpeed(), 189);
-  assert.ok(ship.getThrustPower() > 180);
+  ship.velocity = { x: 100, y: 0 };
+  ship.applyKineticVelocityMultiplier(2);
+  assert.equal(Math.hypot(ship.velocity.x, ship.velocity.y), 200);
+  assert.equal(ship.getMaxSpeed(), 126);
+  assert.equal(ship.getFlightVelocityLimit(), 200);
+  ship.update(1 / 60, { isDown: () => false });
+  assert.ok(Math.hypot(ship.velocity.x, ship.velocity.y) < 200);
+  assert.ok(Math.hypot(ship.velocity.x, ship.velocity.y) > 126);
 });
 
 test("generated corridor shoulder rocks are anchored where they spawn", () => {
