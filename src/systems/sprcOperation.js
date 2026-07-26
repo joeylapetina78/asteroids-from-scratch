@@ -1,5 +1,5 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260726-0115-cdea97e";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260726-0115-cdea97e";
+import { depositCredits } from "./accounts.js?v=fresh-20260726-0149-ac3c0eb";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260726-0149-ac3c0eb";
 import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
 import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js";
 import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js";
@@ -104,6 +104,12 @@ export function ensureSprcOperation(state, now = Date.now()) {
   sprc.needs ??= {};
   sprc.responses ??= {};
   sprc.procurementOrders ??= {};
+  Object.values(sprc.procurementOrders).forEach((order) => {
+    order.paidAmount ??= order.status === "paid" ? order.maximumPayment ?? 0 : 0;
+    order.supplierDeliveries ??= [];
+    order.allocations ??= {};
+    if (order.acceptedAt && !order.playerAcceptedAt) order.playerAcceptedAt = order.acceptedAt;
+  });
   sprc.history ??= [];
   sprc.counters ??= { repair: 0, production: 0, need: 0, response: 0, procurement: 0 };
   sprc.lastLedgerEventId ??= 0;
@@ -488,7 +494,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       id, type: "structural-feedstock-procurement", needId: need.id,
       sourceRepairOrderId: need.sourceRepairOrderId, responseId: response.id, objectiveType: need.objectiveType,
       acceptedMaterials: { ...SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK }, requiredEquivalentUnits: amount,
-      deliveredEquivalentUnits: 0, deliveredMaterials: {}, destinationSiteId: SPRC.siteId,
+      deliveredEquivalentUnits: 0, deliveredMaterials: {}, paidAmount: 0, supplierDeliveries: [], allocations: {}, destinationSiteId: SPRC.siteId,
       pricePerEquivalent, maximumPayment, committedPayment: maximumPayment,
       titleTerms: "Title transfers to SPRC only upon accepted delivery at Scrap Porch.",
       status: "offered", createdAt: now(), deadlineAt: now() + 20 * 60 * 1000,
@@ -507,6 +513,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     if (!order || !contract || contract.status !== "offered") return false;
     order.status = "active";
     order.acceptedAt = now();
+    order.playerAcceptedAt = order.acceptedAt;
     contract.status = "active";
     contract.acceptedAt = order.acceptedAt;
     state.contracts.currentContractId = contractId;
@@ -518,40 +525,69 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     return true;
   }
 
-  function deliverMaterial({ contractId, materialId, amount }) {
+  function reserveProcurementAllocation({ contractId, supplierInstitutionId, equivalentUnits }) {
+    const order = getOrderByContract(contractId);
+    const contract = state.contracts.records[contractId];
+    if (!order || !contract || !["offered", "active"].includes(order.status) || !supplierInstitutionId || equivalentUnits <= 0) return null;
+    order.allocations ??= {};
+    const reservedElsewhere = Object.values(order.allocations).reduce((sum, allocation) => sum + Math.max(0, allocation.reservedEquivalentUnits - allocation.deliveredEquivalentUnits), 0);
+    const unallocated = Math.max(0, order.requiredEquivalentUnits - order.deliveredEquivalentUnits - reservedElsewhere);
+    const reservedEquivalentUnits = Math.min(equivalentUnits, unallocated);
+    if (reservedEquivalentUnits <= 0) return null;
+    const allocation = order.allocations[supplierInstitutionId] ??= { supplierInstitutionId, reservedEquivalentUnits: 0, deliveredEquivalentUnits: 0, status: "active", createdAt: now() };
+    allocation.reservedEquivalentUnits += reservedEquivalentUnits;
+    appendHistory("procurement.allocated", { procurementOrderId: order.id, supplierInstitutionId, equivalentUnits: reservedEquivalentUnits });
+    state.ledger.recordEvent("institution.contractAllocated", { contractId, procurementOrderId: order.id, supplierInstitutionId, equivalentUnits: reservedEquivalentUnits }, { visible: true, message: `${supplierInstitutionId} reserved ${reservedEquivalentUnits} equivalents on ${order.id}.` });
+    return allocation;
+  }
+
+  function deliverMaterial({ contractId, materialId, amount, supplierInstitutionId = "player", creditSupplier = null }) {
     const order = getOrderByContract(contractId);
     const contract = state.contracts.records[contractId];
     const equivalence = order?.acceptedMaterials?.[materialId] ?? 0;
-    if (!order || !contract || order.status !== "active" || equivalence <= 0 || amount <= 0) return { acceptedUnits: 0, equivalentUnits: 0, paid: 0 };
+    const isPlayerSupplier = supplierInstitutionId === "player";
+    const allocation = order?.allocations?.[supplierInstitutionId];
+    const supplierMayDeliver = isPlayerSupplier ? order?.status === "active" : ["offered", "active"].includes(order?.status) && allocation?.status === "active";
+    if (!order || !contract || !supplierMayDeliver || equivalence <= 0 || amount <= 0) return { acceptedUnits: 0, equivalentUnits: 0, paid: 0 };
     const remaining = Math.max(0, order.requiredEquivalentUnits - order.deliveredEquivalentUnits);
-    const acceptedUnits = Math.min(amount, Math.ceil(remaining / equivalence));
+    const supplierRemaining = allocation ? Math.max(0, allocation.reservedEquivalentUnits - allocation.deliveredEquivalentUnits) : remaining;
+    const acceptedUnits = Math.min(amount, Math.ceil(Math.min(remaining, supplierRemaining) / equivalence));
     const equivalentUnits = Math.min(remaining, acceptedUnits * equivalence);
     addInventory("raw", materialId, acceptedUnits);
     order.deliveredMaterials[materialId] = (order.deliveredMaterials[materialId] ?? 0) + acceptedUnits;
     order.deliveredEquivalentUnits += equivalentUnits;
+    order.paidAmount ??= 0;
+    order.supplierDeliveries ??= [];
+    const paymentDue = Math.min(equivalentUnits * order.pricePerEquivalent, order.committedPayment ?? 0, sprc.account.balance);
+    sprc.account.balance -= paymentDue;
+    sprc.account.committed = Math.max(0, sprc.account.committed - paymentDue);
+    order.committedPayment = Math.max(0, (order.committedPayment ?? 0) - paymentDue);
+    order.paidAmount += paymentDue;
+    if (creditSupplier) creditSupplier(paymentDue);
+    else if (supplierInstitutionId === "player") depositCredits(state, paymentDue);
+    order.supplierDeliveries.push({ supplierInstitutionId, materialId, acceptedUnits, equivalentUnits, paid: paymentDue, at: now() });
+    if (allocation) {
+      allocation.deliveredEquivalentUnits += equivalentUnits;
+      if (allocation.deliveredEquivalentUnits >= allocation.reservedEquivalentUnits) allocation.status = "completed";
+    }
     contract.deliveredAmount = order.deliveredEquivalentUnits;
-    appendHistory("procurement.delivered", { procurementOrderId: order.id, materialId, acceptedUnits, equivalentUnits });
-    let paid = 0;
+    appendHistory("procurement.delivered", { procurementOrderId: order.id, supplierInstitutionId, materialId, acceptedUnits, equivalentUnits, paid: paymentDue });
+    let paid = paymentDue;
     if (order.deliveredEquivalentUnits >= order.requiredEquivalentUnits) {
-      paid = Math.min(order.maximumPayment, order.committedPayment ?? 0, sprc.account.balance);
-      sprc.account.balance -= paid;
-      sprc.account.committed = Math.max(0, sprc.account.committed - paid);
-      order.committedPayment = Math.max(0, (order.committedPayment ?? 0) - paid);
-      depositCredits(state, paid);
-      order.status = paid >= order.maximumPayment ? "paid" : "payment-shortfall";
+      order.status = order.paidAmount >= order.maximumPayment ? "paid" : "payment-shortfall";
       order.completedAt = now();
       contract.status = order.status === "paid" ? "paid" : "fulfilled";
       contract.fulfilledAt = now();
       contract.paidAt = order.status === "paid" ? now() : null;
-      contract.paymentShortfall = Math.max(0, order.maximumPayment - paid);
+      contract.paymentShortfall = Math.max(0, order.maximumPayment - order.paidAmount);
       const need = sprc.needs[order.needId];
       if (need) need.status = "resolved";
       if (order.emergencyNeedId && sprc.needs[order.emergencyNeedId]) sprc.needs[order.emergencyNeedId].status = "resolved";
       const response = sprc.responses[order.responseId];
       if (response) response.status = "completed";
-      sprc.actor.relationship.playerReliability += 1;
-      appendHistory("procurement.completed", { procurementOrderId: order.id, paid, paymentShortfall: contract.paymentShortfall });
-      state.ledger.recordEvent("contract.paid", { contractId, creditsPaid: paid, payerAccountId: sprc.account.id, sourceNeedId: order.needId }, { visible: true });
+      if (isPlayerSupplier) sprc.actor.relationship.playerReliability += 1;
+      appendHistory("procurement.completed", { procurementOrderId: order.id, paid: order.paidAmount, paymentShortfall: contract.paymentShortfall });
+      state.ledger.recordEvent("contract.paid", { contractId, creditsPaid: order.paidAmount, payerAccountId: sprc.account.id, sourceNeedId: order.needId }, { visible: true });
     }
     update();
     return { acceptedUnits, equivalentUnits, paid };
@@ -594,7 +630,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       ],
       terms: { destinationSiteId: SPRC.siteId, destinationName: "Scrap Porch", amount: order.requiredEquivalentUnits, acceptedMaterials: order.acceptedMaterials, sourceNeedId: order.needId, sourceRepairOrderId: order.sourceRepairOrderId },
       reward: { credits: order.maximumPayment },
-      status: order.status === "active" ? "active" : order.status === "paid" ? "paid" : "offered",
+      status: order.status === "paid" ? "paid" : order.playerAcceptedAt ? "active" : "offered",
       offeredAt: order.createdAt,
       deliveredAmount: order.deliveredEquivalentUnits,
       presentation: { offerSiteId: SPRC.siteId, offerServiceId: SPRC.serviceId, portableAfterAcceptance: true },
@@ -715,7 +751,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     }
   }
 
-  return { update, acceptProcurement, deliverMaterial, getSnapshot, createProvisionalRepairOrder };
+  return { update, acceptProcurement, reserveProcurementAllocation, deliverMaterial, getSnapshot, createProvisionalRepairOrder };
 }
 
 function getSalActionMessage(type, payload) {

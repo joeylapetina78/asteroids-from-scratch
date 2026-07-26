@@ -34,4 +34,14 @@ export const INSTITUTION_ARCHETYPES = Object.freeze({
     },
     recipes: [],
   }),
+  "mining-contractor": Object.freeze({
+    id: "mining-contractor",
+    capabilities: ["accept-extraction-order", "prospect", "mine", "collect", "deliver"],
+    defaultPolicy: {
+      protectedCash: 120,
+      priorityWeights: { routine: 20, urgent: 55, emergency: 100 },
+      purposeWeights: { "earn-operating-income": 40, "supply-regional-inventory": 25, "return-for-maintenance": 45 },
+    },
+    recipes: [],
+  }),
 });

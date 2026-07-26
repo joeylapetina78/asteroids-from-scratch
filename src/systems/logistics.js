@@ -130,6 +130,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
     const candidates = STANDING_FREIGHT_TEMPLATES
       .filter((entry) => entry.originSiteId === hauler.currentSiteId && countActiveForTemplate(entry.id) < 1)
+      .filter((entry) => (logistics.institutions[entry.sourceInstitutionId]?.inventories?.[entry.commodity] ?? 0) >= entry.amount)
       .map((template) => ({ template, plan: evaluateTransportPlan({ network: transportationNetwork, originId: template.originSiteId, destinationId: template.destinationSiteId, payment: template.payment, currentWear: shipInstitution.wear ?? 0, policy: carrier.policies?.transportation, repairOptions: carrier.repairOptions }) }));
     candidates.filter((candidate) => !candidate.plan.eligible).forEach((candidate) => appendHistory("freight.declined", { shipId, templateId: candidate.template.id, reason: candidate.plan.reason }));
     const selected = candidates.filter((candidate) => candidate.plan.eligible).sort((a, b) => b.plan.score - a.plan.score)[0];
@@ -164,8 +165,8 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const issuer = logistics.institutions[template.issuerInstitutionId];
     const affordability = evaluateAffordability({ account: issuer.accounts.operating, policy: { protectedCash: 0 }, cost: template.payment });
     if (!affordability.affordable) return null;
-    renewSourceUnit(template);
     const source = logistics.institutions[template.sourceInstitutionId];
+    if ((source.inventories[template.commodity] ?? 0) < template.amount) return null;
     source.inventories[template.commodity] -= template.amount;
     issuer.accounts.operating.committed += template.payment;
     const id = `SHIP-${String(++logistics.counters.shipment).padStart(4, "0")}`;
@@ -358,14 +359,6 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
 
   function siteName(siteId) { return transportationNetwork.destinations[siteId]?.name ?? STANDING_FREIGHT_TEMPLATES.find((entry) => entry.originSiteId === siteId)?.originName ?? STANDING_FREIGHT_TEMPLATES.find((entry) => entry.destinationSiteId === siteId)?.destinationName ?? siteId; }
   function formatReason(value) { return String(value).replaceAll("-", " "); }
-
-  function renewSourceUnit(template) {
-    const source = logistics.institutions[template.sourceInstitutionId];
-    if ((source.inventories[template.commodity] ?? 0) >= template.amount) return;
-    if (!source.renewableResources.includes(template.commodity)) throw new Error(`Nonrenewable logistics inventory shortfall: ${template.sourceInstitutionId}.${template.commodity}`);
-    source.inventories[template.commodity] += template.amount;
-    appendHistory("inventory.renewed", { institutionId: source.id, commodity: template.commodity, quantity: template.amount });
-  }
 
   function transferCustody(container, institutionId, action, siteId) { container.custodianInstitutionId = institutionId; container.custody.push({ institutionId, action, siteId, at: now() }); }
   function countActiveForTemplate(templateId) { return Object.values(logistics.shipments).filter((entry) => entry.templateId === templateId && ["assigned", "loaded"].includes(entry.status)).length; }

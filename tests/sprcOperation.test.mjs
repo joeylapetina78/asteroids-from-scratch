@@ -11,6 +11,7 @@ import { createTransportationNetwork, evaluateTransportPlan, findTransportationR
 import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../src/content/transportation/firstReachNetwork.js";
 import { createTowServiceManager } from "../src/systems/towService.js";
 import { NpcShip } from "../src/entities/NpcShip.js";
+import { createMiningOperation, getStandingMiningJobsForSite, STANDING_MINING_ORDERS } from "../src/systems/miningOperation.js";
 
 function createHarness() {
   let clock = 1_000;
@@ -221,6 +222,77 @@ test("a partial feedstock deposit advances visible contract progress without con
   assert.equal(contract.status, "active");
 });
 
+test("institutional suppliers can fill a bounded allocation without accepting or closing the player's offer", () => {
+  const harness = createHarness();
+  harness.operation.update();
+  const order = Object.values(harness.state.sprc.procurementOrders)[0];
+  const contract = harness.state.contracts.records[order.contractId];
+  let supplierCredits = 0;
+
+  const allocation = harness.operation.reserveProcurementAllocation({
+    contractId: order.contractId,
+    supplierInstitutionId: "institution:test-miner",
+    equivalentUnits: 2,
+  });
+  assert.equal(allocation.reservedEquivalentUnits, 2);
+  assert.equal(contract.status, "offered");
+
+  const institutionalDelivery = harness.operation.deliverMaterial({
+    contractId: order.contractId,
+    materialId: "iron-nickel",
+    amount: 3,
+    supplierInstitutionId: "institution:test-miner",
+    creditSupplier: (credits) => { supplierCredits += credits; },
+  });
+  assert.equal(institutionalDelivery.acceptedUnits, 2, "supplier cannot exceed its allocation");
+  assert.equal(supplierCredits, 68);
+  assert.equal(order.deliveredEquivalentUnits, 2);
+  assert.equal(contract.status, "offered");
+
+  const playerBefore = harness.state.credits;
+  assert.equal(harness.operation.acceptProcurement(order.contractId), true);
+  const playerDelivery = harness.operation.deliverMaterial({ contractId: order.contractId, materialId: "iron-nickel", amount: 6 });
+  assert.equal(playerDelivery.paid, 204);
+  assert.equal(harness.state.credits - playerBefore, 204);
+  assert.equal(order.paidAmount, order.maximumPayment);
+  assert.equal(order.status, "paid");
+});
+
+test("every active hub exposes one evergreen local extraction order", () => {
+  for (const siteId of ["yard-exchange", "scrap-porch", "the-ledge"]) {
+    const jobs = getStandingMiningJobsForSite(siteId);
+    assert.equal(jobs.length, 1);
+    assert.equal(jobs[0].repeatable, true);
+    assert.equal(jobs[0].terms.destinationSiteId, siteId);
+  }
+  assert.equal(STANDING_MINING_ORDERS.length, 3);
+});
+
+test("a mining institution delivery conserves material and payment into freight inventory", () => {
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(1_000);
+  let worker = null;
+  const game = {
+    worldSites: [
+      { id: "yard-exchange", position: { x: 380, y: -180 } },
+      { id: "scrap-porch", position: { x: -1180, y: 860 } },
+      { id: "the-ledge", position: { x: 7000, y: -4500 } },
+    ],
+    addWorkerShip: (ship) => { worker = ship; },
+  };
+  const manager = createMiningOperation({ state, game, now: () => 1_000 });
+  const buyer = state.logistics.institutions["scrap-forge"];
+  const buyerCashBefore = buyer.accounts.operating.balance;
+  const minerCashBefore = manager.getState().institution.accounts.operating.balance;
+  worker.cargo["water-ice"] = 3;
+  worker.deliver();
+
+  assert.equal(buyer.inventories["water-ice"], 3);
+  assert.equal(buyerCashBefore - buyer.accounts.operating.balance, 138);
+  assert.equal(manager.getState().institution.accounts.operating.balance - minerCashBefore, 138);
+  assert.equal(manager.getState().completedContracts, 1);
+});
+
 test("material, money, production, repair, and hauler availability remain conserved", () => {
   const harness = createHarness();
   triggerFirstRepair(harness);
@@ -306,6 +378,8 @@ test("the cargo manifest documents custody but does not fabricate source authori
 function createLogisticsHarness() {
   const state = createGameState();
   state.logistics = createInitialLogisticsState(1_000);
+  state.logistics.institutions["yard-exchange"].inventories["iron-nickel"] = 2;
+  state.logistics.institutions["scrap-forge"].inventories["water-ice"] = 2;
   const ships = ["hauler-yard-scrap", "hauler-scrap-yard"].map((id) => ({ id, name: id === "hauler-yard-scrap" ? "Yard Hauler" : "Porch Runner Two", wear: 0, operationalStatus: "seeking-work", dockedSiteId: id === "hauler-yard-scrap" ? "yard-exchange" : "scrap-porch", transfers: [], pendingWearIssue: null, queueCargoTransfer(transfer) { this.transfers.push(transfer); }, assignShipment(assignment) { this.assignment = assignment; this.dockedSiteId = null; this.operationalStatus = "available"; }, clearShipment() { this.assignment = null; this.operationalStatus = "seeking-work"; }, assignTow(assignment) { this.towAssignment = assignment; this.activeTowRequestId = assignment.requestId; this.operationalStatus = "being-towed"; return true; }, clearTow() { this.activeTowRequestId = null; this.towAssignment = null; } }));
   const manager = createLogisticsManager({ state, ships, now: () => 1_000 });
   return { state, ships, manager };
@@ -333,6 +407,14 @@ test("failed route execution cannot commit inventory, custody, or payment", () =
   assert.equal(Object.values(harness.state.logistics.shipments).some((shipment) => shipment.assigneeId === harness.ships[0].id), false);
   assert.equal(harness.state.logistics.institutions["yard-exchange"].inventories["iron-nickel"], sourceBefore);
   assert.equal(harness.state.logistics.institutions["scrap-forge"].accounts.operating.committed, committedBefore);
+});
+
+test("haulers wait instead of fabricating freight when a source inventory is empty", () => {
+  const harness = createLogisticsHarness();
+  harness.state.logistics.institutions["yard-exchange"].inventories["iron-nickel"] = 0;
+  harness.manager.update();
+  assert.equal(Object.values(harness.state.logistics.shipments).some((shipment) => shipment.assigneeId === "hauler-yard-scrap"), false);
+  assert.equal(harness.state.logistics.institutions["yard-exchange"].inventories["iron-nickel"], 0);
 });
 
 test("NPC haulers move only with real conserved standing shipments", () => {

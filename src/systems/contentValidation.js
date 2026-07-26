@@ -1,11 +1,11 @@
-import { getContractRequirementDefinition } from "./contractRules.js?v=fresh-20260726-0115-cdea97e";
-import { COMPONENT_STATE_BY_PANEL_ID, PANEL_IDS } from "./componentRegistry.js?v=fresh-20260726-0115-cdea97e";
-import { HUB_SERVICE_BEHAVIOR_BY_TYPE } from "./hubServiceBehaviors.js?v=fresh-20260726-0115-cdea97e";
-import { getMissionActionDefinition } from "./missionActions.js?v=fresh-20260726-0115-cdea97e";
-import { createGameState } from "../state/gameState.js?v=fresh-20260726-0115-cdea97e";
-import { validateTagList } from "./tagRegistry.js?v=fresh-20260726-0115-cdea97e";
-import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260726-0115-cdea97e";
-import { WORLD_ZONES } from "./worldZones.js?v=fresh-20260726-0115-cdea97e";
+import { getContractRequirementDefinition } from "./contractRules.js?v=fresh-20260726-0149-ac3c0eb";
+import { COMPONENT_STATE_BY_PANEL_ID, PANEL_IDS } from "./componentRegistry.js?v=fresh-20260726-0149-ac3c0eb";
+import { HUB_SERVICE_BEHAVIOR_BY_TYPE } from "./hubServiceBehaviors.js?v=fresh-20260726-0149-ac3c0eb";
+import { getMissionActionDefinition } from "./missionActions.js?v=fresh-20260726-0149-ac3c0eb";
+import { createGameState } from "../state/gameState.js?v=fresh-20260726-0149-ac3c0eb";
+import { validateTagList } from "./tagRegistry.js?v=fresh-20260726-0149-ac3c0eb";
+import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260726-0149-ac3c0eb";
+import { WORLD_ZONES } from "./worldZones.js?v=fresh-20260726-0149-ac3c0eb";
 
 export function validateMissionDefinition(missionDefinition, context = createValidationContext()) {
   const issues = [];

@@ -54,6 +54,8 @@ The testable history connects:
 
 `institution demand -> shipment order -> container -> custody -> load -> travel/fuel/wear -> unload/inventory -> payment -> maintenance need -> SPRC response -> repair/downtime -> return to service`
 
+The first upstream production proof now precedes that chain. Each active hub publishes one evergreen local extraction order. Cinder Contracting, controlled by licensed miner Ivo Cinder, owns the registered worker ship Cinder One. The ship uses shared flight physics to select a rock by its real dominant yield, fly to it, fire physical mining shots, collect the resulting world pickups, return to the buyer, and settle payment between persistent institutional accounts. Delivered water ice, iron nickel, or silicate enters the same hub inventory used to create freight containers. Empty freight sources no longer synthesize replacement stock; haulers wait for real inventory.
+
 ## Institutional recovery
 
 - First Reach Recovery is a `recovery-service` institution controlled by licensed operator Nell Winch. It owns the Blue Hook recovery ship and a persistent operating account.
