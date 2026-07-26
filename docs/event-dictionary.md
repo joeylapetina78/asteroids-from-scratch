@@ -35,6 +35,11 @@ This document is a living manual for authoring. It should grow whenever a new ev
 | `ship.moved` | `distance`, `speed` | Movement was logged for stats. |
 | `ship.stranded` | `nearestSiteId`, `nearestSiteName` | Ship is out of fuel or otherwise stranded. |
 | `ship.towed` | `siteId`, `siteName`, `cost` | Tow service delivered the ship. |
+| `npc.assistanceRequired` | `npcId`, `reason`, `shipmentId`, `wear` | A carrier can no longer complete movement under its own power. |
+| `towService.dispatched` | `institutionId`, `actorInstitutionId`, `vehicleId`, `requestId`, `haulerId`, `destinationSiteId`, `fee`, `purpose` | Institutional recovery accepted and dispatched a quoted request. |
+| `towService.cargoPreserved` | `requestId`, `haulerId`, `destinationSiteId`, `fee` | Recovery delivered a disabled loaded carrier to its contracted destination before service return. |
+| `towService.completed` | `requestId`, `haulerId`, `destinationSiteId`, `fee` | Recovery delivered the carrier, invoiced it, and released it into repair handling. |
+| `towService.blocked` | `requestId`, `haulerId`, `reason` | Recovery could not dispatch because route or protected-cash policy failed. |
 | `ship.collision` | `targetType`, `targetName`, `damage` | Ship hit something. |
 | `ship.nearObject` | `targetType`, `targetName` | Ship came close to something noteworthy. |
 

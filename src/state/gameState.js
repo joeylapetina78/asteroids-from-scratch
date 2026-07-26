@@ -1,12 +1,13 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260725-2325-cef03db";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260725-2325-cef03db";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260725-2325-cef03db";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260725-2325-cef03db";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260725-2325-cef03db";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260725-2325-cef03db";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260725-2325-cef03db";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260725-2325-cef03db";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260726-0115-cdea97e";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260726-0115-cdea97e";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260726-0115-cdea97e";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260726-0115-cdea97e";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260726-0115-cdea97e";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260726-0115-cdea97e";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260726-0115-cdea97e";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260726-0115-cdea97e";
 import { createInitialLogisticsState } from "../systems/logistics.js";
+import { createInitialTowServiceState } from "../systems/towService.js";
 
 export function createGameState() {
   const state = {
@@ -48,6 +49,7 @@ export function createGameState() {
     worldRecords: createEmptyWorldRecords(),
     sprc: createInitialSprcState(),
     logistics: createInitialLogisticsState(),
+    towing: createInitialTowServiceState(),
     cargoCustody: {
       holderEntityId: null,
       shipVin: null,

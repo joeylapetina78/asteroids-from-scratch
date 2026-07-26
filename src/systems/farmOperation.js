@@ -5,7 +5,9 @@ import { createResponseRecord, deriveInventoryNeeds, evaluateAffordability, gene
 const INPUT_PRICES = Object.freeze({ water: 20, seed: 35 });
 export const FARM_INSPECTION_SERVICE_ID = "sunward-acre-inspection";
 
-export function createFarmOperation(now = Date.now()) {
+export function createFarmOperation(options = Date.now()) {
+  const now = typeof options === "number" ? options : options.now ?? Date.now();
+  const ledger = typeof options === "object" ? options.state?.ledger ?? options.ledger ?? null : null;
   const institution = createFarmInstitutionInstance(now);
   const archetype = INSTITUTION_ARCHETYPES[institution.archetypeId];
   const controller = createTaviInstitutionInstance();
@@ -15,6 +17,14 @@ export function createFarmOperation(now = Date.now()) {
 
   function record(type, detail, payload = {}) {
     institution.history.push({ id: `sunward-history-${institution.history.length + 1}`, type, at: now, detail, ...payload });
+    ledger?.recordEvent("institution.action", {
+      institutionId: institution.id,
+      institutionName: institution.name ?? "Sunward Acre",
+      actorInstitutionId: controller.id,
+      actorName: controller.name ?? "Tavi",
+      actionType: type,
+      ...payload,
+    }, { visible: true, message: detail.startsWith("Tavi ") ? detail : `Tavi: ${detail}` });
   }
 
   const procurementCapability = {

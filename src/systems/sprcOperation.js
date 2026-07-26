@@ -1,5 +1,5 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260725-2325-cef03db";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260725-2325-cef03db";
+import { depositCredits } from "./accounts.js?v=fresh-20260726-0115-cdea97e";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260726-0115-cdea97e";
 import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
 import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js";
 import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js";
@@ -358,11 +358,10 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
         hauler.availableForWork = true;
         hauler.repairHistory.push(order.id);
       }
-      sprc.account.balance += 180;
       sprc.facilities.berthTwo.status = "available";
       sprc.facilities.berthTwo.activeRepairOrderId = null;
       appendHistory("repair.completed", { repairOrderId: order.id, haulerId: order.subjectHaulerId, serviceRevenue: 180 });
-      state.ledger.recordEvent("sprc.repairCompleted", { repairOrderId: order.id, haulerId: order.subjectHaulerId, shipName: hauler?.shipName }, { visible: true });
+      state.ledger.recordEvent("sprc.repairCompleted", { repairOrderId: order.id, haulerId: order.subjectHaulerId, shipName: hauler?.shipName, serviceRevenue: 180 }, { visible: true });
     });
   }
 
@@ -703,10 +702,42 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
 
   function appendHistory(type, payload = {}) {
     sprc.history.push({ id: `sprc-history-${sprc.history.length + 1}`, type, at: now(), ...payload });
+    const message = getSalActionMessage(type, payload);
+    if (message) {
+      state.ledger.recordEvent("institution.action", {
+        institutionId: sprc.institution.id,
+        institutionName: "Scrap Porch Recovery Cooperative",
+        actorInstitutionId: sprc.controller.id,
+        actorName: sprc.controller.name ?? "Sal",
+        actionType: type,
+        ...payload,
+      }, { visible: true, message });
+    }
   }
 
   return { update, acceptProcurement, deliverMaterial, getSnapshot, createProvisionalRepairOrder };
 }
+
+function getSalActionMessage(type, payload) {
+  if (type === "need.identified") return `Sal identified a ${formatActionNoun(payload.itemId ?? payload.objectiveType)} shortage${payload.missingAmount ? ` of ${payload.missingAmount}` : ""}.`;
+  if (type === "procurement.created") return `Sal committed SPRC funds and posted procurement order ${payload.procurementOrderId}.`;
+  if (type === "procurement.promoted") return `Sal made ${payload.procurementOrderId} urgent to unblock the waiting repair.`;
+  if (type === "procurement.blocked") return `Sal declined to spend ${payload.required} cr because only ${payload.spendable} cr is safely available.`;
+  if (type === "response.reconsidered") return `Sal reconsidered a previously blocked response after SPRC's funding changed.`;
+  if (type === "procurement.expired") return `Sal's procurement order ${payload.procurementOrderId} expired; the underlying need remains open.`;
+  if (type === "procurement.accepted") return `Sal's procurement order ${payload.procurementOrderId} was accepted.`;
+  if (type === "procurement.delivered") return `Sal accepted ${payload.equivalentUnits} feedstock equivalents into ${payload.procurementOrderId}.`;
+  if (type === "procurement.completed") return `Sal closed ${payload.procurementOrderId} after paying ${payload.paid} cr.`;
+  if (type === "production.queued") return `Sal queued ${payload.outputAmount} ${formatActionNoun(payload.outputItemId)} for repair work.`;
+  if (type === "production.started") return `Sal started production order ${payload.productionOrderId} in The Maw.`;
+  if (type === "production.completed") return `Sal completed production order ${payload.productionOrderId}.`;
+  if (type === "repair.created") return `Sal opened repair order ${payload.repairOrderId}.`;
+  if (type === "repair.started") return `Sal started repair order ${payload.repairOrderId} in Berth Two.`;
+  if (type === "repair.completed") return `Sal completed repair order ${payload.repairOrderId}; SPRC invoiced 180 cr.`;
+  return null;
+}
+
+function formatActionNoun(value) { return String(value ?? "operating").replaceAll("-", " "); }
 
 function seedSprcWorldRecords(state) {
   upsertWorldEntity(state, { id: SPRC.actorId, type: "organization", name: "Scrap Porch Recovery Cooperative", siteId: SPRC.siteId });

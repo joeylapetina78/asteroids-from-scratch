@@ -173,6 +173,10 @@ export function createEventLedger(options = {}) {
     } else if (event.type === "scanner.used") {
       incrementStat("scanner.used.total");
       incrementStat("scanergy.spent.scans", event.payload.scanergySpent ?? 0);
+    } else if (event.type === "scan.performed") {
+      incrementStat("scan.performed.total");
+      incrementStat(`scan.performed.${event.payload.scanType ?? "unknown"}`);
+      incrementStat(`scan.performed.scanner.${event.payload.scannerId ?? "unknown"}`);
     } else if (event.type === "beaconLocator.used") {
       incrementStat("beaconLocator.used.total");
       incrementStat(`beaconLocator.used.${event.payload.siteId ?? "unknown"}`);
@@ -495,6 +499,10 @@ function getDefaultMessage(type, payload) {
 
   if (type === "scanner.used") {
     return "Scanner used";
+  }
+
+  if (type === "scan.performed") {
+    return `${payload.scannerName ?? "Unknown scanner"} scanned ${payload.subjectName ?? "an unknown subject"}`;
   }
 
   if (type === "beaconLocator.used") {

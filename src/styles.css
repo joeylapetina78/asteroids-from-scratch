@@ -1625,6 +1625,50 @@ body {
   mask-image: linear-gradient(to bottom, #000 72%, transparent);
 }
 
+.ledger-stream .ledger-stream-events-section {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+  scrollbar-color: rgba(98, 214, 234, 0.4) transparent;
+  scrollbar-width: thin;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.ledger-stream-heading {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-bottom: 6px;
+  background: linear-gradient(to bottom, rgba(7, 10, 16, 0.94) 75%, transparent);
+}
+
+.ledger-stream-heading h2 {
+  margin-right: auto;
+}
+
+.ledger-stream-filter-label {
+  color: rgba(151, 172, 197, 0.7);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ledger-stream-filter {
+  max-width: 190px;
+  border: 1px solid rgba(98, 214, 234, 0.28);
+  border-radius: 4px;
+  background: rgba(9, 15, 23, 0.92);
+  color: rgba(225, 238, 255, 0.82);
+  font: inherit;
+  font-size: 0.62rem;
+  padding: 2px 5px;
+}
+
 .ledger-stream h2 {
   margin: 0 0 6px;
   color: rgba(98, 214, 234, 0.56);
@@ -1641,6 +1685,10 @@ body {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.ledger-stream-events-section .ledger-stream-list {
+  padding-bottom: 18px;
 }
 
 .ledger-stream-list li {

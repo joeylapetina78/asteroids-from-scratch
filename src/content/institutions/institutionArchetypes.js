@@ -24,4 +24,14 @@ export const INSTITUTION_ARCHETYPES = Object.freeze({
       { id: "field-crop-cycle", capabilityId: "cultivate", inputs: { seed: 1, water: 3 }, outputs: { crop: 4 }, durationSeconds: 120 },
     ],
   }),
+  "recovery-service": Object.freeze({
+    id: "recovery-service",
+    capabilities: ["quote-recovery", "dispatch-recovery", "tow-vehicle", "invoice-service"],
+    defaultPolicy: {
+      protectedCash: 250,
+      priorityWeights: { routine: 10, urgent: 65, emergency: 100 },
+      purposeWeights: { "preserve-loaded-delivery": 50, "service-return": 35, "stranded-pilot": 40 },
+    },
+    recipes: [],
+  }),
 });

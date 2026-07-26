@@ -81,11 +81,11 @@ export const npcDefinitions = {
   },
   "tow-truck": {
     id: "tow-truck",
-    name: "Tow Truck",
-    role: "emergency recovery pilot",
+    name: "Nell Winch",
+    role: "First Reach recovery operator",
     voiceFrequency: 360,
     homeHubIds: [],
-    organizations: ["Independent Tow Runner"],
+    organizations: ["First Reach Recovery"],
   },
   murmur: {
     id: "murmur",

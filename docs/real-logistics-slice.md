@@ -13,7 +13,7 @@ This slice closes a small regional freight loop with two standing offers, two NP
 - Carrier movement continues outside the player's local simulation radius; leaving a hub no longer pauses regional freight.
 - Travel incurs persistent wear. Careful mode accelerates maneuvering strain, so it has a physical cost.
 - Unloading transfers conserved inventory to Scrap Porch and closes custody.
-- A completed shipment debits the issuer's committed payment and credits the carrier (or the player's normal contract payment path).
+- A completed shipment debits the issuer's committed payment and credits the carrier's named operating account (or the player's normal contract payment path). Carrier income and repair expenses are retained as account transactions.
 - Accumulated wear creates inspection, maintenance, or breakdown state instead of the provisional route-count trigger.
 - Downtime removes the hauler from transport capacity while the existing SPRC institution loop procures, produces, and repairs.
 - Wear discovered in transit is held as a pending issue until the current shipment is conserved and the carrier reaches its maintenance hub; maintenance cannot strand paid cargo in deep space.
@@ -29,7 +29,7 @@ This slice closes a small regional freight loop with two standing offers, two NP
 ## Transportation planning seam
 
 - `transportationPlanning.js` contains domain-neutral network construction, shortest-route discovery, projected wear, reachable-maintenance, policy eligibility, and candidate scoring.
-- Authored destinations and connections live in `content/transportation/firstReachNetwork.js`. The known network currently includes The Ledge so path transfer is testable, but no Ledge freight offer is authored yet.
+- Authored destinations and connections live in `content/transportation/firstReachNetwork.js`. The known network includes The Ledge and its premium outbound and return freight offers.
 - Each carrier institution owns its known destinations, expected wear rate, maximum wear, minimum return margin, operating-distance cost, and repair-provider preferences.
 - Dispatch evaluates every local offer before execution. An unreachable destination, missing maintenance path, or maintenance-policy violation makes an offer ineligible and records the reason.
 - Shipment mutation happens only after route execution accepts the evaluated path. A rejected path cannot renew or remove source inventory, create custody, or commit issuer payment.
@@ -42,12 +42,24 @@ This slice closes a small regional freight loop with two standing offers, two NP
 - Yard Exchange posts higher-paying iron-nickel freight to The Ledge; The Ledge posts renewable silicate freight back to Yard Exchange.
 - A healthy carrier scores the longer Ledge work above the Scrap Porch return. A worn carrier makes the Ledge offer ineligible and can still choose the shorter SPRC-compatible work.
 - If no freight remains eligible near the wear limit, the carrier creates a cargo-free service-return movement to its selected repair provider. This movement commits no inventory, custody, or freight payment.
+- A maintenance-policy rejection itself forces reconsideration for service; there is no gap where a carrier can be too worn for every route but below an unrelated repair threshold.
 - Preventive return to SPRC creates a small service order. Repair completion resets persistent ship wear and makes the carrier reconsider work.
+- Each carrier, controlling person, and ship has its own public references; the carrier owns an operating account and bounded transaction history. Repair completion transfers the service fee from that account to SPRC instead of creating revenue from nothing.
+- Carrier accept, load, fulfillment, idle/blocked reasoning, breakdown, maintenance return, repair payment, and restoration events are published to the visible ledger with the pilot and carrier identity attached.
+- Hub, patrol, flyby, and player resource scans publish named scanner/subject events to the same ledger.
 
 ## Completion evidence
 
 The testable history connects:
 
 `institution demand -> shipment order -> container -> custody -> load -> travel/fuel/wear -> unload/inventory -> payment -> maintenance need -> SPRC response -> repair/downtime -> return to service`
+
+## Institutional recovery
+
+- First Reach Recovery is a `recovery-service` institution controlled by licensed operator Nell Winch. It owns the Blue Hook recovery ship and a persistent operating account.
+- Player and carrier rescues create service requests with a destination, purpose, quote, status, and payment record. Completed service credits the provider instead of destroying the tow fee.
+- A hauler disabled with contracted cargo is recovered to the freight destination first so custody and issuer payment remain conserved. After unloading, a second paid service leg takes the ship to SPRC and releases its wear issue into the repair queue.
+- A loaded freight payment can secure the first recovery quote as a receivable; ordinary recovery must still preserve the carrier's minimum operating cash. Unaffordable or unreachable requests remain blocked and visible in the ledger.
+- In the viewport, a carrier under recovery shows Blue Hook ahead of it with a live tow line rather than moving invisibly under its own power.
 
 Every material, custody, condition, and payment transition must remain conserved and reload-safe.

@@ -9,6 +9,7 @@ SPRC is the first persistent institution whose work, rather than a job table, cr
 - SPRC-specific execution remains in `sprcOperation.js`: repairs, mill scheduling, procurement contracts, dialogue, fixtures, Mara, and Porch Runner Two.
 - `farmOperation.js` is the first transfer probe. Its water and seed shortages use the same record, capability, scoring, affordability, reserve-target, and need-reconciliation logic without adding agricultural nouns to the shared engine. Affordable responses commit cash and create purchase orders; resolved needs cancel those orders and release their commitments.
 - Person institutions control operation institutions through `controllerInstitutionId`. Sal controls SPRC and Tavi controls Sunward Acre; both controller records supply traits and authority.
+- Meaningful Sal and Tavi state changes are also published as named `institution.action` ledger events. Their private histories remain the detailed record; routine assessment ticks do not create duplicate public entries.
 - Protected cash is policy-owned. SPRC retains `account.protectedReserve` only as a synchronized compatibility mirror for existing UI and saves.
 - A source guard test rejects authored domain nouns in the shared engine.
 
@@ -26,7 +27,7 @@ SPRC is the first persistent institution whose work, rather than a job table, cr
 - The Maw requires four structural-feedstock equivalents and water ice to produce a two-plate batch.
 - Iron-nickel contributes one equivalent per cargo unit; aluminum contributes two. The procurement order requests the outcome, not a profession.
 - A finite Yard Exchange raw-stock inventory enables purchase-and-haul. Existing mining and previously held cargo use the same delivery path.
-- Procurement payment is debited from SPRC and credited to the player. Repair revenue is separately credited to SPRC.
+- Procurement payment is debited from SPRC and credited to the player. Repair revenue is transferred from the serviced carrier's operating account when the repair completes.
 - Contract payment is committed when an order is posted, unavailable to other decisions, transferred on completion, and released on expiry. Orders are blocked when funding them would cross the protected reserve.
 - Active operational orders appear under **Local Needs** on the Scrap Porch work board, separate from procedural odd jobs.
 - Production consumes reserved raw inputs only when it starts and creates output only when its timer completes.

@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260725-2325-cef03db" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260726-0115-cdea97e" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260725-2325-cef03db</span>
+      <span class="build-tag">build: fresh-20260726-0115-cdea97e</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -68,8 +68,15 @@
       <a href="https://cash.app/$joeylapetina">Murmur alms</a>
     </nav>
     <aside class="ledger-stream" aria-label="Live event ledger diagnostics">
-      <section>
-        <h2>Ledger</h2>
+      <section class="ledger-stream-events-section">
+        <div class="ledger-stream-heading">
+          <h2>Ledger</h2>
+          <label class="ledger-stream-filter-label" for="ledger-stream-filter">Show</label>
+          <select id="ledger-stream-filter" class="ledger-stream-filter" aria-label="Filter ledger activity">
+            <option value="all">All activity</option>
+            <option value="player">My pilot</option>
+          </select>
+        </div>
         <ol id="ledger-stream-events" class="ledger-stream-list"></ol>
       </section>
       <section>
@@ -740,6 +747,6 @@
 
     <div id="attention-callouts" class="attention-callouts" aria-hidden="true"></div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260725-2325-cef03db"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260726-0115-cdea97e"></script>
   </body>
 </html>

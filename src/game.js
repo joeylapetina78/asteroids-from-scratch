@@ -1,39 +1,39 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260725-2325-cef03db";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260725-2325-cef03db";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260725-2325-cef03db";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260725-2325-cef03db";
-import { Ship } from "./entities/Ship.js?v=fresh-20260725-2325-cef03db";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260725-2325-cef03db";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260726-0115-cdea97e";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260726-0115-cdea97e";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260726-0115-cdea97e";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260726-0115-cdea97e";
+import { Ship } from "./entities/Ship.js?v=fresh-20260726-0115-cdea97e";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260726-0115-cdea97e";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260725-2325-cef03db";
-import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260725-2325-cef03db";
-import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260725-2325-cef03db";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260725-2325-cef03db";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260725-2325-cef03db";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260725-2325-cef03db";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260725-2325-cef03db";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260725-2325-cef03db";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260725-2325-cef03db";
-import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260725-2325-cef03db";
-import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260725-2325-cef03db";
+import { createInput } from "./systems/input.js?v=fresh-20260726-0115-cdea97e";
+import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260726-0115-cdea97e";
+import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260726-0115-cdea97e";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260726-0115-cdea97e";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260726-0115-cdea97e";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260726-0115-cdea97e";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260726-0115-cdea97e";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260726-0115-cdea97e";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260726-0115-cdea97e";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260726-0115-cdea97e";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260726-0115-cdea97e";
 import { getStandingFreightJobsForSite } from "./systems/logistics.js";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260725-2325-cef03db";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260725-2325-cef03db";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260725-2325-cef03db";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260725-2325-cef03db";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260725-2325-cef03db";
-import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260725-2325-cef03db";
-import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260725-2325-cef03db";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260725-2325-cef03db";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260725-2325-cef03db";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260725-2325-cef03db";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260725-2325-cef03db";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260725-2325-cef03db";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260725-2325-cef03db";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260725-2325-cef03db";
-import { createGameState } from "./state/gameState.js?v=fresh-20260725-2325-cef03db";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260725-2325-cef03db";
-import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260725-2325-cef03db";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260726-0115-cdea97e";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260726-0115-cdea97e";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260726-0115-cdea97e";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260726-0115-cdea97e";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260726-0115-cdea97e";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260726-0115-cdea97e";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260726-0115-cdea97e";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260726-0115-cdea97e";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260726-0115-cdea97e";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260726-0115-cdea97e";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260726-0115-cdea97e";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260726-0115-cdea97e";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260726-0115-cdea97e";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260726-0115-cdea97e";
+import { createGameState } from "./state/gameState.js?v=fresh-20260726-0115-cdea97e";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260726-0115-cdea97e";
+import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260726-0115-cdea97e";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -903,6 +903,7 @@ export class Game {
 
     scannerState.scanergy = Math.max(0, scannerState.scanergy - SCAN_COST);
     this.scanner.scan(this.ship, this.asteroids, this.worldSites, { targets: scannerState.targets ?? ["resources"] });
+    this.recordScan({ type: "ship", id: this.state.ship?.vin ?? "controlled-ship", name: this.state.ship?.name ?? "Explorer One" }, { name: "nearby resources and sites", entityId: "local-survey-area" }, "resource-survey");
     this.addLifeDisturbance("scanner", this.ship.position, LIFE_DISTURBANCE_SCAN_RADIUS, 0.72);
     this.onHudChange(this.state);
   }
@@ -1537,6 +1538,7 @@ export class Game {
   }
 
   inspectPublicTrafficIdentity(identity, site, inspector, options = {}) {
+    this.recordScan(inspector, identity, "identity-inspection", site);
     const registryEntityId = site ? getRegistryEntityIdForSite(site) : null;
     const wasKnownToRegistry = Boolean(
       registryEntityId && identity?.entityId && getRegistrySubject(this.state, {
@@ -1636,6 +1638,22 @@ export class Game {
       wasKnownToRegistry,
       requiresPresentation: result.status === "needs-presentation" && !options.completeFirstContact,
     };
+  }
+
+  recordScan(scanner, subject, scanType, site = null) {
+    const subjectName = subject?.pilotName
+      ? `${subject.pilotName}${subject.shipName ? ` aboard ${subject.shipName}` : ""}`
+      : subject?.shipName ?? subject?.name ?? subject?.entityId ?? "an unknown subject";
+    this.state.ledger.recordEvent("scan.performed", {
+      scannerType: scanner?.type ?? "unknown",
+      scannerId: scanner?.id ?? "unknown",
+      scannerName: scanner?.name ?? scanner?.id ?? "Unknown scanner",
+      subjectId: subject?.entityId ?? subject?.shipVin ?? subject?.id ?? null,
+      subjectName,
+      scanType,
+      siteId: site?.id ?? null,
+      siteName: site?.name ?? null,
+    }, { visible: true });
   }
 
   enableHubPatrol() {
@@ -2012,7 +2030,11 @@ export class Game {
               id: patrol.id,
               name: patrol.name,
             });
+          } else {
+            this.recordScan({ type: "patrol", id: patrol.id, name: patrol.name }, identity, "identity-flyby", patrol.site);
           }
+        } else {
+          this.recordScan({ type: "patrol", id: patrol.id, name: patrol.name }, { name: target.name ?? target.type ?? "flyby target", entityId: target.id }, "flyby", patrol.site);
         }
       }
 
@@ -3088,6 +3110,8 @@ export class Game {
     const directionToShip = normalizeVector(this.ship.position.x - site.position.x, this.ship.position.y - site.position.y);
     const startDistance = Math.max(site.interactionRadius + 260, Math.min(distanceToSite * 0.55, 1200));
 
+    const towing = this.state.towing;
+    const serviceRequestId = towing ? `TOW-REQ-${String(++towing.counters.request).padStart(4, "0")}` : null;
     this.activeTow = {
       phase: "approach",
       site,
@@ -3106,7 +3130,13 @@ export class Game {
       towedDistance: 0,
       cutterCooldown: 0,
       dropoffPosition: null,
+      serviceRequestId,
     };
+
+    if (towing && serviceRequestId) {
+      towing.requests[serviceRequestId] = { id: serviceRequestId, clientType: "player", playerEntityId: this.state.character?.controlledPersonEntityId, destinationSiteId: site.id, fee: this.activeTow.cost, status: "dispatched", createdAt: Date.now() };
+      towing.vehicle.status = "dispatched";
+    }
 
     this.setShipPowered(false);
     this.state.ledger.recordEvent(
@@ -3116,6 +3146,13 @@ export class Game {
         siteName: site.name,
         cost: this.activeTow.cost,
         distance: this.activeTow.quotedDistance,
+        institutionId: towing?.institution?.id,
+        institutionName: towing?.institution?.name,
+        actorInstitutionId: towing?.controller?.id,
+        actorName: towing?.controller?.name,
+        vehicleId: towing?.vehicle?.id,
+        vehicleName: towing?.vehicle?.name,
+        requestId: serviceRequestId,
       },
       { visible: true },
     );
@@ -3272,6 +3309,17 @@ export class Game {
 
     this.activeTow = null;
     debitCredits(this.state, tow.cost);
+    const towing = this.state.towing;
+    const request = tow.serviceRequestId ? towing?.requests?.[tow.serviceRequestId] : null;
+    if (towing) {
+      const account = towing.institution.accounts.operating;
+      account.balance += tow.cost;
+      account.transactions ??= [];
+      const transaction = { id: `TOW-TX-${String(++towing.counters.transaction).padStart(5, "0")}`, at: Date.now(), accountId: account.id, institutionId: towing.institution.id, amount: tow.cost, type: "player-recovery-income", referenceId: tow.serviceRequestId, balance: account.balance };
+      account.transactions.push(transaction);
+      towing.vehicle.status = "available";
+      if (request) { request.status = "completed"; request.completedAt = Date.now(); request.providerTransactionId = transaction.id; }
+    }
     this.state.components.hull.integrity = Math.max(this.state.components.hull.integrity, 10);
     this.shipDestroyed = false;
     this.hasRecordedStrandedEvent = false;
@@ -3290,6 +3338,13 @@ export class Game {
         distance: Math.round(tow.towedDistance),
         fuelAfter: this.state.components.engine.fuel,
         hullAfter: this.state.components.hull.integrity,
+        institutionId: towing?.institution?.id,
+        institutionName: towing?.institution?.name,
+        actorInstitutionId: towing?.controller?.id,
+        actorName: towing?.controller?.name,
+        vehicleId: towing?.vehicle?.id,
+        vehicleName: towing?.vehicle?.name,
+        requestId: tow.serviceRequestId,
       },
       { visible: true },
     );

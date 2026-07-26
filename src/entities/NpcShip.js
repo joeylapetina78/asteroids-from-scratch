@@ -64,6 +64,8 @@ export class NpcShip {
     this.pendingWearIssue = null;
     this.cargoTransfers = [];
     this.departureTimer = 0;
+    this.activeTowRequestId = null;
+    this.towDestinationSiteId = null;
   }
 
   update(deltaSeconds, world) {
@@ -72,14 +74,15 @@ export class NpcShip {
     }
 
     this.updateCargoTransfers(deltaSeconds);
-    if (this.operationalStatus === "loading") {
+    if (this.operationalStatus === "loading" || this.operationalStatus === "tow-loading") {
+      const nextStatus = this.operationalStatus === "tow-loading" ? "being-towed" : "available";
       this.departureTimer = Math.max(0, this.departureTimer - deltaSeconds);
       if (this.departureTimer === 0) {
         this.dockedSiteId = null;
-        this.operationalStatus = "available";
+        this.operationalStatus = nextStatus;
       }
     }
-    if (this.operationalStatus !== "available") {
+    if (!["available", "being-towed"].includes(this.operationalStatus)) {
       this.velocity.x *= 0.82;
       this.velocity.y *= 0.82;
       this.updateCargoSegments(deltaSeconds);
@@ -87,10 +90,12 @@ export class NpcShip {
       return;
     }
 
-    const wearIncrement = deltaSeconds * (this.isCarefulMode ? 0.032 : 0.012);
-    this.wear += wearIncrement;
-    if (this.isCarefulMode) this.carefulWearSinceIssue += wearIncrement;
-    this.emitWearIssueIfNeeded();
+    if (this.operationalStatus === "available") {
+      const wearIncrement = deltaSeconds * (this.isCarefulMode ? 0.032 : 0.012);
+      this.wear += wearIncrement;
+      if (this.isCarefulMode) this.carefulWearSinceIssue += wearIncrement;
+      this.emitWearIssueIfNeeded();
+    }
 
     this.pulse += deltaSeconds;
     const waypoint = this.getWaypoint();
@@ -118,10 +123,11 @@ export class NpcShip {
           siteName: arrivedSite?.name ?? null,
           routeLegsCompleted: this.completedRouteLegs,
           shipmentId: this.activeShipmentId,
+          towRequestId: this.activeTowRequestId,
           provisionalLogistics: false,
         },
       });
-      this.emitPendingWearIssueAt(arrivedSite);
+      if (!this.activeTowRequestId) this.emitPendingWearIssueAt(arrivedSite);
       this.operationalStatus = "awaiting-assignment";
       this.turnSettleTimer = 0.9;
       this.lastWaypointDistance = distance(this.position, this.getWaypoint());
@@ -176,6 +182,26 @@ export class NpcShip {
     this.cargoSegments.forEach((segment) => { segment.loaded = false; });
   }
 
+  assignTow({ requestId, destinationSiteId, route = this.route }) {
+    if (!this.canAcceptRoute(route)) return false;
+    this.route = route;
+    const destinationIndex = route.findIndex((site) => site.id === destinationSiteId);
+    if (destinationIndex < 0) return false;
+    this.activeTowRequestId = requestId;
+    this.towDestinationSiteId = destinationSiteId;
+    this.routeIndex = destinationIndex;
+    this.departureTimer = 0.8;
+    this.operationalStatus = "tow-loading";
+    this.lastWaypointDistance = distance(this.position, this.getWaypoint());
+    return true;
+  }
+
+  clearTow() {
+    this.activeTowRequestId = null;
+    this.towDestinationSiteId = null;
+    if (!this.activeShipmentId) this.operationalStatus = "seeking-work";
+  }
+
   queueCargoTransfer({ commodity, direction }) {
     this.cargoTransfers.push({ commodity, direction, progress: 0, duration: 0.9 });
   }
@@ -192,6 +218,8 @@ export class NpcShip {
     const issueType = this.carefulWearSinceIssue >= 0.12 ? "maneuvering-strain" : issueCount % 2 === 0 ? "control-fault" : "hull-fatigue";
     this.carefulWearSinceIssue = 0;
     this.pendingWearIssue = { npcId: this.id, npcName: this.name, shipVin: this.publicIdentity?.shipVin, wear: this.wear, issueCount, issueType, causedByCarefulMode: issueType === "maneuvering-strain" };
+    this.operationalStatus = "disabled";
+    this.pendingEvents.push({ type: "npc.assistanceRequired", payload: { ...this.pendingWearIssue, shipmentId: this.activeShipmentId, reason: issueType, x: Math.round(this.position.x), y: Math.round(this.position.y) } });
   }
 
   emitPendingWearIssueAt(site) {
@@ -387,8 +415,34 @@ export class NpcShip {
 
     context.restore();
 
+    if (this.activeTowRequestId) this.drawTowRunner(context, camera);
+
     this.drawCargoTrain(context, camera);
     this.drawHubTethers(context, camera);
+  }
+
+  drawTowRunner(context, camera) {
+    const runnerX = this.position.x + Math.cos(this.heading) * 72;
+    const runnerY = this.position.y + Math.sin(this.heading) * 72;
+    context.save();
+    context.strokeStyle = "rgba(126, 232, 255, 0.78)";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(this.position.x - camera.x, this.position.y - camera.y);
+    context.lineTo(runnerX - camera.x, runnerY - camera.y);
+    context.stroke();
+    context.translate(runnerX - camera.x, runnerY - camera.y);
+    context.rotate(this.heading);
+    context.strokeStyle = "#9ee8ff";
+    context.fillStyle = "rgba(90, 190, 225, 0.16)";
+    context.beginPath();
+    context.moveTo(18, 0);
+    context.lineTo(-10, -11);
+    context.lineTo(-10, 11);
+    context.closePath();
+    context.fill();
+    context.stroke();
+    context.restore();
   }
 
   drawCargoTrain(context, camera) {

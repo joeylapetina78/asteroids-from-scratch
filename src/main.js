@@ -1,36 +1,37 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260725-2325-cef03db";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260725-2325-cef03db";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260725-2325-cef03db";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260725-2325-cef03db";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260725-2325-cef03db";
-import { Game } from "./game.js?v=fresh-20260725-2325-cef03db";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260725-2325-cef03db";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260725-2325-cef03db";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260725-2325-cef03db";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260725-2325-cef03db";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260726-0115-cdea97e";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260726-0115-cdea97e";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260726-0115-cdea97e";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260726-0115-cdea97e";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260726-0115-cdea97e";
+import { Game } from "./game.js?v=fresh-20260726-0115-cdea97e";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260726-0115-cdea97e";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260726-0115-cdea97e";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260726-0115-cdea97e";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260726-0115-cdea97e";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260725-2325-cef03db";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260725-2325-cef03db";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260725-2325-cef03db";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260725-2325-cef03db";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260725-2325-cef03db";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260725-2325-cef03db";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260725-2325-cef03db";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260725-2325-cef03db";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260725-2325-cef03db";
-import { Processor } from "./systems/processor.js?v=fresh-20260725-2325-cef03db";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260725-2325-cef03db";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260725-2325-cef03db";
-import { createGameState } from "./state/gameState.js?v=fresh-20260725-2325-cef03db";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260725-2325-cef03db";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260726-0115-cdea97e";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260726-0115-cdea97e";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260726-0115-cdea97e";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260726-0115-cdea97e";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260726-0115-cdea97e";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260726-0115-cdea97e";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260726-0115-cdea97e";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260726-0115-cdea97e";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260726-0115-cdea97e";
+import { Processor } from "./systems/processor.js?v=fresh-20260726-0115-cdea97e";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260726-0115-cdea97e";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260726-0115-cdea97e";
+import { createGameState } from "./state/gameState.js?v=fresh-20260726-0115-cdea97e";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260726-0115-cdea97e";
 import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js";
 import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js";
 import { createLogisticsManager } from "./systems/logistics.js";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260725-2325-cef03db";
+import { createTowServiceManager } from "./systems/towService.js";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260726-0115-cdea97e";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -58,7 +59,7 @@ const VIEWPORT_PANEL_Z_INDEX = 10;
 const DESK_PANEL_MIN_Z_INDEX = 30;
 const DESK_PANEL_MAX_Z_INDEX = 520;
 const PAPERWORK_PANEL_IDS = ["license", "resource-guide", "document", "contract"];
-const TOW_DRIVER_NAMES = ["Mara Tow", "Jax Cable", "Nell Winch", "Orson Hook"];
+const TOW_DRIVER_NAMES = ["Nell Winch"];
 const YARD_EXCHANGE_CORE_SERVICES = [
   yardExchangeServices.rook,
   yardExchangeServices.shipyard,
@@ -270,6 +271,7 @@ const alphaUpButton = document.querySelector("#alpha-up");
 const alphaDownButton = document.querySelector("#alpha-down");
 const alphaLabel = document.querySelector("#alpha-label");
 const ledgerStreamEvents = document.querySelector("#ledger-stream-events");
+const ledgerStreamFilter = document.querySelector("#ledger-stream-filter");
 const ledgerStreamStats = document.querySelector("#ledger-stream-stats");
 const ledgerStreamPopulation = document.querySelector("#ledger-stream-population");
 let panelAlpha = 0;
@@ -327,11 +329,12 @@ const processor = new Processor(processorCanvas, processUnit, { enableCompaction
 const cargoHold = new Processor(cargoCanvas, handleCargoUnitClick, { isClickable: true, getUnitFlags: getCargoUnitFlags });
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio, updateLedgerDrivenSystems);
 const logisticsManager = createLogisticsManager({ state, ships: game.npcShips, destinations: game.worldSites });
+const towServiceManager = createTowServiceManager({ state, ships: game.npcShips, destinations: game.worldSites });
 
 // Dev hook: the running game and state, reachable from the console for
 // debugging and automated playtests. window.game is shadowed by the canvas
 // element (DOM id), so this lives under a distinct name.
-window.__asteroids = { game, state, logistics: logisticsManager };
+window.__asteroids = { game, state, logistics: logisticsManager, towing: towServiceManager };
 const contractManager = createContractManager({
   state,
   onChange: (contract) => {
@@ -359,7 +362,7 @@ const sprcManager = createSprcOperation({
   },
 });
 window.__asteroids.sprc = sprcManager;
-const farmManager = createFarmOperation(Date.now());
+const farmManager = createFarmOperation({ state, now: Date.now() });
 farmManager.assess();
 window.__asteroids.farm = farmManager;
 const journeyDirector = createJourneyDirector({
@@ -412,6 +415,8 @@ let renderedLedgerVersion = -1;
 let renderedLedgerEventsKey = "";
 let renderedLedgerStatsKey = "";
 let renderedLedgerPopulationKey = "";
+let renderedLedgerFilterKey = "";
+let activeLedgerFilter = "all";
 let renderedWorldEventLogKey = "";
 let lastAudioEventId = 0;
 let journeyTypeTimers = [];
@@ -423,6 +428,12 @@ let activeHubServiceId = null;
 // here because dev-start boot code reaches that render during module eval.
 let lastRookJobBoardSignature = null;
 let isCargoSellModeActive = false;
+
+ledgerStreamFilter?.addEventListener("change", () => {
+  activeLedgerFilter = ledgerStreamFilter.value;
+  renderedLedgerEventsKey = "";
+  updateLedgerStreamDisplay();
+});
 let wasTowAvailable = false;
 let saveTimer = null;
 let lastHubAuthorityEventId = 0;
@@ -743,8 +754,10 @@ renderProcessorOutputs();
 restoreSavedWorld({ save: savedProfile, game, cargoHold });
 sprcManager.update();
 logisticsManager.update();
+towServiceManager.update();
 window.setInterval(() => sprcManager.update(), 1000);
 window.setInterval(() => logisticsManager.update(), 1000);
+window.setInterval(() => towServiceManager.update(), 1000);
 registerStarterDeliveryShipRecords(state);
 clearOldPanelLayouts();
 setInitialPaperworkLocations();
@@ -4951,8 +4964,9 @@ function updateLedgerStreamDisplay() {
     return;
   }
 
-  const visibleEvents = getCompactLedgerEvents();
-  const eventsKey = visibleEvents.map((event) => `${event.message}:${event.count}`).join("|");
+  updateLedgerFilterOptions();
+  const visibleEvents = getCompactLedgerEvents(activeLedgerFilter);
+  const eventsKey = `${activeLedgerFilter}|${visibleEvents.map((event) => `${event.message}:${event.count}`).join("|")}`;
 
   if (renderedLedgerEventsKey !== eventsKey) {
     renderedLedgerEventsKey = eventsKey;
@@ -5047,12 +5061,13 @@ function setTextIfChanged(element, value) {
   }
 }
 
-function getCompactLedgerEvents() {
+function getCompactLedgerEvents(filterKey = "all") {
   const repeatWindowMs = 90_000;
   const now = Date.now();
   const groups = new Map();
   const recentEvents = state.ledger.getRecentEvents(160, { includeHidden: true })
-    .filter((event) => !isNoisyLedgerEvent(event));
+    .filter((event) => !isNoisyLedgerEvent(event))
+    .filter((event) => filterKey === "all" || getLedgerEventEntityKeys(event).has(filterKey));
 
   recentEvents.forEach((event) => {
     const message = event.message?.trim();
@@ -5071,7 +5086,70 @@ function getCompactLedgerEvents() {
     });
   });
 
-  return [...groups.values()].slice(0, 28);
+  return [...groups.values()].slice(0, 80);
+}
+
+function updateLedgerFilterOptions() {
+  if (!ledgerStreamFilter) return;
+  const labels = new Map([
+    ["all", "All activity"],
+    ["player", "My pilot"],
+    ["institution:sprc", "SPRC"],
+    ["actor:sal", "Sal"],
+    ["institution:sunward-acre", "Sunward Acre"],
+    ["actor:tavi", "Tavi"],
+    ["institution:first-reach-recovery", "First Reach Recovery"],
+    ["actor:nell-winch", "Nell Winch"],
+  ]);
+  state.ledger.getRecentEvents(160, { includeHidden: true }).forEach((event) => collectLedgerEntityLabels(event, labels));
+  const current = activeLedgerFilter;
+  const filterKey = [...labels].map(([value, label]) => `${value}:${label}`).join("|");
+  if (renderedLedgerFilterKey === filterKey) {
+    ledgerStreamFilter.value = labels.has(current) ? current : "all";
+    return;
+  }
+  renderedLedgerFilterKey = filterKey;
+  ledgerStreamFilter.replaceChildren(...[...labels].map(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    return option;
+  }));
+  activeLedgerFilter = labels.has(current) ? current : "all";
+  ledgerStreamFilter.value = activeLedgerFilter;
+}
+
+function collectLedgerEntityLabels(event, labels) {
+  const payload = event.payload ?? {};
+  if (payload.institutionId) labels.set(`institution:${payload.institutionId}`, payload.institutionName ?? payload.institutionId);
+  if (payload.carrierInstitutionId) labels.set(`institution:${payload.carrierInstitutionId}`, payload.carrierName ?? payload.carrierInstitutionId);
+  if (payload.actorInstitutionId) labels.set(`actor:${payload.actorInstitutionId}`, payload.actorName ?? payload.actorInstitutionId);
+  if (payload.pilotInstitutionId) labels.set(`actor:${payload.pilotInstitutionId}`, payload.pilotName ?? payload.pilotInstitutionId);
+  if (payload.scannerId && payload.scannerId !== "controlled-ship") labels.set(`npc:${payload.scannerId}`, payload.scannerName ?? payload.scannerId);
+  if (payload.npcId) {
+    const hauler = state.logistics?.haulers?.[payload.npcId];
+    const shipName = hauler ? state.logistics?.institutions?.[hauler.shipInstitutionId]?.name : null;
+    labels.set(`npc:${payload.npcId}`, payload.shipName ?? payload.pilotName ?? shipName ?? payload.npcId);
+  }
+}
+
+function getLedgerEventEntityKeys(event) {
+  const payload = event.payload ?? {};
+  const keys = new Set();
+  if (payload.institutionId) keys.add(`institution:${payload.institutionId}`);
+  if (payload.carrierInstitutionId) keys.add(`institution:${payload.carrierInstitutionId}`);
+  if (payload.actorInstitutionId) keys.add(`actor:${payload.actorInstitutionId}`);
+  if (payload.pilotInstitutionId) keys.add(`actor:${payload.pilotInstitutionId}`);
+  if (payload.scannerId && payload.scannerId !== "controlled-ship") keys.add(`npc:${payload.scannerId}`);
+  if (payload.npcId) keys.add(`npc:${payload.npcId}`);
+  const controlledVin = state.components?.hull?.vin ?? state.character?.activeHullVin;
+  const playerName = state.legal?.pilotLicense?.firstName ? `${state.legal.pilotLicense.firstName} ${state.legal.pilotLicense.lastName}` : null;
+  const explicitlyPlayer = payload.scannerId === "controlled-ship"
+    || payload.subjectId === controlledVin
+    || payload.shipVin === controlledVin
+    || (playerName && (payload.pilotName === playerName || payload.actorName === playerName));
+  if (explicitlyPlayer || /^(ship|weapon|resource|cargo|scanner|beacon|tow|site|zone|contract|mission|pilot|title|supply)\./.test(event.type)) keys.add("player");
+  return keys;
 }
 
 function isNoisyLedgerEvent(event) {
