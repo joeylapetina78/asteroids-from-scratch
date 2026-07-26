@@ -34,6 +34,15 @@ This slice closes a small regional freight loop with two standing offers, two NP
 - Dispatch evaluates every local offer before execution. An unreachable destination, missing maintenance path, or maintenance-policy violation makes an offer ineligible and records the reason.
 - Shipment mutation happens only after route execution accepts the evaluated path. A rejected path cannot renew or remove source inventory, create custody, or commit issuer payment.
 - Multi-stop paths are executable by the ship, but only arrival at the contracted final destination completes the shipment.
+- Maintenance eligibility is calculated explicitly as `current wear + contract-route wear + destination-to-selected-provider wear + minimum return margin <= maximum wear`. Route wear is authored expected wear per distance.
+- Provider selection considers every institution-listed repair option whose destination is known and reachable from the contract destination, ordered by authored priority and then distance. Provider capacity and operating status are not yet modeled.
+
+## The Ledge transfer proof
+
+- Yard Exchange posts higher-paying iron-nickel freight to The Ledge; The Ledge posts renewable silicate freight back to Yard Exchange.
+- A healthy carrier scores the longer Ledge work above the Scrap Porch return. A worn carrier makes the Ledge offer ineligible and can still choose the shorter SPRC-compatible work.
+- If no freight remains eligible near the wear limit, the carrier creates a cargo-free service-return movement to its selected repair provider. This movement commits no inventory, custody, or freight payment.
+- Preventive return to SPRC creates a small service order. Repair completion resets persistent ship wear and makes the carrier reconsider work.
 
 ## Completion evidence
 

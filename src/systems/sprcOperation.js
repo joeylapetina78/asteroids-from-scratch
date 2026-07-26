@@ -1,5 +1,5 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260725-2256-967035c";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260725-2256-967035c";
+import { depositCredits } from "./accounts.js?v=fresh-20260725-2325-cef03db";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260725-2325-cef03db";
 import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
 import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js";
 import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js";
@@ -163,6 +163,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       "maneuvering-strain": { "hull-plate": 1, "machine-part": 1 },
       "hull-fatigue": { "hull-plate": 2, "machine-part": 0 },
       "control-fault": { "hull-plate": 0, "machine-part": 2 },
+      "preventive-service": { "hull-plate": 0, "machine-part": 1 },
     };
     const id = nextId("repair", "SPRC-RPR");
     const requirements = requirementsByIssue[payload.issueType] ?? { "hull-plate": 1, "machine-part": 1 };

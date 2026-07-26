@@ -1,13 +1,13 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260725-2256-967035c";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260725-2256-967035c";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260725-2256-967035c";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260725-2256-967035c";
-import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260725-2256-967035c";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260725-2256-967035c";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260725-2256-967035c";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260725-2256-967035c";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260725-2256-967035c";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260725-2256-967035c";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260725-2325-cef03db";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260725-2325-cef03db";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260725-2325-cef03db";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260725-2325-cef03db";
+import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260725-2325-cef03db";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260725-2325-cef03db";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260725-2325-cef03db";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260725-2325-cef03db";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260725-2325-cef03db";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260725-2325-cef03db";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 

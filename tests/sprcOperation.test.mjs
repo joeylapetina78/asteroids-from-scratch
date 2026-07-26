@@ -329,6 +329,7 @@ test("NPC haulers move only with real conserved standing shipments", () => {
   assert.equal(shipments.length, 2);
   assert.ok(harness.ships.every((ship) => ship.assignment?.shipmentId));
   const yardShipment = shipments.find((entry) => entry.assigneeId === "hauler-yard-scrap");
+  assert.equal(yardShipment.templateId, "standing-iron-yard-ledge", "healthy carrier selects the higher-scoring Ledge work");
   const container = harness.state.logistics.containers[yardShipment.containerId];
   assert.equal(yardShipment.status, "loaded");
   assert.equal(container.commodity, "iron-nickel");
@@ -345,6 +346,50 @@ test("NPC haulers move only with real conserved standing shipments", () => {
   assert.equal(harness.state.logistics.institutions["carrier:yard-hauler"].accounts.operating.balance, carrierBefore + yardShipment.payment);
   assert.deepEqual(harness.ships[0].transfers[1], { commodity: "iron-nickel", direction: "to-hub" });
   assert.notEqual(harness.state.logistics.haulers["hauler-yard-scrap"].activeShipmentId, yardShipment.id, "carrier selected reciprocal work after delivery");
+});
+
+test("a worn carrier declines Ledge freight and selects work compatible with its return margin", () => {
+  const harness = createLogisticsHarness();
+  harness.state.logistics.institutions["ship:hauler-yard-scrap"].wear = 3;
+  harness.ships[0].wear = 3;
+  harness.manager.update();
+  const shipment = Object.values(harness.state.logistics.shipments).find((entry) => entry.assigneeId === harness.ships[0].id);
+  assert.equal(shipment.templateId, "standing-iron-yard-scrap");
+  assert.ok(harness.state.logistics.history.some((entry) => entry.type === "freight.declined" && entry.templateId === "standing-iron-yard-ledge" && entry.reason === "maintenance-policy"));
+});
+
+test("a remote carrier with no policy-eligible freight generates a return-to-maintenance movement", () => {
+  const harness = createLogisticsHarness();
+  const ship = harness.ships[0];
+  const hauler = harness.state.logistics.haulers[ship.id];
+  const shipInstitution = harness.state.logistics.institutions[hauler.shipInstitutionId];
+  hauler.currentSiteId = "the-ledge";
+  ship.dockedSiteId = "the-ledge";
+  ship.wear = 5.2;
+  shipInstitution.wear = 5.2;
+  harness.manager.update();
+  const movement = Object.values(harness.state.logistics.movements)[0];
+  assert.equal(movement.type, "service-return");
+  assert.equal(movement.destinationSiteId, "scrap-porch");
+  assert.equal(Object.values(harness.state.logistics.shipments).some((entry) => entry.assigneeId === ship.id), false);
+  assert.deepEqual(ship.assignment.route.map((site) => site.id), ["the-ledge", "yard-exchange", "scrap-porch"]);
+});
+
+test("older logistics state receives policy and destination data without duplicating carriers", () => {
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(1_000);
+  const carrierCount = Object.keys(state.logistics.haulers).length;
+  delete state.logistics.institutions["the-ledge"];
+  delete state.logistics.institutions["carrier:yard-hauler"].policies;
+  delete state.logistics.institutions["carrier:yard-hauler"].repairOptions;
+  delete state.logistics.movements;
+  delete state.logistics.counters.movement;
+  createLogisticsManager({ state, ships: [], now: () => 1_000 });
+  assert.equal(Object.keys(state.logistics.haulers).length, carrierCount);
+  assert.ok(state.logistics.institutions["the-ledge"]);
+  assert.ok(state.logistics.institutions["carrier:yard-hauler"].policies.transportation);
+  assert.ok(state.logistics.institutions["carrier:yard-hauler"].repairOptions.length > 0);
+  assert.deepEqual(state.logistics.movements, {});
 });
 
 test("an NPC carrier cannot accept standing freight until docked at its recorded site", () => {

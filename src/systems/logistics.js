@@ -1,10 +1,12 @@
 import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
-import { createTransportationNetwork, evaluateTransportPlan } from "./transportationPlanning.js";
+import { createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js";
 import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js";
 
 export const STANDING_FREIGHT_TEMPLATES = Object.freeze([
   { id: "standing-water-scrap-yard", originSiteId: "scrap-porch", originName: "Scrap Porch", destinationSiteId: "yard-exchange", destinationName: "Yard Exchange", commodity: "water-ice", commodityName: "Water Ice", amount: 1, payment: 90, issuerInstitutionId: "yard-exchange", sourceInstitutionId: "scrap-forge", destinationInstitutionId: "yard-exchange" },
   { id: "standing-iron-yard-scrap", originSiteId: "yard-exchange", originName: "Yard Exchange", destinationSiteId: "scrap-porch", destinationName: "Scrap Porch", commodity: "iron-nickel", commodityName: "Iron Nickel", amount: 1, payment: 95, issuerInstitutionId: "scrap-forge", sourceInstitutionId: "yard-exchange", destinationInstitutionId: "scrap-forge" },
+  { id: "standing-iron-yard-ledge", originSiteId: "yard-exchange", originName: "Yard Exchange", destinationSiteId: "the-ledge", destinationName: "The Ledge", commodity: "iron-nickel", commodityName: "Iron Nickel", amount: 1, payment: 210, issuerInstitutionId: "the-ledge", sourceInstitutionId: "yard-exchange", destinationInstitutionId: "the-ledge" },
+  { id: "standing-silicate-ledge-yard", originSiteId: "the-ledge", originName: "The Ledge", destinationSiteId: "yard-exchange", destinationName: "Yard Exchange", commodity: "silicate", commodityName: "Silicate", amount: 1, payment: 190, issuerInstitutionId: "yard-exchange", sourceInstitutionId: "the-ledge", destinationInstitutionId: "yard-exchange" },
 ]);
 
 export function createInitialLogisticsState(now = Date.now()) {
@@ -13,6 +15,7 @@ export function createInitialLogisticsState(now = Date.now()) {
     institutions: {
       "yard-exchange": { id: "yard-exchange", archetypeId: "trade-hub", accounts: { operating: { balance: 5000, committed: 0 } }, inventories: { "iron-nickel": 0, "water-ice": 0 }, renewableResources: ["iron-nickel"] },
       "scrap-forge": { id: "scrap-forge", archetypeId: "resource-outpost", accounts: { operating: { balance: 3000, committed: 0 } }, inventories: { "water-ice": 0, "iron-nickel": 0 }, renewableResources: ["water-ice"] },
+      "the-ledge": { id: "the-ledge", archetypeId: "frontier-outpost", accounts: { operating: { balance: 4200, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 0 }, renewableResources: ["silicate"] },
       "carrier:yard-hauler": { id: "carrier:yard-hauler", archetypeId: "hauling-business", controllerInstitutionId: "person:yard-hauler-operator", accounts: { operating: { balance: 400, committed: 0 } }, policies: { transportation: { ...FIRST_REACH_CARRIER_POLICY } }, repairOptions: FIRST_REACH_REPAIR_OPTIONS.map((entry) => ({ ...entry })) },
       "person:yard-hauler-operator": { id: "person:yard-hauler-operator", archetypeId: "person", controls: ["carrier:yard-hauler"] },
       "ship:hauler-yard-scrap": { id: "ship:hauler-yard-scrap", archetypeId: "cargo-ship", controllerInstitutionId: "carrier:yard-hauler", wear: 0, issueCount: 0 },
@@ -21,16 +24,18 @@ export function createInitialLogisticsState(now = Date.now()) {
       "ship:hauler-scrap-yard": { id: "ship:hauler-scrap-yard", archetypeId: "cargo-ship", controllerInstitutionId: "carrier:porch-runner", wear: 0, issueCount: 0 },
     },
     haulers: {
-      "hauler-yard-scrap": { shipInstitutionId: "ship:hauler-yard-scrap", carrierInstitutionId: "carrier:yard-hauler", currentSiteId: "yard-exchange", activeShipmentId: null, status: "seeking-work" },
-      "hauler-scrap-yard": { shipInstitutionId: "ship:hauler-scrap-yard", carrierInstitutionId: "carrier:porch-runner", currentSiteId: "scrap-porch", activeShipmentId: null, status: "seeking-work" },
+      "hauler-yard-scrap": { shipInstitutionId: "ship:hauler-yard-scrap", carrierInstitutionId: "carrier:yard-hauler", currentSiteId: "yard-exchange", activeShipmentId: null, activeMovementId: null, maintenanceRequested: false, status: "seeking-work" },
+      "hauler-scrap-yard": { shipInstitutionId: "ship:hauler-scrap-yard", carrierInstitutionId: "carrier:porch-runner", currentSiteId: "scrap-porch", activeShipmentId: null, activeMovementId: null, maintenanceRequested: false, status: "seeking-work" },
     },
-    shipments: {}, containers: {}, responses: {}, history: [{ id: "log-history-1", type: "logistics.instantiated", at: now }],
-    counters: { shipment: 0, container: 0, response: 0 }, lastLedgerEventId: 0,
+    shipments: {}, movements: {}, containers: {}, responses: {}, history: [{ id: "log-history-1", type: "logistics.instantiated", at: now }],
+    counters: { shipment: 0, movement: 0, container: 0, response: 0 }, lastLedgerEventId: 0,
   };
 }
 
 export function ensureLogisticsState(state, now = Date.now()) {
   state.logistics ??= createInitialLogisticsState(now);
+  state.logistics.institutions ??= {};
+  state.logistics.institutions["the-ledge"] ??= { id: "the-ledge", archetypeId: "frontier-outpost", accounts: { operating: { balance: 4200, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 0 }, renewableResources: ["silicate"] };
   ["carrier:yard-hauler", "carrier:porch-runner"].forEach((institutionId) => {
     const institution = state.logistics.institutions?.[institutionId];
     if (!institution) return;
@@ -38,6 +43,9 @@ export function ensureLogisticsState(state, now = Date.now()) {
     institution.policies.transportation ??= { ...FIRST_REACH_CARRIER_POLICY };
     institution.repairOptions ??= FIRST_REACH_REPAIR_OPTIONS.map((entry) => ({ ...entry }));
   });
+  state.logistics.movements ??= {};
+  state.logistics.counters.movement ??= 0;
+  Object.values(state.logistics.haulers ?? {}).forEach((hauler) => { hauler.activeMovementId ??= null; hauler.maintenanceRequested ??= false; });
   return state.logistics;
 }
 
@@ -61,20 +69,25 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       if (!ship) return;
       const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
       shipInstitution.wear = Math.max(shipInstitution.wear ?? 0, ship.wear ?? 0);
-      if (hauler.status === "maintenance-required" && ship.operationalStatus === "seeking-work") hauler.status = "seeking-work";
       if (hauler.activeShipmentId && ship.operationalStatus === "seeking-work") {
         const shipment = logistics.shipments[hauler.activeShipmentId];
         if (shipment?.status === "loaded") ship.assignShipment({ shipmentId: shipment.id, destinationSiteId: shipment.destinationSiteId });
       }
-      if (!hauler.activeShipmentId && hauler.status === "seeking-work" && ship.operationalStatus !== "maintenance") assignNpcShipment(shipId);
+      if (!hauler.activeShipmentId && !hauler.activeMovementId && hauler.status === "seeking-work" && ship.operationalStatus !== "maintenance") {
+        if (!assignNpcShipment(shipId)) assignMaintenanceAction(shipId);
+      }
     });
   }
 
   function consumeEvents() {
     for (const event of state.ledger.getEventsAfterId(logistics.lastLedgerEventId, { includeHidden: true })) {
       logistics.lastLedgerEventId = Math.max(logistics.lastLedgerEventId, event.id);
-      if (event.type === "npc.routeCompleted" && event.payload.shipmentId) completeNpcShipment(event.payload.npcId, event.payload.shipmentId, event.payload.siteId);
+      if (event.type === "npc.routeCompleted" && event.payload.shipmentId) {
+        if (logistics.shipments[event.payload.shipmentId]) completeNpcShipment(event.payload.npcId, event.payload.shipmentId, event.payload.siteId);
+        else if (logistics.movements[event.payload.shipmentId]) completeMaintenanceMovement(event.payload.npcId, event.payload.shipmentId, event.payload.siteId);
+      }
       if (event.type === "npc.wearIssue") recordWearIssue(event.payload);
+      if (event.type === "sprc.repairCompleted") restoreAfterMaintenance(event.payload.haulerId);
     }
   }
 
@@ -128,6 +141,65 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       assignedShip.assignShipment({ shipmentId: id, destinationSiteId: template.destinationSiteId, route: routeSites });
     }
     return shipment;
+  }
+
+  function assignMaintenanceAction(shipId) {
+    const hauler = logistics.haulers[shipId];
+    const ship = shipById.get(shipId);
+    const carrier = logistics.institutions[hauler.carrierInstitutionId];
+    const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
+    const policy = carrier.policies?.transportation ?? {};
+    const threshold = (policy.maximumWear ?? Infinity) - (policy.minimumReturnMargin ?? 0);
+    if ((shipInstitution.wear ?? 0) < threshold) return null;
+    const repairRoutes = carrier.repairOptions
+      .map((option) => ({ option, route: findTransportationRoute(transportationNetwork, hauler.currentSiteId, option.destinationId, policy.knownDestinationIds) }))
+      .filter((entry) => entry.route)
+      .sort((a, b) => (a.option.priority ?? 0) - (b.option.priority ?? 0) || a.route.distance - b.route.distance);
+    const selected = repairRoutes[0];
+    if (!selected) { appendHistory("maintenance.blocked", { shipId, reason: "no-reachable-maintenance" }); return null; }
+    if (hauler.currentSiteId === selected.option.destinationId) return requestPreventiveMaintenance(shipId);
+    const routeSites = selected.route.path.map((id) => transportationNetwork.destinations[id]);
+    if (ship.canAcceptRoute ? !ship.canAcceptRoute(routeSites) : routeSites.length < 2) { appendHistory("maintenance.blocked", { shipId, reason: "execution-route-rejected" }); return null; }
+    const id = `MOVE-${String(++logistics.counters.movement).padStart(4, "0")}`;
+    logistics.movements[id] = { id, type: "service-return", shipId, originSiteId: hauler.currentSiteId, destinationSiteId: selected.option.destinationId, providerInstitutionId: selected.option.institutionId, status: "active", createdAt: now() };
+    hauler.activeMovementId = id; hauler.status = "returning-maintenance";
+    ship.assignShipment({ shipmentId: id, destinationSiteId: selected.option.destinationId, route: routeSites });
+    appendHistory("maintenance.returnStarted", { movementId: id, shipId, destinationSiteId: selected.option.destinationId });
+    return logistics.movements[id];
+  }
+
+  function completeMaintenanceMovement(shipId, movementId, siteId) {
+    const movement = logistics.movements[movementId];
+    if (!movement || movement.status !== "active" || movement.destinationSiteId !== siteId) return false;
+    movement.status = "completed"; movement.completedAt = now();
+    const hauler = logistics.haulers[shipId];
+    hauler.currentSiteId = siteId; hauler.activeMovementId = null;
+    shipById.get(shipId)?.clearShipment();
+    appendHistory("maintenance.returnCompleted", { movementId, shipId, siteId });
+    requestPreventiveMaintenance(shipId);
+    return true;
+  }
+
+  function requestPreventiveMaintenance(shipId) {
+    const hauler = logistics.haulers[shipId];
+    if (hauler.maintenanceRequested) return null;
+    const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
+    hauler.maintenanceRequested = true; hauler.status = "maintenance-required";
+    const ship = shipById.get(shipId); if (ship) ship.operationalStatus = "maintenance";
+    state.ledger.recordEvent("logistics.maintenanceRequired", { npcId: shipId, issueType: "preventive-service", wear: shipInstitution.wear ?? 0, issueCount: shipInstitution.issueCount ?? 0, causedByCarefulMode: false }, { visible: true });
+    appendHistory("maintenance.requested", { shipId, issueType: "preventive-service" });
+    return true;
+  }
+
+  function restoreAfterMaintenance(shipId) {
+    const hauler = logistics.haulers[shipId];
+    if (!hauler) return;
+    const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
+    shipInstitution.wear = 0; shipInstitution.issueCount = 0;
+    hauler.maintenanceRequested = false; hauler.status = "seeking-work";
+    const ship = shipById.get(shipId);
+    if (ship) { ship.wear = 0; ship.wearIssueCount = 0; ship.pendingWearIssue = null; ship.operationalStatus = "seeking-work"; }
+    appendHistory("maintenance.restored", { shipId });
   }
 
   function completeNpcShipment(shipId, shipmentId, siteId) {
@@ -189,7 +261,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     if (!hauler) return;
     const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
     shipInstitution.wear = payload.wear; shipInstitution.issueCount = payload.issueCount;
-    hauler.status = "maintenance-required";
+    hauler.maintenanceRequested = true; hauler.status = "maintenance-required";
     shipById.get(payload.npcId).operationalStatus = "maintenance";
     appendHistory("ship.issue", payload);
     state.ledger.recordEvent("logistics.maintenanceRequired", payload, { visible: true });
