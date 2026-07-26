@@ -5,7 +5,7 @@ import { createSprcOperation, SPRC } from "../src/systems/sprcOperation.js";
 import { createShipPaperworkInspectionReport } from "../src/systems/paperworkInspections.js";
 import { createFarmOperation } from "../src/systems/farmOperation.js";
 import { evaluateAffordability, generateCapabilityResponses } from "../src/systems/institutionDecision.js";
-import { createContractManager } from "../src/systems/contractManager.js";
+import { createContractManager, registerContractDefinition } from "../src/systems/contractManager.js";
 import { createInitialLogisticsState, createLogisticsManager, createStandingFreightJob, STANDING_FREIGHT_TEMPLATES } from "../src/systems/logistics.js";
 import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "../src/systems/transportationPlanning.js";
 import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "../src/systems/transportCorridors.js";
@@ -419,6 +419,26 @@ function createLogisticsHarness() {
   const manager = createLogisticsManager({ state, ships, now: () => 1_000 });
   return { state, ships, manager };
 }
+
+test("player evergreen mining delivery enters the same freight inventory used by haulers", () => {
+  const harness = createLogisticsHarness();
+  const definition = getStandingMiningJobsForSite("yard-exchange", "Yard Exchange")[0];
+  registerContractDefinition(definition);
+  const contracts = createContractManager({ state: harness.state });
+  contracts.offerContract(definition.id, { siteId: "yard-exchange" });
+  contracts.acceptContract(definition.id);
+  const buyer = harness.state.logistics.institutions["yard-exchange"];
+  buyer.inventories["iron-nickel"] = 0;
+  harness.state.logistics.haulers["hauler-scrap-yard"].currentSiteId = "yard-exchange";
+  harness.ships[1].dockedSiteId = "yard-exchange";
+  const balanceBefore = buyer.accounts.operating.balance;
+  assert.equal(contracts.depositResourceUnit({ contractId: definition.id, resourceType: "iron-nickel", siteId: "yard-exchange", amount: 3 }), 3);
+  assert.equal(buyer.inventories["iron-nickel"], 3);
+  assert.equal(buyer.accounts.operating.balance, balanceBefore - 126);
+  harness.manager.update();
+  assert.equal(Object.values(harness.state.logistics.shipments).filter((shipment) => shipment.commodity === "iron-nickel").length, 2);
+  assert.equal(buyer.inventories["iron-nickel"], 1);
+});
 
 test("the known transportation network finds a multi-destination path without authored route logic", () => {
   const network = createTransportationNetwork({ destinations: ["yard-exchange", "scrap-porch", "the-ledge"].map((id) => ({ id })), connections: FIRST_REACH_TRANSPORT_CONNECTIONS });

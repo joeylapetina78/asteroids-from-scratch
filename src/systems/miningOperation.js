@@ -1,4 +1,4 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1222-8d854b3";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1244-e29962b";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
@@ -28,6 +28,21 @@ export function getStandingMiningJobsForSite(siteId, issuer = null) {
     reward: { credits: order.amount * order.paymentPerUnit },
     clauses: ["This order is shared with licensed independent and institutional miners.", "Only real collected material is accepted.", `Deliver at ${order.siteName}; another contractor may fill later allocations.`],
   }));
+}
+
+export function settleStandingMiningOrder({ state, orderId, resourceId, amount, supplierAccount = null, referenceId = null, now = Date.now() }) {
+  const order = STANDING_MINING_ORDERS.find((candidate) => candidate.id === orderId);
+  const delivered = Math.min(Math.max(0, amount ?? 0), order?.amount ?? 0);
+  const buyer = state.logistics?.institutions?.[order?.buyerInstitutionId];
+  if (!order || !buyer || order.resourceId !== resourceId || delivered <= 0) return null;
+  const payment = Math.min(delivered * order.paymentPerUnit, buyer.accounts.operating.balance);
+  buyer.inventories[resourceId] = (buyer.inventories[resourceId] ?? 0) + delivered;
+  buyer.accounts.operating.balance -= payment;
+  if (supplierAccount) {
+    supplierAccount.balance += payment;
+    supplierAccount.transactions?.push({ id: `MIN-TX-${referenceId ?? now}`, at: now, type: "mining-income", amount: payment, balance: supplierAccount.balance, referenceId });
+  }
+  return { order, buyer, delivered, payment };
 }
 
 export function createMiningOperation({ state, game, now = () => Date.now() }) {
@@ -99,14 +114,9 @@ export function createMiningOperation({ state, game, now = () => Date.now() }) {
     const order = STANDING_MINING_ORDERS.find((candidate) => candidate.id === contractId);
     const allocation = operation.allocations[allocationId];
     if (!order || !allocation || allocation.status !== "active") return;
-    const delivered = Math.min(amount, allocation.amount);
-    const buyer = state.logistics?.institutions?.[order.buyerInstitutionId];
-    if (!buyer) return;
-    const payment = Math.min(delivered * order.paymentPerUnit, buyer.accounts.operating.balance);
-    buyer.inventories[resourceId] = (buyer.inventories[resourceId] ?? 0) + delivered;
-    buyer.accounts.operating.balance -= payment;
-    operation.institution.accounts.operating.balance += payment;
-    operation.institution.accounts.operating.transactions.push({ id: `MIN-TX-${operation.counter}`, at: now(), type: "mining-income", amount: payment, balance: operation.institution.accounts.operating.balance, referenceId: allocation.id });
+    const settlement = settleStandingMiningOrder({ state, orderId: contractId, resourceId, amount: Math.min(amount, allocation.amount), supplierAccount: operation.institution.accounts.operating, referenceId: allocation.id, now: now() });
+    if (!settlement) return;
+    const { delivered, payment } = settlement;
     allocation.status = "completed";
     allocation.delivered = delivered;
     allocation.paid = payment;
