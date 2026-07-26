@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260724-2244-667e995";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260724-2244-667e995";
+import { getNpcName } from "../npcs.js?v=fresh-20260725-1948-d38544e";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260725-1948-d38544e";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
@@ -83,6 +83,10 @@ export const hubServiceDefinitions = {
         fuelPerUnit: 2,
         chargePerUnit: 3,
         scanergyPerUnit: 1,
+      },
+      rawStockOffers: {
+        "iron-nickel": { price: 30, initialQuantity: 12 },
+        aluminum: { price: 48, initialQuantity: 6 },
       },
       oreValues: {
         "water-ice":       28,
@@ -499,6 +503,17 @@ export const hubServiceDefinitions = {
     },
   ],
   [storySites.originHub.id]: [
+    {
+      id: "scrap-porch-recovery",
+      npcId: "sal",
+      npcName: getNpcName("sal"),
+      organization: "Scrap Porch Recovery Cooperative",
+      serviceType: "operation",
+      label: "Recovery Cooperative",
+      description: "The Maw recovery mill, Berth Two, repair queue, stock, and procurement.",
+      defaultUnlocked: true,
+      greeting: "Sal. This is the working side of the Porch. The Maw makes repair stock; Berth Two spends it.",
+    },
     {
       id: "scrap-porch-work-board",
       npcId: "sal",

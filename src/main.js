@@ -1,31 +1,33 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260724-2244-667e995";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260724-2244-667e995";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260724-2244-667e995";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260724-2244-667e995";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260724-2244-667e995";
-import { Game } from "./game.js?v=fresh-20260724-2244-667e995";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260724-2244-667e995";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260724-2244-667e995";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260724-2244-667e995";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260724-2244-667e995";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260725-1948-d38544e";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260725-1948-d38544e";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260725-1948-d38544e";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260725-1948-d38544e";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260725-1948-d38544e";
+import { Game } from "./game.js?v=fresh-20260725-1948-d38544e";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260725-1948-d38544e";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260725-1948-d38544e";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260725-1948-d38544e";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260725-1948-d38544e";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260724-2244-667e995";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260724-2244-667e995";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260724-2244-667e995";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260724-2244-667e995";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260724-2244-667e995";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260724-2244-667e995";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260724-2244-667e995";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260724-2244-667e995";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260724-2244-667e995";
-import { Processor } from "./systems/processor.js?v=fresh-20260724-2244-667e995";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260724-2244-667e995";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260724-2244-667e995";
-import { createGameState } from "./state/gameState.js?v=fresh-20260724-2244-667e995";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260725-1948-d38544e";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260725-1948-d38544e";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260725-1948-d38544e";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260725-1948-d38544e";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260725-1948-d38544e";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260725-1948-d38544e";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260725-1948-d38544e";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260725-1948-d38544e";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260725-1948-d38544e";
+import { Processor } from "./systems/processor.js?v=fresh-20260725-1948-d38544e";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260725-1948-d38544e";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260725-1948-d38544e";
+import { createGameState } from "./state/gameState.js?v=fresh-20260725-1948-d38544e";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260725-1948-d38544e";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260725-1948-d38544e";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -138,6 +140,8 @@ const finleyChargesCost = document.querySelector("#finley-charges-cost");
 const finleyScan = document.querySelector("#finley-scan");
 const finleyScanButton = document.querySelector("#finley-scan-btn");
 const finleyScanCost = document.querySelector("#finley-scan-cost");
+const supplyRawStock = document.querySelector("#supply-raw-stock");
+const supplyRawStockList = document.querySelector("#supply-raw-stock-list");
 const componentShopNpc = document.querySelector("#component-shop-npc");
 const componentShopOrg = document.querySelector("#component-shop-org");
 const componentShopCredits = document.querySelector("#component-shop-credits");
@@ -338,6 +342,19 @@ const contractManager = createContractManager({
     }
   },
 });
+const sprcManager = createSprcOperation({
+  state,
+  registerContractDefinition,
+  onChange: () => {
+    if (activeHubServiceId === SPRC.serviceId) {
+      renderSprcOperationSummary();
+    }
+    if (contractManager.getCurrentContract()?.type === "resource-procurement") {
+      renderContract();
+    }
+  },
+});
+window.__asteroids.sprc = sprcManager;
 const journeyDirector = createJourneyDirector({
   state,
   game,
@@ -407,6 +424,7 @@ let lastPermitGrantEventId = 0;
 let lastTowChatterEventId = 0;
 let lastDockingInspectionEventId = 0;
 let lastLifeformTourEventId = 0;
+let lastSprcChatterEventId = 0;
 const pendingHubIdentityPresentations = new Map();
 const fulfilledContractPanelPulls = new Set();
 const COMPONENT_WARNING_RULES = [
@@ -585,7 +603,9 @@ dockToggleButton.addEventListener("click", () => {
 contractAcceptButton.addEventListener("click", () => {
   const contract = contractManager.getCurrentContract();
 
-  if (contract?.status === "fulfilled") {
+  if (contract?.type === "resource-procurement" && contract.status === "offered") {
+    sprcManager.acceptProcurement(contract.id);
+  } else if (contract?.status === "fulfilled") {
     activeDepositContractId = null;
     contractManager.collectPayment(contract.id);
   } else if (canPayLoanContract(contract)) {
@@ -714,6 +734,8 @@ drawerToggle?.addEventListener("click", () => {
 renderProcessorOutputs();
   game.placeShipNearSite(chapterOneRoute.startSite.id);
 restoreSavedWorld({ save: savedProfile, game, cargoHold });
+sprcManager.update();
+window.setInterval(() => sprcManager.update(), 1000);
 registerStarterDeliveryShipRecords(state);
 clearOldPanelLayouts();
 setInitialPaperworkLocations();
@@ -1496,9 +1518,27 @@ function updateHubServiceDisplay(siteState) {
 
   hubName.textContent = site.name;
   hubStatus.textContent = activeService?.organization ?? "service menu";
-  hubDetail.textContent = activeService ? `${activeService.npcName}: ${getHubServicePrompt(activeService)}` : "Choose a service window.";
+  if (activeService?.id === SPRC.serviceId) {
+    renderSprcOperationSummary();
+  } else {
+    hubDetail.textContent = activeService ? `${activeService.npcName}: ${getHubServicePrompt(activeService)}` : "Choose a service window.";
+  }
   renderHubServiceMenu(site);
   renderRookJobBoard(site);
+}
+
+function renderSprcOperationSummary() {
+  const { sprc, openRepair, missing } = sprcManager.getSnapshot();
+  const hauler = openRepair ? sprc.haulers[openRepair.subjectHaulerId] : null;
+  const produced = sprc.inventories.produced;
+  const raw = sprc.inventories.raw;
+  const repairText = openRepair
+    ? `${hauler?.shipName ?? openRepair.subjectShipVin} is waiting in Berth Two. Reserved stock covers ${openRepair.reserved.produced["hull-plate"] ?? 0} hull plate and ${openRepair.reserved.produced["machine-part"] ?? 0} machine part; still missing ${missing.items["hull-plate"] ?? 0} plate and ${missing.items["machine-part"] ?? 0} part.`
+    : "Berth Two is available.";
+  const plan = sprc.operatingPlan;
+  const project = sprc.projects?.["sprc-second-cradle"];
+  const availableCash = Math.max(0, sprc.account.balance - sprc.account.committed);
+  hubDetail.textContent = `Sal: ${repairText} Operating plan: keep ${plan.inventoryTargets.structuralFeedstockEquivalents} feedstock equivalents, ${plan.inventoryTargets["hull-plate"]} plates, and ${plan.inventoryTargets["machine-part"]} parts on hand. Current stock: ${produced["hull-plate"] ?? 0} plates, ${produced["machine-part"] ?? 0} parts, ${(raw["iron-nickel"] ?? 0) + (raw.aluminum ?? 0) * 2} feedstock equivalents. Cash: ${availableCash} available, ${sprc.account.committed} committed, ${sprc.account.protectedReserve} protected. Next project: ${project.name} (${project.status}).`;
 }
 
 function syncContractPanelVisibility() {
@@ -1812,7 +1852,10 @@ function renderRookJobBoard(site) {
     return;
   }
 
-  const signature = `board:${site.id}:${service.id}:${board.jobs.map((job) => job.id).join(",")}`;
+  const localNeedsSignature = site.id === SPRC.siteId
+    ? Object.values(state.sprc?.procurementOrders ?? {}).filter((order) => ["offered", "active"].includes(order.status)).map((order) => `${order.id}:${order.status}:${order.deliveredEquivalentUnits}:${order.objectiveType}`).join("|")
+    : "none";
+  const signature = `board:${site.id}:${service.id}:${localNeedsSignature}:${board.jobs.map((job) => job.id).join(",")}`;
 
   if (signature === lastRookJobBoardSignature) {
     return;
@@ -1822,9 +1865,36 @@ function renderRookJobBoard(site) {
   setJobBoardTitle(service);
   rookJobBoard.hidden = false;
   rookJobBoard.replaceChildren(
+    ...createSprcLocalNeedCards(site),
     createRookBoardHeader("Job Board"),
     ...board.jobs.map((job) => createRookJobButton(job)),
   );
+}
+
+function createSprcLocalNeedCards(site) {
+  if (site?.id !== SPRC.siteId) return [];
+  const orders = Object.values(state.sprc?.procurementOrders ?? {}).filter((order) => ["offered", "active"].includes(order.status));
+  if (orders.length === 0) return [];
+  const cards = [createRookBoardHeader("Local Needs")];
+  orders.forEach((order) => {
+    const contract = state.contracts.records[order.contractId];
+    if (!contract) return;
+    const button = document.createElement("button");
+    const title = document.createElement("strong");
+    const detail = document.createElement("span");
+    button.type = "button";
+    button.className = "rook-job-button";
+    title.textContent = order.objectiveType === "emergency-repair" ? "Urgent: Porch Runner Two Repair" : "Reserve Replenishment";
+    detail.textContent = `${order.deliveredEquivalentUnits}/${order.requiredEquivalentUnits} feedstock equivalents - ${order.maximumPayment} cr reserved`;
+    button.append(title, detail);
+    button.addEventListener("click", () => {
+      contractManager.focusContract(contract.id);
+      setComponentAvailable("contract", true);
+      pullContractToCenter(contract.id);
+    });
+    cards.push(button);
+  });
+  return cards;
 }
 
 function setJobBoardTitle(service) {
@@ -2141,6 +2211,19 @@ function openHubService(serviceId) {
     { visible: false },
   );
 
+  if (service.serviceType === "operation") {
+    renderSprcOperationSummary();
+    const openContract = Object.values(state.contracts.records).find(
+      (contract) => contract.type === "resource-procurement" && ["offered", "active", "fulfilled"].includes(contract.status),
+    );
+    if (openContract) {
+      contractManager.focusContract(openContract.id);
+      setComponentAvailable("contract", true);
+      focusPanelById("contract");
+    }
+    return;
+  }
+
   if (behavior.panelId === "merchant") {
     setComponentAvailable("merchant", true);
     renderShipOffers();
@@ -2408,6 +2491,8 @@ function offerAllHubServiceContracts(site, service) {
 }
 
 function updateLedgerDrivenSystems() {
+  syncPlayerCargoCustody();
+  sprcManager.update();
   contractManager.update();
   journeyDirector.update();
   commsDirector.update();
@@ -2415,8 +2500,44 @@ function updateLedgerDrivenSystems() {
   updatePermitGrants();
   updateHubAuthorityMessages();
   updateTowChatter();
+  updateSprcChatter();
   updateLifeformTour();
   updateDockingInspection();
+}
+
+function updateSprcChatter() {
+  const events = state.ledger.getEventsAfterId(lastSprcChatterEventId, { includeHidden: true });
+  events.forEach((event) => {
+    lastSprcChatterEventId = Math.max(lastSprcChatterEventId, event.id);
+    let text = null;
+    if (event.type === "sprc.productionCompleted") {
+      text = `The Maw finished a batch: ${event.payload.amount} ${formatResourceName(event.payload.itemId)} ready for the berth.`;
+    } else if (event.type === "sprc.repairCompleted") {
+      text = `${event.payload.shipName ?? "The runner"} is cleared out of Berth Two and going back to work.`;
+    } else if (event.type === "contract.expired" && event.payload.repairOrderId) {
+      text = "That feedstock order expired. The stock is still short, so the repair stays blocked and the committed credits are back in the operating account.";
+    } else if (event.type === "contract.paid" && event.payload.payerAccountId === state.sprc?.account?.id) {
+      text = "Feedstock received, title transferred, and the reserved payment is yours. The Maw can work with this.";
+    }
+    if (text) commsDirector.say({ source: COMMS_SOURCES.serviceNpc, speaker: "Sal", text });
+  });
+}
+
+function syncPlayerCargoCustody() {
+  const grouped = new Map();
+  cargoHold.units.forEach((unit) => {
+    if (String(unit.type).startsWith("manifest:")) return;
+    const key = `${unit.type}:${unit.sourceClaimId ?? "unproven"}`;
+    const record = grouped.get(key) ?? { type: normalizeResourceType(unit.type), quantity: 0, sourceClaimId: unit.sourceClaimId ?? null };
+    record.quantity += unit.quantity ?? 1;
+    grouped.set(key, record);
+  });
+  state.cargoCustody = {
+    holderEntityId: state.character.controlledPersonEntityId,
+    shipVin: state.character.activeHullVin,
+    units: [...grouped.values()],
+    updatedAt: Date.now(),
+  };
 }
 
 function updatePermitGrants() {
@@ -2985,8 +3106,9 @@ function getContractFileMeta(contract) {
     return balance > 0 ? `${balance.toLocaleString()} cr owed` : "paid off";
   }
 
-  if (contract.type === "resource-delivery") {
-    return `${contract.deliveredAmount ?? 0}/${contract.terms.amount ?? 0} ${contract.terms.resourceName}`;
+  if (contract.type === "resource-delivery" || contract.type === "resource-procurement") {
+    const resourceLabel = contract.type === "resource-procurement" ? "feedstock equivalents" : contract.terms.resourceName;
+    return `${contract.deliveredAmount ?? 0}/${contract.terms.amount ?? 0} ${resourceLabel}`;
   }
 
   if (contract.type === "bounty") {
@@ -3058,6 +3180,19 @@ function renderContractTerms(contract) {
     return;
   }
 
+  if (contract.type === "resource-procurement") {
+    const accepted = Object.entries(contract.terms.acceptedMaterials ?? {})
+      .map(([materialId, equivalents]) => `${formatResourceName(materialId)} (${equivalents}x)`)
+      .join(" or ");
+    contractPrimaryLabel.textContent = "Accepted Feedstock";
+    contractVin.textContent = accepted || "Structural material";
+    contractSecondaryLabel.textContent = "Destination";
+    contractDestination.textContent = contract.terms.destinationName ?? "Scrap Porch";
+    contractTertiaryLabel.textContent = "Reserved Payment";
+    contractReward.textContent = `${contract.reward.credits ?? 0} cr`;
+    return;
+  }
+
   if (contract.type === "bounty") {
     contractPrimaryLabel.textContent = "Target";
     contractVin.textContent = `${contract.terms.amount} ${contract.terms.targetName ?? "targets"}`;
@@ -3124,14 +3259,16 @@ function renderContractProgress(contract) {
     return;
   }
 
-  if (contract.type === "resource-delivery") {
+  if (contract.type === "resource-delivery" || contract.type === "resource-procurement") {
     const requiredAmount = contract.terms.amount ?? 0;
     const deliveredAmount = contract.deliveredAmount ?? 0;
     const progressPercent = requiredAmount > 0 ? Math.min(100, (deliveredAmount / requiredAmount) * 100) : 0;
 
     contractProgress.hidden = false;
-    contractProgressLabel.textContent = "Delivered";
-    contractProgressCount.textContent = `${deliveredAmount} / ${requiredAmount}`;
+    contractProgressLabel.textContent = contract.type === "resource-procurement" ? "Feedstock" : "Delivered";
+    contractProgressCount.textContent = contract.type === "resource-procurement"
+      ? `${deliveredAmount} / ${requiredAmount} equivalents`
+      : `${deliveredAmount} / ${requiredAmount}`;
     contractProgressFill.style.width = `${progressPercent}%`;
     return;
   }
@@ -3218,7 +3355,7 @@ function getContractButtonLabel(contract) {
     return getCredits(state) <= 0 ? "No Credits" : "Visit Finance";
   }
 
-  if (contract.type === "resource-delivery" && contract.status === "active") {
+  if ((contract.type === "resource-delivery" || contract.type === "resource-procurement") && contract.status === "active") {
     return "Dock to Deposit";
   }
 
@@ -3278,7 +3415,7 @@ function canDepositToContract(contract) {
   const dockedSite = currentSiteState?.dockedSite;
 
   return Boolean(
-    contract?.type === "resource-delivery" &&
+    (contract?.type === "resource-delivery" || contract?.type === "resource-procurement") &&
       contract.status === "active" &&
       dockedSite &&
       dockedSite.id === contract.terms.destinationSiteId &&
@@ -3839,10 +3976,10 @@ function renderObjectives(state) {
     let label;
     if (c.status === "fulfilled") {
       label = `Collect payment from ${c.issuer ?? "contractor"}`;
-    } else if (c.type === "resource-delivery") {
+    } else if (c.type === "resource-delivery" || c.type === "resource-procurement") {
       const delivered = c.deliveredAmount ?? 0;
       const required = c.terms?.amount ?? 0;
-      const resource = c.terms?.resourceName ?? c.terms?.resourceType ?? "cargo";
+      const resource = c.type === "resource-procurement" ? "feedstock equivalents" : c.terms?.resourceName ?? c.terms?.resourceType ?? "cargo";
       label = `Deliver ${delivered}/${required} ${resource}`;
     } else {
       label = c.summary ?? c.title ?? c.id;
@@ -4393,6 +4530,7 @@ function renderFinleyPanel(siteState = currentSiteState) {
   const scanCost = Math.ceil(scanNeeded * (prices.scanergyPerUnit ?? 1));
   const canScan = scanNeeded > 0 && credits >= scanCost;
   const cargoValue = getCargoHoldValue();
+  renderRawStockMarket(site, service);
 
   finleyCredits.textContent = `${Math.floor(credits)} cr`;
   finleyCargoValue.textContent = `${cargoValue} cr`;
@@ -4415,6 +4553,53 @@ function renderFinleyPanel(siteState = currentSiteState) {
   finleyScan.textContent = `${Math.floor(scanner.scanergy)} / ${scanner.maxScanergy}`;
   finleyScanCost.textContent = `${scanCost} cr`;
   if (activePump?.type !== "scan") finleyScanButton.disabled = !canScan;
+}
+
+function renderRawStockMarket(site, service) {
+  const offers = service?.rawStockOffers ?? null;
+  supplyRawStock.hidden = !offers;
+  supplyRawStockList.replaceChildren();
+  if (!site || !offers) return;
+  const markets = state.hubServices.marketInventories ??= {};
+  const inventory = markets[service.id] ??= Object.fromEntries(
+    Object.entries(offers).map(([itemId, offer]) => [itemId, offer.initialQuantity ?? 0]),
+  );
+  Object.entries(offers).forEach(([itemId, offer]) => {
+    const row = document.createElement("div");
+    const detail = document.createElement("div");
+    const button = document.createElement("button");
+    row.className = "supply-buy-row";
+    detail.className = "supply-status-item";
+    detail.textContent = `${formatResourceName(itemId)} - ${inventory[itemId] ?? 0} available - ${offer.price} cr`;
+    button.type = "button";
+    button.className = "supply-buy-button";
+    button.textContent = "Buy";
+    button.disabled = (inventory[itemId] ?? 0) <= 0 || !state.components.cargoHold.installed || !canSpendCredits(state, offer.price);
+    button.addEventListener("click", () => buyRawStockUnit({ site, service, itemId, offer }));
+    row.append(detail, button);
+    supplyRawStockList.append(row);
+  });
+}
+
+function buyRawStockUnit({ site, service, itemId, offer }) {
+  const inventory = state.hubServices.marketInventories?.[service.id];
+  if (!inventory || (inventory[itemId] ?? 0) <= 0 || !canSpendCredits(state, offer.price)) return false;
+  spendCredits(state, offer.price);
+  inventory[itemId] -= 1;
+  const receiptId = `receipt:${service.id}:${Date.now()}:${inventory[itemId]}`;
+  issueWorldDocument(state, {
+    document: { id: receiptId, type: "purchase-receipt", title: `${formatResourceName(itemId)} Purchase Receipt`, status: "active", resourceType: itemId, quantity: 1, price: offer.price, siteId: site.id },
+    issuerEntityId: `organization:${service.id}`,
+    holderEntityId: state.character.controlledPersonEntityId,
+    assetEntityId: state.character.activeHullVin ? `ship:${state.character.activeHullVin}` : null,
+  });
+  cargoHold.addUnit(itemId, { quantity: 1, tradeValue: offer.price, label: formatResourceName(itemId), sourceClaimId: receiptId });
+  state.ledger.recordEvent("cargo.purchased", { siteId: site.id, serviceId: service.id, resourceType: itemId, quantity: 1, creditsPaid: offer.price }, { visible: true });
+  syncPlayerCargoCustody();
+  renderFinleyPanel();
+  updateHudDisplay();
+  scheduleSave();
+  return true;
 }
 
 function toggleSupplyPump(type) {
@@ -4572,8 +4757,30 @@ function depositCargoUnit(type, unit = {}) {
     return false;
   }
 
-  if (isIllegalForContractSource(contract, unit)) {
+  if (contract.type !== "resource-procurement" && isIllegalForContractSource(contract, unit)) {
     return false;
+  }
+
+  if (contract.type === "resource-procurement") {
+    const result = sprcManager.deliverMaterial({
+      contractId: contract.id,
+      materialId: normalizeResourceType(type),
+      amount: unit.quantity ?? 1,
+    });
+
+    if (!result.acceptedUnits) {
+      return false;
+    }
+
+    game.createCargoTransferTrail(type);
+    if (contract.status === "paid" || contract.status === "fulfilled") {
+      activeDepositContractId = null;
+    }
+    renderContract();
+    updateHudDisplay();
+    game.updateSiteReadout();
+    scheduleSave();
+    return { processedQuantity: result.acceptedUnits };
   }
 
   const didDeposit = contractManager.depositResourceUnit({

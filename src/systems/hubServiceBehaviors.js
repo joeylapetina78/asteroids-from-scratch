@@ -22,6 +22,10 @@ export const HUB_SERVICE_BEHAVIOR_BY_TYPE = {
     panelId: "finley",
     prompt: "Finley handles repair and cargo sales here.",
   },
+  operation: {
+    panelId: "contract",
+    prompt: "The Maw, Berth Two, repair stock, and live procurement records are open here.",
+  },
   components: {
     panelId: "component-shop",
     prompt: "component refits and bolt-on ship modifications are sold here.",

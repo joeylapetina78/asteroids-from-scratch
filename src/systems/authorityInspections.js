@@ -1,6 +1,6 @@
-import { createShipPaperworkInspectionReport } from "./paperworkInspections.js?v=fresh-20260724-2244-667e995";
-import { getRegistryEntityIdForSite, hasRegistryStatus } from "./entityRegistry.js?v=fresh-20260724-2244-667e995";
-import { PUBLIC_IDENTITY_KIND } from "./publicIdentity.js?v=fresh-20260724-2244-667e995";
+import { createShipPaperworkInspectionReport } from "./paperworkInspections.js?v=fresh-20260725-1948-d38544e";
+import { getRegistryEntityIdForSite, hasRegistryStatus } from "./entityRegistry.js?v=fresh-20260725-1948-d38544e";
+import { PUBLIC_IDENTITY_KIND } from "./publicIdentity.js?v=fresh-20260725-1948-d38544e";
 
 export function inspectPublicIdentity(state, { identity, inspector = null, site = null } = {}) {
   if (!identity) {
@@ -21,6 +21,8 @@ export function inspectPublicIdentity(state, { identity, inspector = null, site 
     if (!paperworkReport.clearance.hasPilotLicense) reasons.push("missing-pilot-license");
     if (!paperworkReport.clearance.hasFlightRegistration) reasons.push("missing-flight-registration");
     if (paperworkReport.unauthorizedZones.length > 0) reasons.push("unauthorized-zone-history");
+    if (paperworkReport.cargoInspection.manifests.length > 0 && paperworkReport.cargoInspection.hasUndeclaredCargo) reasons.push("undeclared-cargo");
+    if (paperworkReport.cargoInspection.manifests.length > 0 && paperworkReport.cargoInspection.hasUnestablishedSource) reasons.push("cargo-source-not-established");
 
     const identityResult = createInspectionResult({
       identity,

@@ -81,6 +81,8 @@ The mission system runs on authored **beats** — discrete story units each with
 
 The event ledger records meaningful career and world events. Contracts, legal records, ship state, and hub services all read from the same ledger rather than each building their own state.
 
+Scrap Porch now hosts the first bounded living economic operation: the Scrap Porch Recovery Cooperative. A named route hauler can enter Berth Two for repair, repair requirements reserve real stock, shortages create traceable needs, The Maw consumes raw inputs to produce hull plates, and an outcome-based procurement order can accept mined, purchased, or previously held structural feedstock. Material, payment, production, repair, and the hauler's return remain conserved and persistent. See [docs/sprc-operation.md](docs/sprc-operation.md).
+
 Recent architecture prep has focused on keeping future content from becoming one-off script glue:
 
 - Mission rules and mission actions now have named system modules.

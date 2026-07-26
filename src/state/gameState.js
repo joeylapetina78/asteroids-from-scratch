@@ -1,10 +1,11 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260724-2244-667e995";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260724-2244-667e995";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260724-2244-667e995";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260724-2244-667e995";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260724-2244-667e995";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260724-2244-667e995";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260724-2244-667e995";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260725-1948-d38544e";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260725-1948-d38544e";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260725-1948-d38544e";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260725-1948-d38544e";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260725-1948-d38544e";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260725-1948-d38544e";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260725-1948-d38544e";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260725-1948-d38544e";
 
 export function createGameState() {
   const state = {
@@ -44,6 +45,13 @@ export function createGameState() {
       jobBoards: {},
     },
     worldRecords: createEmptyWorldRecords(),
+    sprc: createInitialSprcState(),
+    cargoCustody: {
+      holderEntityId: null,
+      shipVin: null,
+      units: [],
+      updatedAt: null,
+    },
     character: {
       controlledPersonEntityId: null,
       currentLicenseId: null,

@@ -50,10 +50,20 @@ export class NpcShip {
     this.pendingEvents = [];
     this.activeHub = null;
     this.publicIdentity = publicIdentity;
+    this.completedRouteLegs = 0;
+    this.operationalStatus = "available";
   }
 
   update(deltaSeconds, world) {
     if (!this.isAlive) {
+      return;
+    }
+
+    if (this.operationalStatus !== "available") {
+      this.velocity.x *= 0.82;
+      this.velocity.y *= 0.82;
+      this.updateCargoSegments(deltaSeconds);
+      this.updateHubService(world.sites);
       return;
     }
 
@@ -62,6 +72,20 @@ export class NpcShip {
     const waypointDistance = distance(this.position, waypoint);
 
     if (waypointDistance <= WAYPOINT_RADIUS) {
+      const arrivedSite = this.route[this.routeIndex];
+      this.completedRouteLegs += 1;
+      this.pendingEvents.push({
+        type: "npc.routeCompleted",
+        payload: {
+          npcId: this.id,
+          npcName: this.name,
+          npcType: "route-hauler",
+          siteId: arrivedSite?.id ?? null,
+          siteName: arrivedSite?.name ?? null,
+          routeLegsCompleted: this.completedRouteLegs,
+          provisionalLogistics: true,
+        },
+      });
       this.routeIndex = (this.routeIndex + 1) % this.route.length;
       this.turnSettleTimer = 0.9;
       this.lastWaypointDistance = distance(this.position, this.getWaypoint());

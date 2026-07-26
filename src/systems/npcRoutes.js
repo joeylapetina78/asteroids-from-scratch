@@ -1,4 +1,4 @@
-import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260724-2244-667e995";
+import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260725-1948-d38544e";
 
 // For now, routes are authored from existing world sites. Later this can become
 // the same data layer that powers trade lanes, missions, patrols, and piracy.
@@ -14,11 +14,11 @@ export function createNpcRouteShips(sites) {
 
   return [
     createRouteShip("hauler-yard-scrap", "Yard Hauler", firstRoute, 1, -140),
-    createRouteShip("hauler-scrap-yard", "Scrap Hauler", secondRoute, 2, -140),
+    createRouteShip("hauler-scrap-yard", "Porch Runner Two", secondRoute, 2, -140, "Mara Venn"),
   ];
 }
 
-function createRouteShip(id, name, route, seed, routeOffset) {
+function createRouteShip(id, name, route, seed, routeOffset, pilotName = `${name} Operator`) {
   const start = route[0].position;
   const next = route[1].position;
   const lane = normalize(next.x - start.x, next.y - start.y);
@@ -34,7 +34,7 @@ function createRouteShip(id, name, route, seed, routeOffset) {
     laneOffset: routeOffset,
     publicIdentity: {
       pilotEntityId: `person:${id}-operator`,
-      pilotName: `${name} Operator`,
+      pilotName,
       pilotLicenseId: `HLC-${String(seed).padStart(3, "0")}-${id.toUpperCase()}`,
       shipVin: `HAUL-${String(seed).padStart(2, "0")}-${id.toUpperCase()}`,
       registeredHubIds: route.filter((site) => site.type === "hub").map((site) => site.id),

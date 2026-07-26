@@ -1,5 +1,5 @@
-import { getCurrentShipLegal, getPilotLicense, getPilotName, getUnauthorizedVisitedZones } from "./legalRecords.js?v=fresh-20260724-2244-667e995";
-import { findDocumentsForEntity, findDocumentsHeldBy, getShipAssetId } from "./worldRecords.js?v=fresh-20260724-2244-667e995";
+import { getCurrentShipLegal, getPilotLicense, getPilotName, getUnauthorizedVisitedZones } from "./legalRecords.js?v=fresh-20260725-1948-d38544e";
+import { findDocumentsForEntity, findDocumentsHeldBy, getShipAssetId } from "./worldRecords.js?v=fresh-20260725-1948-d38544e";
 
 export function createShipPaperworkInspectionReport(state, { inspector = null, site = null } = {}) {
   const hull = state.components.hull;
@@ -16,6 +16,7 @@ export function createShipPaperworkInspectionReport(state, { inspector = null, s
   const flightRegistration = findDocumentByType(shipDocuments, "ship-registration") ?? registrations.flight ?? null;
   const shipTitle = findDocumentByType(shipDocuments, "ship-title");
   const activeLien = findDocumentByType(shipDocuments, "lien", "active");
+  const cargoInspection = inspectCargoCustody(state, { shipDocuments, pilotDocuments });
 
   return {
     inspector,
@@ -41,6 +42,7 @@ export function createShipPaperworkInspectionReport(state, { inspector = null, s
       ship: shipDocumentSummary,
       pilot: pilotDocumentSummary,
     },
+    cargoInspection,
     clearance: {
       hasVin: Boolean(vin),
       hasPilotLicense: pilotDocumentSummary.some((document) => document.type === "pilot-license" && document.status !== "revoked"),
@@ -62,4 +64,44 @@ function summarizeDocuments(documents) {
     holderEntityId: document.holderEntityId ?? null,
     issuerEntityId: document.issuerEntityId ?? null,
   }));
+}
+
+function inspectCargoCustody(state, { shipDocuments = [], pilotDocuments = [] } = {}) {
+  const cargo = state.cargoCustody?.units ?? [];
+  const documents = [...shipDocuments, ...pilotDocuments];
+  const manifests = documents.filter((document) => document.type === "cargo-manifest" && document.status === "active");
+  const extractionDocuments = documents.filter((document) => ["extraction-permit", "salvage-claim", "mining-permit", "purchase-receipt"].includes(document.type) && document.status !== "revoked");
+  const findings = cargo.map((unit) => {
+    const manifest = manifests.find((document) => {
+      const order = state.sprc?.procurementOrders?.[document.procurementOrderId];
+      return Boolean(order?.acceptedMaterials?.[unit.type]);
+    }) ?? null;
+    const sourceEvidence = unit.sourceClaimId
+      ? extractionDocuments.find((document) => document.id === unit.sourceClaimId || document.claimId === unit.sourceClaimId) ?? null
+      : null;
+
+    return {
+      resourceType: unit.type,
+      quantity: unit.quantity,
+      sourceClaimId: unit.sourceClaimId ?? null,
+      manifestDocumentId: manifest?.id ?? null,
+      procurementOrderId: manifest?.procurementOrderId ?? null,
+      declaredForProcurement: Boolean(manifest),
+      lawfulSourceEvidenceDocumentId: sourceEvidence?.id ?? null,
+      sourceAuthorityStatus: sourceEvidence?.type === "purchase-receipt" ? "purchased" : sourceEvidence ? "documented" : "not-established",
+      scopeNote: manifest
+        ? "The manifest documents custody and destination; it does not grant extraction or salvage authority."
+        : "No active manifest declares this cargo for the current procurement order.",
+    };
+  });
+
+  return {
+    holderEntityId: state.cargoCustody?.holderEntityId ?? null,
+    shipVin: state.cargoCustody?.shipVin ?? null,
+    manifests: manifests.map((document) => document.id),
+    extractionDocuments: extractionDocuments.map((document) => document.id),
+    findings,
+    hasUndeclaredCargo: findings.some((finding) => !finding.declaredForProcurement),
+    hasUnestablishedSource: findings.some((finding) => finding.sourceAuthorityStatus === "not-established"),
+  };
 }
