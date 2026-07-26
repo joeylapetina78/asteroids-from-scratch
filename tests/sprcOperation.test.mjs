@@ -945,4 +945,25 @@ test("Sal procures ordinary silicate and copper when machine-part production is 
   const items = Object.values(harness.state.sprc.procurementOrders).map((order) => order.procurementItemId);
   assert.ok(items.includes("silicate"));
   assert.ok(items.includes("copper"));
+  assert.equal(Object.values(harness.state.sprc.procurementOrders).find((order) => order.procurementItemId === "silicate").requiredEquivalentUnits, 6);
+  assert.equal(Object.values(harness.state.sprc.procurementOrders).find((order) => order.procurementItemId === "copper").requiredEquivalentUnits, 3);
+});
+
+test("concurrent repairs share Sal's material orders instead of publishing tiny duplicates", () => {
+  const harness = createHarness();
+  harness.state.sprc.inventories.produced["machine-part"] = 0;
+  harness.state.sprc.inventories.raw.silicate = 0;
+  harness.state.sprc.inventories.raw.copper = 0;
+  for (let index = 1; index <= 3; index += 1) {
+    harness.state.ledger.recordEvent("maintenance.requested", {
+      subjectId: `worker:test-miner-${index}`, subjectName: `Test Miner ${index}`, referenceId: `MW-TEST-${index}`, craftClass: "mining-craft",
+      issueType: "preventive-calibration", requiredCapabilities: ["field-control"], locationSiteId: "scrap-porch", mobility: "self-return",
+      payerInstitutionId: `miner:test-${index}`, payer: { balance: 1000, committed: 0, protectedCash: 100 }, servicePrice: 220,
+    }, { visible: false });
+  }
+  harness.operation.update();
+  const silicateOrders = Object.values(harness.state.sprc.procurementOrders).filter((order) => order.procurementItemId === "silicate");
+  assert.equal(silicateOrders.length, 1);
+  assert.equal(silicateOrders[0].requiredEquivalentUnits, 6);
+  assert.equal(silicateOrders[0].needIds.length, 3);
 });

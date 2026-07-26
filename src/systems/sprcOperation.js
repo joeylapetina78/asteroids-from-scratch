@@ -1,5 +1,5 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260726-1534-0b5f409";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260726-1534-0b5f409";
+import { depositCredits } from "./accounts.js?v=fresh-20260726-1547-ca4bfea";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260726-1547-ca4bfea";
 import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
 import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js";
 import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js";
@@ -62,6 +62,7 @@ export function createInitialSprcState(now = Date.now()) {
       projectedRepairCoverageTarget: institution.policies.projectedServiceCoverageTarget,
       protectedCashReserve: institution.policies.protectedCash,
       servicePriorities: institution.policies.servicePriorities,
+      procurementBatchSizes: institution.policies.procurementBatchSizes,
       rationale: "Cover two likely repairs without betting the cooperative's last credits.",
       lastAssessedAt: now,
     },
@@ -141,6 +142,7 @@ export function ensureSprcOperation(state, now = Date.now()) {
   sprc.facilities.berthTwo.facilityType ??= "repair-berth";
   sprc.operatingPlan.inventoryTargets.copper ??= 1;
   sprc.operatingPlan.safetyStock.copper ??= 1;
+  sprc.operatingPlan.procurementBatchSizes ??= { copper: 3, silicate: 6 };
   sprc.inventories.raw.copper ??= 1;
   sprc.controller ??= createSalInstitutionInstance();
   seedSprcWorldRecords(state);
@@ -467,6 +469,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   }
 
   function chooseProcurementResponse(need) {
+    if (DIRECT_PROCUREMENT[need.itemId] && joinOpenMaterialProcurement(need)) return;
     if (need.objectiveType === "emergency-repair") {
       const procurementItemId = need.itemId === "structural-feedstock" ? "structural-feedstock" : need.itemId;
       const routineOrder = Object.values(sprc.procurementOrders).find((order) => ["offered", "active"].includes(order.status) && order.objectiveType === "reserve-replenishment" && (order.procurementItemId ?? "structural-feedstock") === procurementItemId);
@@ -531,6 +534,31 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     createProcurementOrder(need, response);
   }
 
+  function joinOpenMaterialProcurement(need) {
+    const order = Object.values(sprc.procurementOrders).find((entry) =>
+      ["offered", "active"].includes(entry.status) && entry.procurementItemId === need.itemId
+    );
+    if (!order) return false;
+    const existingResponse = Object.values(sprc.responses).find((entry) =>
+      entry.needId === need.id && entry.procurementOrderId === order.id && entry.status === "active"
+    );
+    if (existingResponse) return true;
+    order.needIds ??= [order.needId].filter(Boolean);
+    if (!order.needIds.includes(need.id)) order.needIds.push(need.id);
+    order.sourceRepairOrderIds ??= [order.sourceRepairOrderId].filter(Boolean);
+    if (need.sourceRepairOrderId && !order.sourceRepairOrderIds.includes(need.sourceRepairOrderId)) {
+      order.sourceRepairOrderIds.push(need.sourceRepairOrderId);
+    }
+    const responseId = nextId("response", "SPRC-RSP");
+    sprc.responses[responseId] = {
+      ...createResponseRecord({ id: responseId, needIds: [need.id], capabilityId: "procure-input", action: "join-material-procurement", rationale: `The open ${need.itemId} order covers this need, so Sal is using it instead of publishing another contract.`, estimatedCost: 0, selectedAt: now() }),
+      needId: need.id, strategy: "shared-procurement-contract", status: "active", procurementOrderId: order.id,
+    };
+    need.responseIds.push(responseId);
+    appendHistory("procurement.needJoined", { procurementOrderId: order.id, needId: need.id, repairOrderId: need.sourceRepairOrderId });
+    return true;
+  }
+
   function expireProcurementOrders() {
     Object.values(sprc.procurementOrders).forEach((order) => {
       if (!["offered", "active"].includes(order.status) || order.deadlineAt > now()) return;
@@ -541,16 +569,17 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
         contract.status = "expired";
         contract.expiredAt = now();
       }
-      const response = sprc.responses[order.responseId];
-      if (response) response.status = "failed";
+      Object.values(sprc.responses).forEach((response) => {
+        if (response.procurementOrderId === order.id && response.status === "active") response.status = "failed";
+      });
       sprc.account.committed = Math.max(0, sprc.account.committed - (order.committedPayment ?? 0));
       order.committedPayment = 0;
-      const need = sprc.needs[order.needId];
-      if (need) {
+      const linkedNeeds = (order.needIds ?? [order.needId]).map((id) => sprc.needs[id]).filter(Boolean);
+      linkedNeeds.forEach((need) => {
         need.status = "open";
         need.retryAfter = now() + 2 * 60 * 1000;
         need.lastOutcome = { type: "procurement-expired", procurementOrderId: order.id, at: now() };
-      }
+      });
       if (order.emergencyNeedId && sprc.needs[order.emergencyNeedId]) {
         sprc.needs[order.emergencyNeedId].lastOutcome = { type: "procurement-expired", procurementOrderId: order.id, at: now() };
       }
@@ -561,9 +590,11 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
 
   function createProcurementOrder(need, response) {
     const id = nextId("procurement", "SPRC-PO");
-    const amount = Math.max(1, need.missingAmount);
     const directMaterial = DIRECT_PROCUREMENT[need.itemId] ?? null;
     const procurementItemId = directMaterial ? need.itemId : "structural-feedstock";
+    const amount = directMaterial
+      ? Math.max(1, need.missingAmount, sprc.operatingPlan.procurementBatchSizes?.[need.itemId] ?? 1)
+      : Math.max(1, need.missingAmount);
     const pricePerEquivalent = directMaterial?.price ?? 34;
     const maximumPayment = amount * pricePerEquivalent;
     const affordability = getProcurementAffordability(maximumPayment);
@@ -576,8 +607,9 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     }
     sprc.account.committed += maximumPayment;
     const record = sprc.procurementOrders[id] = {
-      id, type: directMaterial ? "shop-input-procurement" : "structural-feedstock-procurement", procurementItemId, needId: need.id,
+      id, type: directMaterial ? "shop-input-procurement" : "structural-feedstock-procurement", procurementItemId, needId: need.id, needIds: [need.id],
       sourceRepairOrderId: need.sourceRepairOrderId, responseId: response.id, objectiveType: need.objectiveType,
+      sourceRepairOrderIds: [need.sourceRepairOrderId].filter(Boolean),
       acceptedMaterials: directMaterial ? { [need.itemId]: 1 } : { ...SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK }, requiredEquivalentUnits: amount,
       deliveredEquivalentUnits: 0, deliveredMaterials: {}, paidAmount: 0, supplierDeliveries: [], allocations: {}, destinationSiteId: SPRC.siteId,
       pricePerEquivalent, maximumPayment, committedPayment: maximumPayment,
@@ -665,11 +697,14 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       contract.fulfilledAt = now();
       contract.paidAt = order.status === "paid" ? now() : null;
       contract.paymentShortfall = Math.max(0, order.maximumPayment - order.paidAmount);
-      const need = sprc.needs[order.needId];
-      if (need) need.status = "resolved";
+      (order.needIds ?? [order.needId]).forEach((needId) => {
+        const need = sprc.needs[needId];
+        if (need) need.status = "resolved";
+      });
       if (order.emergencyNeedId && sprc.needs[order.emergencyNeedId]) sprc.needs[order.emergencyNeedId].status = "resolved";
-      const response = sprc.responses[order.responseId];
-      if (response) response.status = "completed";
+      Object.values(sprc.responses).forEach((response) => {
+        if (response.procurementOrderId === order.id && response.status === "active") response.status = "completed";
+      });
       if (isPlayerSupplier) sprc.actor.relationship.playerReliability += 1;
       appendHistory("procurement.completed", { procurementOrderId: order.id, paid: order.paidAmount, paymentShortfall: contract.paymentShortfall });
       state.ledger.recordEvent("contract.paid", { contractId, creditsPaid: order.paidAmount, payerAccountId: sprc.account.id, sourceNeedId: order.needId }, { visible: true });

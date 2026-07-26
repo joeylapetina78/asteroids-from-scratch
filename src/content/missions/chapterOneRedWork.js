@@ -1,5 +1,5 @@
-import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=fresh-20260726-1534-0b5f409";
-import { resourceTypesMatch } from "../../systems/resourceDefinitions.js?v=fresh-20260726-1534-0b5f409";
+import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=fresh-20260726-1547-ca4bfea";
+import { resourceTypesMatch } from "../../systems/resourceDefinitions.js?v=fresh-20260726-1547-ca4bfea";
 
 const PLOT_CONTRACT_ID = "rook-red-teeth-claim-run-50";
 const PLOT_CONTRACT_ZONE_ID = "ore-ridge";

@@ -14,6 +14,7 @@ export function createSprcInstitutionInstance(now = Date.now()) {
       protectedCash: 900,
       inventoryTargets: { structuralFeedstockEquivalents: 8, "hull-plate": 3, "machine-part": 2, copper: 1 },
       safetyStock: { "hull-plate": 1, "machine-part": 1, copper: 1 },
+      procurementBatchSizes: { copper: 3, silicate: 6 },
       projectedServiceCoverageTarget: 2,
       servicePriorities: ["disabled-systems", "damaged-hull", "routine-wear"],
     },
