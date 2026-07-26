@@ -1,5 +1,6 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1627-5762540";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260726-1627-5762540";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1701-4a23f71";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260726-1701-4a23f71";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260726-1701-4a23f71";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
@@ -13,7 +14,7 @@ const MINING_WORKER_DEFAULTS = Object.freeze([
   { id: "worker:cinder-three", name: "Cinder Three", referenceId: "MW-033-CINDER", currentSiteId: "the-ledge", initialWear: 0, offset: { x: 100, y: 80 } },
 ]);
 const EXPANSION_WORKER_DEFAULTS = Object.freeze({ id: "worker:cinder-four", name: "Cinder Four", referenceId: "MW-034-CINDER", currentSiteId: "scrap-porch", initialWear: 0.15, offset: { x: 110, y: -80 } });
-const MINING_ALLOCATION_SIZE = 3;
+const MINING_ALLOCATION_SIZE = 6;
 const EXPANSION_COST = 350;
 const EXPANSION_DEMAND_SECONDS = 12;
 const DEPOSIT_SURVEY_RADIUS = 12000;
@@ -147,6 +148,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       shipRecord.lastDecisionKey = null;
       worker.assign({
         allocationId: allocation.id, contractId: order.contractId ?? order.id, resourceId: order.resourceId, quantity: order.amount, destination,
+        harvestTargetQuantity: order.kind === "sprc" ? MINING_ALLOCATION_SIZE : order.amount,
         depositCandidates: getDepositCandidates(order.resourceId, worker.position),
       });
       if (order.kind !== "sprc") operation.nextOrderIndex = (STANDING_MINING_ORDERS.indexOf(order) + 1) % STANDING_MINING_ORDERS.length;
@@ -254,10 +256,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
 
   function completeDelivery({ allocationId, contractId, resourceId, amount, ship }) {
     const allocation = operation.allocations[allocationId];
-    if (!allocation || allocation.status !== "active") return;
+    if (!allocation || allocation.status !== "active") return { acceptedUnits: 0, paid: 0 };
     if (allocation.orderKind === "sprc") {
       const procurement = state.sprc?.procurementOrders?.[allocation.orderId];
-      if (!procurement) return;
+      if (!procurement) return { acceptedUnits: 0, paid: 0 };
       const result = sprcOperation.deliverMaterial({
         contractId, materialId: resourceId, amount: Math.min(amount, allocation.amount), supplierInstitutionId: operation.institution.id,
         creditSupplier: (payment) => {
@@ -265,16 +267,36 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
           operation.institution.accounts.operating.transactions.push({ id: `MIN-TX-${allocation.id}`, at: now(), type: "mining-income", amount: payment, balance: operation.institution.accounts.operating.balance, referenceId: allocation.id });
         },
       });
-      if (!result?.acceptedUnits) return;
+      if (!result?.acceptedUnits) return { acceptedUnits: 0, paid: 0 };
       finishDelivery({ allocation, ship, siteId: procurement.destinationSiteId, resourceId, delivered: result.acceptedUnits, payment: result.paid, orderLabel: procurement.id });
-      return;
+      const surplusSoldUnits = sellSurplusAtHub({ ship, siteId: procurement.destinationSiteId, resourceId, acceptedUnits: result.acceptedUnits });
+      return { ...result, surplusSoldUnits };
     }
     const order = STANDING_MINING_ORDERS.find((candidate) => candidate.id === contractId);
-    if (!order) return;
+    if (!order) return { acceptedUnits: 0, paid: 0 };
     const settlement = settleStandingMiningOrder({ state, orderId: contractId, resourceId, amount: Math.min(amount, allocation.amount), supplierAccount: operation.institution.accounts.operating, referenceId: allocation.id, now: now() });
-    if (!settlement) return;
+    if (!settlement) return { acceptedUnits: 0, paid: 0 };
     const { delivered, payment } = settlement;
     finishDelivery({ allocation, ship, siteId: order.siteId, resourceId, delivered, payment, orderLabel: order.id });
+    const surplusSoldUnits = sellSurplusAtHub({ ship, siteId: order.siteId, resourceId, acceptedUnits: delivered });
+    return { acceptedUnits: delivered, paid: payment, surplusSoldUnits };
+  }
+
+  function sellSurplusAtHub({ ship, siteId, resourceId, acceptedUnits }) {
+    const surplus = Math.max(0, (ship.cargo[resourceId] ?? 0) - acceptedUnits);
+    if (surplus <= 0) return 0;
+    const buyerInstitutionId = siteId === "scrap-porch" ? "scrap-forge" : siteId;
+    const buyer = state.logistics?.institutions?.[buyerInstitutionId];
+    const unitPrice = Math.max(1, Math.floor(getResourceTradeValue(resourceId) * 0.7));
+    const affordableUnits = Math.min(surplus, Math.floor((buyer?.accounts?.operating?.balance ?? 0) / unitPrice));
+    if (!buyer || affordableUnits <= 0) return 0;
+    const payment = affordableUnits * unitPrice;
+    buyer.inventories[resourceId] = (buyer.inventories[resourceId] ?? 0) + affordableUnits;
+    buyer.accounts.operating.balance -= payment;
+    operation.institution.accounts.operating.balance += payment;
+    operation.institution.accounts.operating.transactions.push({ id: `MIN-SURPLUS-${now()}-${ship.id}`, at: now(), type: "wholesale-income", amount: payment, balance: operation.institution.accounts.operating.balance, referenceId: buyerInstitutionId });
+    record("mining.surplusSold", `${ship.name} sold ${affordableUnits} surplus ${resourceId.replaceAll("-", " ")} to ${siteName(siteId)} supply for ${payment} cr.`, { siteId, resourceId, quantity: affordableUnits, payment, shipInstitutionId: ship.id, shipName: ship.name, buyerInstitutionId });
+    return affordableUnits;
   }
 
   function finishDelivery({ allocation, ship, siteId, resourceId, delivered, payment, orderLabel }) {

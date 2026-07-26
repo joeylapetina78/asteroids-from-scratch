@@ -303,15 +303,17 @@ test("Cinder prioritizes and fulfills SPRC procurement through the public contra
   const order = Object.values(state.sprc.procurementOrders).find((entry) => entry.procurementItemId === "structural-feedstock");
   const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => 1_000 });
   const workers = mining.workers.filter((entry) => entry.assignment?.contractId === order.contractId);
-  assert.equal(workers.length, 3, "Cinder splits Sal's large order across the available fleet");
+  assert.equal(workers.length, 2, "Cinder splits Sal's order into one full six-unit run and one remainder run");
   const minerCashBefore = mining.getState().institution.accounts.operating.balance;
+  const supplyStockBefore = state.logistics.institutions["scrap-forge"].inventories["iron-nickel"] ?? 0;
   workers.forEach((worker) => {
-    worker.cargo[worker.assignment.resourceId] = worker.assignment.quantity;
+    worker.cargo[worker.assignment.resourceId] = worker.assignment.harvestTargetQuantity;
     worker.deliver();
   });
   assert.equal(order.status, "paid");
-  assert.equal(mining.getState().institution.accounts.operating.balance - minerCashBefore, order.maximumPayment);
+  assert.equal(mining.getState().institution.accounts.operating.balance - minerCashBefore, order.maximumPayment + 56);
   assert.equal(state.sprc.inventories.raw["iron-nickel"], order.requiredEquivalentUnits);
+  assert.equal(state.logistics.institutions["scrap-forge"].inventories["iron-nickel"] - supplyStockBefore, 4);
 });
 
 test("sustained critical demand lets Cinder fund and commission a fourth worker", () => {
@@ -385,6 +387,19 @@ test("a mining worker tractors eligible loose resources toward its collector", (
   worker.returnForService({ destination: { x: 1000, y: 1000 }, destinationSiteId: "scrap-porch", issueType: "tractor-field-instability" });
   assert.equal(worker.tractorActive, false);
   assert.deepEqual(worker.tractorTargets, []);
+});
+
+test("a rejected mining delivery preserves both cargo and assignment", () => {
+  const worker = new MiningWorkerShip({
+    id: "worker:test", name: "Test Miner", institutionId: "test-mining", controllerInstitutionId: "test-controller",
+    x: 0, y: 0, onDelivery: () => ({ acceptedUnits: 0, paid: 0 }),
+  });
+  worker.assign({ allocationId: "allocation:test", contractId: "contract:expired", resourceId: "iron-nickel", quantity: 2, destination: { x: 0, y: 0 } });
+  worker.cargo["iron-nickel"] = 2;
+  worker.deliver();
+  assert.equal(worker.cargo["iron-nickel"], 2);
+  assert.equal(worker.assignment.contractId, "contract:expired");
+  assert.equal(worker.state, "delivery-blocked");
 });
 
 test("a mining worker recognizes a useful secondary mineral instead of requiring dominance", () => {
@@ -530,7 +545,7 @@ test("an ignored procurement order expires while the repair remains blocked", ()
   const harness = createHarness();
   triggerFirstRepair(harness);
   const order = Object.values(harness.state.sprc.procurementOrders)[0];
-  harness.advance(21 * 60 * 1000);
+  harness.advance(46 * 60 * 1000);
   harness.operation.update();
   const repair = Object.values(harness.state.sprc.repairOrders)[0];
   assert.equal(order.status, "expired");

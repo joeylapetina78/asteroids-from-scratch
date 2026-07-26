@@ -1,5 +1,5 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260726-1627-5762540";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260726-1627-5762540";
+import { depositCredits } from "./accounts.js?v=fresh-20260726-1701-4a23f71";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260726-1701-4a23f71";
 import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
 import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js";
 import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js";
@@ -271,12 +271,17 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   function assessOperatingPlan() {
     const plan = sprc.operatingPlan;
     if (!plan) return;
-    const onHand = Object.entries(SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK)
+    let onHand = Object.entries(SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK)
       .reduce((sum, [itemId, equivalents]) => sum + (sprc.inventories.raw[itemId] ?? 0) * equivalents, 0);
     const incoming = Object.values(sprc.procurementOrders)
       .filter((order) => ["offered", "active"].includes(order.status))
       .reduce((sum, order) => sum + Math.max(0, order.requiredEquivalentUnits - order.deliveredEquivalentUnits), 0);
     const target = plan.inventoryTargets.structuralFeedstockEquivalents;
+    if (onHand + incoming < target) {
+      buyStructuralFeedstockFromLocalSupply(target - onHand - incoming);
+      onHand = Object.entries(SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK)
+        .reduce((sum, [itemId, equivalents]) => sum + (sprc.inventories.raw[itemId] ?? 0) * equivalents, 0);
+    }
     plan.lastAssessedAt = now();
     plan.projected = {
       structuralFeedstockEquivalents: onHand + incoming,
@@ -297,6 +302,10 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
         objectiveType: "reserve-replenishment", itemId: "structural-feedstock", missingAmount: target - onHand - incoming,
       };
       appendHistory("need.identified", { needId: id, objectiveType: need.objectiveType, itemId: need.itemId, missingAmount: need.missingAmount });
+    } else {
+      need.missingAmount = target - onHand - incoming;
+      need.shortage = need.missingAmount;
+      need.context = { planId: plan.id, target, onHand, incoming };
     }
     chooseProcurementResponse(need);
     const openOrder = Object.values(sprc.procurementOrders).find((order) => ["offered", "active"].includes(order.status) && order.needId === need.id);
@@ -306,8 +315,12 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   function assessTechnologyReserve() {
     const knownDemand = sprc.repairQueue.map((id) => sprc.repairOrders[id]).filter((repair) => repair && !["completed", "canceled"].includes(repair.status)).reduce((sum, repair) => sum + (repair.requirements.raw?.copper ?? 0), 0);
     const target = (sprc.operatingPlan.inventoryTargets.copper ?? 1) + knownDemand;
-    const onHand = getAvailable("raw", "copper");
+    let onHand = getAvailable("raw", "copper");
     const incoming = Object.values(sprc.procurementOrders).filter((order) => ["offered", "active"].includes(order.status) && order.procurementItemId === "copper").reduce((sum, order) => sum + Math.max(0, order.requiredEquivalentUnits - order.deliveredEquivalentUnits), 0);
+    if (onHand + incoming < target) {
+      buyLocalSupplyMaterial("copper", target - onHand - incoming, 55);
+      onHand = getAvailable("raw", "copper");
+    }
     if (onHand + incoming >= target) return;
     let need = Object.values(sprc.needs).find((entry) => entry.itemId === "copper" && entry.objectiveType === "technology-reserve" && entry.status === "open");
     if (!need) {
@@ -316,6 +329,33 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       appendHistory("need.identified", { needId: id, objectiveType: need.objectiveType, itemId: need.itemId, missingAmount: need.missingAmount });
     }
     chooseProcurementResponse(need);
+  }
+
+  function buyStructuralFeedstockFromLocalSupply(requiredEquivalents) {
+    let remaining = requiredEquivalents;
+    for (const materialId of ["iron-nickel", "aluminum"]) {
+      if (remaining <= 0) break;
+      const equivalence = SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK[materialId];
+      const unitPrice = materialId === "iron-nickel" ? 28 : 50;
+      const bought = buyLocalSupplyMaterial(materialId, Math.ceil(remaining / equivalence), unitPrice);
+      remaining = Math.max(0, remaining - bought * equivalence);
+    }
+  }
+
+  function buyLocalSupplyMaterial(itemId, requestedUnits, unitPrice) {
+    const supply = state.logistics?.institutions?.["scrap-forge"];
+    const available = Math.max(0, supply?.inventories?.[itemId] ?? 0);
+    const affordable = Math.floor(getSpendableCash() / unitPrice);
+    const units = Math.min(Math.max(0, requestedUnits), available, affordable);
+    if (!supply || units <= 0) return 0;
+    const cost = units * unitPrice;
+    supply.inventories[itemId] -= units;
+    supply.accounts.operating.balance += cost;
+    sprc.account.balance -= cost;
+    addInventory("raw", itemId, units);
+    appendHistory("procurement.localWholesale", { supplierInstitutionId: "scrap-forge", itemId, units, cost });
+    state.ledger.recordEvent("sprc.localWholesalePurchased", { supplierInstitutionId: "scrap-forge", itemId, units, cost }, { visible: true });
+    return units;
   }
 
   function reserveProducedForRepair(repair) {
@@ -562,6 +602,15 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   function expireProcurementOrders() {
     Object.values(sprc.procurementOrders).forEach((order) => {
       if (!["offered", "active"].includes(order.status) || order.deadlineAt > now()) return;
+      const inTransit = Object.values(order.allocations ?? {}).reduce((sum, allocation) =>
+        sum + Math.max(0, (allocation.reservedEquivalentUnits ?? 0) - (allocation.deliveredEquivalentUnits ?? 0)), 0);
+      if (inTransit > 0 && (order.deadlineExtensionCount ?? 0) < 3) {
+        order.deadlineExtensionCount = (order.deadlineExtensionCount ?? 0) + 1;
+        order.deadlineAt = now() + 20 * 60 * 1000;
+        appendHistory("procurement.deadlineExtended", { procurementOrderId: order.id, inTransitEquivalentUnits: inTransit, extensionCount: order.deadlineExtensionCount });
+        state.ledger.recordEvent("contract.deadlineExtended", { contractId: order.contractId, inTransitEquivalentUnits: inTransit }, { visible: true });
+        return;
+      }
       order.status = "expired";
       order.expiredAt = now();
       const contract = state.contracts.records[order.contractId];
@@ -614,7 +663,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       deliveredEquivalentUnits: 0, deliveredMaterials: {}, paidAmount: 0, supplierDeliveries: [], allocations: {}, destinationSiteId: SPRC.siteId,
       pricePerEquivalent, maximumPayment, committedPayment: maximumPayment,
       titleTerms: "Title transfers to SPRC only upon accepted delivery at Scrap Porch.",
-      status: "offered", createdAt: now(), deadlineAt: now() + 20 * 60 * 1000,
+      status: "offered", createdAt: now(), deadlineAt: now() + 45 * 60 * 1000, deadlineExtensionCount: 0,
       contractId: `contract:${id}`,
     };
     response.procurementOrderId = id;

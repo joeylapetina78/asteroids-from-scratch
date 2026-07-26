@@ -1,5 +1,5 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260726-1627-5762540";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260726-1627-5762540";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260726-1701-4a23f71";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260726-1701-4a23f71";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
@@ -40,9 +40,9 @@ export class MiningWorkerShip {
     this.onDelivery = onDelivery;
   }
 
-  assign({ allocationId, contractId, resourceId, quantity, destination, depositCandidates = [] }) {
+  assign({ allocationId, contractId, resourceId, quantity, harvestTargetQuantity = quantity, destination, depositCandidates = [] }) {
     if (this.assignment || quantity <= 0) return false;
-    this.assignment = { allocationId, contractId, resourceId: normalizeResourceType(resourceId), quantity, destination, depositCandidates: [...depositCandidates] };
+    this.assignment = { allocationId, contractId, resourceId: normalizeResourceType(resourceId), quantity, harvestTargetQuantity: Math.max(quantity, harvestTargetQuantity), destination, depositCandidates: [...depositCandidates] };
     this.state = "prospecting";
     this.onEvent("assignment.accepted", { contractId, resourceId: this.assignment.resourceId, quantity });
     return true;
@@ -65,7 +65,7 @@ export class MiningWorkerShip {
     this.updateTractorField(deltaSeconds, world);
     if (!this.assignment) return this.brake(deltaSeconds);
 
-    if (this.cargoAmount() >= this.assignment.quantity) {
+    if (this.cargoAmount() >= this.assignment.harvestTargetQuantity) {
       this.state = "returning";
       this.targetAsteroid = null;
       return this.flyTo(deltaSeconds, this.assignment.destination, HOME_RANGE, () => this.deliver());
@@ -179,11 +179,18 @@ export class MiningWorkerShip {
     const assignment = this.assignment;
     const amount = this.cargoAmount();
     if (!assignment || amount <= 0) return;
-    this.onDelivery({ ...assignment, amount, ship: this });
-    this.cargo[assignment.resourceId] = Math.max(0, amount - assignment.quantity);
+    const result = this.onDelivery({ ...assignment, amount, ship: this }) ?? { acceptedUnits: 0, paid: 0 };
+    const acceptedUnits = Math.min(amount, Math.max(0, result.acceptedUnits ?? 0));
+    if (acceptedUnits <= 0) {
+      this.state = "delivery-blocked";
+      this.onEvent("delivery.rejected", { contractId: assignment.contractId, resourceId: assignment.resourceId, quantity: amount });
+      return;
+    }
+    const surplusSoldUnits = Math.min(amount - acceptedUnits, Math.max(0, result.surplusSoldUnits ?? 0));
+    this.cargo[assignment.resourceId] = Math.max(0, amount - acceptedUnits - surplusSoldUnits);
     this.assignment = null;
     this.state = "idle";
-    this.onEvent("delivery.completed", { contractId: assignment.contractId, resourceId: assignment.resourceId, quantity: Math.min(amount, assignment.quantity) });
+    this.onEvent("delivery.completed", { contractId: assignment.contractId, resourceId: assignment.resourceId, quantity: acceptedUnits, paid: result.paid ?? 0 });
   }
 
   draw(context, camera) {
