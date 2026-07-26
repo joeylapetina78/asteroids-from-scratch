@@ -290,6 +290,28 @@ test("Cinder Contracting dispatches three independent workers to distinct open o
   assert.deepEqual(manager.workers.map((worker) => manager.getState().ships[worker.id].wear), [0.65, 0.25, 0]);
 });
 
+test("Cinder prioritizes and fulfills SPRC procurement through the public contract lifecycle", () => {
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(1_000);
+  const game = { worldSites: [
+    { id: "yard-exchange", name: "Yard Exchange", position: { x: 380, y: -180 } },
+    { id: "scrap-porch", name: "Scrap Porch", position: { x: -1180, y: 860 } },
+    { id: "the-ledge", name: "The Ledge", position: { x: 7000, y: -4500 } },
+  ], addWorkerShip: () => {} };
+  const sprc = createSprcOperation({ state, now: () => 1_000 });
+  sprc.update();
+  const order = Object.values(state.sprc.procurementOrders).find((entry) => entry.procurementItemId === "structural-feedstock");
+  const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => 1_000 });
+  const worker = mining.workers.find((entry) => entry.assignment?.contractId === order.contractId);
+  assert.ok(worker, "one miner takes Sal's order before ordinary evergreen work");
+  const minerCashBefore = mining.getState().institution.accounts.operating.balance;
+  worker.cargo[worker.assignment.resourceId] = worker.assignment.quantity;
+  worker.deliver();
+  assert.equal(order.status, "paid");
+  assert.equal(mining.getState().institution.accounts.operating.balance - minerCashBefore, order.maximumPayment);
+  assert.equal(state.sprc.inventories.raw[worker.assignment?.resourceId ?? "iron-nickel"], order.requiredEquivalentUnits);
+});
+
 test("accelerated development wear sends the oldest Cinder craft to service after its first completed job", () => {
   const state = createGameState();
   state._devStartId = "panorama";

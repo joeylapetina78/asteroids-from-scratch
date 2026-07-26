@@ -1,4 +1,4 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1547-ca4bfea";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1600-f2e1678";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
@@ -65,7 +65,7 @@ export function canFundStandingMiningOrder({ state, orderId, amount = null }) {
   return (buyer.accounts.operating.balance ?? 0) >= units * order.paymentPerUnit;
 }
 
-export function createMiningOperation({ state, game, now = () => Date.now() }) {
+export function createMiningOperation({ state, game, sprcOperation = null, now = () => Date.now() }) {
   const operation = state.miningOperation ??= createInitialState(now());
   operation.ships ??= {};
   operation.allocations ??= {};
@@ -113,21 +113,34 @@ export function createMiningOperation({ state, game, now = () => Date.now() }) {
       const allocation = {
         id: `allocation:${order.id}:${++operation.counter}`,
         orderId: order.id,
+        orderKind: order.kind ?? "standing",
         supplierInstitutionId: operation.institution.id,
         workerShipId: worker.id,
         amount: order.amount,
         status: "active",
         acceptedAt: now(),
       };
+      if (order.kind === "sprc") {
+        const reservation = sprcOperation.reserveProcurementAllocation({
+          contractId: order.contractId,
+          supplierInstitutionId: operation.institution.id,
+          equivalentUnits: order.equivalentAmount,
+        });
+        if (!reservation) return;
+      }
       operation.allocations[allocation.id] = allocation;
       shipRecord.lastDecisionKey = null;
-      worker.assign({ allocationId: allocation.id, contractId: order.id, resourceId: order.resourceId, quantity: order.amount, destination });
-      operation.nextOrderIndex = (STANDING_MINING_ORDERS.indexOf(order) + 1) % STANDING_MINING_ORDERS.length;
+      worker.assign({ allocationId: allocation.id, contractId: order.contractId ?? order.id, resourceId: order.resourceId, quantity: order.amount, destination });
+      if (order.kind !== "sprc") operation.nextOrderIndex = (STANDING_MINING_ORDERS.indexOf(order) + 1) % STANDING_MINING_ORDERS.length;
       record("mining.contractAccepted", `${operation.controller.name} dispatched ${worker.name} for ${order.amount} ${order.resourceName} at ${order.siteName}.`, { orderId: order.id, allocationId: allocation.id, siteId: order.siteId, resourceId: order.resourceId, quantity: order.amount, shipInstitutionId: worker.id, shipName: worker.name });
     });
   }
 
   function chooseOrder() {
+    const sprcOrder = getSprcMiningOrders().find((order) =>
+      !Object.values(operation.allocations).some((allocation) => allocation.orderId === order.id && allocation.status === "active")
+    );
+    if (sprcOrder) return sprcOrder;
     for (let offset = 0; offset < STANDING_MINING_ORDERS.length; offset += 1) {
       const order = STANDING_MINING_ORDERS[(operation.nextOrderIndex + offset) % STANDING_MINING_ORDERS.length];
       const alreadyAssigned = Object.values(operation.allocations).some((allocation) => allocation.orderId === order.id && allocation.status === "active");
@@ -137,8 +150,27 @@ export function createMiningOperation({ state, game, now = () => Date.now() }) {
     return null;
   }
 
+  function getSprcMiningOrders() {
+    if (!sprcOperation || !state.sprc) return [];
+    return Object.values(state.sprc.procurementOrders)
+      .filter((order) => ["offered", "active"].includes(order.status) && (order.committedPayment ?? 0) > 0)
+      .map((order) => {
+        const resourceId = ["copper", "silicate", "iron-nickel", "aluminum"].find((id) => (order.acceptedMaterials?.[id] ?? 0) > 0);
+        const equivalence = order.acceptedMaterials?.[resourceId] ?? 0;
+        const remainingEquivalents = Math.max(0, order.requiredEquivalentUnits - order.deliveredEquivalentUnits);
+        if (!resourceId || equivalence <= 0 || remainingEquivalents <= 0) return null;
+        return {
+          kind: "sprc", id: order.id, contractId: order.contractId, siteId: order.destinationSiteId, siteName: "Scrap Porch",
+          resourceId, resourceName: resourceId.replaceAll("-", " "), amount: Math.ceil(remainingEquivalents / equivalence),
+          equivalentAmount: remainingEquivalents, priority: order.objectiveType === "emergency-repair" ? 1000 : 800,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
+  }
+
   function publishIdleDecision(shipRecord) {
-    const reasons = STANDING_MINING_ORDERS.map((order) => {
+    const reasons = [...getSprcMiningOrders(), ...STANDING_MINING_ORDERS].map((order) => {
       const occupied = Object.values(operation.allocations).some((allocation) => allocation.orderId === order.id && allocation.status === "active");
       const balance = state.logistics?.institutions?.[order.buyerInstitutionId]?.accounts?.operating?.balance ?? 0;
       return `${order.id}:${occupied ? "allocated" : balance < order.amount * order.paymentPerUnit ? "unfunded" : "open"}`;
@@ -150,24 +182,47 @@ export function createMiningOperation({ state, game, now = () => Date.now() }) {
   }
 
   function completeDelivery({ allocationId, contractId, resourceId, amount, ship }) {
-    const order = STANDING_MINING_ORDERS.find((candidate) => candidate.id === contractId);
     const allocation = operation.allocations[allocationId];
-    if (!order || !allocation || allocation.status !== "active") return;
+    if (!allocation || allocation.status !== "active") return;
+    if (allocation.orderKind === "sprc") {
+      const procurement = state.sprc?.procurementOrders?.[allocation.orderId];
+      if (!procurement) return;
+      const result = sprcOperation.deliverMaterial({
+        contractId, materialId: resourceId, amount: Math.min(amount, allocation.amount), supplierInstitutionId: operation.institution.id,
+        creditSupplier: (payment) => {
+          operation.institution.accounts.operating.balance += payment;
+          operation.institution.accounts.operating.transactions.push({ id: `MIN-TX-${allocation.id}`, at: now(), type: "mining-income", amount: payment, balance: operation.institution.accounts.operating.balance, referenceId: allocation.id });
+        },
+      });
+      if (!result?.acceptedUnits) return;
+      finishDelivery({ allocation, ship, siteId: procurement.destinationSiteId, resourceId, delivered: result.acceptedUnits, payment: result.paid, orderLabel: procurement.id });
+      return;
+    }
+    const order = STANDING_MINING_ORDERS.find((candidate) => candidate.id === contractId);
+    if (!order) return;
     const settlement = settleStandingMiningOrder({ state, orderId: contractId, resourceId, amount: Math.min(amount, allocation.amount), supplierAccount: operation.institution.accounts.operating, referenceId: allocation.id, now: now() });
     if (!settlement) return;
     const { delivered, payment } = settlement;
+    finishDelivery({ allocation, ship, siteId: order.siteId, resourceId, delivered, payment, orderLabel: order.id });
+  }
+
+  function finishDelivery({ allocation, ship, siteId, resourceId, delivered, payment, orderLabel }) {
     allocation.status = "completed";
     allocation.delivered = delivered;
     allocation.paid = payment;
     allocation.completedAt = now();
     const shipRecord = operation.ships[ship.id];
-    shipRecord.currentSiteId = order.siteId;
+    shipRecord.currentSiteId = siteId;
     const workWear = state._devStartId ? ACCELERATED_WORK_WEAR : NORMAL_WORK_WEAR;
     shipRecord.wear = Math.min(1, (shipRecord.wear ?? 0) + workWear);
     operation.completedContracts += 1;
     operation.wear = Object.values(operation.ships).reduce((sum, record) => sum + (record.wear ?? 0), 0) / Object.keys(operation.ships).length;
-    record("mining.contractFulfilled", `${ship.name} delivered ${delivered} ${order.resourceName} to ${order.siteName}, earned ${payment} cr, and added it to the hub's freight inventory. Wear is now ${shipRecord.wear.toFixed(2)}.`, { orderId: order.id, siteId: order.siteId, resourceId, quantity: delivered, payment, accountBalance: operation.institution.accounts.operating.balance, wear: operation.wear, shipWear: shipRecord.wear, shipInstitutionId: ship.id, shipName: ship.name });
+    record("mining.contractFulfilled", `${ship.name} delivered ${delivered} ${resourceId.replaceAll("-", " ")} to ${siteName(siteId)}, earned ${payment} cr, and completed ${orderLabel}. Wear is now ${shipRecord.wear.toFixed(2)}.`, { orderId: allocation.orderId, siteId, resourceId, quantity: delivered, payment, accountBalance: operation.institution.accounts.operating.balance, wear: operation.wear, shipWear: shipRecord.wear, shipInstitutionId: ship.id, shipName: ship.name });
     if (shipRecord.wear >= 1 && shipRecord.maintenanceStatus === "available") beginMaintenance(shipRecord, ship);
+  }
+
+  function siteName(siteId) {
+    return sites.get(siteId)?.name ?? siteId.replaceAll("-", " ");
   }
 
   function beginMaintenance(shipRecord, ship) {
