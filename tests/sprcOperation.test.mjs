@@ -430,13 +430,14 @@ test("a configured transport connection creates a curved, cleared physical corri
   ];
   const corridors = createTransportCorridors({ destinations, connections: FIRST_REACH_TRANSPORT_CONNECTIONS });
   assert.equal(corridors.length, 1);
-  assert.equal(corridors[0].width, 300);
-  assert.ok(corridors[0].waypoints.length > 50);
-  assert.ok(corridors[0].length > corridors[0].directLength * 2);
+  assert.equal(corridors[0].width, 270);
+  assert.ok(corridors[0].waypoints.length > 30);
+  assert.ok(corridors[0].length > corridors[0].directLength * 1.25);
+  assert.ok(corridors[0].length < corridors[0].directLength * 1.5);
   assert.notEqual(corridors[0].samples[Math.floor(corridors[0].samples.length / 2)].y, 0);
   const lateralSigns = corridors[0].samples.map((point) => Math.sign(point.y)).filter(Boolean);
   const directionChanges = lateralSigns.slice(1).filter((sign, index) => sign !== lateralSigns[index]).length;
-  assert.ok(directionChanges >= 8);
+  assert.ok(directionChanges >= 4);
   assert.equal(getCorridorClearance(corridors[0].samples[12], 40, corridors)?.corridor.id, "corridor-yard-ledge");
   assert.equal(getCorridorClearance({ x: 4200, y: 3000 }, 40, corridors), null);
 });
@@ -456,7 +457,7 @@ test("the abstract Yard-Ledge trip expands into waypoints that an NPC follows", 
   assert.equal(ship.route.at(-1).id, "the-ledge");
 });
 
-test("a normal hauler can negotiate the complete switchback corridor without wearing out", () => {
+test("a normal hauler can negotiate the complete natural corridor without wearing out", () => {
   const destinations = [
     { id: "yard-exchange", name: "Yard Exchange", type: "hub", position: { x: 0, y: 0 } },
     { id: "the-ledge", name: "The Ledge", type: "hub", position: { x: 8400, y: 0 } },

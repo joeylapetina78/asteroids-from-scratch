@@ -59,15 +59,17 @@ function createCorridor(connection, from, to) {
   const sampleCount = Math.max(24, Math.ceil(length / (config.sampleSpacing ?? 180)));
   const samples = Array.from({ length: sampleCount + 1 }, (_, index) => {
     const t = index / sampleCount;
-    const authoredLateral = config.coursePoints ? sampleCourseProfile(config.coursePoints, t) * length : null;
+    const authoredPoint = config.coursePoints ? sampleCourseProfile(config.coursePoints, t) : null;
+    const authoredLateral = authoredPoint ? authoredPoint.lateral * length : null;
     const naturalVariation = Math.sin(Math.PI * t) * Math.sin(Math.PI * 7 * t + variationPhase) * (config.naturalVariation ?? 0);
     const baseLateral = authoredLateral ?? (Math.sin(Math.PI * t) * bend + Math.sin(Math.PI * 2 * t) * Math.sin(Math.PI * t) * secondary);
     const lateral = baseLateral + naturalVariation;
-    return { x: mix(from.position.x, to.position.x, t) + normal.x * lateral, y: mix(from.position.y, to.position.y, t) + normal.y * lateral };
+    const along = authoredPoint?.along ?? t;
+    return { x: mix(from.position.x, to.position.x, along) + normal.x * lateral, y: mix(from.position.y, to.position.y, along) + normal.y * lateral };
   });
   const waypoints = samplePolylineByDistance(samples, config.waypointSpacing ?? 520);
   const courseLength = polylineLength(samples);
-  return { id: config.id ?? `corridor:${connection.id}`, connectionId: connection.id, name: config.name ?? `${from.name}–${to.name} Freight Corridor`, fromId: from.id, toId: to.id, width: config.width ?? 480, endpointWidth: config.endpointWidth ?? 720, samples, waypoints, length: courseLength, directLength: length };
+  return { id: config.id ?? `corridor:${connection.id}`, connectionId: connection.id, name: config.name ?? `${from.name}–${to.name} Freight Corridor`, fromId: from.id, toId: to.id, width: config.width ?? 480, endpointWidth: config.endpointWidth ?? 720, shoulderDensity: config.shoulderDensity ?? 0, outerShoulderDensity: config.outerShoulderDensity ?? 0, seed: config.seed ?? 1, samples, waypoints, length: courseLength, directLength: length };
 }
 
 function sampleCourseProfile(points, progress) {
@@ -77,7 +79,10 @@ function sampleCourseProfile(points, progress) {
   const end = points[segmentIndex + 1];
   const last = points[Math.min(points.length - 1, segmentIndex + 2)];
   const amount = (progress - start.progress) / Math.max(0.0001, end.progress - start.progress);
-  return catmullRom(first.lateral, start.lateral, end.lateral, last.lateral, amount);
+  return {
+    along: catmullRom(first.along ?? first.progress, start.along ?? start.progress, end.along ?? end.progress, last.along ?? last.progress, amount),
+    lateral: catmullRom(first.lateral, start.lateral, end.lateral, last.lateral, amount),
+  };
 }
 
 function samplePolylineByDistance(samples, spacing) {

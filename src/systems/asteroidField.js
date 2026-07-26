@@ -1,9 +1,9 @@
-﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260726-1110-e081493";
+﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260726-1133-bd0bc81";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260726-1110-e081493";
-import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260726-1110-e081493";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260726-1110-e081493";
-import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260726-1110-e081493";
+import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260726-1133-bd0bc81";
+import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260726-1133-bd0bc81";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260726-1133-bd0bc81";
+import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260726-1133-bd0bc81";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same
@@ -63,6 +63,9 @@ export function createAsteroidChunks(canvas, resourceField, transportCorridors =
       .filter((asteroid) => !getCorridorClearance(asteroid.position, asteroid.radius, transportCorridors))
       .forEach((asteroid) => chunkAsteroids.push(asteroid));
 
+    createCorridorShoulders({ centerX, centerY, chunkSize, terrain, corridors: transportCorridors })
+      .forEach((asteroid) => chunkAsteroids.push(asteroid));
+
     return chunkAsteroids;
   }
 
@@ -106,6 +109,45 @@ export function createAsteroidChunks(canvas, resourceField, transportCorridors =
   }
 
   return { update };
+}
+
+function createCorridorShoulders({ centerX, centerY, chunkSize, terrain, corridors }) {
+  const asteroids = [];
+  const minX = centerX - chunkSize * 0.5;
+  const maxX = centerX + chunkSize * 0.5;
+  const minY = centerY - chunkSize * 0.5;
+  const maxY = centerY + chunkSize * 0.5;
+
+  corridors.forEach((corridor) => {
+    corridor.samples.forEach((point, index) => {
+      const progress = index / Math.max(1, corridor.samples.length - 1);
+      if (progress < 0.025 || progress > 0.975) return;
+      const previous = corridor.samples[Math.max(0, index - 1)];
+      const next = corridor.samples[Math.min(corridor.samples.length - 1, index + 1)];
+      const segmentLength = Math.hypot(next.x - previous.x, next.y - previous.y) || 1;
+      const tangent = { x: (next.x - previous.x) / segmentLength, y: (next.y - previous.y) / segmentLength };
+      const normal = { x: -tangent.y, y: tangent.x };
+
+      [-1, 1].forEach((side) => {
+        addShoulderRock(corridor.shoulderDensity, 0, 22, 138, side, index, 0);
+        addShoulderRock(corridor.outerShoulderDensity, 170, 80, 260, side, index, 1);
+      });
+
+      function addShoulderRock(density, bandOffset, minimumGap, gapRange, side, sampleIndex, band) {
+        const shoulderRandom = createRandom(hashNumbers(corridor.seed, sampleIndex, side + 2, band + 31));
+        if (shoulderRandom() > density) return;
+        const asteroid = createCommonAsteroid(0, 0, hashNumbers(corridor.seed, 7000 + sampleIndex, side + 2, band));
+        tuneAsteroidForTerrain(asteroid, terrain, shoulderRandom);
+        asteroid.corridorShoulderId = corridor.id;
+        asteroid.corridorShoulderBand = band === 0 ? "edge" : "outer";
+        const offset = corridor.width * 0.5 + asteroid.radius + minimumGap + bandOffset + shoulderRandom() * gapRange;
+        asteroid.position.x = point.x + normal.x * offset * side + tangent.x * randomRange(shoulderRandom, -58, 58);
+        asteroid.position.y = point.y + normal.y * offset * side + tangent.y * randomRange(shoulderRandom, -58, 58);
+        if (asteroid.position.x >= minX && asteroid.position.x < maxX && asteroid.position.y >= minY && asteroid.position.y < maxY) asteroids.push(asteroid);
+      }
+    });
+  });
+  return asteroids;
 }
 
 function getAsteroidCount(density, random, multiplier = 1, minimum = 0) {
