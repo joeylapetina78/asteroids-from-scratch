@@ -14,6 +14,8 @@ import { createTowServiceManager } from "../src/systems/towService.js";
 import { NpcShip } from "../src/entities/NpcShip.js";
 import { MiningWorkerShip } from "../src/entities/MiningWorkerShip.js";
 import { createMiningOperation, getStandingMiningJobsForSite, STANDING_MINING_ORDERS } from "../src/systems/miningOperation.js";
+import { createAsteroidChunks } from "../src/systems/asteroidField.js";
+import { createResourceField } from "../src/systems/resourceField.js";
 
 function createHarness() {
   let clock = 1_000;
@@ -440,6 +442,18 @@ test("a configured transport connection creates a curved, cleared physical corri
   assert.ok(directionChanges >= 4);
   assert.equal(getCorridorClearance(corridors[0].samples[12], 40, corridors)?.corridor.id, "corridor-yard-ledge");
   assert.equal(getCorridorClearance({ x: 4200, y: 3000 }, 40, corridors), null);
+});
+
+test("generated corridor shoulder rocks are anchored where they spawn", () => {
+  const destinations = [
+    { id: "yard-exchange", name: "Yard Exchange", position: { x: 0, y: 0 } },
+    { id: "the-ledge", name: "The Ledge", position: { x: 8400, y: 0 } },
+  ];
+  const corridors = createTransportCorridors({ destinations, connections: FIRST_REACH_TRANSPORT_CONNECTIONS });
+  const chunks = createAsteroidChunks({ width: 1000 }, createResourceField(), corridors);
+  const shoulderRocks = chunks.update(4200, 0).added.filter((asteroid) => asteroid.corridorShoulderId);
+  assert.ok(shoulderRocks.length > 20);
+  assert.ok(shoulderRocks.every((asteroid) => asteroid.origin.x === asteroid.position.x && asteroid.origin.y === asteroid.position.y));
 });
 
 test("the abstract Yard-Ledge trip expands into waypoints that an NPC follows", () => {

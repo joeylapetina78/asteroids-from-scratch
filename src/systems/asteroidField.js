@@ -1,9 +1,9 @@
-﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260726-1133-bd0bc81";
+﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260726-1139-3d379b8";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260726-1133-bd0bc81";
-import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260726-1133-bd0bc81";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260726-1133-bd0bc81";
-import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260726-1133-bd0bc81";
+import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260726-1139-3d379b8";
+import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260726-1139-3d379b8";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260726-1139-3d379b8";
+import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260726-1139-3d379b8";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same
@@ -143,6 +143,8 @@ function createCorridorShoulders({ centerX, centerY, chunkSize, terrain, corrido
         const offset = corridor.width * 0.5 + asteroid.radius + minimumGap + bandOffset + shoulderRandom() * gapRange;
         asteroid.position.x = point.x + normal.x * offset * side + tangent.x * randomRange(shoulderRandom, -58, 58);
         asteroid.position.y = point.y + normal.y * offset * side + tangent.y * randomRange(shoulderRandom, -58, 58);
+        asteroid.origin.x = asteroid.position.x;
+        asteroid.origin.y = asteroid.position.y;
         if (asteroid.position.x >= minX && asteroid.position.x < maxX && asteroid.position.y >= minY && asteroid.position.y < maxY) asteroids.push(asteroid);
       }
     });

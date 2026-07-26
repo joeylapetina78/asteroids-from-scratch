@@ -77,3 +77,9 @@ Important systems direction:
 - The player should provide or reveal documents through UI actions.
 - NPC ships should eventually go through comparable inspection and clearance rules.
 - The hub knows some truth through its registry, but it should only inspect the fields its authority/equipment/rules say it checks.
+
+## Migrating Rock Storms
+
+A corridor-generation bug briefly produced a compelling accidental event: a broad wall of rocks swept from roughly northeast to southwest, forcing the player to dodge impacts at hubs and while traveling. The bug itself came from generated rocks retaining a distant spring origin and has been removed, but the phenomenon is worth authoring deliberately later.
+
+A real migrating-rock event should have explicit warning, direction, duration, density, damage expectations, world causality, and ledger/scanner signals. It could temporarily obstruct freight corridors, delay institutions, create salvage and mining opportunities, damage infrastructure, and make route choice meaningful. It must be spawned and paced as an encounter rather than emerging accidentally from ordinary terrain rocks.
