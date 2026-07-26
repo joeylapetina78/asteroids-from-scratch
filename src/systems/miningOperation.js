@@ -1,4 +1,5 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1600-f2e1678";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1627-5762540";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260726-1627-5762540";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
@@ -11,6 +12,11 @@ const MINING_WORKER_DEFAULTS = Object.freeze([
   { id: "worker:cinder-two", name: "Cinder Two", referenceId: "MW-032-CINDER", currentSiteId: "yard-exchange", initialWear: 0.25, offset: { x: -90, y: -90 } },
   { id: "worker:cinder-three", name: "Cinder Three", referenceId: "MW-033-CINDER", currentSiteId: "the-ledge", initialWear: 0, offset: { x: 100, y: 80 } },
 ]);
+const EXPANSION_WORKER_DEFAULTS = Object.freeze({ id: "worker:cinder-four", name: "Cinder Four", referenceId: "MW-034-CINDER", currentSiteId: "scrap-porch", initialWear: 0.15, offset: { x: 110, y: -80 } });
+const MINING_ALLOCATION_SIZE = 3;
+const EXPANSION_COST = 350;
+const EXPANSION_DEMAND_SECONDS = 12;
+const DEPOSIT_SURVEY_RADIUS = 12000;
 
 const MINING_ISSUES = Object.freeze([
   { issueType: "structural-fatigue", requiredCapabilities: ["structural-repair", "mechanical-repair"] },
@@ -72,6 +78,8 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   operation.completedContracts ??= 0;
   operation.wear ??= 0;
   operation.lastMaintenanceEventId ??= 0;
+  operation.depositKnowledge ??= {};
+  operation.projects ??= { "cinder-four": { id: "cinder-four", name: "Commission Cinder Four", status: "planned", requiredCredits: EXPANSION_COST, demandSince: null, approvedAt: null, completedAt: null } };
   MINING_WORKER_DEFAULTS.forEach((defaults) => {
     operation.ships[defaults.id] ??= createWorkerRecord(defaults);
     operation.ships[defaults.id].capabilities ??= { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } };
@@ -80,8 +88,12 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     operation.ships[defaults.id].pendingIssue ??= null;
   });
   const sites = new Map(game.worldSites.map((site) => [site.id, site]));
-  const workers = MINING_WORKER_DEFAULTS.map((defaults) => {
-    const shipRecord = operation.ships[defaults.id];
+  seedDepositKnowledge();
+  const workers = [];
+  Object.values(operation.ships).forEach((shipRecord) => addPhysicalWorker(shipRecord));
+
+  function addPhysicalWorker(shipRecord) {
+    const defaults = [...MINING_WORKER_DEFAULTS, EXPANSION_WORKER_DEFAULTS].find((entry) => entry.id === shipRecord.id) ?? EXPANSION_WORKER_DEFAULTS;
     const home = sites.get(shipRecord.currentSiteId) ?? sites.get("scrap-porch");
     const worker = new MiningWorkerShip({
       id: shipRecord.id,
@@ -94,11 +106,13 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       onDelivery: completeDelivery,
     });
     game.addWorkerShip(worker);
+    workers.push(worker);
     return worker;
-  });
+  }
 
   function update() {
     consumeMaintenanceEvents();
+    assessExpansion();
     workers.forEach((worker) => {
       const shipRecord = operation.ships[worker.id];
       shipRecord.position = { x: worker.position.x, y: worker.position.y };
@@ -117,6 +131,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         supplierInstitutionId: operation.institution.id,
         workerShipId: worker.id,
         amount: order.amount,
+        equivalentAmount: order.equivalentAmount ?? order.amount,
         status: "active",
         acceptedAt: now(),
       };
@@ -130,16 +145,17 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       }
       operation.allocations[allocation.id] = allocation;
       shipRecord.lastDecisionKey = null;
-      worker.assign({ allocationId: allocation.id, contractId: order.contractId ?? order.id, resourceId: order.resourceId, quantity: order.amount, destination });
+      worker.assign({
+        allocationId: allocation.id, contractId: order.contractId ?? order.id, resourceId: order.resourceId, quantity: order.amount, destination,
+        depositCandidates: getDepositCandidates(order.resourceId, worker.position),
+      });
       if (order.kind !== "sprc") operation.nextOrderIndex = (STANDING_MINING_ORDERS.indexOf(order) + 1) % STANDING_MINING_ORDERS.length;
       record("mining.contractAccepted", `${operation.controller.name} dispatched ${worker.name} for ${order.amount} ${order.resourceName} at ${order.siteName}.`, { orderId: order.id, allocationId: allocation.id, siteId: order.siteId, resourceId: order.resourceId, quantity: order.amount, shipInstitutionId: worker.id, shipName: worker.name });
     });
   }
 
   function chooseOrder() {
-    const sprcOrder = getSprcMiningOrders().find((order) =>
-      !Object.values(operation.allocations).some((allocation) => allocation.orderId === order.id && allocation.status === "active")
-    );
+    const sprcOrder = getSprcMiningOrders()[0];
     if (sprcOrder) return sprcOrder;
     for (let offset = 0; offset < STANDING_MINING_ORDERS.length; offset += 1) {
       const order = STANDING_MINING_ORDERS[(operation.nextOrderIndex + offset) % STANDING_MINING_ORDERS.length];
@@ -157,12 +173,15 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       .map((order) => {
         const resourceId = ["copper", "silicate", "iron-nickel", "aluminum"].find((id) => (order.acceptedMaterials?.[id] ?? 0) > 0);
         const equivalence = order.acceptedMaterials?.[resourceId] ?? 0;
-        const remainingEquivalents = Math.max(0, order.requiredEquivalentUnits - order.deliveredEquivalentUnits);
+        const activeReserved = Object.values(operation.allocations)
+          .filter((allocation) => allocation.orderId === order.id && allocation.status === "active")
+          .reduce((sum, allocation) => sum + (allocation.equivalentAmount ?? allocation.amount ?? 0), 0);
+        const remainingEquivalents = Math.max(0, order.requiredEquivalentUnits - order.deliveredEquivalentUnits - activeReserved);
         if (!resourceId || equivalence <= 0 || remainingEquivalents <= 0) return null;
         return {
           kind: "sprc", id: order.id, contractId: order.contractId, siteId: order.destinationSiteId, siteName: "Scrap Porch",
-          resourceId, resourceName: resourceId.replaceAll("-", " "), amount: Math.ceil(remainingEquivalents / equivalence),
-          equivalentAmount: remainingEquivalents, priority: order.objectiveType === "emergency-repair" ? 1000 : 800,
+          resourceId, resourceName: resourceId.replaceAll("-", " "), amount: Math.ceil(Math.min(remainingEquivalents, MINING_ALLOCATION_SIZE * equivalence) / equivalence),
+          equivalentAmount: Math.min(remainingEquivalents, MINING_ALLOCATION_SIZE * equivalence), priority: order.objectiveType === "emergency-repair" ? 1000 : 800,
         };
       })
       .filter(Boolean)
@@ -179,6 +198,58 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     if (shipRecord.lastDecisionKey === key) return;
     shipRecord.lastDecisionKey = key;
     record("mining.waitingForFundedWork", `${shipRecord.name} is idle: available mining orders are already allocated or their buyers cannot fund the posted price.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, reasons });
+  }
+
+  function seedDepositKnowledge() {
+    if (Object.keys(operation.depositKnowledge).length > 0 || !game.resourceField) return;
+    const chunkSize = game.canvas?.width ?? 1200;
+    sites.forEach((site) => {
+      getOreClusterSeedsInRadius(site.position.x, site.position.y, DEPOSIT_SURVEY_RADIUS, chunkSize, game.resourceField).forEach((seed) => {
+        const id = `deposit:${Math.round(seed.x)}:${Math.round(seed.y)}:${seed.resourceId}`;
+        operation.depositKnowledge[id] ??= { id, resourceId: seed.resourceId, x: seed.x, y: seed.y, source: "regional-survey", confidence: 0.65, successfulSelections: 0 };
+      });
+    });
+  }
+
+  function getDepositCandidates(resourceId, position) {
+    return Object.values(operation.depositKnowledge)
+      .filter((deposit) => deposit.resourceId === resourceId)
+      .sort((a, b) => {
+        const aScore = (a.confidence + a.successfulSelections * 0.15) / Math.max(500, Math.hypot(a.x - position.x, a.y - position.y));
+        const bScore = (b.confidence + b.successfulSelections * 0.15) / Math.max(500, Math.hypot(b.x - position.x, b.y - position.y));
+        return bScore - aScore;
+      })
+      .slice(0, 12)
+      .map((deposit) => ({ id: deposit.id, x: deposit.x, y: deposit.y }));
+  }
+
+  function assessExpansion() {
+    const project = operation.projects["cinder-four"];
+    if (!project || project.status === "completed") return;
+    const serviceable = workers.filter((worker) => operation.ships[worker.id]?.maintenanceStatus === "available");
+    const criticalAllocations = Object.values(operation.allocations).filter((allocation) => allocation.orderKind === "sprc" && allocation.status === "active");
+    const underPressure = criticalAllocations.length >= 2 && serviceable.length > 0 && serviceable.every((worker) => worker.assignment);
+    if (project.status === "planned") {
+      if (!underPressure) project.demandSince = null;
+      else project.demandSince ??= now();
+      const requiredSeconds = state._devStartId ? 5 : EXPANSION_DEMAND_SECONDS;
+      if (project.demandSince != null && now() - project.demandSince >= requiredSeconds * 1000) {
+        project.status = "approved";
+        project.approvedAt = now();
+        record("mining.expansionApproved", `${operation.controller.name} approved Cinder Four after sustained repair-supply demand occupied the available fleet.`, { projectId: project.id, requiredCredits: project.requiredCredits });
+      }
+    }
+    if (project.status !== "approved") return;
+    const account = operation.institution.accounts.operating;
+    if (account.balance - MINING_PROTECTED_CASH < project.requiredCredits) return;
+    account.balance -= project.requiredCredits;
+    account.transactions.push({ id: `MIN-EXP-${now()}`, at: now(), type: "capital-expense", amount: -project.requiredCredits, balance: account.balance, referenceId: project.id });
+    const shipRecord = createWorkerRecord(EXPANSION_WORKER_DEFAULTS);
+    operation.ships[shipRecord.id] = shipRecord;
+    addPhysicalWorker(shipRecord);
+    project.status = "completed";
+    project.completedAt = now();
+    record("mining.expansionCompleted", `${operation.controller.name} commissioned Cinder Four for ${project.requiredCredits} cr; the new worker entered service at Scrap Porch.`, { projectId: project.id, shipInstitutionId: shipRecord.id, shipName: shipRecord.name, cost: project.requiredCredits, accountBalance: account.balance });
   }
 
   function completeDelivery({ allocationId, contractId, resourceId, amount, ship }) {
@@ -265,6 +336,13 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       "delivery.completed": `${shipRecord.name} completed its physical delivery.`,
       "service.arrived": payload.issueType ? `${shipRecord.name} arrived at Scrap Porch and requested service for ${payload.issueType.replaceAll("-", " ")}.` : `${shipRecord.name} arrived at Scrap Porch for service.`,
     };
+    if (actionType === "prospect.selected") {
+      const id = `deposit:${payload.x}:${payload.y}:${payload.resourceId}`;
+      const deposit = operation.depositKnowledge[id] ??= { id, resourceId: payload.resourceId, x: payload.x, y: payload.y, source: "worker-observation", confidence: 0.85, successfulSelections: 0 };
+      deposit.confidence = Math.min(1, deposit.confidence + 0.05);
+      deposit.successfulSelections += 1;
+      deposit.lastObservedAt = now();
+    }
     record(`worker.${actionType}`, messages[actionType] ?? `${shipRecord.name}: ${actionType}`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, ...payload });
     if (actionType === "service.arrived") {
       const issue = MINING_ISSUES.find((candidate) => candidate.issueType === payload.issueType);

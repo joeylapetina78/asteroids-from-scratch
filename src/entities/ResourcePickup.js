@@ -1,6 +1,6 @@
-import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260726-1600-f2e1678";
+import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260726-1627-5762540";
 import { createRandom, randomRange } from "../systems/random.js";
-import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260726-1600-f2e1678";
+import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260726-1627-5762540";
 
 const PICKUP_RADIUS = 10;
 const PICKUP_DRAG = 0.985;

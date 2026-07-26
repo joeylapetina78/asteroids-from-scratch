@@ -302,14 +302,39 @@ test("Cinder prioritizes and fulfills SPRC procurement through the public contra
   sprc.update();
   const order = Object.values(state.sprc.procurementOrders).find((entry) => entry.procurementItemId === "structural-feedstock");
   const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => 1_000 });
-  const worker = mining.workers.find((entry) => entry.assignment?.contractId === order.contractId);
-  assert.ok(worker, "one miner takes Sal's order before ordinary evergreen work");
+  const workers = mining.workers.filter((entry) => entry.assignment?.contractId === order.contractId);
+  assert.equal(workers.length, 3, "Cinder splits Sal's large order across the available fleet");
   const minerCashBefore = mining.getState().institution.accounts.operating.balance;
-  worker.cargo[worker.assignment.resourceId] = worker.assignment.quantity;
-  worker.deliver();
+  workers.forEach((worker) => {
+    worker.cargo[worker.assignment.resourceId] = worker.assignment.quantity;
+    worker.deliver();
+  });
   assert.equal(order.status, "paid");
   assert.equal(mining.getState().institution.accounts.operating.balance - minerCashBefore, order.maximumPayment);
-  assert.equal(state.sprc.inventories.raw[worker.assignment?.resourceId ?? "iron-nickel"], order.requiredEquivalentUnits);
+  assert.equal(state.sprc.inventories.raw["iron-nickel"], order.requiredEquivalentUnits);
+});
+
+test("sustained critical demand lets Cinder fund and commission a fourth worker", () => {
+  let clock = 1_000;
+  const state = createGameState();
+  state._devStartId = "capacity-test";
+  state.logistics = createInitialLogisticsState(clock);
+  const game = { worldSites: [
+    { id: "yard-exchange", name: "Yard Exchange", position: { x: 380, y: -180 } },
+    { id: "scrap-porch", name: "Scrap Porch", position: { x: -1180, y: 860 } },
+    { id: "the-ledge", name: "The Ledge", position: { x: 7000, y: -4500 } },
+  ], addWorkerShip: () => {} };
+  const sprc = createSprcOperation({ state, now: () => clock });
+  sprc.update();
+  const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => clock });
+  mining.update();
+  clock += 6_000;
+  mining.getState().institution.accounts.operating.balance = 600;
+  mining.update();
+  assert.equal(mining.getState().projects["cinder-four"].status, "completed");
+  assert.ok(mining.getState().ships["worker:cinder-four"]);
+  assert.equal(mining.workers.length, 4);
+  assert.equal(mining.getState().institution.accounts.operating.balance, 250);
 });
 
 test("accelerated development wear sends the oldest Cinder craft to service after its first completed job", () => {
@@ -360,6 +385,15 @@ test("a mining worker tractors eligible loose resources toward its collector", (
   worker.returnForService({ destination: { x: 1000, y: 1000 }, destinationSiteId: "scrap-porch", issueType: "tractor-field-instability" });
   assert.equal(worker.tractorActive, false);
   assert.deepEqual(worker.tractorTargets, []);
+});
+
+test("a mining worker recognizes a useful secondary mineral instead of requiring dominance", () => {
+  const worker = new MiningWorkerShip({ id: "worker:secondary", name: "Secondary", institutionId: "miner:test", controllerInstitutionId: "person:test", x: 0, y: 0 });
+  worker.assign({ allocationId: "allocation:secondary", contractId: "mine:secondary", resourceId: "copper", quantity: 1, destination: { x: 0, y: 0 } });
+  const asteroid = { position: { x: 300, y: 0 }, resources: { stone: 0.3, "iron-nickel": 0.5, copper: 0.2 }, tier: 2 };
+  worker.update(0.1, { asteroids: [asteroid], pickups: [], collectPickup: () => null, pullPickup: () => {} });
+  assert.equal(worker.targetAsteroid, asteroid);
+  assert.equal(worker.state, "outbound");
 });
 
 test("a mining institution delivery conserves material and payment into freight inventory", () => {
@@ -669,6 +703,15 @@ test("generated corridor shoulder rocks are anchored where they spawn", () => {
   const shoulderRocks = chunks.update(4200, 0).added.filter((asteroid) => asteroid.corridorShoulderId);
   assert.ok(shoulderRocks.length > 20);
   assert.ok(shoulderRocks.every((asteroid) => asteroid.origin.x === asteroid.position.x && asteroid.origin.y === asteroid.position.y));
+});
+
+test("asteroid streaming keeps a physical resource neighborhood around remote mining workers", () => {
+  const chunks = createAsteroidChunks({ width: 1000 }, createResourceField(), []);
+  chunks.update(0, 0);
+  const remote = chunks.update(0, 0, [{ x: 12000, y: -8000 }]);
+  assert.ok(remote.added.some((asteroid) => Math.hypot(asteroid.position.x - 12000, asteroid.position.y + 8000) < 2600));
+  const returned = chunks.update(0, 0, []);
+  assert.ok(returned.removedSet.size > 0);
 });
 
 test("the abstract Yard-Ledge trip expands into waypoints that an NPC follows", () => {

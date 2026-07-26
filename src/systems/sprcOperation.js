@@ -1,5 +1,5 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260726-1600-f2e1678";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260726-1600-f2e1678";
+import { depositCredits } from "./accounts.js?v=fresh-20260726-1627-5762540";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260726-1627-5762540";
 import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
 import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js";
 import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js";

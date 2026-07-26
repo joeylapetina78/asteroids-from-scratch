@@ -1,42 +1,42 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260726-1600-f2e1678";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260726-1600-f2e1678";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260726-1600-f2e1678";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260726-1600-f2e1678";
-import { Ship } from "./entities/Ship.js?v=fresh-20260726-1600-f2e1678";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260726-1600-f2e1678";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260726-1627-5762540";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260726-1627-5762540";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260726-1627-5762540";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260726-1627-5762540";
+import { Ship } from "./entities/Ship.js?v=fresh-20260726-1627-5762540";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260726-1627-5762540";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260726-1600-f2e1678";
-import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260726-1600-f2e1678";
-import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260726-1600-f2e1678";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260726-1600-f2e1678";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260726-1600-f2e1678";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260726-1600-f2e1678";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260726-1600-f2e1678";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260726-1600-f2e1678";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260726-1600-f2e1678";
-import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260726-1600-f2e1678";
-import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260726-1600-f2e1678";
-import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260726-1600-f2e1678";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260726-1600-f2e1678";
-import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260726-1600-f2e1678";
+import { createInput } from "./systems/input.js?v=fresh-20260726-1627-5762540";
+import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260726-1627-5762540";
+import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260726-1627-5762540";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260726-1627-5762540";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260726-1627-5762540";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260726-1627-5762540";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260726-1627-5762540";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260726-1627-5762540";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260726-1627-5762540";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260726-1627-5762540";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260726-1627-5762540";
+import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260726-1627-5762540";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260726-1627-5762540";
+import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260726-1627-5762540";
 import { getStandingMiningJobsForSite } from "./systems/miningOperation.js";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260726-1600-f2e1678";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260726-1600-f2e1678";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260726-1600-f2e1678";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260726-1600-f2e1678";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260726-1600-f2e1678";
-import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260726-1600-f2e1678";
-import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260726-1600-f2e1678";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260726-1600-f2e1678";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260726-1600-f2e1678";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260726-1600-f2e1678";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260726-1600-f2e1678";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260726-1600-f2e1678";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260726-1600-f2e1678";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260726-1600-f2e1678";
-import { createGameState } from "./state/gameState.js?v=fresh-20260726-1600-f2e1678";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260726-1600-f2e1678";
-import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260726-1600-f2e1678";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260726-1627-5762540";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260726-1627-5762540";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260726-1627-5762540";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260726-1627-5762540";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260726-1627-5762540";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260726-1627-5762540";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260726-1627-5762540";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260726-1627-5762540";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260726-1627-5762540";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260726-1627-5762540";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260726-1627-5762540";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260726-1627-5762540";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260726-1627-5762540";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260726-1627-5762540";
+import { createGameState } from "./state/gameState.js?v=fresh-20260726-1627-5762540";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260726-1627-5762540";
+import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260726-1627-5762540";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -4285,7 +4285,11 @@ export class Game {
   }
 
   updateAsteroidChunks() {
-    const { added, removedSet } = this.chunkManager.update(this.ship.position.x, this.ship.position.y);
+    const { added, removedSet } = this.chunkManager.update(
+      this.ship.position.x,
+      this.ship.position.y,
+      this.workerShips.filter((worker) => worker.isAlive).map((worker) => worker.position),
+    );
 
     if (added.length > 0 || removedSet.size > 0) {
       this.asteroids = [...this.asteroids.filter((a) => !removedSet.has(a)), ...added];

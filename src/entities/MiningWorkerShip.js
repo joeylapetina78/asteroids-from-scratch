@@ -1,5 +1,5 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260726-1600-f2e1678";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260726-1600-f2e1678";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260726-1627-5762540";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260726-1627-5762540";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
@@ -40,9 +40,9 @@ export class MiningWorkerShip {
     this.onDelivery = onDelivery;
   }
 
-  assign({ allocationId, contractId, resourceId, quantity, destination }) {
+  assign({ allocationId, contractId, resourceId, quantity, destination, depositCandidates = [] }) {
     if (this.assignment || quantity <= 0) return false;
-    this.assignment = { allocationId, contractId, resourceId: normalizeResourceType(resourceId), quantity, destination };
+    this.assignment = { allocationId, contractId, resourceId: normalizeResourceType(resourceId), quantity, destination, depositCandidates: [...depositCandidates] };
     this.state = "prospecting";
     this.onEvent("assignment.accepted", { contractId, resourceId: this.assignment.resourceId, quantity });
     return true;
@@ -86,12 +86,18 @@ export class MiningWorkerShip {
     }
 
     if (!this.targetAsteroid || !world.asteroids.includes(this.targetAsteroid) || !hasResource(this.targetAsteroid, this.assignment.resourceId)) {
-      this.targetAsteroid = nearest(world.asteroids.filter((asteroid) => hasResource(asteroid, this.assignment.resourceId)), this.position);
+      this.targetAsteroid = bestResourceAsteroid(world.asteroids, this.assignment.resourceId, this.position);
       if (this.targetAsteroid) this.onEvent("prospect.selected", { resourceId: this.assignment.resourceId, x: Math.round(this.targetAsteroid.position.x), y: Math.round(this.targetAsteroid.position.y) });
     }
     if (!this.targetAsteroid) {
       this.state = "prospecting";
-      return this.brake(deltaSeconds);
+      const deposit = this.assignment.depositCandidates[0];
+      if (!deposit) return this.brake(deltaSeconds);
+      if (distance(this.position, deposit) <= 360) {
+        this.assignment.depositCandidates.shift();
+        return this.brake(deltaSeconds);
+      }
+      return this.flyTo(deltaSeconds, deposit, 280);
     }
 
     const targetDistance = distance(this.position, this.targetAsteroid.position);
@@ -213,10 +219,21 @@ export class MiningWorkerShip {
 }
 
 function hasResource(asteroid, resourceId) {
-  const dominant = Object.entries(asteroid.resources ?? {})
-    .filter(([id]) => id !== "stone")
-    .reduce((best, [id, amount]) => amount > best.amount ? { id, amount } : best, { id: null, amount: 0 });
-  return dominant.id != null && normalizeResourceType(dominant.id) === resourceId;
+  return getResourceAbundance(asteroid, resourceId) >= 0.1;
+}
+
+function bestResourceAsteroid(asteroids, resourceId, position) {
+  return asteroids.reduce((best, asteroid) => {
+    const abundance = getResourceAbundance(asteroid, resourceId);
+    if (abundance < 0.1) return best;
+    const score = (abundance * Math.max(1, asteroid.tier ?? 1)) / Math.max(120, distance(position, asteroid.position));
+    return !best || score > best.score ? { asteroid, score } : best;
+  }, null)?.asteroid ?? null;
+}
+
+function getResourceAbundance(asteroid, resourceId) {
+  return Object.entries(asteroid.resources ?? {}).reduce((total, [id, amount]) =>
+    normalizeResourceType(id) === resourceId ? total + amount : total, 0);
 }
 
 function nearest(items, position) {

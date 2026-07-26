@@ -1,15 +1,16 @@
-﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260726-1600-f2e1678";
+﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260726-1627-5762540";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260726-1600-f2e1678";
-import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260726-1600-f2e1678";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260726-1600-f2e1678";
-import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260726-1600-f2e1678";
+import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260726-1627-5762540";
+import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260726-1627-5762540";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260726-1627-5762540";
+import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260726-1627-5762540";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same
 // chunk coordinates always produce the same asteroids (deterministic seed),
 // so the field feels persistent even though most of it is not in memory.
 const CHUNK_LOAD_RADIUS = 3;
+const WORKER_CHUNK_LOAD_RADIUS = 2;
 
 export function createAsteroidChunks(canvas, resourceField, transportCorridors = []) {
   const chunkSize = canvas.width;
@@ -73,19 +74,28 @@ export function createAsteroidChunks(canvas, resourceField, transportCorridors =
   // add to the live array and a Set of asteroids to remove. The caller (game.js)
   // owns the live array and applies the diff itself so it can manage fragments
   // and other dynamic asteroids independently.
-  function update(shipX, shipY) {
+  function update(shipX, shipY, observerPositions = []) {
     const [playerCX, playerCY] = toChunkCoords(shipX, shipY);
     const added = [];
     const removedSet = new Set();
+    const desiredKeys = new Set();
 
-    for (let dx = -CHUNK_LOAD_RADIUS; dx <= CHUNK_LOAD_RADIUS; dx++) {
-      for (let dy = -CHUNK_LOAD_RADIUS; dy <= CHUNK_LOAD_RADIUS; dy++) {
-        const key = makeKey(playerCX + dx, playerCY + dy);
+    addObserverChunks(playerCX, playerCY, CHUNK_LOAD_RADIUS);
+    observerPositions.forEach((position) => {
+      const [cx, cy] = toChunkCoords(position.x, position.y);
+      addObserverChunks(cx, cy, WORKER_CHUNK_LOAD_RADIUS);
+    });
 
-        if (!loadedChunks.has(key)) {
-          const chunkAsteroids = generateChunk(playerCX + dx, playerCY + dy);
-          loadedChunks.set(key, chunkAsteroids);
-          added.push(...chunkAsteroids);
+    function addObserverChunks(observerCX, observerCY, radius) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          const key = makeKey(observerCX + dx, observerCY + dy);
+          desiredKeys.add(key);
+          if (!loadedChunks.has(key)) {
+            const chunkAsteroids = generateChunk(observerCX + dx, observerCY + dy);
+            loadedChunks.set(key, chunkAsteroids);
+            added.push(...chunkAsteroids);
+          }
         }
       }
     }
@@ -93,11 +103,7 @@ export function createAsteroidChunks(canvas, resourceField, transportCorridors =
     const toUnload = [];
 
     for (const [key] of loadedChunks) {
-      const [cx, cy] = key.split(",").map(Number);
-
-      if (Math.abs(cx - playerCX) > CHUNK_LOAD_RADIUS || Math.abs(cy - playerCY) > CHUNK_LOAD_RADIUS) {
-        toUnload.push(key);
-      }
+      if (!desiredKeys.has(key)) toUnload.push(key);
     }
 
     for (const key of toUnload) {
