@@ -1,5 +1,5 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260725-1948-d38544e";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260725-1948-d38544e";
+import { depositCredits } from "./accounts.js?v=fresh-20260725-2256-967035c";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260725-2256-967035c";
 import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
 import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js";
 import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js";
@@ -12,6 +12,7 @@ export const SPRC = Object.freeze({
   facilityId: "facility:sprc-maw",
   berthId: "facility:sprc-berth-two",
   firstHaulerId: "hauler-scrap-yard",
+  secondHaulerId: "hauler-yard-scrap",
 });
 
 export const SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK = Object.freeze({
@@ -56,6 +57,11 @@ export function createInitialSprcState(now = Date.now()) {
       berthTwo: { id: SPRC.berthId, name: "Berth Two", status: "available", capacity: 1, activeRepairOrderId: null },
     },
     haulers: {
+      [SPRC.secondHaulerId]: {
+        id: SPRC.secondHaulerId, pilotEntityId: "person:hauler-yard-scrap-operator", pilotName: "Yard Hauler Operator",
+        shipVin: "HAUL-01-HAULER-YARD-SCRAP", shipName: "Yard Hauler", homeOrganizationId: "carrier:yard-hauler",
+        assignment: { type: "standing-freight", routeId: "yard-exchange-scrap-porch", provisional: false }, cargoCustody: [], condition: "serviceable", maintenanceStatus: "available", routeCompletions: 0, lastMaintenanceTriggerRouteCompletion: 0, repairHistory: [], currentLocationSiteId: "yard-exchange", availableForWork: true,
+      },
       [SPRC.firstHaulerId]: {
         id: SPRC.firstHaulerId,
         pilotEntityId: "person:hauler-scrap-yard-operator",
@@ -134,6 +140,8 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       sprc.lastLedgerEventId = Math.max(sprc.lastLedgerEventId, event.id);
       if (event.type === "npc.routeCompleted" && event.payload.npcId === SPRC.firstHaulerId) {
         recordRouteCompletion(event.payload);
+      } else if (event.type === "logistics.maintenanceRequired" && sprc.haulers[event.payload.npcId]) {
+        createWearRepairOrder(event.payload);
       }
     });
   }
@@ -144,10 +152,26 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     hauler.routeCompletions += 1;
     hauler.currentLocationSiteId = payload.siteId ?? hauler.currentLocationSiteId;
     appendHistory("hauler.routeCompleted", { haulerId: hauler.id, routeCompletions: hauler.routeCompletions, siteId: payload.siteId });
-    const openRepair = Object.values(sprc.repairOrders).some((repair) => repair.subjectHaulerId === hauler.id && repair.status !== "completed" && repair.status !== "canceled");
-    if (!openRepair && hauler.routeCompletions - (hauler.lastMaintenanceTriggerRouteCompletion ?? 0) >= ROUTES_BEFORE_PROVISIONAL_REPAIR) {
-      createProvisionalRepairOrder(hauler.id);
-    }
+  }
+
+  function createWearRepairOrder(payload) {
+    const hauler = sprc.haulers[payload.npcId];
+    if (!hauler) return null;
+    const existing = Object.values(sprc.repairOrders).some((repair) => repair.subjectHaulerId === hauler.id && !["completed", "canceled"].includes(repair.status));
+    if (existing) return null;
+    const requirementsByIssue = {
+      "maneuvering-strain": { "hull-plate": 1, "machine-part": 1 },
+      "hull-fatigue": { "hull-plate": 2, "machine-part": 0 },
+      "control-fault": { "hull-plate": 0, "machine-part": 2 },
+    };
+    const id = nextId("repair", "SPRC-RPR");
+    const requirements = requirementsByIssue[payload.issueType] ?? { "hull-plate": 1, "machine-part": 1 };
+    const order = sprc.repairOrders[id] = { id, facilityId: SPRC.berthId, subjectHaulerId: hauler.id, subjectShipVin: hauler.shipVin, condition: payload.issueType, origin: { type: "operational-wear", wear: payload.wear, issueCount: payload.issueCount, causedByCarefulMode: payload.causedByCarefulMode }, requirements: { produced: requirements }, reserved: { produced: {} }, status: "waiting-stock", priority: payload.issueType === "control-fault" ? 80 : 60, createdAt: now(), startedAt: null, completesAt: null };
+    sprc.repairQueue.push(id);
+    hauler.condition = payload.issueType; hauler.maintenanceStatus = "queued"; hauler.availableForWork = false;
+    appendHistory("repair.created", { repairOrderId: id, haulerId: hauler.id, issueType: payload.issueType, wear: payload.wear });
+    state.ledger.recordEvent("sprc.repairCreated", { repairOrderId: id, haulerId: hauler.id, shipName: hauler.shipName, condition: order.condition }, { visible: true });
+    return order;
   }
 
   function createProvisionalRepairOrder(haulerId) {
@@ -473,8 +497,6 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     response.procurementOrderId = id;
     registerProcurementContract(record);
     state.contracts.records[record.contractId] ??= buildContractDefinition(record);
-    state.contracts.currentContractId ??= record.contractId;
-    issueProcurementDocuments(record);
     appendHistory("procurement.created", { procurementOrderId: id, needId: need.id, repairOrderId: need.sourceRepairOrderId, amount });
     state.ledger.recordEvent("contract.offered", { contractId: record.contractId, contractTitle: "SPRC Structural Feedstock", sourceNeedId: need.id }, { visible: true });
   }
@@ -487,6 +509,8 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     order.acceptedAt = now();
     contract.status = "active";
     contract.acceptedAt = order.acceptedAt;
+    state.contracts.currentContractId = contractId;
+    issueProcurementDocuments(order);
     issueCargoManifest(order);
     appendHistory("procurement.accepted", { procurementOrderId: order.id, contractId });
     state.ledger.recordEvent("contract.accepted", { contractId, contractTitle: contract.title, sourceNeedId: order.needId }, { visible: true });
@@ -573,6 +597,8 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       status: order.status === "active" ? "active" : order.status === "paid" ? "paid" : "offered",
       offeredAt: order.createdAt,
       deliveredAmount: order.deliveredEquivalentUnits,
+      presentation: { offerSiteId: SPRC.siteId, offerServiceId: SPRC.serviceId, portableAfterAcceptance: true },
+      offerSource: { type: "institution-local", siteId: SPRC.siteId, serviceId: SPRC.serviceId, npcName: "Sal" },
       causal: { needId: order.needId, repairOrderId: order.sourceRepairOrderId, responseId: order.responseId },
     };
   }

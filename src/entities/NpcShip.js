@@ -1,3 +1,6 @@
+import { drawResourceShape } from "./ResourcePickup.js";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js";
+
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
 // can be attacked or damaged by rock impacts.
@@ -18,7 +21,7 @@ const CARGO_CAR_DAMPING = 0.82;
 const HUB_TETHER_PADDING = 42;
 
 export class NpcShip {
-  constructor({ id, name, route, x, y, seed = 1, laneOffset = 0, publicIdentity = null }) {
+  constructor({ id, name, route, x, y, seed = 1, laneOffset = 0, publicIdentity = null, maintenanceSiteId = null }) {
     this.id = id;
     this.name = name;
     this.route = route;
@@ -49,9 +52,18 @@ export class NpcShip {
     this.lastWaypointDistance = distance(this.position, firstWaypoint);
     this.pendingEvents = [];
     this.activeHub = null;
+    this.dockedSiteId = route[0]?.id ?? null;
     this.publicIdentity = publicIdentity;
+    this.maintenanceSiteId = maintenanceSiteId;
     this.completedRouteLegs = 0;
-    this.operationalStatus = "available";
+    this.operationalStatus = "seeking-work";
+    this.activeShipmentId = null;
+    this.wear = 0;
+    this.wearIssueCount = 0;
+    this.carefulWearSinceIssue = 0;
+    this.pendingWearIssue = null;
+    this.cargoTransfers = [];
+    this.departureTimer = 0;
   }
 
   update(deltaSeconds, world) {
@@ -59,6 +71,14 @@ export class NpcShip {
       return;
     }
 
+    this.updateCargoTransfers(deltaSeconds);
+    if (this.operationalStatus === "loading") {
+      this.departureTimer = Math.max(0, this.departureTimer - deltaSeconds);
+      if (this.departureTimer === 0) {
+        this.dockedSiteId = null;
+        this.operationalStatus = "available";
+      }
+    }
     if (this.operationalStatus !== "available") {
       this.velocity.x *= 0.82;
       this.velocity.y *= 0.82;
@@ -67,12 +87,26 @@ export class NpcShip {
       return;
     }
 
+    const wearIncrement = deltaSeconds * (this.isCarefulMode ? 0.032 : 0.012);
+    this.wear += wearIncrement;
+    if (this.isCarefulMode) this.carefulWearSinceIssue += wearIncrement;
+    this.emitWearIssueIfNeeded();
+
     this.pulse += deltaSeconds;
     const waypoint = this.getWaypoint();
     const waypointDistance = distance(this.position, waypoint);
 
     if (waypointDistance <= WAYPOINT_RADIUS) {
       const arrivedSite = this.route[this.routeIndex];
+      const isFinalDestination = this.routeIndex === this.route.length - 1;
+      if (!isFinalDestination) {
+        this.completedRouteLegs += 1;
+        this.routeIndex += 1;
+        this.turnSettleTimer = 0.9;
+        this.lastWaypointDistance = distance(this.position, this.getWaypoint());
+        return;
+      }
+      this.dockedSiteId = arrivedSite?.id ?? null;
       this.completedRouteLegs += 1;
       this.pendingEvents.push({
         type: "npc.routeCompleted",
@@ -83,10 +117,12 @@ export class NpcShip {
           siteId: arrivedSite?.id ?? null,
           siteName: arrivedSite?.name ?? null,
           routeLegsCompleted: this.completedRouteLegs,
-          provisionalLogistics: true,
+          shipmentId: this.activeShipmentId,
+          provisionalLogistics: false,
         },
       });
-      this.routeIndex = (this.routeIndex + 1) % this.route.length;
+      this.emitPendingWearIssueAt(arrivedSite);
+      this.operationalStatus = "awaiting-assignment";
       this.turnSettleTimer = 0.9;
       this.lastWaypointDistance = distance(this.position, this.getWaypoint());
     }
@@ -114,6 +150,54 @@ export class NpcShip {
 
   getWaypoint() {
     return getLaneWaypoint(this.route, this.routeIndex, this.laneOffset);
+  }
+
+  canAcceptRoute(route) {
+    return Array.isArray(route) && route.length >= 2 && route.every((site) => site?.id && site?.position);
+  }
+
+  assignShipment({ shipmentId, destinationSiteId, route = this.route }) {
+    if (!this.canAcceptRoute(route)) return false;
+    this.route = route;
+    const destinationIndex = this.route.findIndex((site) => site.id === destinationSiteId);
+    if (destinationIndex < 0) return false;
+    this.activeShipmentId = shipmentId;
+    this.routeIndex = destinationIndex;
+    this.departureTimer = 1.1;
+    this.operationalStatus = "loading";
+    this.cargoSegments.forEach((segment) => { segment.loaded = true; });
+    this.lastWaypointDistance = distance(this.position, this.getWaypoint());
+    return true;
+  }
+
+  clearShipment() {
+    this.activeShipmentId = null;
+    this.operationalStatus = "seeking-work";
+    this.cargoSegments.forEach((segment) => { segment.loaded = false; });
+  }
+
+  queueCargoTransfer({ commodity, direction }) {
+    this.cargoTransfers.push({ commodity, direction, progress: 0, duration: 0.9 });
+  }
+
+  updateCargoTransfers(deltaSeconds) {
+    this.cargoTransfers.forEach((transfer) => { transfer.progress += deltaSeconds / transfer.duration; });
+    this.cargoTransfers = this.cargoTransfers.filter((transfer) => transfer.progress < 1);
+  }
+
+  emitWearIssueIfNeeded() {
+    const issueCount = Math.floor(this.wear / 6);
+    if (issueCount <= this.wearIssueCount) return;
+    this.wearIssueCount = issueCount;
+    const issueType = this.carefulWearSinceIssue >= 0.12 ? "maneuvering-strain" : issueCount % 2 === 0 ? "control-fault" : "hull-fatigue";
+    this.carefulWearSinceIssue = 0;
+    this.pendingWearIssue = { npcId: this.id, npcName: this.name, shipVin: this.publicIdentity?.shipVin, wear: this.wear, issueCount, issueType, causedByCarefulMode: issueType === "maneuvering-strain" };
+  }
+
+  emitPendingWearIssueAt(site) {
+    if (!this.pendingWearIssue || site?.id !== this.maintenanceSiteId) return;
+    this.pendingEvents.push({ type: "npc.wearIssue", payload: this.pendingWearIssue });
+    this.pendingWearIssue = null;
   }
 
   getMaxSpeed() {
@@ -338,17 +422,18 @@ export class NpcShip {
   }
 
   drawHubTethers(context, camera) {
-    if (!this.activeHub) {
+    if (!this.activeHub || this.cargoTransfers.length === 0) {
       return;
     }
 
     const hubX = this.activeHub.position.x - camera.x;
     const hubY = this.activeHub.position.y - camera.y;
 
-    this.cargoSegments.forEach((segment, index) => {
+    this.cargoTransfers.forEach((transfer, index) => {
+      const segment = this.cargoSegments[index % this.cargoSegments.length];
       const segmentX = segment.position.x - camera.x;
       const segmentY = segment.position.y - camera.y;
-      const flow = (this.pulse * 1.4 + index * 0.21) % 1;
+      const flow = transfer.direction === "from-hub" ? 1 - transfer.progress : transfer.progress;
       const lightX = segmentX + (hubX - segmentX) * flow;
       const lightY = segmentY + (hubY - segmentY) * flow;
 
@@ -361,10 +446,11 @@ export class NpcShip {
       context.lineTo(hubX, hubY);
       context.stroke();
       context.setLineDash([]);
-      context.fillStyle = index % 2 === 0 ? "#9ee8ff" : "#ffd36b";
-      context.beginPath();
-      context.arc(lightX, lightY, 2.3, 0, Math.PI * 2);
-      context.fill();
+      context.translate(lightX, lightY);
+      context.fillStyle = getResourceColor(transfer.commodity);
+      context.strokeStyle = "rgba(255, 255, 255, 0.88)";
+      context.lineWidth = 1;
+      drawResourceShape(context, getResourceShape(transfer.commodity), 8);
       context.restore();
     });
   }

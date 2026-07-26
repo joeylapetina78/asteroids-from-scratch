@@ -1,36 +1,39 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260725-1948-d38544e";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260725-1948-d38544e";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260725-1948-d38544e";
-import { Ship } from "./entities/Ship.js?v=fresh-20260725-1948-d38544e";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260725-1948-d38544e";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260725-2256-967035c";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260725-2256-967035c";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260725-2256-967035c";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260725-2256-967035c";
+import { Ship } from "./entities/Ship.js?v=fresh-20260725-2256-967035c";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260725-2256-967035c";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260725-1948-d38544e";
-import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260725-1948-d38544e";
-import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260725-1948-d38544e";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260725-1948-d38544e";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260725-1948-d38544e";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260725-1948-d38544e";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260725-1948-d38544e";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260725-1948-d38544e";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260725-1948-d38544e";
-import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260725-1948-d38544e";
-import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260725-1948-d38544e";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260725-1948-d38544e";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260725-1948-d38544e";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260725-1948-d38544e";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260725-1948-d38544e";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260725-1948-d38544e";
-import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260725-1948-d38544e";
-import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260725-1948-d38544e";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260725-1948-d38544e";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260725-1948-d38544e";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260725-1948-d38544e";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260725-1948-d38544e";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260725-1948-d38544e";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260725-1948-d38544e";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260725-1948-d38544e";
-import { createGameState } from "./state/gameState.js?v=fresh-20260725-1948-d38544e";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260725-1948-d38544e";
+import { createInput } from "./systems/input.js?v=fresh-20260725-2256-967035c";
+import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260725-2256-967035c";
+import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260725-2256-967035c";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260725-2256-967035c";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260725-2256-967035c";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260725-2256-967035c";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260725-2256-967035c";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260725-2256-967035c";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260725-2256-967035c";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260725-2256-967035c";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260725-2256-967035c";
+import { getStandingFreightJobsForSite } from "./systems/logistics.js";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260725-2256-967035c";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260725-2256-967035c";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260725-2256-967035c";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260725-2256-967035c";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260725-2256-967035c";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260725-2256-967035c";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260725-2256-967035c";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260725-2256-967035c";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260725-2256-967035c";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260725-2256-967035c";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260725-2256-967035c";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260725-2256-967035c";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260725-2256-967035c";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260725-2256-967035c";
+import { createGameState } from "./state/gameState.js?v=fresh-20260725-2256-967035c";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260725-2256-967035c";
+import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260725-2256-967035c";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -682,7 +685,7 @@ export class Game {
       }
     }
 
-    return jobs;
+    return [...jobs, ...getStandingFreightJobsForSite(site.id, issuer)];
   }
 
   spawnIncursionPortal(position = null) {
@@ -2614,35 +2617,38 @@ export class Game {
     });
   }
 
-  createCargoTransferTrail(resourceType = "fuel") {
+  createCargoTransferTrail(resource = "fuel", direction = "to-hub") {
     const site = this.dockedSite;
 
     if (!site) {
       return;
     }
 
+    const resourceType = typeof resource === "string" ? resource : resource.type;
     this.audio?.playCargoTransfer(resourceType);
-    const color = CARGO_TRAIL_COLOR[resourceType] ?? "#ff7452";
+    const color = resource.color ?? getResourceColor(resourceType) ?? CARGO_TRAIL_COLOR[resourceType] ?? "#ff7452";
+    const shape = resource.shape ?? getResourceShape(resourceType);
     const distanceX = site.position.x - this.ship.position.x;
     const distanceY = site.position.y - this.ship.position.y;
     const transferDistance = distance(this.ship.position, site.position) || 1;
-    const normalX = distanceX / transferDistance;
-    const normalY = distanceY / transferDistance;
+    const normalX = distanceX / transferDistance * (direction === "from-hub" ? -1 : 1);
+    const normalY = distanceY / transferDistance * (direction === "from-hub" ? -1 : 1);
 
     const travelTime = Math.max(0.4, transferDistance / 235);
 
     this.particles.push({
       type: "cargo-packet",
       position: {
-        x: this.ship.position.x,
-        y: this.ship.position.y,
+        x: direction === "from-hub" ? site.position.x : this.ship.position.x,
+        y: direction === "from-hub" ? site.position.y : this.ship.position.y,
       },
       velocity: {
         x: normalX * 235,
         y: normalY * 235,
       },
       color,
-      size: 6,
+      shape,
+      size: resource.size ?? 8,
       drag: 0.995,
       life: travelTime,
       maxLife: travelTime,
@@ -4312,18 +4318,19 @@ export class Game {
     this.npcShips.forEach((ship) => {
       const operationalRecord = this.state.sprc?.haulers?.[ship.id];
       if (operationalRecord) {
-        ship.operationalStatus = operationalRecord.availableForWork ? "available" : "maintenance";
+        if (!operationalRecord.availableForWork) ship.operationalStatus = "maintenance";
+        else if (ship.operationalStatus === "maintenance") ship.operationalStatus = "seeking-work";
       }
     });
-    const activeNpcShips = this.npcShips.filter((ship) =>
+    const localNpcShips = this.npcShips.filter((ship) =>
       isNearSimulationArea(ship, this.canvas, this.camera, this.ship, NPC_SIMULATION_MARGIN),
     );
 
-    activeNpcShips.forEach((ship) => {
+    this.npcShips.forEach((ship) => {
       ship.environmentHitCooldown = Math.max(0, (ship.environmentHitCooldown ?? 0) - deltaSeconds);
       ship.update(deltaSeconds, {
-        asteroids: activeAsteroids,
-        npcShips: activeNpcShips,
+        asteroids: localNpcShips.includes(ship) ? activeAsteroids : [],
+        npcShips: this.npcShips,
         sites: this.worldSites,
       });
       ship.consumeEvents().forEach((event) => {
@@ -4334,7 +4341,7 @@ export class Game {
         return;
       }
 
-      const hitAsteroid = activeAsteroids.find((asteroid) =>
+      const hitAsteroid = localNpcShips.includes(ship) && activeAsteroids.find((asteroid) =>
         circlesOverlap(ship.position, ship.radius, asteroid.position, asteroid.radius),
       );
 
@@ -4353,7 +4360,7 @@ export class Game {
       }
     });
 
-    this.updateHubTrafficSensors(activeNpcShips);
+    this.updateHubTrafficSensors(localNpcShips);
   }
 
   updateHubTrafficSensors(activeNpcShips) {
@@ -6528,10 +6535,9 @@ export class Game {
       if (particle.type === "spark") {
         this.context.fillRect(-particle.size * 1.5, -particle.size / 2, particle.size * 3, particle.size);
       } else if (particle.type === "cargo-packet") {
-        this.context.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
         this.context.strokeStyle = "rgba(255, 255, 255, 0.82)";
         this.context.lineWidth = 1;
-        this.context.strokeRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
+        drawResourceShape(this.context, particle.shape ?? "square", particle.size);
       } else {
         this.context.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
       }

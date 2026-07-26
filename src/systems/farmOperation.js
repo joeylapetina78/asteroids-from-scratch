@@ -3,6 +3,7 @@ import { createFarmInstitutionInstance, createTaviInstitutionInstance } from "..
 import { createResponseRecord, deriveInventoryNeeds, evaluateAffordability, generateCapabilityResponses, reconcileNeeds, resolveInstitutionPolicy } from "./institutionDecision.js";
 
 const INPUT_PRICES = Object.freeze({ water: 20, seed: 35 });
+export const FARM_INSPECTION_SERVICE_ID = "sunward-acre-inspection";
 
 export function createFarmOperation(now = Date.now()) {
   const institution = createFarmInstitutionInstance(now);
@@ -10,6 +11,11 @@ export function createFarmOperation(now = Date.now()) {
   const controller = createTaviInstitutionInstance();
   const policy = resolveInstitutionPolicy({ archetypePolicy: archetype.defaultPolicy, institutionPolicy: institution.policies });
   let counter = 0;
+  institution.history = [{ id: "sunward-history-1", type: "institution.instantiated", at: now, detail: "Tavi opened the current operating plan." }];
+
+  function record(type, detail, payload = {}) {
+    institution.history.push({ id: `sunward-history-${institution.history.length + 1}`, type, at: now, detail, ...payload });
+  }
 
   const procurementCapability = {
     id: "procure-input",
@@ -32,18 +38,24 @@ export function createFarmOperation(now = Date.now()) {
       makeId: (resourceId) => `sunward-need-${resourceId}`,
       now,
     });
+    const knownNeedIds = new Set(Object.keys(institution.needs));
     reconcileNeeds({ records: institution.needs, derivedNeeds: derived, now });
+    for (const need of derived) {
+      if (!knownNeedIds.has(need.id)) record("need.identified", `${need.shortage} ${need.subject.resourceId} needed to restore reserve.`, { needId: need.id });
+    }
     for (const response of Object.values(institution.responses)) {
       if (!["active", "blocked"].includes(response.status)) continue;
       const need = institution.needs[response.needIds[0]];
       if (need?.status === "open") continue;
       response.status = "canceled";
       response.canceledAt = now;
+      record("response.canceled", `The ${response.resourceId} response stopped because its need was satisfied.`, { responseId: response.id });
       const order = Object.values(institution.procurementOrders).find((entry) => entry.responseId === response.id && entry.status === "offered");
       if (order) {
         order.status = "canceled";
         institution.accounts.operating.committed = Math.max(0, institution.accounts.operating.committed - order.committedPayment);
         order.committedPayment = 0;
+        record("procurement.canceled", `Released the cash committed to the ${order.resourceId} order.`, { orderId: order.id });
       }
     }
     const proposals = generateCapabilityResponses({ institution, controller, needs: Object.values(institution.needs), capabilities: [procurementCapability], policy });
@@ -55,6 +67,7 @@ export function createFarmOperation(now = Date.now()) {
       if (existing?.status === "blocked") {
         existing.status = "superseded";
         existing.reconsideredAt = now;
+        record("response.reconsidered", `Funding changed, so Tavi reconsidered the blocked ${proposal.resourceId} purchase.`, { responseId: existing.id });
       }
       const id = `sunward-response-${++counter}`;
       institution.responses[id] = {
@@ -64,6 +77,9 @@ export function createFarmOperation(now = Date.now()) {
         resourceId: proposal.resourceId,
         affordability,
       };
+      record(affordability.affordable ? "response.selected" : "response.blocked", affordability.affordable
+        ? `Tavi selected procurement for ${proposal.quantity} ${proposal.resourceId}.`
+        : `Tavi protected the cash reserve instead of funding ${proposal.resourceId}.`, { responseId: id });
       if (affordability.affordable) {
         institution.accounts.operating.committed += proposal.estimatedCost;
         institution.procurementOrders[`sunward-order-${counter}`] = {
@@ -77,6 +93,7 @@ export function createFarmOperation(now = Date.now()) {
           status: "offered",
           createdAt: now,
         };
+        record("procurement.created", `Committed ${proposal.estimatedCost} credits for ${proposal.quantity} ${proposal.resourceId}.`, { orderId: `sunward-order-${counter}` });
       }
     }
     return { institution, controller, policy, proposals };

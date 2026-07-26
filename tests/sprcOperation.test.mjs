@@ -5,6 +5,10 @@ import { createSprcOperation, SPRC } from "../src/systems/sprcOperation.js";
 import { createShipPaperworkInspectionReport } from "../src/systems/paperworkInspections.js";
 import { createFarmOperation } from "../src/systems/farmOperation.js";
 import { evaluateAffordability, generateCapabilityResponses } from "../src/systems/institutionDecision.js";
+import { createContractManager } from "../src/systems/contractManager.js";
+import { createInitialLogisticsState, createLogisticsManager, createStandingFreightJob, STANDING_FREIGHT_TEMPLATES } from "../src/systems/logistics.js";
+import { createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "../src/systems/transportationPlanning.js";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../src/content/transportation/firstReachNetwork.js";
 
 function createHarness() {
   let clock = 1_000;
@@ -19,10 +23,8 @@ function createHarness() {
 }
 
 function triggerFirstRepair(harness) {
-  for (const siteId of ["yard-exchange", "scrap-porch"]) {
-    harness.state.ledger.recordEvent("npc.routeCompleted", { npcId: SPRC.firstHaulerId, siteId }, { visible: false });
-    harness.operation.update();
-  }
+  harness.state.ledger.recordEvent("logistics.maintenanceRequired", { npcId: SPRC.firstHaulerId, issueType: "hull-fatigue", wear: 1.5, issueCount: 1, causedByCarefulMode: false }, { visible: false });
+  harness.operation.update();
 }
 
 test("Sal posts a funded reserve order before Mara needs repair", () => {
@@ -36,6 +38,20 @@ test("Sal posts a funded reserve order before Mara needs repair", () => {
   assert.equal(harness.state.sprc.account.protectedReserve, 900);
   assert.equal(harness.state.sprc.operatingPlan.projected.structuralFeedstockEquivalents, 8);
   assert.equal(harness.state.sprc.projects["sprc-second-cradle"].status, "planned");
+});
+
+test("Sal's unaccepted procurement offer is local, then becomes portable when accepted", () => {
+  const harness = createHarness();
+  harness.operation.update();
+  const order = Object.values(harness.state.sprc.procurementOrders)[0];
+  const contracts = createContractManager({ state: harness.state });
+  assert.equal(harness.state.contracts.currentContractId, null);
+  assert.deepEqual(contracts.getVisibleContractIds(null), []);
+  assert.deepEqual(contracts.getVisibleContractIds("yard-exchange"), []);
+  assert.deepEqual(contracts.getVisibleContractIds(SPRC.siteId), [order.contractId]);
+  harness.operation.acceptProcurement(order.contractId);
+  assert.deepEqual(contracts.getVisibleContractIds("yard-exchange"), [order.contractId]);
+  assert.equal(harness.state.contracts.currentContractId, order.contractId);
 });
 
 test("Sal protects the cash reserve instead of posting an unfunded order", () => {
@@ -76,6 +92,8 @@ test("a farm institution uses the shared evaluator for a different resource doma
   assert.equal(result.controller.id, result.institution.controllerInstitutionId);
   assert.deepEqual(result.controller.controls, [result.institution.id]);
   assert.equal(result.institution.archetypeId, "farm");
+  assert.ok(result.institution.history.some((entry) => entry.type === "need.identified"));
+  assert.ok(result.institution.history.some((entry) => entry.type === "procurement.created"));
 });
 
 test("farm needs and commitments reconcile when circumstances change", () => {
@@ -144,7 +162,7 @@ test("mixed acceptable materials fill one outcome-based reserve order", () => {
   assert.equal(order.status, "paid");
 });
 
-test("the provisional route trigger creates a causal repair, need, response, and procurement order", () => {
+test("operational wear creates a causal repair, need, response, and procurement order", () => {
   const harness = createHarness();
   triggerFirstRepair(harness);
   const repair = Object.values(harness.state.sprc.repairOrders)[0];
@@ -152,24 +170,25 @@ test("the provisional route trigger creates a causal repair, need, response, and
   const response = Object.values(harness.state.sprc.responses).find((entry) => entry.needId === need.id);
   const order = Object.values(harness.state.sprc.procurementOrders)[0];
 
-  assert.equal(repair.origin.type, "provisional-route-count");
-  assert.equal(repair.origin.replaceWith, "unified-wear-assessment");
+  assert.equal(repair.origin.type, "operational-wear");
+  assert.equal(repair.condition, "hull-fatigue");
   assert.equal(need.sourceRepairOrderId, repair.id);
   assert.equal(response.needId, need.id);
   assert.equal(response.procurementOrderId, order.id);
   assert.equal(order.sourceRepairOrderId, repair.id);
   assert.equal(harness.state.sprc.inventories.reserved.produced["hull-plate"], 1);
-  assert.equal(harness.state.sprc.inventories.reserved.produced["machine-part"], 1);
+  assert.equal(harness.state.sprc.inventories.reserved.produced["machine-part"] ?? 0, 0);
 });
 
 test("aluminum and iron-nickel satisfy the same outcome-based procurement order", () => {
-  for (const [materialId, deliveredUnits] of [["iron-nickel", 8], ["aluminum", 4]]) {
+  for (const [materialId, equivalentsPerUnit] of [["iron-nickel", 1], ["aluminum", 2]]) {
     const harness = createHarness();
     triggerFirstRepair(harness);
     const order = Object.values(harness.state.sprc.procurementOrders)[0];
     harness.operation.acceptProcurement(order.contractId);
+    const deliveredUnits = order.requiredEquivalentUnits / equivalentsPerUnit;
     const result = harness.operation.deliverMaterial({ contractId: order.contractId, materialId, amount: deliveredUnits });
-    assert.equal(result.equivalentUnits, 8);
+    assert.equal(result.equivalentUnits, order.requiredEquivalentUnits);
     assert.equal(order.status, "paid");
   }
 });
@@ -269,4 +288,110 @@ test("the cargo manifest documents custody but does not fabricate source authori
   assert.equal(finding.declaredForProcurement, true);
   assert.equal(finding.sourceAuthorityStatus, "not-established");
   assert.match(finding.scopeNote, /does not grant extraction or salvage authority/);
+});
+
+function createLogisticsHarness() {
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(1_000);
+  const ships = ["hauler-yard-scrap", "hauler-scrap-yard"].map((id) => ({ id, wear: 0, operationalStatus: "seeking-work", dockedSiteId: id === "hauler-yard-scrap" ? "yard-exchange" : "scrap-porch", transfers: [], queueCargoTransfer(transfer) { this.transfers.push(transfer); }, assignShipment(assignment) { this.assignment = assignment; this.dockedSiteId = null; this.operationalStatus = "available"; }, clearShipment() { this.assignment = null; this.operationalStatus = "seeking-work"; } }));
+  const manager = createLogisticsManager({ state, ships, now: () => 1_000 });
+  return { state, ships, manager };
+}
+
+test("the known transportation network finds a multi-destination path without authored route logic", () => {
+  const network = createTransportationNetwork({ destinations: ["yard-exchange", "scrap-porch", "the-ledge"].map((id) => ({ id })), connections: FIRST_REACH_TRANSPORT_CONNECTIONS });
+  const route = findTransportationRoute(network, "scrap-porch", "the-ledge", FIRST_REACH_CARRIER_POLICY.knownDestinationIds);
+  assert.deepEqual(route.path, ["scrap-porch", "yard-exchange", "the-ledge"]);
+});
+
+test("transport work becomes ineligible when it violates the carrier maintenance policy", () => {
+  const network = createTransportationNetwork({ destinations: ["yard-exchange", "scrap-porch", "the-ledge"].map((id) => ({ id })), connections: FIRST_REACH_TRANSPORT_CONNECTIONS });
+  const plan = evaluateTransportPlan({ network, originId: "yard-exchange", destinationId: "the-ledge", payment: 500, currentWear: 4, policy: FIRST_REACH_CARRIER_POLICY, repairOptions: FIRST_REACH_REPAIR_OPTIONS });
+  assert.equal(plan.eligible, false);
+  assert.equal(plan.reason, "maintenance-policy");
+});
+
+test("failed route execution cannot commit inventory, custody, or payment", () => {
+  const harness = createLogisticsHarness();
+  harness.ships[0].canAcceptRoute = () => false;
+  const sourceBefore = harness.state.logistics.institutions["yard-exchange"].inventories["iron-nickel"];
+  const committedBefore = harness.state.logistics.institutions["scrap-forge"].accounts.operating.committed;
+  harness.manager.update();
+  assert.equal(Object.values(harness.state.logistics.shipments).some((shipment) => shipment.assigneeId === harness.ships[0].id), false);
+  assert.equal(harness.state.logistics.institutions["yard-exchange"].inventories["iron-nickel"], sourceBefore);
+  assert.equal(harness.state.logistics.institutions["scrap-forge"].accounts.operating.committed, committedBefore);
+});
+
+test("NPC haulers move only with real conserved standing shipments", () => {
+  const harness = createLogisticsHarness();
+  harness.manager.update();
+  const shipments = Object.values(harness.state.logistics.shipments);
+  assert.equal(shipments.length, 2);
+  assert.ok(harness.ships.every((ship) => ship.assignment?.shipmentId));
+  const yardShipment = shipments.find((entry) => entry.assigneeId === "hauler-yard-scrap");
+  const container = harness.state.logistics.containers[yardShipment.containerId];
+  assert.equal(yardShipment.status, "loaded");
+  assert.equal(container.commodity, "iron-nickel");
+  assert.equal(container.custody.length, 2);
+  assert.deepEqual(harness.ships[0].transfers[0], { commodity: "iron-nickel", direction: "from-hub" });
+  const issuerBefore = harness.state.logistics.institutions[yardShipment.issuerInstitutionId].accounts.operating.balance;
+  const carrierBefore = harness.state.logistics.institutions["carrier:yard-hauler"].accounts.operating.balance;
+  harness.state.ledger.recordEvent("npc.routeCompleted", { npcId: "hauler-yard-scrap", shipmentId: yardShipment.id, siteId: yardShipment.destinationSiteId }, { visible: false });
+  harness.manager.update();
+  assert.equal(yardShipment.status, "delivered");
+  assert.equal(container.ownerInstitutionId, yardShipment.destinationInstitutionId);
+  assert.equal(harness.state.logistics.institutions[yardShipment.destinationInstitutionId].inventories[yardShipment.commodity], 1);
+  assert.equal(harness.state.logistics.institutions[yardShipment.issuerInstitutionId].accounts.operating.balance, issuerBefore - yardShipment.payment);
+  assert.equal(harness.state.logistics.institutions["carrier:yard-hauler"].accounts.operating.balance, carrierBefore + yardShipment.payment);
+  assert.deepEqual(harness.ships[0].transfers[1], { commodity: "iron-nickel", direction: "to-hub" });
+  assert.notEqual(harness.state.logistics.haulers["hauler-yard-scrap"].activeShipmentId, yardShipment.id, "carrier selected reciprocal work after delivery");
+});
+
+test("an NPC carrier cannot accept standing freight until docked at its recorded site", () => {
+  const harness = createLogisticsHarness();
+  harness.ships[0].dockedSiteId = null;
+  harness.manager.update();
+  assert.equal(Object.values(harness.state.logistics.shipments).some((shipment) => shipment.assigneeId === harness.ships[0].id), false);
+  harness.ships[0].dockedSiteId = "yard-exchange";
+  harness.manager.update();
+  assert.equal(Object.values(harness.state.logistics.shipments).some((shipment) => shipment.assigneeId === harness.ships[0].id), true);
+});
+
+test("a carrier finishes its shipment at the maintenance hub before downtime blocks reassignment", () => {
+  const harness = createLogisticsHarness();
+  harness.manager.update();
+  const shipment = Object.values(harness.state.logistics.shipments).find((entry) => entry.assigneeId === "hauler-yard-scrap");
+  const ship = harness.ships.find((entry) => entry.id === "hauler-yard-scrap");
+  ship.dockedSiteId = shipment.destinationSiteId;
+  harness.state.ledger.recordEvent("npc.routeCompleted", { npcId: ship.id, shipmentId: shipment.id, siteId: shipment.destinationSiteId }, { visible: false });
+  harness.state.ledger.recordEvent("npc.wearIssue", { npcId: ship.id, issueType: "hull-fatigue", wear: 6, issueCount: 1 }, { visible: false });
+  harness.manager.update();
+  assert.equal(shipment.status, "delivered");
+  assert.equal(harness.state.logistics.haulers[ship.id].activeShipmentId, null);
+  assert.equal(harness.state.logistics.haulers[ship.id].status, "maintenance-required");
+  assert.equal(ship.operationalStatus, "maintenance");
+});
+
+test("player standing freight uses the same container, custody, inventory, and payment lifecycle", () => {
+  const harness = createLogisticsHarness();
+  const template = STANDING_FREIGHT_TEMPLATES[0];
+  const contract = createStandingFreightJob(template, "Yard Exchange Freight Desk");
+  const shipment = harness.manager.acceptPlayerContract(contract, "person:test-pilot");
+  assert.equal(shipment.status, "assigned");
+  assert.equal(harness.manager.loadPlayerContract(contract.id), true);
+  assert.equal(shipment.status, "loaded");
+  assert.equal(harness.manager.deliverPlayerContract(contract.id), true);
+  assert.equal(shipment.status, "delivered");
+  assert.equal(harness.state.logistics.containers[shipment.containerId].custodianInstitutionId, shipment.destinationInstitutionId);
+});
+
+test("different wear issues create different SPRC repair recipes", () => {
+  for (const [issueType, expected] of [["maneuvering-strain", { "hull-plate": 1, "machine-part": 1 }], ["hull-fatigue", { "hull-plate": 2, "machine-part": 0 }], ["control-fault", { "hull-plate": 0, "machine-part": 2 }]]) {
+    const harness = createHarness();
+    harness.state.ledger.recordEvent("logistics.maintenanceRequired", { npcId: SPRC.firstHaulerId, issueType, wear: 1.5, issueCount: 1, causedByCarefulMode: issueType === "maneuvering-strain" }, { visible: false });
+    harness.operation.update();
+    const repair = Object.values(harness.state.sprc.repairOrders)[0];
+    assert.deepEqual(repair.requirements.produced, expected);
+    assert.equal(repair.origin.type, "operational-wear");
+  }
 });

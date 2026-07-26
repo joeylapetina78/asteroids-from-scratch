@@ -1,33 +1,36 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260725-1948-d38544e";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260725-1948-d38544e";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260725-1948-d38544e";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260725-1948-d38544e";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260725-1948-d38544e";
-import { Game } from "./game.js?v=fresh-20260725-1948-d38544e";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260725-1948-d38544e";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260725-1948-d38544e";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260725-1948-d38544e";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260725-1948-d38544e";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260725-2256-967035c";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260725-2256-967035c";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260725-2256-967035c";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260725-2256-967035c";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260725-2256-967035c";
+import { Game } from "./game.js?v=fresh-20260725-2256-967035c";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260725-2256-967035c";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260725-2256-967035c";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260725-2256-967035c";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260725-2256-967035c";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260725-1948-d38544e";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260725-1948-d38544e";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260725-1948-d38544e";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260725-1948-d38544e";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260725-1948-d38544e";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260725-1948-d38544e";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260725-1948-d38544e";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260725-1948-d38544e";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260725-1948-d38544e";
-import { Processor } from "./systems/processor.js?v=fresh-20260725-1948-d38544e";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260725-1948-d38544e";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260725-1948-d38544e";
-import { createGameState } from "./state/gameState.js?v=fresh-20260725-1948-d38544e";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260725-1948-d38544e";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260725-1948-d38544e";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260725-2256-967035c";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260725-2256-967035c";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260725-2256-967035c";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260725-2256-967035c";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260725-2256-967035c";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260725-2256-967035c";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260725-2256-967035c";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260725-2256-967035c";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260725-2256-967035c";
+import { Processor } from "./systems/processor.js?v=fresh-20260725-2256-967035c";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260725-2256-967035c";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260725-2256-967035c";
+import { createGameState } from "./state/gameState.js?v=fresh-20260725-2256-967035c";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260725-2256-967035c";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js";
+import { createLogisticsManager } from "./systems/logistics.js";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260725-2256-967035c";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -323,11 +326,12 @@ wireAudioUnlockGestures();
 const processor = new Processor(processorCanvas, processUnit, { enableCompaction: true, getUnitFlags: getResourceUnitFlags });
 const cargoHold = new Processor(cargoCanvas, handleCargoUnitClick, { isClickable: true, getUnitFlags: getCargoUnitFlags });
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio, updateLedgerDrivenSystems);
+const logisticsManager = createLogisticsManager({ state, ships: game.npcShips, destinations: game.worldSites });
 
 // Dev hook: the running game and state, reachable from the console for
 // debugging and automated playtests. window.game is shadowed by the canvas
 // element (DOM id), so this lives under a distinct name.
-window.__asteroids = { game, state };
+window.__asteroids = { game, state, logistics: logisticsManager };
 const contractManager = createContractManager({
   state,
   onChange: (contract) => {
@@ -355,6 +359,9 @@ const sprcManager = createSprcOperation({
   },
 });
 window.__asteroids.sprc = sprcManager;
+const farmManager = createFarmOperation(Date.now());
+farmManager.assess();
+window.__asteroids.farm = farmManager;
 const journeyDirector = createJourneyDirector({
   state,
   game,
@@ -653,7 +660,7 @@ contractPaymentMax.addEventListener("click", () => {
 
 contractNextButton.addEventListener("click", () => {
   activeDepositContractId = null;
-  contractManager.showNextContract();
+  contractManager.showNextContract(currentSiteState?.dockedSite?.id ?? null);
   updateHudDisplay();
 });
 
@@ -735,7 +742,9 @@ renderProcessorOutputs();
   game.placeShipNearSite(chapterOneRoute.startSite.id);
 restoreSavedWorld({ save: savedProfile, game, cargoHold });
 sprcManager.update();
+logisticsManager.update();
 window.setInterval(() => sprcManager.update(), 1000);
+window.setInterval(() => logisticsManager.update(), 1000);
 registerStarterDeliveryShipRecords(state);
 clearOldPanelLayouts();
 setInitialPaperworkLocations();
@@ -1520,6 +1529,8 @@ function updateHubServiceDisplay(siteState) {
   hubStatus.textContent = activeService?.organization ?? "service menu";
   if (activeService?.id === SPRC.serviceId) {
     renderSprcOperationSummary();
+  } else if (activeService?.id === FARM_INSPECTION_SERVICE_ID) {
+    renderFarmInstitutionSummary();
   } else {
     hubDetail.textContent = activeService ? `${activeService.npcName}: ${getHubServicePrompt(activeService)}` : "Choose a service window.";
   }
@@ -1541,8 +1552,21 @@ function renderSprcOperationSummary() {
   hubDetail.textContent = `Sal: ${repairText} Operating plan: keep ${plan.inventoryTargets.structuralFeedstockEquivalents} feedstock equivalents, ${plan.inventoryTargets["hull-plate"]} plates, and ${plan.inventoryTargets["machine-part"]} parts on hand. Current stock: ${produced["hull-plate"] ?? 0} plates, ${produced["machine-part"] ?? 0} parts, ${(raw["iron-nickel"] ?? 0) + (raw.aluminum ?? 0) * 2} feedstock equivalents. Cash: ${availableCash} available, ${sprc.account.committed} committed, ${sprc.account.protectedReserve} protected. Next project: ${project.name} (${project.status}).`;
 }
 
+function renderFarmInstitutionSummary() {
+  const { institution, controller, policy } = farmManager.assess();
+  const water = institution.inventories.inputs.water ?? 0;
+  const target = institution.policies.inventoryTargets.water ?? 0;
+  const need = Object.values(institution.needs).find((entry) => entry.status === "open") ?? null;
+  const response = need ? Object.values(institution.responses).find((entry) => entry.needIds?.includes(need.id) && ["active", "blocked"].includes(entry.status)) : null;
+  const order = response ? Object.values(institution.procurementOrders).find((entry) => entry.responseId === response.id && entry.status === "offered") : null;
+  const recipe = INSTITUTION_ARCHETYPES[institution.archetypeId]?.recipes?.[0];
+  const recent = institution.history.slice(-3).map((entry) => entry.detail).join(" / ");
+  const spendable = Math.max(0, institution.accounts.operating.balance - institution.accounts.operating.committed - policy.protectedCash);
+  hubDetail.textContent = `${controller.name}, operator of ${institution.name}. Water: ${water}/${target}; seed: ${institution.inventories.inputs.seed ?? 0}/${institution.policies.inventoryTargets.seed ?? 0}. Cash: ${spendable} spendable, ${institution.accounts.operating.committed} committed, ${policy.protectedCash} protected. Current need: ${need ? `${need.shortage} ${need.subject.resourceId}` : "none"}. Internal response: ${response ? `${response.capabilityId} (${response.status})` : "none"}${order ? `; internal order ${order.id} requests ${order.quantity} ${order.resourceId} for up to ${order.maximumPayment} credits` : ""}. This order has not been posted to the pilot job board and cannot be accepted here. Planned cycle: ${recipe ? `${recipe.id}, using ${recipe.inputs.seed} seed and ${recipe.inputs.water} water to produce ${recipe.outputs.crop} crop` : "not scheduled"}. Recent decisions: ${recent || "none"}.`;
+}
+
 function syncContractPanelVisibility() {
-  const hasOpenContracts = contractManager.getOpenContractIds().length > 0;
+  const hasOpenContracts = contractManager.getVisibleContractIds(currentSiteState?.dockedSite?.id ?? null).length > 0;
   setComponentAvailable("contract", hasOpenContracts);
 }
 
@@ -1931,7 +1955,7 @@ function getJobKind(job) {
 }
 
 function getJobKindLabel(job) {
-  return { mining: "Mining", freight: "Freight", bounty: "Bounty" }[getJobKind(job)] ?? "Work";
+  return { mining: "Mining", freight: "Freight", bounty: "Bounty", logistics: "Logistics" }[getJobKind(job)] ?? "Work";
 }
 
 function createRookJobButton(job) {
@@ -2064,6 +2088,15 @@ function selectRookJob(jobId) {
     board.selectedContractId = null;
     renderRookJobBoard(site);
     return;
+  }
+  if (offeredContract.terms?.standingFreightTemplateId) {
+    const playerInstitutionId = state.character.controlledPersonEntityId ?? "person:player";
+    if (!logisticsManager.acceptPlayerContract(offeredContract, playerInstitutionId)) {
+      offeredContract.status = "canceled";
+      board.selectedContractId = null;
+      renderRookJobBoard(site);
+      return;
+    }
   }
   setComponentAvailable("contract", true);
   pullContractToCenter(job.id);
@@ -2211,15 +2244,19 @@ function openHubService(serviceId) {
     { visible: false },
   );
 
+  if (service.id === FARM_INSPECTION_SERVICE_ID) {
+    renderFarmInstitutionSummary();
+    return;
+  }
+
   if (service.serviceType === "operation") {
     renderSprcOperationSummary();
     const openContract = Object.values(state.contracts.records).find(
       (contract) => contract.type === "resource-procurement" && ["offered", "active", "fulfilled"].includes(contract.status),
     );
     if (openContract) {
-      contractManager.focusContract(openContract.id);
       setComponentAvailable("contract", true);
-      focusPanelById("contract");
+      pullContractToCenter(openContract.id);
     }
     return;
   }
@@ -2969,6 +3006,10 @@ function formatBias(value) {
 }
 
 function renderContract(contract = contractManager.getCurrentContract()) {
+  const visibleContractIds = contractManager.getVisibleContractIds(currentSiteState?.dockedSite?.id ?? null);
+  if (contract && !visibleContractIds.includes(contract.id)) {
+    contract = null;
+  }
   game.syncContractBeaconTarget(contract);
   renderContractFileStack(contract);
 
@@ -3050,7 +3091,7 @@ function renderContractFileStack(currentContract = contractManager.getCurrentCon
 }
 
 function getPaperworkFiles() {
-  const contractFiles = contractManager.getOpenContractIds().map((contractId) => {
+  const contractFiles = contractManager.getVisibleContractIds(currentSiteState?.dockedSite?.id ?? null).map((contractId) => {
     const contract = state.contracts.records[contractId];
     return {
       kind: "contract",
@@ -3403,7 +3444,7 @@ function isContractButtonEnabled(contract) {
 }
 
 function renderContractNavigation(contract = contractManager.getCurrentContract()) {
-  const contractIds = contractManager.getOpenContractIds();
+  const contractIds = contractManager.getVisibleContractIds(currentSiteState?.dockedSite?.id ?? null);
   const currentIndex = contract ? contractIds.indexOf(contract.id) : -1;
   const countLabel = contractIds.length === 1 ? "1 contract" : `${contractIds.length} contracts`;
 
@@ -3460,6 +3501,7 @@ function loadCargoManifest(contract) {
     return;
   }
 
+  if (contract.terms?.standingFreightTemplateId && !logisticsManager.loadPlayerContract(contract.id)) return;
   const unitType = getManifestUnitType(contract.id);
   cargoHold.addUnit(unitType, {
     quantity: 1,
@@ -3470,7 +3512,11 @@ function loadCargoManifest(contract) {
     size: MANIFEST_CONTAINER_SIZE,
   });
   setComponentAvailable("cargo", true);
-  game.createCargoTransferTrail(unitType);
+  game.createCargoTransferTrail({
+    type: contract.terms.commodity,
+    color: getResourceColor(contract.terms.commodity),
+    shape: getResourceShape(contract.terms.commodity),
+  }, "from-hub");
   state.ledger.recordEvent(
     "cargo.manifestLoaded",
     { contractId: contract.id, contractTitle: contract.title, originSiteId: contract.terms.originSiteId, commodity: contract.terms.commodityName },
@@ -3486,9 +3532,14 @@ function deliverCargoManifest(contract) {
     return;
   }
 
+  if (contract.terms?.standingFreightTemplateId && !logisticsManager.deliverPlayerContract(contract.id)) return;
   const unitType = getManifestUnitType(contract.id);
   cargoHold.removeUnits(unitType, 1);
-  game.createCargoTransferTrail(unitType);
+  game.createCargoTransferTrail({
+    type: contract.terms.commodity,
+    color: getResourceColor(contract.terms.commodity),
+    shape: getResourceShape(contract.terms.commodity),
+  }, "to-hub");
   contractManager.deliverCargoRun(contract.id, currentSiteState?.dockedSite?.id);
   renderContract();
   updateHudDisplay();
@@ -3815,7 +3866,9 @@ function updatePaperworkControlLabels() {
     button.hidden = !state.ui.paperwork?.filingIntroduced;
     button.textContent = isInDrawer ? "Desk" : "File";
     button.title = button.disabled
-      ? "Accept this contract before filing it"
+      ? panelId === "contract" && contractManager.getCurrentContract()?.status === "offered"
+        ? "Accept this contract before filing it"
+        : "No contract selected"
       : isInDrawer
         ? "Move paperwork to the desktop"
         : "File paperwork in the drawer";
@@ -4495,7 +4548,7 @@ function sellCargoUnit(type, unit = {}) {
   const creditsEarned = unitValue * quantity;
   depositCredits(state, creditsEarned);
   state.ledger.recordEvent("cargo.sold", { creditsEarned, units: { [type]: quantity }, totalUnits: quantity }, { visible: false });
-  game.createCargoTransferTrail(type);
+  game.createCargoTransferTrail({ type, color: unit.color, shape: unit.shape, size: unit.size }, "to-hub");
   renderFinleyPanel();
   updateHudDisplay();
   game.updateSiteReadout();
@@ -4772,7 +4825,7 @@ function depositCargoUnit(type, unit = {}) {
       return false;
     }
 
-    game.createCargoTransferTrail(type);
+    game.createCargoTransferTrail({ type, color: unit.color, shape: unit.shape, size: unit.size }, "to-hub");
     if (contract.status === "paid" || contract.status === "fulfilled") {
       activeDepositContractId = null;
     }
@@ -4795,7 +4848,7 @@ function depositCargoUnit(type, unit = {}) {
     return false;
   }
 
-  game.createCargoTransferTrail(type);
+  game.createCargoTransferTrail({ type, color: unit.color, shape: unit.shape, size: unit.size }, "to-hub");
 
   if (contract.status === "fulfilled" || contract.status === "paid") {
     activeDepositContractId = null;

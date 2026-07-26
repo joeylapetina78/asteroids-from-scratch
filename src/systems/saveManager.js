@@ -1,6 +1,6 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260725-1948-d38544e";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260725-1948-d38544e";
-import { ensureObligations } from "./obligations.js?v=fresh-20260725-1948-d38544e";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260725-2256-967035c";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260725-2256-967035c";
+import { ensureObligations } from "./obligations.js?v=fresh-20260725-2256-967035c";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 
@@ -70,6 +70,7 @@ export function loadSavedProfile(state) {
     mergePlainObject(state.ui, save.ui);
     mergePlainObject(state.worldRecords, save.worldRecords);
     mergePlainObject(state.sprc, save.sprc);
+    mergePlainObject(state.logistics, save.logistics);
 
     if (!save.ship?.purchasedOfferId && save.components?.merchant?.purchasedOfferId) {
       state.ship.purchasedOfferId = save.components.merchant.purchasedOfferId;
@@ -102,6 +103,7 @@ export function saveProfile({ state, game, cargoHold }) {
     ui: cloneJsonSafe(state.ui),
     worldRecords: cloneJsonSafe(state.worldRecords),
     sprc: cloneJsonSafe(state.sprc),
+    logistics: cloneJsonSafe(state.logistics),
     world: game?.getSaveSnapshot?.() ?? null,
     cargo: cargoHold?.getSaveSnapshot?.() ?? null,
   };

@@ -1,13 +1,13 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260725-1948-d38544e";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260725-1948-d38544e";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260725-1948-d38544e";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260725-1948-d38544e";
-import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260725-1948-d38544e";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260725-1948-d38544e";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260725-1948-d38544e";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260725-1948-d38544e";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260725-1948-d38544e";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260725-1948-d38544e";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260725-2256-967035c";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260725-2256-967035c";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260725-2256-967035c";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260725-2256-967035c";
+import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260725-2256-967035c";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260725-2256-967035c";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260725-2256-967035c";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260725-2256-967035c";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260725-2256-967035c";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260725-2256-967035c";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -565,8 +565,16 @@ export function createContractManager({ state, onChange = () => {} }) {
       .map((contract) => contract.id);
   }
 
-  function showNextContract() {
-    const contractIds = getOpenContractIds();
+  function getVisibleContractIds(siteId = null) {
+    return getOpenContractIds().filter((contractId) => {
+      const contract = state.contracts.records[contractId];
+      const offerSiteId = contract.presentation?.offerSiteId ?? null;
+      return contract.status !== "offered" || !offerSiteId || offerSiteId === siteId;
+    });
+  }
+
+  function showNextContract(siteId = undefined) {
+    const contractIds = siteId === undefined ? getOpenContractIds() : getVisibleContractIds(siteId);
 
     if (contractIds.length === 0) {
       state.contracts.currentContractId = null;
@@ -610,6 +618,7 @@ export function createContractManager({ state, onChange = () => {} }) {
     focusContract,
     getCurrentContract,
     getOpenContractIds,
+    getVisibleContractIds,
     offerContract,
     payLoan,
     showNextContract,

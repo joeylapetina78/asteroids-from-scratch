@@ -18,7 +18,7 @@ SPRC is the first persistent institution whose work, rather than a job table, cr
 - The Maw is a visible recovery mill at Scrap Porch.
 - Berth Two is one visible repair berth.
 - Porch Runner Two, piloted by Mara Venn, is the first repair customer.
-- Its first maintenance condition is provisionally triggered after two legacy route legs. The repair order records `origin.type = provisional-route-count` and `replaceWith = unified-wear-assessment`; downstream systems do not depend on that trigger.
+- Working haulers accumulate persistent wear. Crossing a wear threshold emits a hull-fatigue, control-fault, or maneuvering-strain issue; careful flying increases maneuvering strain rather than providing free acceleration.
 - Sal now operates from a persistent plan before that repair occurs: eight structural-feedstock equivalents, three hull plates, two machine parts, two projected repairs of coverage, and a 900-credit protected cash reserve.
 - Routine reserve replenishment is distinct from emergency blocked-repair procurement. If Mara arrives while a reserve order is open, Sal promotes that funded order instead of emitting a duplicate.
 - The second repair cradle exists as a persistent planned project with material and cash requirements, subordinate to service safety stock and protected cash.
@@ -30,7 +30,7 @@ SPRC is the first persistent institution whose work, rather than a job table, cr
 - Contract payment is committed when an order is posted, unavailable to other decisions, transferred on completion, and released on expiry. Orders are blocked when funding them would cross the protected reserve.
 - Active operational orders appear under **Local Needs** on the Scrap Porch work board, separate from procedural odd jobs.
 - Production consumes reserved raw inputs only when it starts and creates output only when its timer completes.
-- Repair consumes reserved output, restores the named hauler to availability, and returns it to its existing theatrical route.
+- Repair consumes reserved output, restores the named hauler to availability, and returns it to the standing-freight pool. Issue type selects a distinct plate-and-part recipe.
 
 ## Causal record chain
 
@@ -46,11 +46,11 @@ Accepting a procurement order issues an open cargo manifest. The manifest docume
 
 `state.sprc` is saved with the profile. It includes accounts, inventories, reservations, facilities, repair and production orders, needs, responses, procurement orders, the hauler's operational record, relationship state, counters, and history. Completion checks are status-based so loading cannot repeat payment or duplicate production.
 
-## Deliberate provisional seams
+## Deliberate bounded seams
 
-- The initiating route-count condition must eventually be replaced by unified wear assessment.
-- The repaired hauler returns to its legacy visual route; its cargo animation is not yet real logistics.
-- Local market restocking, alternate carriers, contract expiry, confiscation, mill faults, and competing projects are structurally possible but not yet simulated.
+- Renewable source units make the two pilot commodities inexhaustible, but each shipment still creates, transfers, and delivers one conserved container.
+- Dispatch selects the first eligible standing offer at the hauler's current site; it is not a route optimizer or price market.
+- Local market competition, confiscation, mill faults, and competing carriers are structurally possible but not yet simulated.
 - The shared layer intentionally stops short of a universal planner. SPRC and the farm prove only the smallest reusable decision seams; domain execution remains capability-owned.
 
 ## Verification

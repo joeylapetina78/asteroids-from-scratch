@@ -1,8 +1,19 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260725-1948-d38544e";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260725-1948-d38544e";
+import { getNpcName } from "../npcs.js?v=fresh-20260725-2256-967035c";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260725-2256-967035c";
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
+    {
+      id: "sunward-acre-inspection",
+      npcId: "tavi",
+      npcName: "Tavi",
+      organization: "Sunward Acre",
+      serviceType: "operation",
+      label: "Sunward Acre",
+      description: "Inspect the nearby farm's operating plan, reserves, need, and response.",
+      defaultUnlocked: true,
+      greeting: "Tavi. Sunward Acre is small, but the books are real. You can see what we're holding and what we're trying to secure.",
+    },
     {
       id: yardExchangeServices.rook,
       npcId: "rook",
