@@ -1,6 +1,6 @@
 # Agent Map
 
-This is the short re-entry map for future coding passes. Read this before broad code archaeology.
+This is the short re-entry map for future coding passes. Read [HANDOFF.md](HANDOFF.md) first for the July 2026 checkpoint, then use this file before broad code archaeology.
 
 ## Current North Star
 
@@ -19,6 +19,7 @@ Asteroids RPG is a world-centric institutional space sim. The player controls on
 - `docs/ship-workbench-roadmap.md` is the console-rack, hull-slot, and responsive-workbench direction. Read it before adding a permanent ship panel.
 - `docs/comms-attention-roadmap.md` is the source of truth for Journey, viewport chatter, target arrows, and visual attention. Read it before adding a prompt, highlight, or UI callout.
 - `docs/tag-registry.md` defines the world-tag vocabulary and its live system readers. Read it before adding or repurposing a zone or region tag.
+- `docs/HANDOFF.md` records the current economy, institution, mining, freight, recovery, corridor, known-risk, and recommended-next-step state.
 
 ## Important Invariants
 
@@ -29,6 +30,8 @@ Asteroids RPG is a world-centric institutional space sim. The player controls on
 - Hubs, patrols, NPCs, and the player should inspect or present paperwork through the same authority/document systems.
 - `state.components` is ship hardware. UI panels are not ship hardware.
 - The viewport should keep drawing even if a subsystem throws; `game.js` logs frame errors and keeps the loop alive.
+- Delivery rejection must never destroy cargo. Inventory, custody, credits, commitments, repair inputs, and wear transitions remain conserved.
+- Shared institution decision code must remain free of authored domain nouns; personalities, recipes, capabilities, and values belong in content, archetype, or instance data.
 
 ## World Generation Direction
 

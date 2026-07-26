@@ -19,6 +19,7 @@ SPRC is the first persistent institution whose work, rather than a job table, cr
 - The Maw is a visible recovery mill at Scrap Porch.
 - Berth Two is one visible repair berth.
 - Porch Runner Two, piloted by Mara Venn, is the first repair customer.
+- Repair eligibility is now public capability matching rather than a list of recognized ship IDs. Freight haulers and Cinder mining craft use the same facility, condition, capability, mobility, payer, affordability, and material checks.
 - Working haulers accumulate persistent wear. Crossing a wear threshold emits a hull-fatigue, control-fault, or maneuvering-strain issue; careful flying increases maneuvering strain rather than providing free acceleration.
 - Sal now operates from a persistent plan before that repair occurs: eight structural-feedstock equivalents, three hull plates, two machine parts, two projected repairs of coverage, and a 900-credit protected cash reserve.
 - Routine reserve replenishment is distinct from emergency blocked-repair procurement. If Mara arrives while a reserve order is open, Sal promotes that funded order instead of emitting a duplicate.
@@ -29,6 +30,8 @@ SPRC is the first persistent institution whose work, rather than a job table, cr
 - A finite Yard Exchange raw-stock inventory enables purchase-and-haul. Existing mining and previously held cargo use the same delivery path.
 - Procurement payment is debited from SPRC and credited to the player. Repair revenue is transferred from the serviced carrier's operating account when the repair completes.
 - Contract payment is committed when an order is posted, unavailable to other decisions, transferred on completion, and released on expiry. Orders are blocked when funding them would cross the protected reserve.
+- Procurement orders have a 45-minute base deadline and bounded extensions while an institutional allocation is physically in transit. Rejected delivery preserves cargo and assignment; accepted partial units are paid and conserved.
+- Sal checks real Scrap Porch supply inventory for structural material and copper before publishing external procurement. Miners can sell genuine surplus into that inventory, closing the first local wholesale loop.
 - Active operational orders appear under **Local Needs** on the Scrap Porch work board, separate from procedural odd jobs.
 - Production consumes reserved raw inputs only when it starts and creates output only when its timer completes.
 - Repair consumes reserved output, restores the named hauler to availability, and returns it to the standing-freight pool. Issue type selects a distinct plate-and-part recipe.
@@ -63,4 +66,4 @@ npm test
 npm run validate:content
 ```
 
-The tests cover causal record creation, interchangeable accepted materials, material and money conservation, repair completion, hauler return, reload idempotence, blocked-response reconsideration, farm transfer, and the shared-engine domain boundary.
+The tests cover causal record creation, interchangeable accepted materials, rejected-delivery conservation, institutional allocations and deadlines, local surplus and wholesale flow, material and money conservation, repair completion, hauler return, reload idempotence, blocked-response reconsideration, farm transfer, and the shared-engine domain boundary.

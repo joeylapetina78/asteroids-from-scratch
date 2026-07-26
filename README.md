@@ -4,7 +4,7 @@ A browser-based space RPG built around a world-centric institutional simulation.
 
 Mining is one profession within that world. Hauling is another. Salvage, patrol, bounty work, piracy, and search-and-rescue are others. The same underlying systems — documents, contracts, components, inspection rules, and AI behaviors — should support all of them.
 
-For the system map and architecture, see [docs/project-map.md](docs/project-map.md).
+For the current implementation and future-agent handoff, start with [docs/HANDOFF.md](docs/HANDOFF.md). For the deeper system map, see [docs/project-map.md](docs/project-map.md).
 
 ---
 
@@ -81,7 +81,9 @@ The mission system runs on authored **beats** — discrete story units each with
 
 The event ledger records meaningful career and world events. Contracts, legal records, ship state, and hub services all read from the same ledger rather than each building their own state.
 
-Scrap Porch now hosts the first bounded living economic operation: the Scrap Porch Recovery Cooperative. A named route hauler can enter Berth Two for repair, repair requirements reserve real stock, shortages create traceable needs, The Maw consumes raw inputs to produce hull plates, and an outcome-based procurement order can accept mined, purchased, or previously held structural feedstock. Material, payment, production, repair, and the hauler's return remain conserved and persistent. See [docs/sprc-operation.md](docs/sprc-operation.md).
+Scrap Porch now hosts the first bounded living economy. SPRC repairs compatible freight haulers and Cinder mining craft through public capability matching; Sal plans reserves, protects cash, publishes causal procurement, buys local wholesale inventory, produces parts, and schedules ready work. Cinder's physical miners prioritize critical SPRC demand, mine multiple rocks per trip, sell surplus into real hub inventory, develop work-based wear, pay for service, and return to operation. Named haulers and the player draw freight from that same conserved inventory. See [docs/HANDOFF.md](docs/HANDOFF.md), [docs/sprc-operation.md](docs/sprc-operation.md), and [docs/real-logistics-slice.md](docs/real-logistics-slice.md).
+
+The Yard Exchange-The Ledge route is also a reusable procedural freight corridor: an authored connection produces a deterministic curved centerline, navigable shoulders, NPC waypoints, debris-clearing pressure, and bidirectional kinetic speed pads. Institutional recovery uses the same transportation network when a carrier cannot finish under its own power.
 
 Recent architecture prep has focused on keeping future content from becoming one-off script glue:
 
@@ -96,6 +98,10 @@ The save system is browser-local and for playtesting only. Save keys may be inte
 ---
 
 ## What's Next
+
+The recommended immediate milestone is observation and balancing, not another large intelligence layer. Measure a normal 20-30 minute economy run: material and credit flows, waiting time, expiries, maintenance downtime, and whether Cinder expansion relieves or floods supply. Tune payouts, quantities, wear, reserves, and deadlines from those results.
+
+The next larger system should extend the public wear/service/salvage lifecycle to one non-economic craft class, probably an incursion ship, while preserving real repair matching and conserved wreck material. The older authority and mission-editor tracks below remain valuable parallel work, but [docs/HANDOFF.md](docs/HANDOFF.md) is the current priority source.
 
 The near-term track is building out the document/authority framework so that pilot licenses, ship titles, registrations, loan liens, mining permits, and hub access passes share structure instead of being isolated systems. That foundation enables inspections, zone enforcement, document forgery, debt mechanics, repo events, and new professions without rewriting the core player systems.
 

@@ -65,6 +65,11 @@ This document is a living manual for authoring. It should grow whenever a new ev
 | `contract.resourceDeposited` | `contractId`, `resourceType`, `deliveredAmount`, `requiredAmount` | One resource unit was deposited toward a contract. |
 | `contract.fulfilled` | `contractId`, `destinationSiteId`, `shipVin`, `resourceType`, `unitsDelivered` | Terms are satisfied, payment is ready. |
 | `contract.paid` | `contractId`, `creditsPaid`, `accountCredits` | Contract payment was collected into the current account. |
+| `contract.expired` | `contractId`, `sourceNeedId`, `repairOrderId` | Institutional procurement elapsed and released committed funds. |
+| `contract.deadlineExtended` | `contractId`, `inTransitEquivalentUnits` | Procurement was extended because allocated institutional cargo is in transit. |
+| `institution.contractAllocated` | `contractId`, `procurementOrderId`, `supplierInstitutionId`, `equivalentUnits` | An institution reserved a bounded share of public procurement. |
+| `institution.action` | `institutionId`, `actorName`, `actionType` plus action facts | A named controller or institution made a meaningful operational decision. |
+| `sprc.localWholesalePurchased` | `supplierInstitutionId`, `itemId`, `units`, `cost` | SPRC bought local hub inventory before external procurement. |
 | `payment.made` | `paymentId`, `payableType`, `payableId`, `payeeEntityId`, `amountPaid`, `accountCredits` | Generic payment receipt. Loans, fees, fines, purchases, and future payouts should move toward this path. |
 | `loan.disbursed` | `contractId`, `obligationId`, `principal`, `maxInterest`, `accountCredits` | Loan funds were added and a loan obligation was created. |
 | `loan.paymentMade` | `obligationId`, `sourceContractId`, `amountPaid`, `balance`, `accountCredits` | Credits were paid from the current account toward a loan obligation. |
@@ -106,6 +111,12 @@ The older delivery fields still exist for display and compatibility. Future cont
 | `resource.mined` | `units`, `totalUnits` | Mining produced resource units. |
 | `resource.collected` | `resourceType`, `amount` | Ship collected a loose resource. |
 | `resource.processed` | `resourceType`, `output`, `amount` | Processor converted a resource. |
+| `mining.contractAccepted` | `orderId`, `allocationId`, `resourceId`, `quantity`, `shipInstitutionId` | Cinder assigned a physical worker to funded work. |
+| `mining.contractFulfilled` | `orderId`, `siteId`, `resourceId`, `quantity`, `payment`, `shipInstitutionId` | A worker delivered accepted material, received payment, and incurred work wear. |
+| `mining.surplusSold` | `siteId`, `resourceId`, `quantity`, `payment`, `buyerInstitutionId` | Cargo beyond an allocation entered local supply inventory. |
+| `mining.maintenanceRequired` | `shipInstitutionId`, `issueType`, `wear`, `requiredCapabilities` | Mining work produced a service issue and return to SPRC. |
+| `mining.expansionApproved` | `projectId`, `requiredCredits` | Sustained demand caused Cinder to approve another worker. |
+| `mining.expansionCompleted` | `projectId`, `shipInstitutionId`, `cost`, `accountBalance` | Cinder funded and commissioned the worker. |
 
 ## NPC And Combat Events
 

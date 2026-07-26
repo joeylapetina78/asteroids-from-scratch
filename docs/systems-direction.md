@@ -1,6 +1,8 @@
 # Living Frontier — Systems Direction
 
-This document describes the architectural direction for the Asteroids RPG. It is a living reference for both design and implementation. The vision is described first, with current implementation status noted inline so Codex and Claude can see what exists, what is partially built, and what is ahead.
+This document describes the long-range architectural direction for the Asteroids RPG.
+
+> **Implementation checkpoint (July 26, 2026):** Several older status notes below are historical and understate the current build. Real institutional mining, conserved freight, named carrier accounts, public SPRC repair matching, work-based maintenance, institutional recovery, local wholesale inventory, shared player/NPC jobs, and reusable physical freight corridors now exist. Read [HANDOFF.md](HANDOFF.md) for authoritative current status; retain this document as design philosophy.
 
 **The big goal:** Build systems first, then let ideas use those systems. We do not want a special pirate system, miner system, mercenary system, or patrol system. We want shared systems where different roles emerge from equipment, documents, relationships, goals, places, and contracts.
 
