@@ -8,7 +8,7 @@ import { evaluateAffordability, generateCapabilityResponses } from "../src/syste
 import { createContractManager } from "../src/systems/contractManager.js";
 import { createInitialLogisticsState, createLogisticsManager, createStandingFreightJob, STANDING_FREIGHT_TEMPLATES } from "../src/systems/logistics.js";
 import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "../src/systems/transportationPlanning.js";
-import { createTransportCorridors, getCorridorClearance } from "../src/systems/transportCorridors.js";
+import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "../src/systems/transportCorridors.js";
 import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../src/content/transportation/firstReachNetwork.js";
 import { createTowServiceManager } from "../src/systems/towService.js";
 import { NpcShip } from "../src/entities/NpcShip.js";
@@ -16,6 +16,7 @@ import { MiningWorkerShip } from "../src/entities/MiningWorkerShip.js";
 import { createMiningOperation, getStandingMiningJobsForSite, STANDING_MINING_ORDERS } from "../src/systems/miningOperation.js";
 import { createAsteroidChunks } from "../src/systems/asteroidField.js";
 import { createResourceField } from "../src/systems/resourceField.js";
+import { Ship } from "../src/entities/Ship.js";
 
 function createHarness() {
   let clock = 1_000;
@@ -440,8 +441,30 @@ test("a configured transport connection creates a curved, cleared physical corri
   const lateralSigns = corridors[0].samples.map((point) => Math.sign(point.y)).filter(Boolean);
   const directionChanges = lateralSigns.slice(1).filter((sign, index) => sign !== lateralSigns[index]).length;
   assert.ok(directionChanges >= 4);
+  assert.equal(corridors[0].boostPatches.length, 4);
   assert.equal(getCorridorClearance(corridors[0].samples[12], 40, corridors)?.corridor.id, "corridor-yard-ledge");
   assert.equal(getCorridorClearance({ x: 4200, y: 3000 }, 40, corridors), null);
+});
+
+test("corridor infrastructure provides slipstream tuning and pushes debris off the centerline", () => {
+  const destinations = [
+    { id: "yard-exchange", name: "Yard Exchange", position: { x: 0, y: 0 } },
+    { id: "the-ledge", name: "The Ledge", position: { x: 8400, y: 0 } },
+  ];
+  const corridors = createTransportCorridors({ destinations, connections: FIRST_REACH_TRANSPORT_CONNECTIONS });
+  const center = corridors[0].samples[Math.floor(corridors[0].samples.length / 2)];
+  const asteroid = { position: { ...center }, origin: { ...center }, velocity: { x: 0, y: 0 }, radius: 34 };
+  assert.equal(applyCorridorMaintenance(asteroid, corridors, 1), true);
+  assert.ok(Math.hypot(asteroid.velocity.x, asteroid.velocity.y) >= 12);
+  assert.ok(Math.hypot(asteroid.origin.x - center.x, asteroid.origin.y - center.y) >= 10);
+
+  const ship = new Ship(0, 0, { powered: true, fuel: 100 });
+  ship.environmentMaxSpeedMultiplier = corridors[0].slipstreamSpeedMultiplier;
+  ship.environmentThrustMultiplier = corridors[0].slipstreamThrustMultiplier;
+  assert.equal(ship.getMaxSpeed(), 126);
+  ship.triggerCorridorBoost();
+  assert.equal(ship.getMaxSpeed(), 189);
+  assert.ok(ship.getThrustPower() > 180);
 });
 
 test("generated corridor shoulder rocks are anchored where they spawn", () => {

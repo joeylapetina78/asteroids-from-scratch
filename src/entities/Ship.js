@@ -1,4 +1,4 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260726-1139-3d379b8";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260726-1149-12a9b04";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_THRUST_POWER = 95;
@@ -79,6 +79,9 @@ export class Ship {
     this.cloakConfig = null;
     this.boostDurationRemaining = 0;
     this.boostCooldown = 0;
+    this.environmentMaxSpeedMultiplier = 1;
+    this.environmentThrustMultiplier = 1;
+    this.corridorBoostDurationRemaining = 0;
   }
 
   update(deltaSeconds, input) {
@@ -115,6 +118,7 @@ export class Ship {
     );
 
     this.boostDurationRemaining = Math.max(0, this.boostDurationRemaining - deltaSeconds);
+    this.corridorBoostDurationRemaining = Math.max(0, this.corridorBoostDurationRemaining - deltaSeconds);
   }
 
   startForwardBoost() {
@@ -141,7 +145,8 @@ export class Ship {
   }
 
   getThrustPower() {
-    return this.engine.thrustPower ?? DEFAULT_THRUST_POWER;
+    const patchMultiplier = this.corridorBoostDurationRemaining > 0 ? 1.75 : 1;
+    return (this.engine.thrustPower ?? DEFAULT_THRUST_POWER) * this.environmentThrustMultiplier * patchMultiplier;
   }
 
   getReverseThrustMultiplier() {
@@ -155,7 +160,12 @@ export class Ship {
 
   getMaxSpeed() {
     const cloakMultiplier = this.isCloaked ? (this.cloakConfig?.maxSpeedMultiplier ?? 0.78) : 1;
-    return (this.engine.maxSpeed ?? DEFAULT_MAX_SPEED) * cloakMultiplier;
+    const patchMultiplier = this.corridorBoostDurationRemaining > 0 ? 1.5 : 1;
+    return (this.engine.maxSpeed ?? DEFAULT_MAX_SPEED) * cloakMultiplier * this.environmentMaxSpeedMultiplier * patchMultiplier;
+  }
+
+  triggerCorridorBoost(durationSeconds = 1.2) {
+    this.corridorBoostDurationRemaining = Math.max(this.corridorBoostDurationRemaining, durationSeconds);
   }
 
   hasLateralThrusters() {

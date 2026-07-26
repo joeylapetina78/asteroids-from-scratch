@@ -46,6 +46,28 @@ export function getCorridorClearance(position, bodyRadius, corridors = []) {
   return null;
 }
 
+export function applyCorridorMaintenance(asteroid, corridors, deltaSeconds) {
+  const clearance = getCorridorClearance(asteroid.position, 0, corridors);
+  if (!clearance || clearance.nearest.distance >= clearance.width * 0.5) return false;
+  const tangent = clearance.nearest.tangent;
+  const relative = { x: asteroid.position.x - clearance.nearest.point.x, y: asteroid.position.y - clearance.nearest.point.y };
+  let side = Math.sign(tangent.x * relative.y - tangent.y * relative.x);
+  if (side === 0) side = Math.sin(asteroid.origin.x * 0.017 + asteroid.origin.y * 0.011) < 0 ? -1 : 1;
+  const normal = { x: -tangent.y * side, y: tangent.x * side };
+  const halfWidth = clearance.width * 0.5;
+  const centerPressure = 1 - clearance.nearest.distance / Math.max(1, halfWidth);
+  const push = 4 + centerPressure * 8;
+  asteroid.velocity.x += normal.x * push * deltaSeconds;
+  asteroid.velocity.y += normal.y * push * deltaSeconds;
+  const targetDistance = halfWidth + asteroid.radius + 28;
+  const originRelative = { x: asteroid.origin.x - clearance.nearest.point.x, y: asteroid.origin.y - clearance.nearest.point.y };
+  const originDistance = originRelative.x * normal.x + originRelative.y * normal.y;
+  const anchorShift = Math.min(Math.max(0, targetDistance - originDistance), 11 * deltaSeconds);
+  asteroid.origin.x += normal.x * anchorShift;
+  asteroid.origin.y += normal.y * anchorShift;
+  return true;
+}
+
 function createCorridor(connection, from, to) {
   const config = connection.corridor;
   const dx = to.position.x - from.position.x;
@@ -69,7 +91,18 @@ function createCorridor(connection, from, to) {
   });
   const waypoints = samplePolylineByDistance(samples, config.waypointSpacing ?? 520);
   const courseLength = polylineLength(samples);
-  return { id: config.id ?? `corridor:${connection.id}`, connectionId: connection.id, name: config.name ?? `${from.name}–${to.name} Freight Corridor`, fromId: from.id, toId: to.id, width: config.width ?? 480, endpointWidth: config.endpointWidth ?? 720, shoulderDensity: config.shoulderDensity ?? 0, outerShoulderDensity: config.outerShoulderDensity ?? 0, seed: config.seed ?? 1, samples, waypoints, length: courseLength, directLength: length };
+  const id = config.id ?? `corridor:${connection.id}`;
+  return { id, connectionId: connection.id, name: config.name ?? `${from.name}–${to.name} Freight Corridor`, fromId: from.id, toId: to.id, width: config.width ?? 480, endpointWidth: config.endpointWidth ?? 720, shoulderDensity: config.shoulderDensity ?? 0, outerShoulderDensity: config.outerShoulderDensity ?? 0, slipstreamSpeedMultiplier: config.slipstreamSpeedMultiplier ?? 1, slipstreamThrustMultiplier: config.slipstreamThrustMultiplier ?? 1, boostPatches: createBoostPatches(id, samples, config.boostPatchProgress ?? []), seed: config.seed ?? 1, samples, waypoints, length: courseLength, directLength: length };
+}
+
+function createBoostPatches(corridorId, samples, progressValues) {
+  return progressValues.map((progress, index) => {
+    const sampleIndex = Math.max(1, Math.min(samples.length - 2, Math.round(progress * (samples.length - 1))));
+    const previous = samples[sampleIndex - 1];
+    const next = samples[sampleIndex + 1];
+    const tangentLength = Math.hypot(next.x - previous.x, next.y - previous.y) || 1;
+    return { id: `${corridorId}:boost:${index}`, position: { ...samples[sampleIndex] }, tangent: { x: (next.x - previous.x) / tangentLength, y: (next.y - previous.y) / tangentLength }, radius: 72 };
+  });
 }
 
 function sampleCourseProfile(points, progress) {
@@ -120,7 +153,10 @@ function nearestPointOnPolyline(point, samples) {
     const t = Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared));
     const projected = { x: start.x + dx * t, y: start.y + dy * t };
     const distance = Math.hypot(point.x - projected.x, point.y - projected.y);
-    if (distance < best.distance) best = { distance, progress: (index - 1 + t) / (samples.length - 1), point: projected };
+    if (distance < best.distance) {
+      const segmentLength = Math.hypot(dx, dy) || 1;
+      best = { distance, progress: (index - 1 + t) / (samples.length - 1), point: projected, tangent: { x: dx / segmentLength, y: dy / segmentLength } };
+    }
   }
   return best;
 }

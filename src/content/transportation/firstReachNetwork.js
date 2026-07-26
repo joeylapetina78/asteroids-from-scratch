@@ -16,6 +16,9 @@ export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
       naturalVariation: 42,
       shoulderDensity: 0.74,
       outerShoulderDensity: 0.38,
+      slipstreamSpeedMultiplier: 1.2,
+      slipstreamThrustMultiplier: 1.1,
+      boostPatchProgress: [0.18, 0.43, 0.68, 0.88],
       seed: 4187,
       coursePoints: [
         { progress: 0, along: 0, lateral: 0 },
