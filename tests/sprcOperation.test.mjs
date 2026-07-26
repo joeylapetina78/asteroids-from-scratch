@@ -11,6 +11,7 @@ import { createTransportationNetwork, evaluateTransportPlan, findTransportationR
 import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../src/content/transportation/firstReachNetwork.js";
 import { createTowServiceManager } from "../src/systems/towService.js";
 import { NpcShip } from "../src/entities/NpcShip.js";
+import { MiningWorkerShip } from "../src/entities/MiningWorkerShip.js";
 import { createMiningOperation, getStandingMiningJobsForSite, STANDING_MINING_ORDERS } from "../src/systems/miningOperation.js";
 
 function createHarness() {
@@ -268,19 +269,49 @@ test("every active hub exposes one evergreen local extraction order", () => {
   assert.equal(STANDING_MINING_ORDERS.length, 3);
 });
 
+test("Cinder Contracting dispatches three independent workers to distinct open orders", () => {
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(1_000);
+  const added = [];
+  const game = { worldSites: [
+    { id: "yard-exchange", position: { x: 380, y: -180 } },
+    { id: "scrap-porch", position: { x: -1180, y: 860 } },
+    { id: "the-ledge", position: { x: 7000, y: -4500 } },
+  ], addWorkerShip: (worker) => added.push(worker) };
+  const manager = createMiningOperation({ state, game, now: () => 1_000 });
+  assert.equal(added.length, 3);
+  assert.equal(manager.workers.length, 3);
+  assert.equal(new Set(manager.workers.map((worker) => worker.assignment.contractId)).size, 3);
+  assert.ok(manager.workers.every((worker) => worker.capabilities.tractorField.powerSource === "evergreen"));
+});
+
+test("a mining worker tractors eligible loose resources toward its collector", () => {
+  const worker = new MiningWorkerShip({ id: "worker:test", name: "Test Worker", institutionId: "miner:test", controllerInstitutionId: "person:test", x: 0, y: 0 });
+  worker.assign({ allocationId: "allocation:test", contractId: "mine:test", resourceId: "iron-nickel", quantity: 1, destination: { x: 0, y: 0 } });
+  const pickup = { type: "iron-nickel", position: { x: 120, y: 0 }, velocity: { x: 0, y: 0 }, radius: 10, sourceClaimId: null };
+  worker.update(0.1, {
+    asteroids: [], pickups: [pickup], collectPickup: () => null,
+    pullPickup: (item, ship, step, force) => { item.velocity.x += Math.sign(ship.position.x - item.position.x) * force * step; },
+  });
+  assert.equal(worker.tractorActive, true);
+  assert.ok(pickup.velocity.x < 0);
+  assert.equal(worker.canRecoverPickup({ type: "rockmoss-crawler", sourceClaimId: null }), false);
+  assert.equal(worker.canRecoverPickup({ type: "iron-nickel", sourceClaimId: "claim:someone-else" }), false);
+});
+
 test("a mining institution delivery conserves material and payment into freight inventory", () => {
   const state = createGameState();
   state.logistics = createInitialLogisticsState(1_000);
-  let worker = null;
   const game = {
     worldSites: [
       { id: "yard-exchange", position: { x: 380, y: -180 } },
       { id: "scrap-porch", position: { x: -1180, y: 860 } },
       { id: "the-ledge", position: { x: 7000, y: -4500 } },
     ],
-    addWorkerShip: (ship) => { worker = ship; },
+    addWorkerShip: () => {},
   };
   const manager = createMiningOperation({ state, game, now: () => 1_000 });
+  const worker = manager.worker;
   const buyer = state.logistics.institutions["scrap-forge"];
   const buyerCashBefore = buyer.accounts.operating.balance;
   const minerCashBefore = manager.getState().institution.accounts.operating.balance;

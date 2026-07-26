@@ -1,5 +1,5 @@
-import { getRegionProfile } from "./worldRegions.js?v=fresh-20260726-0149-ac3c0eb";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260726-0149-ac3c0eb";
+import { getRegionProfile } from "./worldRegions.js?v=fresh-20260726-0212-e45b567";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260726-0212-e45b567";
 
 // Cargo runs are the courier archetype: instead of mining ore (survey) or
 // culling hunters (bounty), a hub hands you a sealed manifest bound for another
