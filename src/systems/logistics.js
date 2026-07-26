@@ -1,6 +1,6 @@
 import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260726-1244-e29962b";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260726-1244-e29962b";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260726-1439-ea664d3";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260726-1439-ea664d3";
 
 export const STANDING_FREIGHT_TEMPLATES = Object.freeze([
   { id: "standing-water-scrap-yard", originSiteId: "scrap-porch", originName: "Scrap Porch", destinationSiteId: "yard-exchange", destinationName: "Yard Exchange", commodity: "water-ice", commodityName: "Water Ice", amount: 1, payment: 90, issuerInstitutionId: "yard-exchange", sourceInstitutionId: "scrap-forge", destinationInstitutionId: "yard-exchange" },
@@ -231,6 +231,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const ship = shipById.get(shipId); if (ship) ship.operationalStatus = "maintenance";
     const maintenancePayload = { npcId: shipId, issueType: "preventive-service", wear: shipInstitution.wear ?? 0, issueCount: shipInstitution.issueCount ?? 0, causedByCarefulMode: false };
     state.ledger.recordEvent("logistics.maintenanceRequired", maintenancePayload, { visible: false });
+    publishMaintenanceRequest(shipId, maintenancePayload);
     publishCarrierEvent("carrier.maintenanceRequested", shipId, maintenancePayload, `${getCarrierContext(shipId).pilotName} placed ${getCarrierContext(shipId).shipName} in Scrap Porch's service queue at wear ${(shipInstitution.wear ?? 0).toFixed(2)}.`);
     appendHistory("maintenance.requested", { shipId, issueType: "preventive-service" });
     return true;
@@ -313,7 +314,16 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     shipById.get(payload.npcId).operationalStatus = "maintenance";
     appendHistory("ship.issue", payload);
     state.ledger.recordEvent("logistics.maintenanceRequired", payload, { visible: false });
+    publishMaintenanceRequest(payload.npcId, payload);
     publishCarrierEvent("carrier.breakdown", payload.npcId, payload, `${getCarrierContext(payload.npcId).shipName} suffered a ${formatReason(payload.issueType ?? "wear issue")} at wear ${(payload.wear ?? 0).toFixed(2)}; ${getCarrierContext(payload.npcId).pilotName} is seeking repair.`);
+  }
+
+  function publishMaintenanceRequest(shipId, payload) {
+    const hauler = logistics.haulers[shipId];
+    const carrier = logistics.institutions[hauler.carrierInstitutionId];
+    const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
+    const requiredCapabilities = payload.issueType === "hull-fatigue" ? ["structural-repair"] : payload.issueType === "control-fault" ? ["control-systems"] : ["mechanical-repair"];
+    state.ledger.recordEvent("maintenance.requested", { subjectId: shipId, subjectName: shipInstitution.name, referenceId: shipInstitution.referenceId, craftClass: "freight-hauler", issueType: payload.issueType, requiredCapabilities, locationSiteId: "scrap-porch", mobility: "recovered", payerInstitutionId: carrier.id, payer: { balance: carrier.accounts.operating.balance, committed: carrier.accounts.operating.committed ?? 0, protectedCash: carrier.policies?.transportation?.minimumOperatingCash ?? 0 }, servicePrice: 180, wear: payload.wear, issueCount: payload.issueCount, causedByCarefulMode: payload.causedByCarefulMode }, { visible: false });
   }
 
   function settleRepairInvoice(shipId, amount, referenceId) {

@@ -5,15 +5,19 @@ export function createSprcInstitutionInstance(now = Date.now()) {
     archetypeId: "repair-cooperative",
     controllerInstitutionId: "sal",
     siteId: "scrap-porch",
+    serviceCapabilities: [
+      { id: "freight-craft-maintenance", craftClasses: ["freight-hauler"], issueTypes: ["maneuvering-strain", "hull-fatigue", "control-fault", "preventive-service"], repairCapabilities: ["structural-repair", "mechanical-repair", "control-systems"], facilityType: "repair-berth", servicePrice: 180 },
+      { id: "mining-craft-maintenance", craftClasses: ["mining-craft"], issueTypes: ["structural-fatigue", "tractor-field-instability", "field-control-failure", "preventive-calibration"], repairCapabilities: ["structural-repair", "mechanical-repair", "tractor-field", "field-control"], facilityType: "repair-berth", servicePrice: 220 },
+    ],
     accounts: { operating: { id: "account:sprc-operating", balance: 1800, committed: 0, currency: "credits" } },
     policies: {
       protectedCash: 900,
-      inventoryTargets: { structuralFeedstockEquivalents: 8, "hull-plate": 3, "machine-part": 2 },
-      safetyStock: { "hull-plate": 1, "machine-part": 1 },
+      inventoryTargets: { structuralFeedstockEquivalents: 8, "hull-plate": 3, "machine-part": 2, "rare-earth": 1 },
+      safetyStock: { "hull-plate": 1, "machine-part": 1, "rare-earth": 1 },
       projectedServiceCoverageTarget: 2,
       servicePriorities: ["disabled-systems", "damaged-hull", "routine-wear"],
     },
-    inventories: { raw: { "iron-nickel": 0, aluminum: 0, "water-ice": 2, silicate: 2, copper: 1 }, produced: { "hull-plate": 1, "machine-part": 1 }, reserved: { raw: {}, produced: {} } },
+    inventories: { raw: { "iron-nickel": 0, aluminum: 0, "water-ice": 2, silicate: 2, copper: 1, "rare-earth": 1 }, produced: { "hull-plate": 1, "machine-part": 1 }, reserved: { raw: {}, produced: {} } },
     projects: { "sprc-second-cradle": { id: "sprc-second-cradle", name: "Second Repair Cradle", status: "planned", requirements: { "hull-plate": 6, "machine-part": 4, credits: 600 }, reserved: { "hull-plate": 0, "machine-part": 0, credits: 0 }, priority: 20, rationale: "Add a second berth after routine coverage and protected cash are secure." } },
     createdAt: now,
   };

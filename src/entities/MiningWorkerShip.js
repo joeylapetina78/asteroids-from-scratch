@@ -1,5 +1,5 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260726-1244-e29962b";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260726-1244-e29962b";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260726-1439-ea664d3";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260726-1439-ea664d3";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
@@ -26,6 +26,8 @@ export class MiningWorkerShip {
     this.isThrusting = false;
     this.state = "idle";
     this.assignment = null;
+    this.serviceReturn = null;
+    this.miningDisabled = false;
     this.targetAsteroid = null;
     this.cargo = {};
     this.fireCooldown = 0;
@@ -49,6 +51,17 @@ export class MiningWorkerShip {
   update(deltaSeconds, world) {
     this.pulse += deltaSeconds;
     this.fireCooldown = Math.max(0, this.fireCooldown - deltaSeconds);
+    if (this.serviceReturn) {
+      this.state = "returning-service";
+      this.targetAsteroid = null;
+      return this.flyTo(deltaSeconds, this.serviceReturn.destination, HOME_RANGE, () => {
+        const request = this.serviceReturn;
+        this.serviceReturn = null;
+        this.state = "awaiting-service";
+        this.onEvent("service.arrived", { issueType: request.issueType, destinationSiteId: request.destinationSiteId });
+      });
+    }
+    if (this.miningDisabled) return this.brake(deltaSeconds);
     this.updateTractorField(deltaSeconds, world);
     if (!this.assignment) return this.brake(deltaSeconds);
 
@@ -108,6 +121,19 @@ export class MiningWorkerShip {
   canRecoverPickup(pickup) {
     if (pickup.type === "rockmoss-crawler") return false;
     return pickup.producedByWorkerShipId === this.id || pickup.sourceClaimId == null;
+  }
+
+  returnForService({ destination, destinationSiteId, issueType }) {
+    this.miningDisabled = true;
+    this.serviceReturn = { destination, destinationSiteId, issueType };
+    this.targetAsteroid = null;
+    return true;
+  }
+
+  completeService() {
+    this.miningDisabled = false;
+    this.serviceReturn = null;
+    this.state = "idle";
   }
 
   flyTo(deltaSeconds, target, stopRange, onArrival = null) {

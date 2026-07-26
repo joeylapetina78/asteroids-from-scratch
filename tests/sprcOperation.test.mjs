@@ -328,6 +328,60 @@ test("a mining institution delivery conserves material and payment into freight 
   assert.equal(manager.getState().completedContracts, 1);
 });
 
+test("an unregistered Cinder craft receives paid technology service through SPRC's public capability", () => {
+  let clock = 1_000;
+  const state = createGameState();
+  state._devStartId = "accelerated-maintenance-test";
+  state.logistics = createInitialLogisticsState(clock);
+  const game = {
+    worldSites: [
+      { id: "yard-exchange", position: { x: 380, y: -180 } },
+      { id: "scrap-porch", position: { x: -1180, y: 860 } },
+      { id: "the-ledge", position: { x: 7000, y: -4500 } },
+    ],
+    addWorkerShip: () => {},
+  };
+  const mining = createMiningOperation({ state, game, now: () => clock });
+  const sprc = createSprcOperation({ state, now: () => clock });
+  const worker = mining.worker;
+  const workerRecord = mining.getState().ships[worker.id];
+  workerRecord.issueCount = 1;
+  const minerCashBefore = mining.getState().institution.accounts.operating.balance;
+  const sprcCashBefore = state.sprc.account.balance;
+
+  for (let completed = 0; completed < 2; completed += 1) {
+    worker.cargo[worker.assignment.resourceId] = worker.assignment.quantity;
+    worker.deliver();
+    mining.update();
+  }
+  assert.equal(workerRecord.pendingIssue, "tractor-field-instability");
+  assert.equal(worker.miningDisabled, true);
+  assert.equal(state.sprc.serviceSubjects[worker.id], undefined, "the worker was not pre-authored into SPRC");
+
+  worker.onEvent("service.arrived", { issueType: workerRecord.pendingIssue, destinationSiteId: "scrap-porch" });
+  sprc.update();
+  const repair = Object.values(state.sprc.repairOrders).find((candidate) => candidate.subjectId === worker.id);
+  assert.equal(repair.craftClass, "mining-craft");
+  assert.equal(repair.serviceCapabilityId, "mining-craft-maintenance");
+  assert.deepEqual(repair.requirements.raw, { "rare-earth": 1 });
+  assert.ok(Object.values(state.sprc.procurementOrders).some((order) => order.procurementItemId === "rare-earth"), "Sal replenishes expensive technology stock after allocating it");
+
+  sprc.update();
+  assert.equal(repair.status, "repairing");
+  assert.equal(state.sprc.inventories.raw["rare-earth"], 0);
+  clock += 31_000;
+  sprc.update();
+  mining.update();
+
+  assert.equal(workerRecord.maintenanceStatus, "available");
+  assert.equal(workerRecord.wear, 0);
+  assert.equal(worker.miningDisabled, false);
+  assert.ok(mining.getState().institution.accounts.operating.transactions.some((transaction) => transaction.type === "maintenance-expense" && transaction.amount === -220));
+  assert.ok(mining.getState().institution.accounts.operating.balance > minerCashBefore - 220, "completed work funded service before its expense");
+  assert.equal(state.sprc.account.balance - sprcCashBefore, 220);
+  assert.ok(state.ledger.getRecentEvents(50).some((event) => event.type === "mining.maintenanceCompleted" && event.payload.shipInstitutionId === worker.id));
+});
+
 test("material, money, production, repair, and hauler availability remain conserved", () => {
   const harness = createHarness();
   triggerFirstRepair(harness);

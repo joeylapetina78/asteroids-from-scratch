@@ -1,4 +1,4 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1244-e29962b";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1439-ea664d3";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
@@ -11,6 +11,17 @@ const MINING_WORKER_DEFAULTS = Object.freeze([
   { id: "worker:cinder-two", name: "Cinder Two", referenceId: "MW-032-CINDER", currentSiteId: "yard-exchange", offset: { x: -90, y: -90 } },
   { id: "worker:cinder-three", name: "Cinder Three", referenceId: "MW-033-CINDER", currentSiteId: "the-ledge", offset: { x: 100, y: 80 } },
 ]);
+
+const MINING_ISSUES = Object.freeze([
+  { issueType: "structural-fatigue", requiredCapabilities: ["structural-repair", "mechanical-repair"] },
+  { issueType: "tractor-field-instability", requiredCapabilities: ["tractor-field", "mechanical-repair"] },
+  { issueType: "field-control-failure", requiredCapabilities: ["field-control"] },
+  { issueType: "preventive-calibration", requiredCapabilities: ["field-control"] },
+]);
+const NORMAL_WORK_WEAR = 0.125;
+const ACCELERATED_WORK_WEAR = 0.5;
+const MINING_SERVICE_PRICE = 220;
+const MINING_PROTECTED_CASH = 120;
 
 export function getStandingMiningJobsForSite(siteId, issuer = null) {
   return STANDING_MINING_ORDERS.filter((order) => order.siteId === siteId).map((order) => ({
@@ -51,9 +62,13 @@ export function createMiningOperation({ state, game, now = () => Date.now() }) {
   operation.allocations ??= {};
   operation.completedContracts ??= 0;
   operation.wear ??= 0;
+  operation.lastMaintenanceEventId ??= 0;
   MINING_WORKER_DEFAULTS.forEach((defaults) => {
     operation.ships[defaults.id] ??= createWorkerRecord(defaults);
     operation.ships[defaults.id].capabilities ??= { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } };
+    operation.ships[defaults.id].maintenanceStatus ??= "available";
+    operation.ships[defaults.id].issueCount ??= 0;
+    operation.ships[defaults.id].pendingIssue ??= null;
   });
   const sites = new Map(game.worldSites.map((site) => [site.id, site]));
   const workers = MINING_WORKER_DEFAULTS.map((defaults) => {
@@ -74,11 +89,13 @@ export function createMiningOperation({ state, game, now = () => Date.now() }) {
   });
 
   function update() {
+    consumeMaintenanceEvents();
     workers.forEach((worker) => {
       const shipRecord = operation.ships[worker.id];
       shipRecord.position = { x: worker.position.x, y: worker.position.y };
       shipRecord.status = worker.state;
       shipRecord.cargo = { ...worker.cargo };
+      if (shipRecord.maintenanceStatus !== "available") return;
       if (worker.assignment) return;
       const order = chooseOrder();
       if (!order) return;
@@ -123,10 +140,44 @@ export function createMiningOperation({ state, game, now = () => Date.now() }) {
     allocation.completedAt = now();
     const shipRecord = operation.ships[ship.id];
     shipRecord.currentSiteId = order.siteId;
-    shipRecord.wear = Math.min(1, (shipRecord.wear ?? 0) + 0.035);
+    const workWear = state._devStartId ? ACCELERATED_WORK_WEAR : NORMAL_WORK_WEAR;
+    shipRecord.wear = Math.min(1, (shipRecord.wear ?? 0) + workWear);
     operation.completedContracts += 1;
-    operation.wear = Math.min(1, operation.wear + 0.035);
+    operation.wear = Object.values(operation.ships).reduce((sum, record) => sum + (record.wear ?? 0), 0) / Object.keys(operation.ships).length;
     record("mining.contractFulfilled", `${ship.name} delivered ${delivered} ${order.resourceName} to ${order.siteName}, earned ${payment} cr, and added it to the hub's freight inventory.`, { orderId: order.id, siteId: order.siteId, resourceId, quantity: delivered, payment, accountBalance: operation.institution.accounts.operating.balance, wear: operation.wear, shipInstitutionId: ship.id, shipName: ship.name });
+    if (shipRecord.wear >= 1 && shipRecord.maintenanceStatus === "available") beginMaintenance(shipRecord, ship);
+  }
+
+  function beginMaintenance(shipRecord, ship) {
+    const issue = MINING_ISSUES[shipRecord.issueCount % MINING_ISSUES.length];
+    const serviceSite = sites.get("scrap-porch");
+    if (!serviceSite) return;
+    shipRecord.issueCount += 1;
+    shipRecord.pendingIssue = issue.issueType;
+    shipRecord.maintenanceStatus = "returning-for-service";
+    ship.returnForService({ destination: serviceSite.position, destinationSiteId: "scrap-porch", issueType: issue.issueType });
+    record("mining.maintenanceRequired", `${shipRecord.name} developed ${issue.issueType.replaceAll("-", " ")} after mining work and is returning to Scrap Porch.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, issueType: issue.issueType, wear: shipRecord.wear, requiredCapabilities: issue.requiredCapabilities });
+  }
+
+  function consumeMaintenanceEvents() {
+    for (const event of state.ledger.getEventsAfterId(operation.lastMaintenanceEventId, { includeHidden: true })) {
+      operation.lastMaintenanceEventId = Math.max(operation.lastMaintenanceEventId, event.id);
+      if (event.type !== "sprc.repairCompleted") continue;
+      const shipRecord = operation.ships[event.payload.subjectId];
+      if (!shipRecord || shipRecord.maintenanceStatus === "available") continue;
+      const price = event.payload.serviceRevenue ?? MINING_SERVICE_PRICE;
+      const account = operation.institution.accounts.operating;
+      if (account.balance < price) continue;
+      account.balance -= price;
+      account.transactions.push({ id: `MIN-SVC-${event.id}`, at: now(), type: "maintenance-expense", amount: -price, balance: account.balance, referenceId: event.payload.repairOrderId });
+      if (state.sprc?.account) state.sprc.account.balance += price;
+      shipRecord.wear = 0;
+      shipRecord.pendingIssue = null;
+      shipRecord.maintenanceStatus = "available";
+      shipRecord.currentSiteId = "scrap-porch";
+      workers.find((worker) => worker.id === shipRecord.id)?.completeService();
+      record("mining.maintenanceCompleted", `${shipRecord.name} paid SPRC ${price} cr, completed service, and returned to mining duty.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, repairOrderId: event.payload.repairOrderId, payment: price, accountBalance: account.balance });
+    }
   }
 
   function recordWorkerEvent(shipRecord, actionType, payload) {
@@ -135,8 +186,21 @@ export function createMiningOperation({ state, game, now = () => Date.now() }) {
       "prospect.selected": `${shipRecord.name} selected a real ${payload.resourceId} rock and is approaching it.`,
       "resource.collected": `${shipRecord.name} collected ${payload.quantity} ${payload.resourceId}.`,
       "delivery.completed": `${shipRecord.name} completed its physical delivery.`,
+      "service.arrived": payload.issueType ? `${shipRecord.name} arrived at Scrap Porch and requested service for ${payload.issueType.replaceAll("-", " ")}.` : `${shipRecord.name} arrived at Scrap Porch for service.`,
     };
     record(`worker.${actionType}`, messages[actionType] ?? `${shipRecord.name}: ${actionType}`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, ...payload });
+    if (actionType === "service.arrived") {
+      const issue = MINING_ISSUES.find((candidate) => candidate.issueType === payload.issueType);
+      shipRecord.currentSiteId = payload.destinationSiteId;
+      shipRecord.maintenanceStatus = "awaiting-service";
+      state.ledger.recordEvent("maintenance.requested", {
+        subjectId: shipRecord.id, subjectName: shipRecord.name, referenceId: shipRecord.referenceId,
+        craftClass: "mining-craft", issueType: payload.issueType, requiredCapabilities: issue?.requiredCapabilities ?? [],
+        locationSiteId: payload.destinationSiteId, mobility: "self-return", payerInstitutionId: operation.institution.id,
+        payer: { balance: operation.institution.accounts.operating.balance, committed: operation.institution.accounts.operating.committed ?? 0, protectedCash: MINING_PROTECTED_CASH },
+        servicePrice: MINING_SERVICE_PRICE, wear: shipRecord.wear, issueCount: shipRecord.issueCount,
+      }, { visible: false });
+    }
   }
 
   function record(type, message, payload = {}) {
@@ -154,10 +218,10 @@ function createInitialState(now) {
     institution: { id: "miner:cinder-contracting", name: "Cinder Contracting", archetypeId: "mining-contractor", controllerInstitutionId: "person:ivo-cinder", referenceId: "FR-MIN-031", accounts: { operating: { id: "FR-ACCT-031", balance: 260, committed: 0, transactions: [] } } },
     controller: { id: "person:ivo-cinder", name: "Ivo Cinder", archetypeId: "person", controls: ["miner:cinder-contracting"], license: { id: "MEX-031-CINDER", class: "commercial-extraction", status: "active" } },
     ships: Object.fromEntries(MINING_WORKER_DEFAULTS.map((defaults) => [defaults.id, createWorkerRecord(defaults)])),
-    allocations: {}, history: [{ id: "mining-history-1", type: "institution.instantiated", at: now }], nextOrderIndex: 1, counter: 0, completedContracts: 0, wear: 0,
+    allocations: {}, history: [{ id: "mining-history-1", type: "institution.instantiated", at: now }], nextOrderIndex: 1, counter: 0, completedContracts: 0, wear: 0, lastMaintenanceEventId: 0,
   };
 }
 
 function createWorkerRecord(defaults) {
-  return { id: defaults.id, name: defaults.name, archetypeId: "mining-worker", ownerInstitutionId: "miner:cinder-contracting", referenceId: defaults.referenceId, currentSiteId: defaults.currentSiteId, status: "idle", cargo: {}, wear: 0, capabilities: { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } } };
+  return { id: defaults.id, name: defaults.name, archetypeId: "mining-worker", ownerInstitutionId: "miner:cinder-contracting", referenceId: defaults.referenceId, currentSiteId: defaults.currentSiteId, status: "idle", cargo: {}, wear: 0, issueCount: 0, pendingIssue: null, maintenanceStatus: "available", capabilities: { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } } };
 }

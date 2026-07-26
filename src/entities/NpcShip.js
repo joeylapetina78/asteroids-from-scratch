@@ -59,6 +59,7 @@ export class NpcShip {
     this.operationalStatus = "seeking-work";
     this.activeShipmentId = null;
     this.wear = 0;
+    this.wearMode = "normal";
     this.wearIssueCount = 0;
     this.carefulWearSinceIssue = 0;
     this.pendingWearIssue = null;
@@ -385,8 +386,9 @@ export class NpcShip {
     this.navigationMetrics.distanceTraveled += traveled;
     if (this.isCarefulMode) this.navigationMetrics.carefulDistance += traveled;
     if (this.operationalStatus === "available") {
-      const corridorWearRate = this.isCarefulMode ? 0.00022 : 0.0001;
-      const openFieldWearRate = this.isCarefulMode ? 0.00034 : 0.00016;
+      const accelerated = this.wearMode === "accelerated";
+      const corridorWearRate = accelerated ? (this.isCarefulMode ? 0.00022 : 0.0001) : (this.isCarefulMode ? 0.000088 : 0.00004);
+      const openFieldWearRate = accelerated ? (this.isCarefulMode ? 0.00034 : 0.00016) : (this.isCarefulMode ? 0.000136 : 0.000064);
       const wearIncrement = traveled * (this.activeCorridorId ? corridorWearRate : openFieldWearRate);
       this.wear += wearIncrement;
       if (this.isCarefulMode) this.carefulWearSinceIssue += wearIncrement;

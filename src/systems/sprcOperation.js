@@ -1,8 +1,9 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260726-1244-e29962b";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260726-1244-e29962b";
+import { depositCredits } from "./accounts.js?v=fresh-20260726-1439-ea664d3";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260726-1439-ea664d3";
 import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
 import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js";
 import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js";
+import { matchMaintenanceService } from "./maintenanceService.js";
 
 export const SPRC = Object.freeze({
   actorId: "organization:sprc",
@@ -23,13 +24,23 @@ export const SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK = Object.freeze({
 const ROUTES_BEFORE_PROVISIONAL_REPAIR = 2;
 const PLATE_BATCH_SECONDS = 30;
 const REPAIR_SECONDS = 30;
+const SERVICE_REPAIR_RECIPES = Object.freeze({
+  "maneuvering-strain": { produced: { "hull-plate": 1, "machine-part": 1 }, raw: {} },
+  "hull-fatigue": { produced: { "hull-plate": 2, "machine-part": 0 }, raw: {} },
+  "control-fault": { produced: { "hull-plate": 0, "machine-part": 2 }, raw: {} },
+  "preventive-service": { produced: { "hull-plate": 0, "machine-part": 1 }, raw: {} },
+  "structural-fatigue": { produced: { "hull-plate": 1, "machine-part": 1 }, raw: {} },
+  "tractor-field-instability": { produced: { "machine-part": 1 }, raw: { "rare-earth": 1 } },
+  "field-control-failure": { produced: {}, raw: { "rare-earth": 1 } },
+  "preventive-calibration": { produced: { "machine-part": 1 }, raw: {} },
+});
 
 export function createInitialSprcState(now = Date.now()) {
   const institution = createSprcInstitutionInstance(now);
   const controller = createSalInstitutionInstance();
   return {
     version: 2,
-    institution: { id: institution.id, archetypeId: institution.archetypeId, controllerInstitutionId: institution.controllerInstitutionId },
+    institution: { id: institution.id, archetypeId: institution.archetypeId, controllerInstitutionId: institution.controllerInstitutionId, siteId: institution.siteId, serviceCapabilities: institution.serviceCapabilities },
     controller,
     actor: {
       id: SPRC.actorId,
@@ -53,8 +64,8 @@ export function createInitialSprcState(now = Date.now()) {
     projects: institution.projects,
     inventories: institution.inventories,
     facilities: {
-      maw: { id: SPRC.facilityId, name: "The Maw", status: "working", capacity: 1, activeProductionOrderId: null },
-      berthTwo: { id: SPRC.berthId, name: "Berth Two", status: "available", capacity: 1, activeRepairOrderId: null },
+      maw: { id: SPRC.facilityId, name: "The Maw", facilityType: "recovery-mill", status: "working", capacity: 1, activeProductionOrderId: null },
+      berthTwo: { id: SPRC.berthId, name: "Berth Two", facilityType: "repair-berth", status: "available", capacity: 1, activeRepairOrderId: null },
     },
     haulers: {
       [SPRC.secondHaulerId]: {
@@ -98,6 +109,8 @@ export function ensureSprcOperation(state, now = Date.now()) {
   const sprc = state.sprc;
   sprc.inventories.reserved ??= { raw: {}, produced: {} };
   sprc.repairOrders ??= {};
+  sprc.serviceSubjects ??= sprc.haulers;
+  Object.entries(sprc.haulers ?? {}).forEach(([id, hauler]) => { sprc.serviceSubjects[id] = hauler; });
   sprc.repairQueue ??= [];
   sprc.productionOrders ??= {};
   sprc.productionQueue ??= [];
@@ -117,6 +130,14 @@ export function ensureSprcOperation(state, now = Date.now()) {
   sprc.operatingPlan.protectedCashReserve ??= sprc.account.protectedReserve ?? 900;
   sprc.account.protectedReserve = sprc.operatingPlan.protectedCashReserve;
   sprc.institution ??= { id: "sprc", archetypeId: "repair-cooperative", controllerInstitutionId: "sal" };
+  const institutionDefaults = createSprcInstitutionInstance(now);
+  sprc.institution.siteId ??= institutionDefaults.siteId;
+  sprc.institution.serviceCapabilities ??= institutionDefaults.serviceCapabilities;
+  sprc.facilities.maw.facilityType ??= "recovery-mill";
+  sprc.facilities.berthTwo.facilityType ??= "repair-berth";
+  sprc.operatingPlan.inventoryTargets["rare-earth"] ??= 1;
+  sprc.operatingPlan.safetyStock["rare-earth"] ??= 1;
+  sprc.inventories.raw["rare-earth"] ??= 1;
   sprc.controller ??= createSalInstitutionInstance();
   seedSprcWorldRecords(state);
   return sprc;
@@ -146,8 +167,10 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       sprc.lastLedgerEventId = Math.max(sprc.lastLedgerEventId, event.id);
       if (event.type === "npc.routeCompleted" && event.payload.npcId === SPRC.firstHaulerId) {
         recordRouteCompletion(event.payload);
-      } else if (event.type === "logistics.maintenanceRequired" && sprc.haulers[event.payload.npcId]) {
-        createWearRepairOrder(event.payload);
+      } else if (event.type === "maintenance.requested") {
+        createServiceRepairOrder(event.payload);
+      } else if (event.type === "logistics.maintenanceRequired" && sprc.serviceSubjects[event.payload.npcId]) {
+        createServiceRepairOrder(createLegacyFreightRequest(event.payload));
       }
     });
   }
@@ -160,24 +183,32 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     appendHistory("hauler.routeCompleted", { haulerId: hauler.id, routeCompletions: hauler.routeCompletions, siteId: payload.siteId });
   }
 
-  function createWearRepairOrder(payload) {
-    const hauler = sprc.haulers[payload.npcId];
-    if (!hauler) return null;
-    const existing = Object.values(sprc.repairOrders).some((repair) => repair.subjectHaulerId === hauler.id && !["completed", "canceled"].includes(repair.status));
+  function createLegacyFreightRequest(payload) {
+    const subject = sprc.serviceSubjects[payload.npcId];
+    return { ...payload, subjectId: payload.npcId, subjectName: subject.shipName, craftClass: "freight-hauler", locationSiteId: SPRC.siteId, mobility: "recovered", requiredCapabilities: payload.issueType === "hull-fatigue" ? ["structural-repair"] : payload.issueType === "control-fault" ? ["control-systems"] : ["mechanical-repair"], payer: { balance: 1000, committed: 0, protectedCash: 0 }, payerInstitutionId: subject.homeOrganizationId, servicePrice: 180 };
+  }
+
+  function createServiceRepairOrder(payload) {
+    const subjectId = payload.subjectId ?? payload.npcId;
+    let subject = sprc.serviceSubjects[subjectId];
+    if (!subject) {
+      subject = sprc.serviceSubjects[subjectId] = { id: subjectId, shipVin: payload.referenceId ?? payload.shipVin ?? subjectId, shipName: payload.subjectName ?? payload.npcName ?? subjectId, homeOrganizationId: payload.payerInstitutionId, craftClass: payload.craftClass, condition: "serviceable", maintenanceStatus: "available", repairHistory: [], currentLocationSiteId: payload.locationSiteId, availableForWork: true };
+    }
+    const requirements = SERVICE_REPAIR_RECIPES[payload.issueType];
+    const match = matchMaintenanceService({ request: { ...payload, subjectId }, institution: sprc.institution, facilities: Object.values(sprc.facilities), repairRecipe: requirements, inventories: sprc.inventories, procurableItemIds: ["hull-plate", "machine-part", "rare-earth"] });
+    if (!match.eligible) {
+      appendHistory("repair.declined", { subjectId, issueType: payload.issueType, reason: match.reason });
+      state.ledger.recordEvent("sprc.repairDeclined", { subjectId, issueType: payload.issueType, reason: match.reason }, { visible: true });
+      return null;
+    }
+    const existing = Object.values(sprc.repairOrders).some((repair) => (repair.subjectId ?? repair.subjectHaulerId) === subjectId && !["completed", "canceled"].includes(repair.status));
     if (existing) return null;
-    const requirementsByIssue = {
-      "maneuvering-strain": { "hull-plate": 1, "machine-part": 1 },
-      "hull-fatigue": { "hull-plate": 2, "machine-part": 0 },
-      "control-fault": { "hull-plate": 0, "machine-part": 2 },
-      "preventive-service": { "hull-plate": 0, "machine-part": 1 },
-    };
     const id = nextId("repair", "SPRC-RPR");
-    const requirements = requirementsByIssue[payload.issueType] ?? { "hull-plate": 1, "machine-part": 1 };
-    const order = sprc.repairOrders[id] = { id, facilityId: SPRC.berthId, subjectHaulerId: hauler.id, subjectShipVin: hauler.shipVin, condition: payload.issueType, origin: { type: "operational-wear", wear: payload.wear, issueCount: payload.issueCount, causedByCarefulMode: payload.causedByCarefulMode }, requirements: { produced: requirements }, reserved: { produced: {} }, status: "waiting-stock", priority: payload.issueType === "control-fault" ? 80 : 60, createdAt: now(), startedAt: null, completesAt: null };
+    const order = sprc.repairOrders[id] = { id, facilityId: match.facility.id, serviceCapabilityId: match.capability.id, subjectId, subjectHaulerId: subjectId, subjectShipVin: subject.shipVin, craftClass: payload.craftClass, payerInstitutionId: payload.payerInstitutionId, servicePrice: payload.servicePrice ?? match.capability.servicePrice, condition: payload.issueType, origin: { type: "operational-wear", wear: payload.wear, issueCount: payload.issueCount, causedByCarefulMode: payload.causedByCarefulMode }, requirements: { produced: { ...requirements.produced }, raw: { ...requirements.raw } }, reserved: { produced: {}, raw: {} }, status: "waiting-stock", priority: payload.issueType.includes("failure") || payload.issueType === "control-fault" ? 80 : 60, createdAt: now(), startedAt: null, completesAt: null };
     sprc.repairQueue.push(id);
-    hauler.condition = payload.issueType; hauler.maintenanceStatus = "queued"; hauler.availableForWork = false;
-    appendHistory("repair.created", { repairOrderId: id, haulerId: hauler.id, issueType: payload.issueType, wear: payload.wear });
-    state.ledger.recordEvent("sprc.repairCreated", { repairOrderId: id, haulerId: hauler.id, shipName: hauler.shipName, condition: order.condition }, { visible: true });
+    subject.condition = payload.issueType; subject.maintenanceStatus = "queued"; subject.availableForWork = false; subject.currentLocationSiteId = payload.locationSiteId;
+    appendHistory("repair.created", { repairOrderId: id, subjectId, haulerId: subjectId, issueType: payload.issueType, wear: payload.wear });
+    state.ledger.recordEvent("sprc.repairCreated", { repairOrderId: id, subjectId, haulerId: subjectId, shipName: subject.shipName, craftClass: payload.craftClass, condition: order.condition }, { visible: true });
     return order;
   }
 
@@ -216,11 +247,17 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       const repair = sprc.repairOrders[repairId];
       if (!repair || !["waiting-stock", "waiting-production"].includes(repair.status)) return;
       reserveProducedForRepair(repair);
+      reserveRawForRepair(repair);
       const missingPlates = getMissingRequirement(repair, "hull-plate");
       const missingParts = getMissingRequirement(repair, "machine-part");
       if (missingParts > 0) reserveAndQueuePartsProduction(repair, missingParts);
       if (missingPlates > 0) reserveAndQueuePlateProduction(repair, missingPlates);
       reserveProducedForRepair(repair);
+      reserveRawForRepair(repair);
+      Object.entries(repair.requirements.raw ?? {}).forEach(([itemId, required]) => {
+        const missing = Math.max(0, required - (repair.reserved.raw[itemId] ?? 0));
+        if (missing > 0) createOrUpdateNeed(repair, itemId, missing, { itemId, required, available: getAvailable("raw", itemId) });
+      });
       repair.status = getRepairMissing(repair).total > 0 ? "waiting-production" : "ready";
     });
   }
@@ -239,9 +276,11 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       structuralFeedstockEquivalents: onHand + incoming,
       hullPlates: getAvailable("produced", "hull-plate"),
       machineParts: getAvailable("produced", "machine-part"),
+      technologyReserve: getAvailable("raw", "rare-earth"),
       repairCoverage: Math.min(Math.floor((sprc.inventories.produced["hull-plate"] ?? 0) / 2), sprc.inventories.produced["machine-part"] ?? 0),
       spendableCash: getSpendableCash(),
     };
+    assessTechnologyReserve();
     if (onHand + incoming >= target) return;
     let need = Object.values(sprc.needs).find((entry) => entry.objectiveType === "reserve-replenishment" && entry.status === "open");
     if (!need) {
@@ -258,6 +297,21 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     if (openOrder) plan.projected.structuralFeedstockEquivalents = onHand + Math.max(0, openOrder.requiredEquivalentUnits - openOrder.deliveredEquivalentUnits);
   }
 
+  function assessTechnologyReserve() {
+    const knownDemand = sprc.repairQueue.map((id) => sprc.repairOrders[id]).filter((repair) => repair && !["completed", "canceled"].includes(repair.status)).reduce((sum, repair) => sum + (repair.requirements.raw?.["rare-earth"] ?? 0), 0);
+    const target = (sprc.operatingPlan.inventoryTargets["rare-earth"] ?? 1) + knownDemand;
+    const onHand = getAvailable("raw", "rare-earth");
+    const incoming = Object.values(sprc.procurementOrders).filter((order) => ["offered", "active"].includes(order.status) && order.procurementItemId === "rare-earth").reduce((sum, order) => sum + Math.max(0, order.requiredEquivalentUnits - order.deliveredEquivalentUnits), 0);
+    if (onHand + incoming >= target) return;
+    let need = Object.values(sprc.needs).find((entry) => entry.itemId === "rare-earth" && entry.objectiveType === "technology-reserve" && entry.status === "open");
+    if (!need) {
+      const id = nextId("need", "SPRC-NEED");
+      need = sprc.needs[id] = { ...createNeedRecord({ id, kind: "inventory-reserve", subject: { itemId: "rare-earth" }, target, current: onHand + incoming, shortage: target - onHand - incoming, urgency: knownDemand ? "urgent" : "routine", purpose: knownDemand ? "complete-accepted-service" : "restore-operating-reserve", createdAt: now() }), type: "operating-need", sourceActivity: "inventory-plan", sourceRepairOrderId: null, objectiveType: "technology-reserve", itemId: "rare-earth", missingAmount: target - onHand - incoming };
+      appendHistory("need.identified", { needId: id, objectiveType: need.objectiveType, itemId: need.itemId, missingAmount: need.missingAmount });
+    }
+    chooseProcurementResponse(need);
+  }
+
   function reserveProducedForRepair(repair) {
     Object.entries(repair.requirements.produced).forEach(([itemId, required]) => {
       const already = repair.reserved.produced[itemId] ?? 0;
@@ -268,6 +322,17 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       repair.reserved.produced[itemId] = already + amount;
       addReserved("produced", itemId, amount);
       appendHistory("inventory.reserved", { ownerType: "repair", ownerId: repair.id, inventory: "produced", itemId, amount });
+    });
+  }
+
+  function reserveRawForRepair(repair) {
+    Object.entries(repair.requirements.raw ?? {}).forEach(([itemId, required]) => {
+      const already = repair.reserved.raw[itemId] ?? 0;
+      const amount = Math.min(Math.max(0, required - already), getAvailable("raw", itemId));
+      if (amount <= 0) return;
+      repair.reserved.raw[itemId] = already + amount;
+      addReserved("raw", itemId, amount);
+      appendHistory("inventory.reserved", { ownerType: "repair", ownerId: repair.id, inventory: "raw", itemId, amount });
     });
   }
 
@@ -344,12 +409,16 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       removeInventory("produced", itemId, amount);
       addReserved("produced", itemId, -amount);
     });
+    Object.entries(order.reserved.raw ?? {}).forEach(([itemId, amount]) => {
+      removeInventory("raw", itemId, amount);
+      addReserved("raw", itemId, -amount);
+    });
     order.status = "repairing";
     order.startedAt = now();
     order.completesAt = order.startedAt + REPAIR_SECONDS * 1000;
     sprc.facilities.berthTwo.status = "occupied";
     sprc.facilities.berthTwo.activeRepairOrderId = order.id;
-    appendHistory("repair.started", { repairOrderId: order.id, consumed: order.reserved.produced });
+    appendHistory("repair.started", { repairOrderId: order.id, consumed: { produced: order.reserved.produced, raw: order.reserved.raw } });
   }
 
   function completeDueRepairs() {
@@ -357,17 +426,17 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       if (order.status !== "repairing" || order.completesAt > now()) return;
       order.status = "completed";
       order.completedAt = now();
-      const hauler = sprc.haulers[order.subjectHaulerId];
-      if (hauler) {
-        hauler.condition = "serviceable";
-        hauler.maintenanceStatus = "available";
-        hauler.availableForWork = true;
-        hauler.repairHistory.push(order.id);
+      const subject = sprc.serviceSubjects[order.subjectId ?? order.subjectHaulerId];
+      if (subject) {
+        subject.condition = "serviceable";
+        subject.maintenanceStatus = "available";
+        subject.availableForWork = true;
+        subject.repairHistory.push(order.id);
       }
       sprc.facilities.berthTwo.status = "available";
       sprc.facilities.berthTwo.activeRepairOrderId = null;
-      appendHistory("repair.completed", { repairOrderId: order.id, haulerId: order.subjectHaulerId, serviceRevenue: 180 });
-      state.ledger.recordEvent("sprc.repairCompleted", { repairOrderId: order.id, haulerId: order.subjectHaulerId, shipName: hauler?.shipName, serviceRevenue: 180 }, { visible: true });
+      appendHistory("repair.completed", { repairOrderId: order.id, subjectId: order.subjectId, haulerId: order.subjectHaulerId, serviceRevenue: order.servicePrice ?? 180 });
+      state.ledger.recordEvent("sprc.repairCompleted", { repairOrderId: order.id, subjectId: order.subjectId, haulerId: order.subjectHaulerId, shipName: subject?.shipName, craftClass: order.craftClass, payerInstitutionId: order.payerInstitutionId, serviceRevenue: order.servicePrice ?? 180 }, { visible: true });
     });
   }
 
@@ -385,12 +454,13 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       need.missingAmount = missingAmount;
       need.context = context;
     }
-    if (itemId === "structural-feedstock") chooseProcurementResponse(need);
+    if (["structural-feedstock", "rare-earth"].includes(itemId)) chooseProcurementResponse(need);
   }
 
   function chooseProcurementResponse(need) {
     if (need.objectiveType === "emergency-repair") {
-      const routineOrder = Object.values(sprc.procurementOrders).find((order) => ["offered", "active"].includes(order.status) && order.objectiveType === "reserve-replenishment");
+      const procurementItemId = need.itemId === "rare-earth" ? "rare-earth" : "structural-feedstock";
+      const routineOrder = Object.values(sprc.procurementOrders).find((order) => ["offered", "active"].includes(order.status) && order.objectiveType === "reserve-replenishment" && (order.procurementItemId ?? "structural-feedstock") === procurementItemId);
       if (routineOrder) {
         routineOrder.objectiveType = "emergency-repair";
         routineOrder.sourceRepairOrderId = need.sourceRepairOrderId;
@@ -398,12 +468,12 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
         const responseId = nextId("response", "SPRC-RSP");
         sprc.responses[responseId] = {
           id: responseId, needId: need.id, strategy: "promote-existing-procurement", status: "active", selectedAt: now(), procurementOrderId: routineOrder.id,
-          reason: "The reserve order already covers this material; Mara's repair makes it urgent instead of creating a duplicate order.",
+          reason: "The reserve order already covers this material, so the accepted repair makes it urgent instead of creating a duplicate order.",
         };
         need.responseIds.push(responseId);
         const contract = state.contracts.records[routineOrder.contractId];
         if (contract) {
-          contract.summary = `Urgent: deliver ${routineOrder.requiredEquivalentUnits} feedstock equivalents. The first four unblock Porch Runner Two; the remainder restores SPRC's reserve.`;
+          contract.summary = `Urgent: deliver ${routineOrder.requiredEquivalentUnits} ${procurementItemId === "rare-earth" ? "rare-earth units" : "feedstock equivalents"}. Known service demand now has priority; any remainder restores SPRC's reserve.`;
           contract.causal.repairOrderId = need.sourceRepairOrderId;
         }
         appendHistory("procurement.promoted", { procurementOrderId: routineOrder.id, emergencyNeedId: need.id, repairOrderId: need.sourceRepairOrderId });
@@ -414,7 +484,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     if (existing?.status === "active") return;
     if (existing?.status === "blocked") {
       const amount = Math.max(1, need.missingAmount);
-      const affordability = getProcurementAffordability(amount * 34);
+      const affordability = getProcurementAffordability(amount * (need.itemId === "rare-earth" ? 240 : 34));
       if (!affordability.affordable) return;
       existing.status = "superseded";
       existing.reconsideredAt = now();
@@ -424,14 +494,16 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     const policy = getResolvedPolicy();
     const procurementCapability = {
       id: "procure-input",
-      canAddress: ({ need: candidate }) => candidate?.itemId === "structural-feedstock",
+      canAddress: ({ need: candidate }) => ["structural-feedstock", "rare-earth"].includes(candidate?.itemId),
       propose: ({ need: candidate }) => [{
         capabilityId: "procure-input",
         action: "post-procurement-contract",
         purpose: candidate.purpose,
-        estimatedCost: Math.max(1, candidate.missingAmount) * 34,
+        estimatedCost: Math.max(1, candidate.missingAmount) * (candidate.itemId === "rare-earth" ? 240 : 34),
         risk: 0,
-        rationale: candidate.objectiveType === "reserve-replenishment"
+        rationale: candidate.itemId === "rare-earth"
+          ? "SPRC holds one rare-earth unit for field-control emergencies and buys additional units only for known demand."
+          : candidate.objectiveType === "reserve-replenishment"
           ? "Projected repair coverage is below Sal's target, so SPRC is buying feedstock before the next repair arrives."
           : "On-hand feedstock cannot schedule the required plate batch; the blocked repair makes procurement urgent.",
       }],
@@ -479,7 +551,8 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   function createProcurementOrder(need, response) {
     const id = nextId("procurement", "SPRC-PO");
     const amount = Math.max(1, need.missingAmount);
-    const pricePerEquivalent = 34;
+    const isTechnology = need.itemId === "rare-earth";
+    const pricePerEquivalent = isTechnology ? 240 : 34;
     const maximumPayment = amount * pricePerEquivalent;
     const affordability = getProcurementAffordability(maximumPayment);
     if (!affordability.affordable) {
@@ -491,9 +564,9 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     }
     sprc.account.committed += maximumPayment;
     const record = sprc.procurementOrders[id] = {
-      id, type: "structural-feedstock-procurement", needId: need.id,
+      id, type: isTechnology ? "technology-material-procurement" : "structural-feedstock-procurement", procurementItemId: isTechnology ? "rare-earth" : "structural-feedstock", needId: need.id,
       sourceRepairOrderId: need.sourceRepairOrderId, responseId: response.id, objectiveType: need.objectiveType,
-      acceptedMaterials: { ...SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK }, requiredEquivalentUnits: amount,
+      acceptedMaterials: isTechnology ? { "rare-earth": 1 } : { ...SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK }, requiredEquivalentUnits: amount,
       deliveredEquivalentUnits: 0, deliveredMaterials: {}, paidAmount: 0, supplierDeliveries: [], allocations: {}, destinationSiteId: SPRC.siteId,
       pricePerEquivalent, maximumPayment, committedPayment: maximumPayment,
       titleTerms: "Title transfers to SPRC only upon accepted delivery at Scrap Porch.",
@@ -504,7 +577,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     registerProcurementContract(record);
     state.contracts.records[record.contractId] ??= buildContractDefinition(record);
     appendHistory("procurement.created", { procurementOrderId: id, needId: need.id, repairOrderId: need.sourceRepairOrderId, amount });
-    state.ledger.recordEvent("contract.offered", { contractId: record.contractId, contractTitle: "SPRC Structural Feedstock", sourceNeedId: need.id }, { visible: true });
+    state.ledger.recordEvent("contract.offered", { contractId: record.contractId, contractTitle: isTechnology ? "SPRC Field-Control Material" : "SPRC Structural Feedstock", sourceNeedId: need.id }, { visible: true });
   }
 
   function acceptProcurement(contractId) {
@@ -611,20 +684,25 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
 
   function buildContractDefinition(order) {
     const isRoutineReserve = order.objectiveType === "reserve-replenishment" && !order.sourceRepairOrderId;
+    const isTechnology = (order.procurementItemId ?? "structural-feedstock") === "rare-earth";
     return {
       id: order.contractId,
       type: "resource-procurement",
       group: "sprc-procurement",
-      title: "SPRC Structural Feedstock",
+      title: isTechnology ? "SPRC Field-Control Material" : "SPRC Structural Feedstock",
       issuer: "Scrap Porch Recovery Cooperative",
       summary: isRoutineReserve
-        ? `Sal is rebuilding SPRC's working reserve before the next repair arrives. Deliver ${order.requiredEquivalentUnits} feedstock equivalents.`
-        : `Urgent feedstock for a blocked repair, with any surplus restoring SPRC's working reserve. Deliver ${order.requiredEquivalentUnits} equivalents.`,
+        ? isTechnology
+          ? `Sal is restoring SPRC's protected field-control reserve. Deliver ${order.requiredEquivalentUnits} rare-earth units.`
+          : `Sal is rebuilding SPRC's working reserve before the next repair arrives. Deliver ${order.requiredEquivalentUnits} feedstock equivalents.`
+        : isTechnology
+          ? `Known field-control service demand requires ${order.requiredEquivalentUnits} rare-earth units.`
+          : `Urgent feedstock for a blocked repair, with any surplus restoring SPRC's working reserve. Deliver ${order.requiredEquivalentUnits} equivalents.`,
       clauses: [
         isRoutineReserve
           ? "Objective: restore projected repair coverage to Sal's operating target."
           : `Objective: unblock repair ${order.sourceRepairOrderId} without abandoning SPRC's safety-stock plan.`,
-        `Accepted: iron-nickel (1 equivalent/unit) or aluminum (2 equivalents/unit).`,
+        isTechnology ? "Accepted: rare-earth (1 unit/unit)." : "Accepted: iron-nickel (1 equivalent/unit) or aluminum (2 equivalents/unit).",
         order.titleTerms,
         "This purchase order does not grant extraction or salvage rights.",
       ],
@@ -691,8 +769,10 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   }
 
   function getRepairMissing(repair) {
-    const items = Object.fromEntries(Object.keys(repair.requirements.produced).map((itemId) => [itemId, getMissingRequirement(repair, itemId)]));
-    return { items, total: Object.values(items).reduce((sum, amount) => sum + amount, 0) };
+    const produced = Object.fromEntries(Object.keys(repair.requirements.produced ?? {}).map((itemId) => [itemId, Math.max(0, (repair.requirements.produced[itemId] ?? 0) - (repair.reserved.produced?.[itemId] ?? 0))]));
+    const raw = Object.fromEntries(Object.keys(repair.requirements.raw ?? {}).map((itemId) => [itemId, Math.max(0, (repair.requirements.raw[itemId] ?? 0) - (repair.reserved.raw?.[itemId] ?? 0))]));
+    const items = { ...produced, ...raw };
+    return { items, buckets: { produced, raw }, total: Object.values(items).reduce((sum, amount) => sum + amount, 0) };
   }
 
   function getAvailable(bucket, itemId) {

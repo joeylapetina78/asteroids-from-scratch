@@ -1,5 +1,5 @@
-import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260726-1244-e29962b";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260726-1244-e29962b";
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260726-1439-ea664d3";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260726-1439-ea664d3";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
