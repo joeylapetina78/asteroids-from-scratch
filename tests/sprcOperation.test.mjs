@@ -335,6 +335,9 @@ test("a mining worker tractors eligible loose resources toward its collector", (
   assert.ok(pickup.velocity.x < 0);
   assert.equal(worker.canRecoverPickup({ type: "rockmoss-crawler", sourceClaimId: null }), false);
   assert.equal(worker.canRecoverPickup({ type: "iron-nickel", sourceClaimId: "claim:someone-else" }), false);
+  worker.returnForService({ destination: { x: 1000, y: 1000 }, destinationSiteId: "scrap-porch", issueType: "tractor-field-instability" });
+  assert.equal(worker.tractorActive, false);
+  assert.deepEqual(worker.tractorTargets, []);
 });
 
 test("a mining institution delivery conserves material and payment into freight inventory", () => {
@@ -398,12 +401,12 @@ test("an unregistered Cinder craft receives paid technology service through SPRC
   const repair = Object.values(state.sprc.repairOrders).find((candidate) => candidate.subjectId === worker.id);
   assert.equal(repair.craftClass, "mining-craft");
   assert.equal(repair.serviceCapabilityId, "mining-craft-maintenance");
-  assert.deepEqual(repair.requirements.raw, { "rare-earth": 1 });
-  assert.ok(Object.values(state.sprc.procurementOrders).some((order) => order.procurementItemId === "rare-earth"), "Sal replenishes expensive technology stock after allocating it");
+  assert.deepEqual(repair.requirements.raw, { copper: 1 });
+  assert.ok(Object.values(state.sprc.procurementOrders).some((order) => order.procurementItemId === "copper"), "Sal replenishes the protected Scannergy-conductor stock after allocating it");
 
   sprc.update();
   assert.equal(repair.status, "repairing");
-  assert.equal(state.sprc.inventories.raw["rare-earth"], 0);
+  assert.equal(state.sprc.inventories.raw.copper, 0);
   clock += 31_000;
   sprc.update();
   mining.update();
@@ -914,4 +917,32 @@ test("different wear issues create different SPRC repair recipes", () => {
     assert.deepEqual(repair.requirements.produced, expected);
     assert.equal(repair.origin.type, "operational-wear");
   }
+});
+
+test("a ready hauler repair bypasses an earlier miner repair blocked on materials", () => {
+  const harness = createHarness();
+  harness.state.sprc.inventories.raw.copper = 0;
+  harness.state.ledger.recordEvent("maintenance.requested", {
+    subjectId: "worker:test-miner", subjectName: "Test Miner", referenceId: "MW-TEST", craftClass: "mining-craft",
+    issueType: "field-control-failure", requiredCapabilities: ["field-control"], locationSiteId: "scrap-porch", mobility: "self-return",
+    payerInstitutionId: "miner:test", payer: { balance: 1000, committed: 0, protectedCash: 100 }, servicePrice: 220,
+  }, { visible: false });
+  harness.state.ledger.recordEvent("logistics.maintenanceRequired", { npcId: SPRC.firstHaulerId, issueType: "preventive-service", wear: 4, issueCount: 1 }, { visible: false });
+  harness.operation.update();
+  harness.operation.update();
+  const active = harness.state.sprc.repairOrders[harness.state.sprc.facilities.berthTwo.activeRepairOrderId];
+  assert.equal(active.subjectId, SPRC.firstHaulerId);
+  assert.equal(harness.state.sprc.repairOrders["SPRC-RPR-0001"].status, "waiting-production");
+});
+
+test("Sal procures ordinary silicate and copper when machine-part production is blocked", () => {
+  const harness = createHarness();
+  harness.state.sprc.inventories.produced["machine-part"] = 0;
+  harness.state.sprc.inventories.raw.silicate = 0;
+  harness.state.sprc.inventories.raw.copper = 0;
+  harness.state.ledger.recordEvent("logistics.maintenanceRequired", { npcId: SPRC.firstHaulerId, issueType: "preventive-service", wear: 4, issueCount: 1 }, { visible: false });
+  harness.operation.update();
+  const items = Object.values(harness.state.sprc.procurementOrders).map((order) => order.procurementItemId);
+  assert.ok(items.includes("silicate"));
+  assert.ok(items.includes("copper"));
 });

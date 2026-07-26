@@ -12,12 +12,12 @@ export function createSprcInstitutionInstance(now = Date.now()) {
     accounts: { operating: { id: "account:sprc-operating", balance: 1800, committed: 0, currency: "credits" } },
     policies: {
       protectedCash: 900,
-      inventoryTargets: { structuralFeedstockEquivalents: 8, "hull-plate": 3, "machine-part": 2, "rare-earth": 1 },
-      safetyStock: { "hull-plate": 1, "machine-part": 1, "rare-earth": 1 },
+      inventoryTargets: { structuralFeedstockEquivalents: 8, "hull-plate": 3, "machine-part": 2, copper: 1 },
+      safetyStock: { "hull-plate": 1, "machine-part": 1, copper: 1 },
       projectedServiceCoverageTarget: 2,
       servicePriorities: ["disabled-systems", "damaged-hull", "routine-wear"],
     },
-    inventories: { raw: { "iron-nickel": 0, aluminum: 0, "water-ice": 2, silicate: 2, copper: 1, "rare-earth": 1 }, produced: { "hull-plate": 1, "machine-part": 1 }, reserved: { raw: {}, produced: {} } },
+    inventories: { raw: { "iron-nickel": 0, aluminum: 0, "water-ice": 2, silicate: 2, copper: 1 }, produced: { "hull-plate": 1, "machine-part": 1 }, reserved: { raw: {}, produced: {} } },
     projects: { "sprc-second-cradle": { id: "sprc-second-cradle", name: "Second Repair Cradle", status: "planned", requirements: { "hull-plate": 6, "machine-part": 4, credits: 600 }, reserved: { "hull-plate": 0, "machine-part": 0, credits: 0 }, priority: 20, rationale: "Add a second berth after routine coverage and protected cash are secure." } },
     createdAt: now,
   };
