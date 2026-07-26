@@ -66,6 +66,8 @@ export class NpcShip {
     this.departureTimer = 0;
     this.activeTowRequestId = null;
     this.towDestinationSiteId = null;
+    this.activeCorridorId = null;
+    this.navigationMetrics = { distanceTraveled: 0, carefulDistance: 0, replanCount: 0, corridorEntries: 0 };
   }
 
   update(deltaSeconds, world) {
@@ -90,13 +92,6 @@ export class NpcShip {
       return;
     }
 
-    if (this.operationalStatus === "available") {
-      const wearIncrement = deltaSeconds * (this.isCarefulMode ? 0.032 : 0.012);
-      this.wear += wearIncrement;
-      if (this.isCarefulMode) this.carefulWearSinceIssue += wearIncrement;
-      this.emitWearIssueIfNeeded();
-    }
-
     this.pulse += deltaSeconds;
     const waypoint = this.getWaypoint();
     const waypointDistance = distance(this.position, waypoint);
@@ -105,6 +100,11 @@ export class NpcShip {
       const arrivedSite = this.route[this.routeIndex];
       const isFinalDestination = this.routeIndex === this.route.length - 1;
       if (!isFinalDestination) {
+        if (arrivedSite?.corridorId && arrivedSite.corridorId !== this.activeCorridorId) {
+          this.activeCorridorId = arrivedSite.corridorId;
+          this.navigationMetrics.corridorEntries += 1;
+          this.pendingEvents.push({ type: "npc.corridorEntered", payload: { npcId: this.id, npcName: this.name, corridorId: arrivedSite.corridorId, shipmentId: this.activeShipmentId, towRequestId: this.activeTowRequestId } });
+        }
         this.completedRouteLegs += 1;
         this.routeIndex += 1;
         this.turnSettleTimer = 0.9;
@@ -113,6 +113,22 @@ export class NpcShip {
       }
       this.dockedSiteId = arrivedSite?.id ?? null;
       this.completedRouteLegs += 1;
+      if (this.activeCorridorId) {
+        this.pendingEvents.push({
+          type: "npc.corridorExited",
+          payload: {
+            npcId: this.id,
+            npcName: this.name,
+            corridorId: this.activeCorridorId,
+            siteId: arrivedSite?.id ?? null,
+            siteName: arrivedSite?.name ?? null,
+            shipmentId: this.activeShipmentId,
+            towRequestId: this.activeTowRequestId,
+            navigationMetrics: { ...this.navigationMetrics },
+          },
+        });
+        this.activeCorridorId = null;
+      }
       this.pendingEvents.push({
         type: "npc.routeCompleted",
         payload: {
@@ -124,6 +140,7 @@ export class NpcShip {
           routeLegsCompleted: this.completedRouteLegs,
           shipmentId: this.activeShipmentId,
           towRequestId: this.activeTowRequestId,
+          navigationMetrics: { ...this.navigationMetrics },
           provisionalLogistics: false,
         },
       });
@@ -135,6 +152,7 @@ export class NpcShip {
 
     this.updateCarefulMode(deltaSeconds, world.asteroids, waypointDistance);
     this.applySteer(arrive(this, this.getWaypoint()));
+    this.applySteer(steerTowardOpenGap(this, this.getWaypoint(), world.asteroids), this.isCarefulMode ? 1.15 : 0.62);
     this.applySteer(avoidAsteroids(this, world.asteroids), this.getAvoidanceWeight());
     this.applySteer(separateShips(this, world.npcShips), this.turnSettleTimer > 0 ? 1.05 : 1.3);
     this.updateStuckEscape(deltaSeconds, world.npcShips, world.asteroids);
@@ -168,7 +186,9 @@ export class NpcShip {
     const destinationIndex = this.route.findIndex((site) => site.id === destinationSiteId);
     if (destinationIndex < 0) return false;
     this.activeShipmentId = shipmentId;
-    this.routeIndex = destinationIndex;
+    this.routeIndex = Math.min(1, destinationIndex);
+    this.activeCorridorId = null;
+    this.navigationMetrics = { distanceTraveled: 0, carefulDistance: 0, replanCount: 0, corridorEntries: 0 };
     this.departureTimer = 1.1;
     this.operationalStatus = "loading";
     this.cargoSegments.forEach((segment) => { segment.loaded = true; });
@@ -189,7 +209,9 @@ export class NpcShip {
     if (destinationIndex < 0) return false;
     this.activeTowRequestId = requestId;
     this.towDestinationSiteId = destinationSiteId;
-    this.routeIndex = destinationIndex;
+    this.routeIndex = Math.min(1, destinationIndex);
+    this.activeCorridorId = null;
+    this.navigationMetrics = { distanceTraveled: 0, carefulDistance: 0, replanCount: 0, corridorEntries: 0 };
     this.departureTimer = 0.8;
     this.operationalStatus = "tow-loading";
     this.lastWaypointDistance = distance(this.position, this.getWaypoint());
@@ -277,8 +299,9 @@ export class NpcShip {
     this.blockedTimer = 0;
 
     if (!wasCareful) {
+      this.navigationMetrics.replanCount += 1;
       this.pendingEvents.push({
-        type: "npc.carefulMode",
+        type: "npc.navigationReplanned",
         payload: {
           npcId: this.id,
           npcName: this.name,
@@ -287,6 +310,8 @@ export class NpcShip {
           x: Math.round(this.position.x),
           y: Math.round(this.position.y),
           waypointIndex: this.routeIndex,
+          corridorId: this.activeCorridorId,
+          replanCount: this.navigationMetrics.replanCount,
         },
       });
     }
@@ -340,8 +365,19 @@ export class NpcShip {
     this.velocity.x = limitedVelocity.x;
     this.velocity.y = limitedVelocity.y;
 
-    this.position.x += this.velocity.x * deltaSeconds;
-    this.position.y += this.velocity.y * deltaSeconds;
+    const moveX = this.velocity.x * deltaSeconds;
+    const moveY = this.velocity.y * deltaSeconds;
+    this.position.x += moveX;
+    this.position.y += moveY;
+    const traveled = Math.hypot(moveX, moveY);
+    this.navigationMetrics.distanceTraveled += traveled;
+    if (this.isCarefulMode) this.navigationMetrics.carefulDistance += traveled;
+    if (this.operationalStatus === "available") {
+      const wearIncrement = traveled * (this.isCarefulMode ? 0.00034 : 0.00016);
+      this.wear += wearIncrement;
+      if (this.isCarefulMode) this.carefulWearSinceIssue += wearIncrement;
+      this.emitWearIssueIfNeeded();
+    }
     this.acceleration.x = 0;
     this.acceleration.y = 0;
     this.updateHeading(deltaSeconds);
@@ -553,6 +589,50 @@ function getLaneWaypoint(route, routeIndex, laneOffset) {
     x: current.x + side.x * laneOffset,
     y: current.y + side.y * laneOffset,
   };
+}
+
+function steerTowardOpenGap(ship, target, asteroids) {
+  if (!asteroids?.length) return { x: 0, y: 0 };
+
+  const targetHeading = Math.atan2(target.y - ship.position.y, target.x - ship.position.x);
+  const currentHeading = Math.atan2(ship.velocity.y, ship.velocity.x);
+  const offsets = [0, -0.34, 0.34, -0.68, 0.68, -1.02, 1.02];
+  const lookAhead = ship.activeTowRequestId ? [110, 220, 360, 500] : [105, 210, 340, 470];
+  const shipEnvelope = ship.activeTowRequestId ? 104 : 72;
+  let nearbyObstacle = false;
+  let best = null;
+
+  offsets.forEach((offset) => {
+    const heading = targetHeading + offset;
+    const direction = { x: Math.cos(heading), y: Math.sin(heading) };
+    let minimumClearance = Infinity;
+
+    lookAhead.forEach((lookDistance) => {
+      const sample = {
+        x: ship.position.x + direction.x * lookDistance,
+        y: ship.position.y + direction.y * lookDistance,
+      };
+      asteroids.forEach((asteroid) => {
+        const clearance = distance(sample, asteroid.position) - asteroid.radius - shipEnvelope;
+        minimumClearance = Math.min(minimumClearance, clearance);
+        if (distanceSquared(ship.position, asteroid.position) < 560 * 560) nearbyObstacle = true;
+      });
+    });
+
+    const progress = Math.cos(offset) * 2.8;
+    const clearanceScore = Math.min(3, minimumClearance / 115);
+    const turnCost = Math.abs(Math.atan2(Math.sin(heading - currentHeading), Math.cos(heading - currentHeading))) * 0.3;
+    const sidePreference = Math.sign(offset) === ship.avoidanceSide ? 0.08 : 0;
+    const score = progress + clearanceScore - turnCost + sidePreference;
+    if (!best || score > best.score) best = { heading, score };
+  });
+
+  if (!nearbyObstacle || !best) return { x: 0, y: 0 };
+  const desiredSpeed = ship.getMaxSpeed() * (ship.isCarefulMode ? 0.9 : 1);
+  return limit({
+    x: Math.cos(best.heading) * desiredSpeed - ship.velocity.x,
+    y: Math.sin(best.heading) * desiredSpeed - ship.velocity.y,
+  }, MAX_FORCE * 1.75);
 }
 
 function avoidAsteroids(ship, asteroids) {

@@ -34,6 +34,9 @@ This slice closes a small regional freight loop with two standing offers, two NP
 - Dispatch evaluates every local offer before execution. An unreachable destination, missing maintenance path, or maintenance-policy violation makes an offer ineligible and records the reason.
 - Shipment mutation happens only after route execution accepts the evaluated path. A rejected path cannot renew or remove source inventory, create custody, or commit issuer payment.
 - Multi-stop paths are executable by the ship, but only arrival at the contracted final destination completes the shipment.
+- Authored connections may define a physical freight corridor. The shared corridor builder turns that data into a deterministic curved centerline, navigation waypoints, widened hub approaches, and a generation clearance envelope. The Yard Exchange-The Ledge connection is the first instance.
+- Haulers and recovery towing follow the same physical corridor route. Local navigation samples several headings ahead of the vehicle, favors wide forward openings, and accounts for the larger towing envelope before close-range avoidance takes over.
+- Navigation wear is charged by distance traveled rather than elapsed struggle time. Corridor entry, exit, and obstacle replanning are recorded with carrier identity and can be inspected in the ledger.
 - Maintenance eligibility is calculated explicitly as `current wear + contract-route wear + destination-to-selected-provider wear + minimum return margin <= maximum wear`. Route wear is authored expected wear per distance.
 - Provider selection considers every institution-listed repair option whose destination is known and reachable from the contract destination, ordered by authored priority and then distance. Provider capacity and operating status are not yet modeled.
 

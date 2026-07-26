@@ -7,7 +7,8 @@ import { createFarmOperation } from "../src/systems/farmOperation.js";
 import { evaluateAffordability, generateCapabilityResponses } from "../src/systems/institutionDecision.js";
 import { createContractManager } from "../src/systems/contractManager.js";
 import { createInitialLogisticsState, createLogisticsManager, createStandingFreightJob, STANDING_FREIGHT_TEMPLATES } from "../src/systems/logistics.js";
-import { createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "../src/systems/transportationPlanning.js";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "../src/systems/transportationPlanning.js";
+import { createTransportCorridors, getCorridorClearance } from "../src/systems/transportCorridors.js";
 import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../src/content/transportation/firstReachNetwork.js";
 import { createTowServiceManager } from "../src/systems/towService.js";
 import { NpcShip } from "../src/entities/NpcShip.js";
@@ -420,6 +421,34 @@ test("the known transportation network finds a multi-destination path without au
   const network = createTransportationNetwork({ destinations: ["yard-exchange", "scrap-porch", "the-ledge"].map((id) => ({ id })), connections: FIRST_REACH_TRANSPORT_CONNECTIONS });
   const route = findTransportationRoute(network, "scrap-porch", "the-ledge", FIRST_REACH_CARRIER_POLICY.knownDestinationIds);
   assert.deepEqual(route.path, ["scrap-porch", "yard-exchange", "the-ledge"]);
+});
+
+test("a configured transport connection creates a curved, cleared physical corridor", () => {
+  const destinations = [
+    { id: "yard-exchange", name: "Yard Exchange", position: { x: 0, y: 0 } },
+    { id: "the-ledge", name: "The Ledge", position: { x: 8400, y: 0 } },
+  ];
+  const corridors = createTransportCorridors({ destinations, connections: FIRST_REACH_TRANSPORT_CONNECTIONS });
+  assert.equal(corridors.length, 1);
+  assert.ok(corridors[0].waypoints.length > 8);
+  assert.notEqual(corridors[0].samples[Math.floor(corridors[0].samples.length / 2)].y, 0);
+  assert.equal(getCorridorClearance(corridors[0].samples[12], 40, corridors)?.corridor.id, "corridor-yard-ledge");
+  assert.equal(getCorridorClearance({ x: 4200, y: 3000 }, 40, corridors), null);
+});
+
+test("the abstract Yard-Ledge trip expands into waypoints that an NPC follows", () => {
+  const destinations = [
+    { id: "yard-exchange", name: "Yard Exchange", position: { x: 0, y: 0 } },
+    { id: "the-ledge", name: "The Ledge", position: { x: 8400, y: 0 } },
+  ];
+  const network = createTransportationNetwork({ destinations, connections: FIRST_REACH_TRANSPORT_CONNECTIONS });
+  const plan = findTransportationRoute(network, "yard-exchange", "the-ledge");
+  const physicalRoute = buildPhysicalTransportationRoute(network, plan);
+  const ship = new NpcShip({ id: "corridor-test", name: "Corridor Test", route: destinations, x: 0, y: 0 });
+  assert.equal(ship.assignShipment({ shipmentId: "shipment:test", destinationSiteId: "the-ledge", route: physicalRoute }), true);
+  assert.ok(physicalRoute.length > 10);
+  assert.equal(ship.route[ship.routeIndex].type, "corridor-waypoint");
+  assert.equal(ship.route.at(-1).id, "the-ledge");
 });
 
 test("transport work becomes ineligible when it violates the carrier maintenance policy", () => {

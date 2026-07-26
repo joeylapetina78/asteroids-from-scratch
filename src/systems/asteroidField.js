@@ -1,8 +1,9 @@
-﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260726-0212-e45b567";
+﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260726-1046-f278b37";
 import { createRandom, hashNumbers, randomRange } from "./random.js";
-import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260726-0212-e45b567";
-import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260726-0212-e45b567";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260726-0212-e45b567";
+import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260726-1046-f278b37";
+import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260726-1046-f278b37";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260726-1046-f278b37";
+import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260726-1046-f278b37";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same
@@ -10,7 +11,7 @@ import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260726-0212-
 // so the field feels persistent even though most of it is not in memory.
 const CHUNK_LOAD_RADIUS = 3;
 
-export function createAsteroidChunks(canvas, resourceField) {
+export function createAsteroidChunks(canvas, resourceField, transportCorridors = []) {
   const chunkSize = canvas.width;
   const loadedChunks = new Map(); // "cx,cy"  Asteroid[]
 
@@ -48,17 +49,18 @@ export function createAsteroidChunks(canvas, resourceField) {
       const baseProfile = resourceField.getProfile(position.x, position.y);
       const asteroid = createRandomAsteroid(position.x, position.y, getOreClusterProfile(position, baseProfile, oreClusterSeeds), hashNumbers(seed, i));
       tuneAsteroidForTerrain(asteroid, terrain, random);
-      chunkAsteroids.push(asteroid);
+      if (!getCorridorClearance(asteroid.position, asteroid.radius, transportCorridors)) chunkAsteroids.push(asteroid);
     }
 
     for (let i = 0; i < commonCount; i++) {
       const position = getTerrainPosition({ centerX, centerY, chunkSize, terrain, clusters, random, index: i, count: commonCount });
       const asteroid = createCommonAsteroid(position.x, position.y, hashNumbers(seed, 1000 + i));
       tuneAsteroidForTerrain(asteroid, terrain, random);
-      chunkAsteroids.push(asteroid);
+      if (!getCorridorClearance(asteroid.position, asteroid.radius, transportCorridors)) chunkAsteroids.push(asteroid);
     }
 
     createAmbientSurvivalDeposits({ centerX, centerY, chunkSize, terrain, tags: profile.tags, random, seed })
+      .filter((asteroid) => !getCorridorClearance(asteroid.position, asteroid.radius, transportCorridors))
       .forEach((asteroid) => chunkAsteroids.push(asteroid));
 
     return chunkAsteroids;

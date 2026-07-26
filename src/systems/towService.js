@@ -1,5 +1,5 @@
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260726-1046-f278b37";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260726-1046-f278b37";
 
 const REPAIR_SITE_ID = "scrap-porch";
 const BASE_NPC_TOW_FEE = 140;
@@ -76,7 +76,7 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
     const request = towing.requests[id] = { id, haulerId: issue.npcId, carrierInstitutionId: carrier.id, shipInstitutionId: hauler.shipInstitutionId, issue: { ...issue }, purpose: options.purpose ?? (shipment ? "preserve-loaded-delivery" : "service-return"), parentRequestId: options.parentRequestId ?? null, originSiteId: hauler.currentSiteId, destinationSiteId, shipmentId: shipment?.id ?? null, securedReceivable, fee, committedPayment: fee, status: "dispatched", createdAt: now(), completedAt: null, followupRequestId: null };
     account.committed = (account.committed ?? 0) + fee;
     towing.vehicle.status = "dispatched";
-    ship.assignTow({ requestId: id, destinationSiteId, route: route.path.map((siteId) => network.destinations[siteId]) });
+    ship.assignTow({ requestId: id, destinationSiteId, route: buildPhysicalTransportationRoute(network, route) });
     publish("towService.dispatched", request, `${towing.controller.name} dispatched ${towing.vehicle.name} for ${ship.name}; ${carrier.name} approved a ${fee} cr recovery quote to ${network.destinations[destinationSiteId]?.name ?? destinationSiteId}.`);
     return request;
   }

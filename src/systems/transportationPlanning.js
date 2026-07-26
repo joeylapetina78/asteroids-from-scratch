@@ -31,6 +31,13 @@ export function findTransportationRoute(network, originId, destinationId, knownD
   return null;
 }
 
+export function buildPhysicalTransportationRoute(network, route) {
+  if (!route?.path) return [];
+  const destinations = Object.values(network.destinations);
+  const corridors = createTransportCorridors({ destinations, connections: network.connections });
+  return expandTransportationPath(route.path, network.destinations, network.connections, corridors);
+}
+
 export function evaluateTransportPlan({ network, originId, destinationId, payment = 0, currentWear = 0, policy = {}, repairOptions = [] }) {
   const route = findTransportationRoute(network, originId, destinationId, policy.knownDestinationIds);
   if (!route) return { eligible: false, reason: "destination-unreachable", score: -Infinity };
@@ -59,3 +66,4 @@ export function evaluateTransportPlan({ network, originId, destinationId, paymen
     score: payment - distanceCost - projectedWear * (policy.wearPenalty ?? 0),
   };
 }
+import { createTransportCorridors, expandTransportationPath } from "./transportCorridors.js?v=fresh-20260726-1046-f278b37";

@@ -1,6 +1,6 @@
 import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
-import { createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260726-1046-f278b37";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260726-1046-f278b37";
 
 export const STANDING_FREIGHT_TEMPLATES = Object.freeze([
   { id: "standing-water-scrap-yard", originSiteId: "scrap-porch", originName: "Scrap Porch", destinationSiteId: "yard-exchange", destinationName: "Yard Exchange", commodity: "water-ice", commodityName: "Water Ice", amount: 1, payment: 90, issuerInstitutionId: "yard-exchange", sourceInstitutionId: "scrap-forge", destinationInstitutionId: "yard-exchange" },
@@ -159,7 +159,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
   }
 
   function createShipment({ template, assigneeType, assigneeId, responseId = null, contractId = null, plan = null }) {
-    const routeSites = plan?.route?.path?.map((id) => transportationNetwork.destinations[id]) ?? [];
+    const routeSites = plan?.route ? buildPhysicalTransportationRoute(transportationNetwork, plan.route) : [];
     const assignedShip = assigneeType === "npc" ? shipById.get(assigneeId) : null;
     if (assigneeType === "npc" && (!assignedShip || (assignedShip.canAcceptRoute ? !assignedShip.canAcceptRoute(routeSites) : routeSites.length < 2))) return null;
     const issuer = logistics.institutions[template.issuerInstitutionId];
