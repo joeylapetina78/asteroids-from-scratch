@@ -1,6 +1,6 @@
-import { getCurrentShipLegal, getPilotName, updateCurrentShipLegal } from "./legalRecords.js?v=fresh-20260726-1701-4a23f71";
-import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260726-1701-4a23f71";
-import { registerHull, setActiveHull } from "./hulls.js?v=fresh-20260726-1701-4a23f71";
+import { getCurrentShipLegal, getPilotName, updateCurrentShipLegal } from "./legalRecords.js?v=fresh-20260728-2032-8e0cc22";
+import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260728-2032-8e0cc22";
+import { registerHull, setActiveHull } from "./hulls.js?v=fresh-20260728-2032-8e0cc22";
 import {
   WORLD_RECORD_RELATIONSHIPS,
   ensureInstitution,
@@ -9,7 +9,7 @@ import {
   getShipAssetId,
   issueWorldDocument,
   upsertWorldRelationship,
-} from "./worldRecords.js?v=fresh-20260726-1701-4a23f71";
+} from "./worldRecords.js?v=fresh-20260728-2032-8e0cc22";
 
 const YARD_EXCHANGE_AUTHORITY_ID = "institution:yard-exchange-authority";
 const YARD_EXCHANGE_FINANCE_ID = "institution:yard-exchange-finance";
@@ -47,8 +47,8 @@ export function purchaseShipOffer(state, offer) {
   setActiveHull(state, purchasedVin);
   state.components.hull.integrity = state.components.hull.maxIntegrity;
   state.components.engine.fuelBurnRate = 4.5;
-  state.components.engine.maxFuel = 260;
-  state.components.engine.fuel = Math.max(state.components.engine.fuel, 220);
+  state.components.engine.maxFuel = 2000;
+  state.components.engine.fuel = Math.max(state.components.engine.fuel, 1200);
   state.components.engine.powerLocked = false;
   state.components.miner.installed = true;
   state.components.miner.ammo = Math.max(state.components.miner.ammo, 150);

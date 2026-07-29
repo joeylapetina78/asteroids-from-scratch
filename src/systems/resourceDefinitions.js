@@ -22,36 +22,39 @@ export const FAMILIES = {
 // shade within their lane; keep new materials inside their role's lane.
 export const FAMILY_MEMBERS = {
   volatile: [
-    { id: "water-ice",   color: "#b8eaff", weight: 3, value: 30, processOutputs: { fuel: 250 } },
-    { id: "methane-ice", color: "#7cd9e8", weight: 2, value: 50, processOutputs: { fuel: 320 } },
-    { id: "hydrogen",    color: "#6fb5ff", weight: 1, value: 80, processOutputs: { fuel: 400 } },
+    { id: "water-ice",   color: "#b8eaff", weight: 3, value: 30, processOutputs: { fuel: 250, "hull-repair": 1 } },
+    { id: "methane-ice", color: "#7cd9e8", weight: 2, value: 50, processOutputs: { fuel: 320, "hull-repair": 1 } },
+    { id: "hydrogen",    color: "#6fb5ff", weight: 1, value: 80, processOutputs: { fuel: 400, "hull-repair": 1 } },
   ],
+  // Structural is the efficient hull-patch material. hull-repair yields track
+  // SPRC's structural equivalence (iron-nickel = 1, aluminum = 2) so the player
+  // and the repair institutions agree on what a hull's worth of metal is.
   structural: [
-    { id: "iron-nickel", color: "#ff7452", weight: 3, value: 20, processOutputs: { ammo: 250 } },
-    { id: "aluminum",    color: "#f0b46a", weight: 2, value: 35, processOutputs: { ammo: 300 } },
-    { id: "titanium",    color: "#c07840", weight: 1, value: 60, processOutputs: { ammo: 400 } },
+    { id: "iron-nickel", color: "#ff7452", weight: 3, value: 20, processOutputs: { ammo: 250, "hull-repair": 5 } },
+    { id: "aluminum",    color: "#f0b46a", weight: 2, value: 35, processOutputs: { ammo: 300, "hull-repair": 10 } },
+    { id: "titanium",    color: "#c07840", weight: 1, value: 60, processOutputs: { ammo: 400, "hull-repair": 15 } },
   ],
   industrial: [
-    { id: "silicate",     color: "#d4b896", weight: 3, value: 15, processOutputs: { ammo: 180 } },
-    { id: "carbonaceous", color: "#8a7060", weight: 2, value: 25, processOutputs: { ammo: 220, fuel: 100 } },
+    { id: "silicate",     color: "#d4b896", weight: 3, value: 15, processOutputs: { ammo: 180, "hull-repair": 2 } },
+    { id: "carbonaceous", color: "#8a7060", weight: 2, value: 25, processOutputs: { ammo: 220, fuel: 100, "hull-repair": 3 } },
   ],
   conductor: [
-    { id: "copper", color: "#a066ff", weight: 3, value: 50, processOutputs: { scanergy: 250 } },
-    { id: "cobalt", color: "#6a48e0", weight: 2, value: 80, processOutputs: { scanergy: 350 } },
-    { id: "silver", color: "#cdb4ff", weight: 1, value: 120, processOutputs: { scanergy: 450 } },
+    { id: "copper", color: "#a066ff", weight: 3, value: 50, processOutputs: { scanergy: 250, "hull-repair": 1 } },
+    { id: "cobalt", color: "#6a48e0", weight: 2, value: 80, processOutputs: { scanergy: 350, "hull-repair": 1 } },
+    { id: "silver", color: "#cdb4ff", weight: 1, value: 120, processOutputs: { scanergy: 450, "hull-repair": 1 } },
   ],
   energy: [
-    { id: "uranium", color: "#a0e040", weight: 2, value: 90, processOutputs: { fuel: 650 } },
-    { id: "thorium", color: "#60e0a0", weight: 1, value: 160, processOutputs: { fuel: 900 } },
+    { id: "uranium", color: "#a0e040", weight: 2, value: 90, processOutputs: { fuel: 650, "hull-repair": 1 } },
+    { id: "thorium", color: "#60e0a0", weight: 1, value: 160, processOutputs: { fuel: 900, "hull-repair": 1 } },
   ],
   advanced: [
-    { id: "lithium",    color: "#30f0a0", weight: 3, value: 130, processOutputs: { ammo: 450, scanergy: 300 } },
-    { id: "rare-earth", color: "#e050d0", weight: 2, value: 220, processOutputs: { scanergy: 700 } },
-    { id: "platinum",   color: "#d8e8f8", weight: 1, value: 300, processOutputs: {} },
+    { id: "lithium",    color: "#30f0a0", weight: 3, value: 130, processOutputs: { ammo: 450, scanergy: 300, "hull-repair": 3 } },
+    { id: "rare-earth", color: "#e050d0", weight: 2, value: 220, processOutputs: { scanergy: 700, "hull-repair": 1 } },
+    { id: "platinum",   color: "#d8e8f8", weight: 1, value: 300, processOutputs: { "hull-repair": 1 } },
   ],
   strange: [
-    { id: "crystal-matrix", color: "#ff6fd8", weight: 2, value: 200, processOutputs: {} },
-    { id: "anomaly-shard",  color: "#ff3080", weight: 1, value: 450, processOutputs: {} },
+    { id: "crystal-matrix", color: "#ff6fd8", weight: 2, value: 200, processOutputs: { "hull-repair": 1 } },
+    { id: "anomaly-shard",  color: "#ff3080", weight: 1, value: 450, processOutputs: { "hull-repair": 1 } },
     { id: "rift-trophy", color: "#ffd86f", weight: 0, value: 0, processOutputs: {} },
     { id: "rockmoss-crawler", color: "#72ffc9", weight: 0, value: 0, processOutputs: {} },
   ],
@@ -176,5 +179,6 @@ function getResourcePurpose(resource) {
 
 function formatPurpose(output) {
   if (output === "ammo") return "Charges";
+  if (output === "hull-repair") return "Hull patch";
   return output.charAt(0).toUpperCase() + output.slice(1);
 }

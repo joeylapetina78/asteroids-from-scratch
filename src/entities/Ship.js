@@ -1,4 +1,4 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260726-1701-4a23f71";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260728-2032-8e0cc22";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_THRUST_POWER = 95;
@@ -81,12 +81,18 @@ export class Ship {
     this.boostCooldown = 0;
     this.environmentMaxSpeedMultiplier = 1;
     this.environmentThrustMultiplier = 1;
+    // Engine-condition modifiers, set each frame by the game's engine effect
+    // handler. Separate from the environment multipliers so hazards/corridors
+    // and wear-faults compose instead of clobbering each other.
+    this.conditionThrustMultiplier = 1;
+    this.conditionMaxSpeedMultiplier = 1;
+    this.conditionThrustBlocked = false;
     this.hasKineticOverspeed = false;
   }
 
   update(deltaSeconds, input) {
     this.boostCooldown = Math.max(0, this.boostCooldown - deltaSeconds);
-    const canThrust = this.engine.powered && input.isDown("KeyW") && this.engine.fuel > 0;
+    const canThrust = this.engine.powered && input.isDown("KeyW") && this.engine.fuel > 0 && !this.conditionThrustBlocked;
     const canStrafe = this.engine.powered && this.engine.fuel > 0 && this.hasLateralThrusters();
     const isBoosting = this.engine.powered && this.boostDurationRemaining > 0;
     const strafe = canStrafe ? (input.isDown("KeyQ") ? -1 : input.isDown("KeyE") ? 1 : 0) : 0;
@@ -145,7 +151,7 @@ export class Ship {
   }
 
   getThrustPower() {
-    return (this.engine.thrustPower ?? DEFAULT_THRUST_POWER) * this.environmentThrustMultiplier;
+    return (this.engine.thrustPower ?? DEFAULT_THRUST_POWER) * this.environmentThrustMultiplier * this.conditionThrustMultiplier;
   }
 
   getReverseThrustMultiplier() {
@@ -159,7 +165,7 @@ export class Ship {
 
   getMaxSpeed() {
     const cloakMultiplier = this.isCloaked ? (this.cloakConfig?.maxSpeedMultiplier ?? 0.78) : 1;
-    return (this.engine.maxSpeed ?? DEFAULT_MAX_SPEED) * cloakMultiplier * this.environmentMaxSpeedMultiplier;
+    return (this.engine.maxSpeed ?? DEFAULT_MAX_SPEED) * cloakMultiplier * this.environmentMaxSpeedMultiplier * this.conditionMaxSpeedMultiplier;
   }
 
   applyKineticVelocityMultiplier(multiplier = 2) {
@@ -293,11 +299,16 @@ export class Ship {
   drawThrust(context) {
     const visual = this.engine.thrustVisual ?? {};
     const color = visual.color ?? "#ffb85c";
-    const length = visual.length ?? 15;
-    const width = visual.width ?? 5;
+    // A worn engine burns weak and ragged: shorter, thinner, sputtery plume.
+    const stage = this.engine.condition?.stage ?? "healthy";
+    const plumeScale = stage === "emergency" ? 0.5 : stage === "degraded" ? 0.82 : 1;
+    const raggedness = stage === "emergency" ? 1 : stage === "degraded" ? 0.4 : 0;
+    const length = (visual.length ?? 15) * plumeScale;
+    const width = (visual.width ?? 5) * plumeScale;
+    const flicker = 1 - raggedness * Math.random() * 0.7;
     const direction = this.engine.thrustMode === "reverse" ? 1 : -1;
     const originX = direction > 0 ? 18 : -17;
-    const tipX = originX + direction * (length + Math.random() * length * 0.55);
+    const tipX = originX + direction * (length * flicker + Math.random() * length * 0.55);
 
     context.save();
     context.globalAlpha = this.isCloaked ? 0.3 : 1;

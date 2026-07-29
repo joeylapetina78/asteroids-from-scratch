@@ -1,13 +1,13 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260726-1701-4a23f71";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260726-1701-4a23f71";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260726-1701-4a23f71";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260726-1701-4a23f71";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260726-1701-4a23f71";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260726-1701-4a23f71";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260726-1701-4a23f71";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260726-1701-4a23f71";
-import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260726-1701-4a23f71";
-import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260726-1701-4a23f71";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260728-2032-8e0cc22";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260728-2032-8e0cc22";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260728-2032-8e0cc22";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260728-2032-8e0cc22";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260728-2032-8e0cc22";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260728-2032-8e0cc22";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260728-2032-8e0cc22";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260728-2032-8e0cc22";
+import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260728-2032-8e0cc22";
+import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260728-2032-8e0cc22";
 
 export function createGameState() {
   const state = {
@@ -124,13 +124,17 @@ export function createGameState() {
         powerLocked: false,
         upgrades: [],
         thrustMode: "forward",
-        fuel: 200,
-        maxFuel: 200,
+        fuel: 2000,
+        maxFuel: 2000,
         thrustPower: 95,
         reverseThrustMultiplier: 0.2,
         rotationSpeed: 2.6,
         maxSpeed: 105,
         fuelBurnRate: 10,
+        // Persistent wear/fault state, driven by the shared panel-condition
+        // machine (panelMaintenance.js) with engine-specific rules from
+        // engineCondition.js. First panel wired into that system.
+        condition: { stage: "healthy", wear: 0 },
         thrustVisual: {
           style: "ragged-flame",
           color: "#ffb85c",
@@ -142,7 +146,7 @@ export function createGameState() {
         installed: false,
         armed: false,
         ammo: 100,
-        maxAmmo: 200,
+        maxAmmo: 2000,
       },
       beaconLocator: {
         installed: false,
@@ -163,7 +167,7 @@ export function createGameState() {
       scanner: {
         installed: false,
         scanergy: 0,
-        maxScanergy: 400,
+        maxScanergy: 2500,
         targets: ["resources"],
       },
       processor: {
@@ -180,6 +184,17 @@ export function createGameState() {
         installed: true,
         integrity: 100,
         maxIntegrity: 100,
+        // Onboard patch material converted at the processor (Repair Hull mode).
+        // Denominated in integrity points, so it patches the hull 1:1; a full
+        // reserve is exactly one full hull repair. Lives here for now because the
+        // hull is its only consumer — will move to a shared onboard supply once
+        // other panels draw from it.
+        repairReserve: 0,
+        maxRepairReserve: 100,
+        // Dormant: the persistent wear/condition state the shared panel-condition
+        // system will drive later. Nothing reads it yet; declared now so saves
+        // already carry it and no migration is needed.
+        condition: "healthy",
         vin: "YRDSKF-01-7A3",
         vinPlateAttached: true,
       },

@@ -1,42 +1,44 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260726-1701-4a23f71";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260726-1701-4a23f71";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260726-1701-4a23f71";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260726-1701-4a23f71";
-import { Ship } from "./entities/Ship.js?v=fresh-20260726-1701-4a23f71";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260726-1701-4a23f71";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260728-2032-8e0cc22";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260728-2032-8e0cc22";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260728-2032-8e0cc22";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260728-2032-8e0cc22";
+import { Ship } from "./entities/Ship.js?v=fresh-20260728-2032-8e0cc22";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260728-2032-8e0cc22";
+import { applyPanelPatch, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260728-2032-8e0cc22";
+import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260728-2032-8e0cc22";
 import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260726-1701-4a23f71";
-import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260726-1701-4a23f71";
-import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260726-1701-4a23f71";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260726-1701-4a23f71";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260726-1701-4a23f71";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260726-1701-4a23f71";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260726-1701-4a23f71";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260726-1701-4a23f71";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260726-1701-4a23f71";
-import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260726-1701-4a23f71";
-import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260726-1701-4a23f71";
-import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260726-1701-4a23f71";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260726-1701-4a23f71";
-import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260726-1701-4a23f71";
+import { createInput } from "./systems/input.js?v=fresh-20260728-2032-8e0cc22";
+import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260728-2032-8e0cc22";
+import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260728-2032-8e0cc22";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260728-2032-8e0cc22";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260728-2032-8e0cc22";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260728-2032-8e0cc22";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260728-2032-8e0cc22";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260728-2032-8e0cc22";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260728-2032-8e0cc22";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260728-2032-8e0cc22";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260728-2032-8e0cc22";
+import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260728-2032-8e0cc22";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260728-2032-8e0cc22";
+import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260728-2032-8e0cc22";
 import { getStandingMiningJobsForSite } from "./systems/miningOperation.js";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260726-1701-4a23f71";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260726-1701-4a23f71";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260726-1701-4a23f71";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260726-1701-4a23f71";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260726-1701-4a23f71";
-import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260726-1701-4a23f71";
-import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260726-1701-4a23f71";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260726-1701-4a23f71";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260726-1701-4a23f71";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260726-1701-4a23f71";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260726-1701-4a23f71";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260726-1701-4a23f71";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260726-1701-4a23f71";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260726-1701-4a23f71";
-import { createGameState } from "./state/gameState.js?v=fresh-20260726-1701-4a23f71";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260726-1701-4a23f71";
-import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260726-1701-4a23f71";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260728-2032-8e0cc22";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260728-2032-8e0cc22";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260728-2032-8e0cc22";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260728-2032-8e0cc22";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260728-2032-8e0cc22";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260728-2032-8e0cc22";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260728-2032-8e0cc22";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260728-2032-8e0cc22";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260728-2032-8e0cc22";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260728-2032-8e0cc22";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260728-2032-8e0cc22";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260728-2032-8e0cc22";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260728-2032-8e0cc22";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260728-2032-8e0cc22";
+import { createGameState } from "./state/gameState.js?v=fresh-20260728-2032-8e0cc22";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260728-2032-8e0cc22";
+import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260728-2032-8e0cc22";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -70,6 +72,10 @@ const MAX_HUB_DEFENSE_HITS_PER_FRAME = 3;
 const VIEWPORT_TITLE_SECONDS = 5.6;
 const DOCK_MESSAGE_SECONDS = 2.8;
 const REPAIR_CREDITS_PER_HULL = 2;
+// Credits to service an engine fault at dock, by stage. Early service is
+// cheaper — the incentive to fix it before it worsens. Interim pricing; the
+// next slice moves this to material-conserving SPRC service via the same seam.
+const ENGINE_CONDITION_REPAIR_COST = { healthy: 0, degraded: 45, emergency: 110, failed: 200 };
 const DAMAGE_FLASH_DECAY_PER_SECOND = 2.9;
 const MAX_DAMAGE_FLASH_ALPHA = 0.42;
 const MAX_IMPACT_SHAKE_PIXELS = 28;
@@ -292,6 +298,10 @@ export class Game {
     this.hasRecordedUnarmedFireReminder = false;
     this.hasRecordedStrandedEvent = false;
     this.hasRecordedLowFuelEvent = false;
+    // Engine-condition runtime state (persistent wear lives in state.components).
+    this.conditionDebugScale = 1; // dev accelerator; see setConditionDebugScale
+    this.engineMisfireRemaining = 0;
+    this.engineSteerBias = 0;
     this.viewportTitle = null;
     this.viewportTitleTimer = 0;
     this.discoveredSiteIds = new Set();
@@ -975,7 +985,13 @@ export class Game {
     this.ship.cloakConfig = this.state.components.cloak;
     this.ship.isCloaked = Boolean(this.state.components.cloak.isActive);
     this.updateCorridorTravelEffects(deltaSeconds);
+    // Set this frame's engine-condition modifiers (thrust scale, misfire block,
+    // steering pull) BEFORE the ship consumes them.
+    this.applyEngineConditionEffects(deltaSeconds);
     this.ship.update(deltaSeconds, this.input);
+    // Accrue wear from what the ship actually did this frame, then react to any
+    // stage change.
+    this.updateEngineCondition(deltaSeconds);
     if (previousFuel > 0 && this.state.components.engine.fuel <= 0 && this.state.components.engine.powered) {
       this.setShipPowered(false);
     }
@@ -1017,6 +1033,9 @@ export class Game {
     });
     this.updateIncursions(deltaSeconds);
     this.updateIncursionShots(deltaSeconds);
+    // Runs after every damage source this frame so fresh hits reset the settle
+    // timer before any patching resumes.
+    this.updateHullRepair(deltaSeconds);
     this.updateAmbientLife(deltaSeconds);
     // Lifeforms are preserved off-screen, but only nearby ones are simulated.
     // That keeps the field feeling persistent without paying every steering
@@ -2566,6 +2585,7 @@ export class Game {
 
     const repairCost = this.getRepairCost();
     const hullBeforeRepair = this.state.components.hull.integrity;
+    const engineConditionBefore = this.state.components.engine?.condition?.stage ?? "healthy";
 
     if (repairCost <= 0 || !canSpendCredits(this.state, repairCost)) {
       return;
@@ -2573,6 +2593,10 @@ export class Game {
 
     spendCredits(this.state, repairCost);
     this.state.components.hull.integrity = this.state.components.hull.maxIntegrity;
+    // Dock is the interim service provider: it clears panel conditions through
+    // the same shared repair seam SPRC will use next slice — not a second
+    // repair architecture. Onboard hull reserve stays integrity-only.
+    this.serviceEnginePanel();
     this.state.ledger.recordEvent("ship.repaired", {
       siteId: site.id,
       siteName: site.name,
@@ -2580,17 +2604,46 @@ export class Game {
       hullBefore: hullBeforeRepair,
       hullAfter: this.state.components.hull.integrity,
       hullRestored: this.state.components.hull.integrity - hullBeforeRepair,
+      engineConditionBefore,
+      engineConditionAfter: "healthy",
     });
     this.shipDestroyed = false;
     this.onHudChange(this.state);
     this.setDockedSite(site);
   }
 
+  // Restore the engine panel to healthy via the shared service seam and clear
+  // the runtime fault state a failure left behind (stranded latch, misfire).
+  serviceEnginePanel() {
+    const engine = this.state.components.engine;
+    if (!engine?.installed) {
+      return "healthy";
+    }
+
+    const condition = ensurePanelCondition(engine);
+    const previousStage = repairPanelCondition(condition);
+    this.engineMisfireRemaining = 0;
+    this.engineSteerBias = 0;
+    this.ship.conditionThrustBlocked = false;
+    this.ship.conditionThrustMultiplier = 1;
+    this.ship.conditionMaxSpeedMultiplier = 1;
+    if (previousStage === "failed") {
+      this.hasRecordedStrandedEvent = false;
+    }
+    if (previousStage !== "healthy") {
+      this.onHudChange(this.state);
+    }
+    return previousStage;
+  }
+
   getRepairCost() {
     const hull = this.state.components.hull;
     const missingHull = Math.max(0, hull.maxIntegrity - hull.integrity);
+    const hullCost = Math.ceil(missingHull * REPAIR_CREDITS_PER_HULL);
+    const engineStage = this.state.components.engine?.condition?.stage ?? "healthy";
+    const engineCost = ENGINE_CONDITION_REPAIR_COST[engineStage] ?? 0;
 
-    return Math.ceil(missingHull * REPAIR_CREDITS_PER_HULL);
+    return hullCost + engineCost;
   }
 
   updateLowFuelEvent(previousFuel) {
@@ -4554,6 +4607,215 @@ export class Game {
       },
       { visible: isVisible(ship, this.canvas, this.camera) },
     );
+  }
+
+  // Onboard hull patching: once the hull has gone HULL_REPAIR_DELAY_SECONDS
+  // without fresh damage, stored repair reserve flows back into missing
+  // integrity at HULL_REPAIR_RATE, 1:1. Damage detection is a frame-over-frame
+  // integrity watch, so it uniformly catches weapons, collisions, and hazards
+  // (which lower integrity directly, not through damageHull).
+  updateHullRepair(deltaSeconds) {
+    const hull = this.state.components.hull;
+
+    if (!hull?.installed) {
+      this._hullIntegrityWatch = hull?.integrity;
+      return;
+    }
+
+    const watch = this._hullIntegrityWatch ?? hull.integrity;
+    let delay = this.hullRepairDelay ?? 0;
+
+    if (hull.integrity < watch) {
+      delay = HULL_REPAIR_DELAY_SECONDS;
+    }
+
+    if (this.shipDestroyed) {
+      this.hullRepairDelay = delay;
+      this._hullIntegrityWatch = hull.integrity;
+      return;
+    }
+
+    if (delay > 0) {
+      this.hullRepairDelay = Math.max(0, delay - deltaSeconds);
+      this._hullIntegrityWatch = hull.integrity;
+      return;
+    }
+
+    this.hullRepairDelay = 0;
+    const reserveBefore = hull.repairReserve ?? 0;
+    const patched = applyPanelPatch(hull, hull, HULL_REPAIR_RATE * deltaSeconds);
+
+    if (patched > 0) {
+      this.onHudChange(this.state);
+
+      // Ran the tank dry with damage still outstanding — surface it once so the
+      // player knows to convert more patch material.
+      if ((hull.repairReserve ?? 0) <= 0 && reserveBefore > 0 && hull.integrity < hull.maxIntegrity) {
+        this.state.ledger.recordEvent("ship.repairReserveEmpty", {
+          hullIntegrity: Math.round(hull.integrity),
+          hullMaxIntegrity: hull.maxIntegrity,
+        });
+      }
+    }
+
+    this._hullIntegrityWatch = hull.integrity;
+  }
+
+  isHullRepairing() {
+    const hull = this.state.components.hull;
+
+    return Boolean(
+      hull?.installed &&
+        !this.shipDestroyed &&
+        (this.hullRepairDelay ?? 0) <= 0 &&
+        (hull.repairReserve ?? 0) > 0 &&
+        hull.integrity < hull.maxIntegrity,
+    );
+  }
+
+  // ── Engine condition (first panel on the shared panel-condition system) ────
+  // Applies this frame's symptoms from the current stage. Runs before the ship
+  // consumes thrust so the modifiers/misfire block take effect this frame.
+  applyEngineConditionEffects(deltaSeconds) {
+    const engine = this.state.components.engine;
+    const ship = this.ship;
+
+    if (!engine?.installed) {
+      ship.conditionThrustMultiplier = 1;
+      ship.conditionMaxSpeedMultiplier = 1;
+      ship.conditionThrustBlocked = false;
+      return;
+    }
+
+    const condition = ensurePanelCondition(engine);
+    const effects = getEngineStageEffects(condition.stage);
+
+    ship.conditionThrustMultiplier = effects.thrustScale;
+    ship.conditionMaxSpeedMultiplier = effects.maxSpeedScale;
+
+    // Misfire: a brief thrust dropout that auto-recovers. It only rolls while
+    // the player is actually calling for thrust, so it reads as the drive
+    // coughing under load rather than a random input stall.
+    this.engineMisfireRemaining = Math.max(0, this.engineMisfireRemaining - deltaSeconds);
+    if (
+      this.engineMisfireRemaining <= 0 &&
+      effects.misfireChance > 0 &&
+      engine.powered &&
+      engine.fuel > 0 &&
+      !this.shipDestroyed &&
+      this.input.isDown("KeyW") &&
+      Math.random() < effects.misfireChance * deltaSeconds
+    ) {
+      this.engineMisfireRemaining = effects.misfireDuration;
+      this.audio?.playEngineFault(condition.stage);
+    }
+    ship.conditionThrustBlocked = this.engineMisfireRemaining > 0;
+
+    // Steering pull: a gentle wandering drift at Emergency+, so control feels
+    // untrustworthy without yanking the ship around.
+    if (effects.steerPull > 0 && engine.powered && !this.shipDestroyed) {
+      this.engineSteerBias += (Math.random() - 0.5) * effects.steerPull * 4 * deltaSeconds;
+      this.engineSteerBias = Math.max(-effects.steerPull, Math.min(effects.steerPull, this.engineSteerBias));
+      this.ship.angle += this.engineSteerBias * deltaSeconds;
+    } else {
+      this.engineSteerBias = 0;
+    }
+  }
+
+  // Accrues use-driven wear and reacts to any stage change. Runs after the ship
+  // moves so wear reflects what actually happened this frame.
+  updateEngineCondition(deltaSeconds) {
+    const engine = this.state.components.engine;
+    if (!engine?.installed || this.shipDestroyed) {
+      return;
+    }
+
+    const condition = ensurePanelCondition(engine);
+    const speed = Math.hypot(this.ship.velocity.x, this.ship.velocity.y);
+    const wearDelta =
+      computeEngineWearDelta({
+        thrusting: this.ship.isThrusting,
+        speed,
+        boosting: this.ship.boostDurationRemaining > 0,
+        deltaSeconds,
+      }) * this.conditionDebugScale;
+
+    if (wearDelta <= 0) {
+      return;
+    }
+
+    const { changed, previousStage, stage } = accumulatePanelWear(condition, wearDelta, ENGINE_CONDITION_CONFIG.thresholds);
+    if (changed) {
+      this.onEnginePanelStageChanged(previousStage, stage);
+    }
+  }
+
+  onEnginePanelStageChanged(previousStage, stage) {
+    const worsening = panelStageIndex(stage) > panelStageIndex(previousStage);
+
+    this.state.ledger.recordEvent("ship.panelConditionChanged", {
+      panel: "engine",
+      from: previousStage,
+      to: stage,
+      worsening,
+    });
+
+    if (worsening) {
+      this.audio?.playEngineFault(stage);
+      const messages = {
+        degraded: { title: "Engine Strain", hint: "Drive is misfiring under load — schedule service soon." },
+        emergency: { title: "Engine Fault", hint: "Thrust failing and pulling — reach a repair facility." },
+        failed: { title: "Engine Failure", hint: "Primary thrust is dead. Signal for a tow." },
+      };
+      const message = messages[stage];
+      if (message) {
+        this.showViewportTitle(message.title, message.hint, "hazard", VIEWPORT_TITLE_SECONDS, "left");
+      }
+      if (stage === "failed") {
+        this.ship.stopThrusting();
+        this.ship.conditionThrustBlocked = true;
+        this.recordStrandedEvent("engine-failed");
+      }
+    }
+
+    this.onHudChange(this.state);
+  }
+
+  isEngineFailed() {
+    return this.state.components.engine?.condition?.stage === "failed";
+  }
+
+  // Dev accelerator so the whole ~40-60 min chain can be exercised in a couple
+  // of minutes. window.__asteroids.game.setConditionDebugScale(60), etc.
+  setConditionDebugScale(scale) {
+    this.conditionDebugScale = Math.max(0, Number(scale) || 0);
+    return this.conditionDebugScale;
+  }
+
+  debugSetEnginePanelStage(stage) {
+    const engine = this.state.components.engine;
+    const condition = ensurePanelCondition(engine);
+    const thresholds = ENGINE_CONDITION_CONFIG.thresholds;
+    const wearForStage = { healthy: 0, degraded: thresholds.degraded, emergency: thresholds.emergency, failed: thresholds.failed };
+    const previousStage = condition.stage;
+
+    condition.wear = wearForStage[stage] ?? 0;
+    condition.stage = stage in wearForStage ? stage : "healthy";
+    if (condition.stage !== previousStage) {
+      this.onEnginePanelStageChanged(previousStage, condition.stage);
+    }
+    this.onHudChange(this.state);
+    return condition;
+  }
+
+  debugAddEngineWear(points) {
+    const engine = this.state.components.engine;
+    const condition = ensurePanelCondition(engine);
+    const { changed, previousStage, stage } = accumulatePanelWear(condition, Number(points) || 0, ENGINE_CONDITION_CONFIG.thresholds);
+    if (changed) {
+      this.onEnginePanelStageChanged(previousStage, stage);
+    }
+    return condition;
   }
 
   damageHull(amount) {

@@ -1,38 +1,39 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260726-1701-4a23f71";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260726-1701-4a23f71";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260726-1701-4a23f71";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260726-1701-4a23f71";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260726-1701-4a23f71";
-import { Game } from "./game.js?v=fresh-20260726-1701-4a23f71";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260726-1701-4a23f71";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260726-1701-4a23f71";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260726-1701-4a23f71";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260726-1701-4a23f71";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260728-2032-8e0cc22";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260728-2032-8e0cc22";
+import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260728-2032-8e0cc22";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260728-2032-8e0cc22";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260728-2032-8e0cc22";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260728-2032-8e0cc22";
+import { Game } from "./game.js?v=fresh-20260728-2032-8e0cc22";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260728-2032-8e0cc22";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260728-2032-8e0cc22";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260728-2032-8e0cc22";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260728-2032-8e0cc22";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260726-1701-4a23f71";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260726-1701-4a23f71";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260726-1701-4a23f71";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260726-1701-4a23f71";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260726-1701-4a23f71";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260726-1701-4a23f71";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260726-1701-4a23f71";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260726-1701-4a23f71";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260726-1701-4a23f71";
-import { Processor } from "./systems/processor.js?v=fresh-20260726-1701-4a23f71";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260726-1701-4a23f71";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260726-1701-4a23f71";
-import { createGameState } from "./state/gameState.js?v=fresh-20260726-1701-4a23f71";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260726-1701-4a23f71";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260728-2032-8e0cc22";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260728-2032-8e0cc22";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260728-2032-8e0cc22";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260728-2032-8e0cc22";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260728-2032-8e0cc22";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260728-2032-8e0cc22";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260728-2032-8e0cc22";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260728-2032-8e0cc22";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260728-2032-8e0cc22";
+import { Processor } from "./systems/processor.js?v=fresh-20260728-2032-8e0cc22";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260728-2032-8e0cc22";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260728-2032-8e0cc22";
+import { createGameState } from "./state/gameState.js?v=fresh-20260728-2032-8e0cc22";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260728-2032-8e0cc22";
 import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js";
 import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260726-1701-4a23f71";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260726-1701-4a23f71";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260728-2032-8e0cc22";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260728-2032-8e0cc22";
 import { createMiningOperation } from "./systems/miningOperation.js";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260726-1701-4a23f71";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260728-2032-8e0cc22";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -186,6 +187,9 @@ const hullCount = document.querySelector("#hull-count");
 const hullFill = document.querySelector("#hull-fill");
 const hullVin = document.querySelector("#hull-vin");
 const hullDockingLock = document.querySelector("#hull-docking-lock");
+const hullReserveCount = document.querySelector("#hull-reserve-count");
+const hullReserveFill = document.querySelector("#hull-reserve-fill");
+const hullRepairStatus = document.querySelector("#hull-repair-status");
 const dockToggleButton = document.querySelector("#dock-toggle");
 const dockingDetail = document.querySelector("#docking-detail");
 const dockingTarget = document.querySelector("#docking-target");
@@ -313,6 +317,7 @@ const _hud = {
   hullPct: null,
   hullFraction: null,
   hullVin: null,
+  hullReserveKey: null,
   minerArmed: null,
 };
 const state = createGameState();
@@ -336,7 +341,7 @@ const towServiceManager = createTowServiceManager({ state, ships: game.npcShips,
 // Dev hook: the running game and state, reachable from the console for
 // debugging and automated playtests. window.game is shadowed by the canvas
 // element (DOM id), so this lives under a distinct name.
-window.__asteroids = { game, state, logistics: logisticsManager, towing: towServiceManager };
+window.__asteroids = { game, state, processor, cargoHold, logistics: logisticsManager, towing: towServiceManager };
 const contractManager = createContractManager({
   state,
   onChange: (contract) => {
@@ -463,10 +468,19 @@ function updateShipPowerDisplay() {
   const engine = state.components.engine;
   const isOutOfFuel = engine.installed && engine.fuel <= 0;
 
+  const engineStage = engine.condition?.stage ?? "healthy";
+
   powerButton.textContent = engine.powered ? "Power Down" : "Power Ship";
   powerButton.setAttribute("aria-pressed", String(engine.powered));
   powerButton.disabled = !engine.installed || state.components.hull.integrity <= 0 || engine.powerLocked || (!engine.powered && isOutOfFuel);
-  shipStatus.textContent = state.components.hull.integrity <= 0 ? "ship destroyed" : engine.powerLocked ? "power locked" : isOutOfFuel ? "out of fuel" : engine.powered ? "ship online" : "ship offline";
+  shipStatus.textContent =
+    state.components.hull.integrity <= 0 ? "ship destroyed" :
+    engine.powerLocked ? "power locked" :
+    isOutOfFuel ? "out of fuel" :
+    engineStage === "failed" ? "engine failed" :
+    engineStage === "emergency" ? "engine faulting" :
+    engineStage === "degraded" ? "engine strained" :
+    engine.powered ? "ship online" : "ship offline";
 }
 
 powerButton.addEventListener("click", () => {
@@ -491,7 +505,7 @@ licenseIdDisplay.addEventListener("click", () => {
 });
 
 towButton.addEventListener("click", () => {
-  if ((state.components.engine.fuel > 0 && state.components.hull.integrity > 0) || currentSiteState?.dockedSite || game.isTowActive()) {
+  if ((state.components.engine.fuel > 0 && state.components.hull.integrity > 0 && !game.isEngineFailed()) || currentSiteState?.dockedSite || game.isTowActive()) {
     return;
   }
 
@@ -845,7 +859,7 @@ function updateHudDisplay() {
   const isStranded = state.components.engine.installed && !currentSiteState?.dockedSite &&
     !game.isTowActive() &&
     !state.ledger.getSignal("actor.controlLocked") &&
-    (currentFuel <= 0 || state.components.hull.integrity <= 0);
+    (currentFuel <= 0 || state.components.hull.integrity <= 0 || game.isEngineFailed());
 
   if (fuelFloor !== _hud.fuel) {
     _hud.fuel = fuelFloor;
@@ -945,6 +959,24 @@ function updateHudDisplay() {
   if (hullFraction !== _hud.hullFraction) {
     _hud.hullFraction = hullFraction;
     hullFill.style.transform = `scaleX(${hullFraction})`;
+  }
+
+  const hull = state.components.hull;
+  const reserveValue = Math.floor(hull.repairReserve ?? 0);
+  const maxReserve = hull.maxRepairReserve ?? 0;
+  const isPatching = game.isHullRepairing?.() ?? false;
+  const reserveKey = `${reserveValue}/${maxReserve}|${isPatching}`;
+  if (reserveKey !== _hud.hullReserveKey) {
+    _hud.hullReserveKey = reserveKey;
+    if (hullReserveCount) {
+      hullReserveCount.textContent = `${reserveValue} / ${maxReserve}`;
+    }
+    if (hullReserveFill) {
+      hullReserveFill.style.transform = `scaleX(${getMeterFraction(reserveValue, maxReserve)})`;
+    }
+    if (hullRepairStatus) {
+      hullRepairStatus.hidden = !isPatching;
+    }
   }
 
   const vinText = state.components.hull.vinPlateAttached ? state.components.hull.vin : "UNVERIFIED";
@@ -1268,8 +1300,8 @@ function setupExplorerStart() {
   Object.assign(state.components.engine, {
     installed: true,
     powered: false,
-    fuel: 350,
-    maxFuel: 350,
+    fuel: 2000,
+    maxFuel: 2000,
     thrustPower: 160,
     maxSpeed: 185,
     thrustVisual: {
@@ -1298,13 +1330,13 @@ function setupExplorerStart() {
   });
   Object.assign(state.components.scanner, {
     installed: true,
-    scanergy: 400,
+    scanergy: 2500,
     targets: ["resources"],
   });
   Object.assign(state.components.miner, {
     installed: true,
     armed: false,
-    ammo: 200,
+    ammo: 2000,
   });
   Object.assign(state.components.processor, { installed: true });
   state.components.cargoHold.installed = true;
@@ -3623,8 +3655,30 @@ function getViewportLocationLabel(debug) {
 
 function updateWarningPanels() {
   COMPONENT_WARNING_RULES.forEach((rule) => {
-    setPanelAlert(rule.panelId, getPanelAlertLevel(rule.getValue(), rule));
+    let level = getPanelAlertLevel(rule.getValue(), rule);
+    if (rule.panelId === "engine") {
+      // Engine warning is the worse of low fuel and engine-condition stage, so a
+      // fault glows even on a full tank.
+      level = worseAlertLevel(level, engineConditionAlertLevel());
+    }
+    setPanelAlert(rule.panelId, level);
   });
+}
+
+function engineConditionAlertLevel() {
+  const stage = state.components.engine.condition?.stage ?? "healthy";
+  if (stage === "emergency" || stage === "failed") {
+    return "critical";
+  }
+  if (stage === "degraded") {
+    return "caution";
+  }
+  return "none";
+}
+
+function worseAlertLevel(first, second) {
+  const order = { none: 0, caution: 1, critical: 2 };
+  return (order[first] ?? 0) >= (order[second] ?? 0) ? first : second;
 }
 
 function getPanelAlertLevel(value, rule) {
@@ -4465,6 +4519,27 @@ function fireMossSeederFromCargo() {
   return true;
 }
 
+// Remaining capacity for a processor output's destination tank. Cargo has no
+// cap (Infinity), so it always accepts.
+function getProcessorOutputHeadroom(output) {
+  const components = state.components;
+
+  if (output === "fuel") {
+    return components.engine.maxFuel - components.engine.fuel;
+  }
+  if (output === "ammo") {
+    return components.miner.maxAmmo - components.miner.ammo;
+  }
+  if (output === "scanergy") {
+    return components.scanner.maxScanergy - components.scanner.scanergy;
+  }
+  if (output === "hull-repair") {
+    return (components.hull.maxRepairReserve ?? 0) - (components.hull.repairReserve ?? 0);
+  }
+
+  return Infinity;
+}
+
 function processUnit(type, unit = {}) {
   const output = getSelectedProcessorOutput();
   const quantity = unit.quantity ?? 1;
@@ -4480,6 +4555,17 @@ function processUnit(type, unit = {}) {
     return false;
   }
 
+  // Don't let the player feed a resource into an already-full tank — the unit
+  // stays in the processor instead of being consumed for nothing.
+  if (getProcessorOutputHeadroom(output) <= 0) {
+    state.ledger.recordEvent("resource.processingRejected", {
+      resourceType: type,
+      output,
+      reason: "output-full",
+    }, { visible: false });
+    return false;
+  }
+
   state.components.processor.output = output;
   audio.playCargoTransfer(type);
   state.ledger.recordEvent("resource.processed", {
@@ -4490,11 +4576,17 @@ function processUnit(type, unit = {}) {
   });
 
   if (output === "fuel") {
-    state.components.engine.fuel += totalAmount;
+    const engine = state.components.engine;
+    engine.fuel = addToTank(engine.fuel, totalAmount, engine.maxFuel);
   } else if (output === "ammo") {
-    state.components.miner.ammo += totalAmount;
+    const miner = state.components.miner;
+    miner.ammo = addToTank(miner.ammo, totalAmount, miner.maxAmmo);
   } else if (output === "scanergy") {
-    state.components.scanner.scanergy += totalAmount;
+    const scanner = state.components.scanner;
+    scanner.scanergy = addToTank(scanner.scanergy, totalAmount, scanner.maxScanergy);
+  } else if (output === "hull-repair") {
+    const hull = state.components.hull;
+    hull.repairReserve = addToTank(hull.repairReserve ?? 0, totalAmount, hull.maxRepairReserve);
   } else if (output === "cargo") {
     cargoHold.addUnit(type, { ...getResourceUnitMetadata(unit), quantity });
   }

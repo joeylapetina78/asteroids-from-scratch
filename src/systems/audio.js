@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260726-1701-4a23f71";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260728-2032-8e0cc22";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;
@@ -136,7 +136,7 @@ export function createGameAudio() {
     });
   }
 
-  function updateEngine({ powered, thrusting }) {
+  function updateEngine({ powered, thrusting, volumeScale = 1 }) {
     if (!isReady()) {
       return;
     }
@@ -145,7 +145,18 @@ export function createGameAudio() {
 
     if (powered && thrusting && now >= nextThrustAt) {
       nextThrustAt = now + THRUST_TICK_SECONDS;
-      brownNoiseBurst({ duration: 0.14, volume: 0.043 });
+      brownNoiseBurst({ duration: 0.14, volume: 0.043 * volumeScale });
+    }
+  }
+
+  // A wet cough / sputter for an engine misfire or fault escalation. Deeper
+  // stages sound rougher and lower.
+  function playEngineFault(stage = "degraded") {
+    const deep = stage === "emergency" || stage === "failed";
+    tone({ frequency: deep ? 96 : 130, endFrequency: deep ? 38 : 60, duration: deep ? 0.22 : 0.14, type: "sawtooth", volume: 0.1 });
+    noiseBurst({ duration: deep ? 0.12 : 0.07, volume: 0.075 });
+    if (deep) {
+      tone({ frequency: 70, endFrequency: 30, duration: 0.18, delay: 0.14, type: "sawtooth", volume: 0.07 });
     }
   }
 
@@ -260,6 +271,7 @@ export function createGameAudio() {
     playRockBreak,
     playScanner,
     playUiClick,
+    playEngineFault,
     unlock,
     updateEngine,
   };

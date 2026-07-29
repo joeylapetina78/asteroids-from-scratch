@@ -7,6 +7,6 @@
     "start": "python -m http.server 8123",
     "bump:cache": "node bump-cache.js",
     "validate:content": "node scripts/validateContent.mjs",
-    "test": "node --test tests/sprcOperation.test.mjs"
+    "test": "node --test tests/"
   }
 }

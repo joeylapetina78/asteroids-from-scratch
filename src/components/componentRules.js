@@ -33,6 +33,18 @@ export function getProcessorOutputs(components) {
     });
   }
 
+  if (components.hull?.installed) {
+    outputs.push({
+      id: "hull-repair",
+      label: "Repair Hull",
+      amountLabel: "structural = efficient",
+      // Every material can be jury-rigged into patch reserve in a pinch, so all
+      // shapes are accepted; structural (square) just converts far better.
+      acceptedShapes: ["square", "triangle", "circle", "hexagon", "octagon", "diamond", "shard"],
+      color: "#ff7452",
+    });
+  }
+
   if (components.cargoHold.installed) {
     outputs.push({
       id: "cargo",

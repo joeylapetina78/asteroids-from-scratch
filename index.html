@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260726-1701-4a23f71" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260728-2032-8e0cc22" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260726-1701-4a23f71</span>
+      <span class="build-tag">build: fresh-20260728-2032-8e0cc22</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -366,6 +366,15 @@
                   </div>
                   <div class="component-meter-track" aria-hidden="true">
                     <span id="hull-fill"></span>
+                  </div>
+                </div>
+                <div class="component-meter meter-repair-reserve" aria-label="Hull repair reserve">
+                  <div class="component-meter-label">
+                    <span>Repair Reserve <em id="hull-repair-status" class="hull-repair-status" hidden>patching</em></span>
+                    <strong id="hull-reserve-count">0 / 100</strong>
+                  </div>
+                  <div class="component-meter-track" aria-hidden="true">
+                    <span id="hull-reserve-fill"></span>
                   </div>
                 </div>
               </div>
@@ -680,6 +689,27 @@
           </div>
           <p class="resource-guide-intro">Carry this until the colors become second nature. Process outputs are per unit; unknown materials are worth holding onto.</p>
           <div id="resource-guide-content" class="resource-guide-content"></div>
+          <div class="resource-guide-legend" aria-label="How to read material colors">
+            <span class="legend-title">Read the color by role</span>
+            <div class="legend-lanes">
+              <div class="legend-lane">
+                <span class="legend-swatch lane-fuel"></span>
+                <strong>Fuel</strong>
+                <span>icy blues</span>
+              </div>
+              <div class="legend-lane">
+                <span class="legend-swatch lane-charge"></span>
+                <strong>Charge</strong>
+                <span>warm ambers</span>
+              </div>
+              <div class="legend-lane">
+                <span class="legend-swatch lane-scanergy"></span>
+                <strong>Scanergy</strong>
+                <span>electric violets</span>
+              </div>
+            </div>
+            <p class="legend-note">Specialist families — energy, advanced, strange — sit outside the survival lanes. Hold them; someone always wants them.</p>
+          </div>
         </aside>
 
         <div class="component-panel document-panel is-component-locked" data-panel-id="document" aria-label="Document reader">
@@ -747,6 +777,6 @@
 
     <div id="attention-callouts" class="attention-callouts" aria-hidden="true"></div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260726-1701-4a23f71"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260728-2032-8e0cc22"></script>
   </body>
 </html>
