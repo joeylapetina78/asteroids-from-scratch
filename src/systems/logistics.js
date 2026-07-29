@@ -1,6 +1,14 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260726-1701-4a23f71";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260726-1701-4a23f71";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260728-2032-8e0cc22";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260728-2032-8e0cc22";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260728-2032-8e0cc22";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260728-2032-8e0cc22";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260728-2032-8e0cc22";
+
+// Until a carrier has actually paid for a repair, assume this much for upkeep.
+const FREIGHT_REFERENCE_SERVICE_COST = 180;
+const FREIGHT_REPRICE_INTERVAL_MS = 45 * 1000;
+const FREIGHT_REPRICE_MAX_MULTIPLE = 2.5;
+const CARRIER_DEFAULT_TRAITS = Object.freeze({ caution: 0.5, growthBias: 0.3 });
 
 export const STANDING_FREIGHT_TEMPLATES = Object.freeze([
   { id: "standing-water-scrap-yard", originSiteId: "scrap-porch", originName: "Scrap Porch", destinationSiteId: "yard-exchange", destinationName: "Yard Exchange", commodity: "water-ice", commodityName: "Water Ice", amount: 1, payment: 90, issuerInstitutionId: "yard-exchange", sourceInstitutionId: "scrap-forge", destinationInstitutionId: "yard-exchange" },
@@ -83,6 +91,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
 
   function update() {
     consumeEvents();
+    repriceUnclaimedFreight();
     Object.entries(logistics.haulers).forEach(([shipId, hauler]) => {
       const ship = shipById.get(shipId);
       if (!ship) return;
@@ -113,6 +122,87 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     }
   }
 
+  // ── Supplier-side freight pricing ────────────────────────────────────────
+  // The rate actually on offer for a template: the authored base until an
+  // issuer raises it to attract a carrier.
+  function getFreightRate(template) {
+    logistics.postedFreightRates ??= {};
+    return logistics.postedFreightRates[template.id] ?? template.payment;
+  }
+
+  // What this run costs the carrier, and therefore what it must be paid.
+  // Maintenance is valued at what repairs CURRENTLY cost this carrier, so a
+  // repair-price rise flows straight into freight asks.
+  function evaluateCarrierAsk({ template, plan, carrier, currentWear = 0, offeredPrice }) {
+    const distance = plan?.route?.distance ?? 0;
+    const policy = carrier.policies?.transportation ?? {};
+    const serviceCost = getServiceCost(state, carrier.id, "maintenance", FREIGHT_REFERENCE_SERVICE_COST);
+    const maxWear = policy.maximumWear ?? 6;
+    // Charge only the wear THIS run adds (plan.projectedWear is cumulative and
+    // includes the ship's existing wear — billing that to one trip would make
+    // every worn carrier refuse all work).
+    const incrementalWear = Math.max(0, (plan?.projectedWear ?? currentWear) - currentWear);
+    return evaluateSupplierAsk({
+      workId: template.id,
+      costComponents: {
+        travel: distance * (policy.operatingCostPerDistance ?? 0.01),
+        // Amortize: this run consumes incrementalWear/maxWear of a service cycle.
+        maintenance: maxWear > 0 ? (incrementalWear / maxWear) * serviceCost : 0,
+        time: 0,
+      },
+      offeredPrice,
+      traits: logistics.institutions[carrier.controllerInstitutionId]?.traits ?? CARRIER_DEFAULT_TRAITS,
+      policy,
+    });
+  }
+
+  function recordFreightAsk(template, ask) {
+    logistics.freightAsks ??= {};
+    logistics.freightAsks[template.id] = {
+      templateId: template.id,
+      ask: ask.recommendedPrice,
+      floor: ask.minAcceptablePrice,
+      costToServe: Math.round(ask.metrics.costToServe),
+      acceptable: ask.acceptable,
+      reasons: ask.reasons,
+      at: now(),
+    };
+  }
+
+  // A hub whose freight nobody will carry raises what it pays — bounded,
+  // throttled, and logged, mirroring how Sal reprices unfilled purchase orders.
+  function repriceUnclaimedFreight() {
+    logistics.postedFreightRates ??= {};
+    STANDING_FREIGHT_TEMPLATES.forEach((template) => {
+      const ask = logistics.freightAsks?.[template.id];
+      if (!ask || ask.acceptable) return;
+      if (countActiveForTemplate(template.id) > 0) return;
+      const lastRepricedAt = logistics.freightRepricedAt?.[template.id] ?? 0;
+      if (now() - lastRepricedAt < FREIGHT_REPRICE_INTERVAL_MS) return;
+
+      const current = getFreightRate(template);
+      const ceiling = Math.round(template.payment * FREIGHT_REPRICE_MAX_MULTIPLE);
+      const next = Math.min(ask.ask, ceiling);
+      logistics.freightRepricedAt ??= {};
+      logistics.freightRepricedAt[template.id] = now();
+      if (next <= current) return;
+
+      const issuer = logistics.institutions[template.issuerInstitutionId];
+      const funding = evaluateAffordability({ account: issuer.accounts.operating, policy: { protectedCash: 0 }, cost: next });
+      if (!funding.affordable) {
+        appendHistory("freight.repriceDeferred", { templateId: template.id, wanted: next, reason: "issuer-cannot-fund" });
+        return;
+      }
+      logistics.postedFreightRates[template.id] = next;
+      appendHistory("freight.repriced", { templateId: template.id, previousPayment: current, payment: next, carrierCost: ask.costToServe });
+      state.ledger.recordEvent("institution.freightRepriced", {
+        institutionId: template.issuerInstitutionId, templateId: template.id, previousPayment: current, payment: next,
+        carrierCost: ask.costToServe,
+        reasons: [`No carrier would run ${template.originName}→${template.destinationName} at ${current} cr.`, ...ask.reasons],
+      }, { visible: true, message: `${siteName(template.destinationSiteId)} raises ${template.commodityName} freight to ${next} cr — carriers cannot cover ${ask.costToServe} cr of cost at ${current}.` });
+    });
+  }
+
   function assignNpcShipment(shipId) {
     const hauler = logistics.haulers[shipId];
     const ship = shipById.get(shipId);
@@ -132,10 +222,19 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       .filter((entry) => entry.originSiteId === hauler.currentSiteId && countActiveForTemplate(entry.id) < 1)
       .filter((entry) => (logistics.institutions[entry.sourceInstitutionId]?.inventories?.[entry.commodity] ?? 0) >= entry.amount)
       .map((template) => {
-        const plan = evaluateTransportPlan({ network: transportationNetwork, originId: template.originSiteId, destinationId: template.destinationSiteId, payment: template.payment, currentWear: shipInstitution.wear ?? 0, policy: carrier.policies?.transportation, repairOptions: carrier.repairOptions });
+        const rate = getFreightRate(template);
+        const plan = evaluateTransportPlan({ network: transportationNetwork, originId: template.originSiteId, destinationId: template.destinationSiteId, payment: rate, currentWear: shipInstitution.wear ?? 0, policy: carrier.policies?.transportation, repairOptions: carrier.repairOptions });
         const issuer = logistics.institutions[template.issuerInstitutionId];
-        const funding = evaluateAffordability({ account: issuer.accounts.operating, policy: { protectedCash: 0 }, cost: template.payment });
-        return { template, plan: plan.eligible && !funding.affordable ? { ...plan, eligible: false, reason: "payer-cannot-fund", funding } : plan };
+        const funding = evaluateAffordability({ account: issuer.accounts.operating, policy: { protectedCash: 0 }, cost: rate });
+        // Supplier-side pricing: the carrier totals what the run costs it —
+        // including the maintenance it will owe at CURRENT repair prices — and
+        // refuses work that does not clear that cost.
+        const ask = evaluateCarrierAsk({ template, plan, carrier, currentWear: shipInstitution.wear ?? 0, offeredPrice: rate });
+        recordFreightAsk(template, ask);
+        let resolved = plan;
+        if (plan.eligible && !funding.affordable) resolved = { ...plan, eligible: false, reason: "payer-cannot-fund", funding };
+        else if (plan.eligible && !ask.acceptable) resolved = { ...plan, eligible: false, reason: "below-carrier-cost", ask };
+        return { template, plan: resolved, ask, rate };
       });
     candidates.filter((candidate) => !candidate.plan.eligible).forEach((candidate) => appendHistory("freight.declined", { shipId, templateId: candidate.template.id, reason: candidate.plan.reason }));
     const selected = candidates.filter((candidate) => candidate.plan.eligible).sort((a, b) => b.plan.score - a.plan.score)[0];
@@ -158,7 +257,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       appendHistory("freight.declined", { shipId, templateId: template.id, reason: "execution-route-rejected" });
     } else {
       hauler.lastDecisionKey = null;
-      publishCarrierEvent("carrier.contractAccepted", shipId, { shipmentId: shipment.id, templateId: template.id, payment: template.payment, originSiteId: template.originSiteId, destinationSiteId: template.destinationSiteId, projectedWear: plan.projectedWear }, `${getCarrierContext(shipId).pilotName} accepted ${template.payment} cr freight from ${template.originName} to ${template.destinationName}; account balance is ${account.balance} cr.`);
+      publishCarrierEvent("carrier.contractAccepted", shipId, { shipmentId: shipment.id, templateId: template.id, payment: shipment.payment, originSiteId: template.originSiteId, destinationSiteId: template.destinationSiteId, projectedWear: plan.projectedWear, carrierCost: Math.round(selected.ask?.metrics?.costToServe ?? 0), carrierAsk: selected.ask?.recommendedPrice ?? null }, `${getCarrierContext(shipId).pilotName} accepted ${shipment.payment} cr freight from ${template.originName} to ${template.destinationName}; account balance is ${account.balance} cr.`);
     }
     return shipment;
   }
@@ -168,16 +267,20 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const assignedShip = assigneeType === "npc" ? shipById.get(assigneeId) : null;
     if (assigneeType === "npc" && (!assignedShip || (assignedShip.canAcceptRoute ? !assignedShip.canAcceptRoute(routeSites) : routeSites.length < 2))) return null;
     const issuer = logistics.institutions[template.issuerInstitutionId];
-    const affordability = evaluateAffordability({ account: issuer.accounts.operating, policy: { protectedCash: 0 }, cost: template.payment });
+    // The posted rate, which may have been raised above the authored base to
+    // attract a carrier, is the single price used for funding, commitment, and
+    // settlement.
+    const rate = getFreightRate(template);
+    const affordability = evaluateAffordability({ account: issuer.accounts.operating, policy: { protectedCash: 0 }, cost: rate });
     if (!affordability.affordable) return null;
     const source = logistics.institutions[template.sourceInstitutionId];
     if ((source.inventories[template.commodity] ?? 0) < template.amount) return null;
     source.inventories[template.commodity] -= template.amount;
-    issuer.accounts.operating.committed += template.payment;
+    issuer.accounts.operating.committed += rate;
     const id = `SHIP-${String(++logistics.counters.shipment).padStart(4, "0")}`;
     const containerId = `CONT-${String(++logistics.counters.container).padStart(4, "0")}`;
     const container = logistics.containers[containerId] = { id: containerId, shipmentId: id, commodity: template.commodity, quantity: template.amount, ownerInstitutionId: template.sourceInstitutionId, custodianInstitutionId: template.sourceInstitutionId, custody: [{ institutionId: template.sourceInstitutionId, action: "created", siteId: template.originSiteId, at: now() }] };
-    const shipment = logistics.shipments[id] = { id, templateId: template.id, contractId, responseId, assigneeType, assigneeId, containerId, originSiteId: template.originSiteId, destinationSiteId: template.destinationSiteId, sourceInstitutionId: template.sourceInstitutionId, destinationInstitutionId: template.destinationInstitutionId, issuerInstitutionId: template.issuerInstitutionId, commodity: template.commodity, quantity: template.amount, payment: template.payment, committedPayment: template.payment, status: "assigned", createdAt: now(), loadedAt: null };
+    const shipment = logistics.shipments[id] = { id, templateId: template.id, contractId, responseId, assigneeType, assigneeId, containerId, originSiteId: template.originSiteId, destinationSiteId: template.destinationSiteId, sourceInstitutionId: template.sourceInstitutionId, destinationInstitutionId: template.destinationInstitutionId, issuerInstitutionId: template.issuerInstitutionId, commodity: template.commodity, quantity: template.amount, payment: rate, committedPayment: rate, basePayment: template.payment, status: "assigned", createdAt: now(), loadedAt: null };
     appendHistory("shipment.assigned", { shipmentId: id, containerId, assigneeId, commodity: template.commodity });
     if (assigneeType === "npc") {
       loadShipment(shipment);
@@ -336,6 +439,9 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     if (!hauler || !Number.isFinite(amount) || amount <= 0) return null;
     const transaction = recordAccountTransaction(hauler.carrierInstitutionId, -amount, "repair-expense", referenceId, `Paid Scrap Porch repair invoice ${referenceId}`);
     state.sprc.account.balance += amount;
+    // Book the real upkeep cost so this carrier's future freight asks reflect
+    // what maintenance now costs it.
+    recordServiceCost(state, { institutionId: hauler.carrierInstitutionId, serviceType: "maintenance", price: amount, at: now() });
     publishCarrierEvent("carrier.repairPaid", shipId, { repairOrderId: referenceId, amount, transactionId: transaction.id, balance: transaction.balance }, `${getCarrierContext(shipId).carrierName} paid Scrap Porch ${amount} cr for repairs; operating balance is ${transaction.balance} cr.`);
     return transaction;
   }

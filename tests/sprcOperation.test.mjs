@@ -249,16 +249,21 @@ test("institutional suppliers can fill a bounded allocation without accepting or
     supplierInstitutionId: "institution:test-miner",
     creditSupplier: (credits) => { supplierCredits += credits; },
   });
+  // Sal's unit price now comes from his valuation, so payments are asserted
+  // against the order's live price rather than a hard-coded constant.
+  const unitPrice = order.pricePerEquivalent;
+  assert.ok(unitPrice > 0, "the order carries a valued unit price");
   assert.equal(institutionalDelivery.acceptedUnits, 2, "supplier cannot exceed its allocation");
-  assert.equal(supplierCredits, 68);
+  assert.equal(supplierCredits, 2 * unitPrice);
   assert.equal(order.deliveredEquivalentUnits, 2);
   assert.equal(contract.status, "offered");
 
   const playerBefore = harness.state.credits;
   assert.equal(harness.operation.acceptProcurement(order.contractId), true);
+  const remainingEquivalents = order.requiredEquivalentUnits - order.deliveredEquivalentUnits;
   const playerDelivery = harness.operation.deliverMaterial({ contractId: order.contractId, materialId: "iron-nickel", amount: 6 });
-  assert.equal(playerDelivery.paid, 204);
-  assert.equal(harness.state.credits - playerBefore, 204);
+  assert.equal(playerDelivery.paid, remainingEquivalents * unitPrice);
+  assert.equal(harness.state.credits - playerBefore, remainingEquivalents * unitPrice);
   assert.equal(order.paidAmount, order.maximumPayment);
   assert.equal(order.status, "paid");
 });
@@ -485,9 +490,13 @@ test("an unregistered Cinder craft receives paid technology service through SPRC
   assert.equal(workerRecord.maintenanceStatus, "available");
   assert.equal(workerRecord.wear, 0);
   assert.equal(worker.miningDisabled, false);
-  assert.ok(mining.getState().institution.accounts.operating.transactions.some((transaction) => transaction.type === "maintenance-expense" && transaction.amount === -220));
-  assert.ok(mining.getState().institution.accounts.operating.balance > minerCashBefore - 220, "completed work funded service before its expense");
-  assert.equal(state.sprc.account.balance - sprcCashBefore, 220);
+  // Service is priced from Sal's live cost basis plus margin, so assert the
+  // money moved matches the quoted price rather than a hard-coded constant.
+  const servicePrice = repair.servicePrice;
+  assert.ok(servicePrice > 0, "the repair carries a quoted service price");
+  assert.ok(mining.getState().institution.accounts.operating.transactions.some((transaction) => transaction.type === "maintenance-expense" && transaction.amount === -servicePrice));
+  assert.ok(mining.getState().institution.accounts.operating.balance > minerCashBefore - servicePrice, "completed work funded service before its expense");
+  assert.equal(state.sprc.account.balance - sprcCashBefore, servicePrice);
   assert.ok(state.ledger.getRecentEvents(50).some((event) => event.type === "mining.maintenanceCompleted" && event.payload.shipInstitutionId === worker.id));
 });
 

@@ -1,6 +1,8 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260726-1701-4a23f71";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260726-1701-4a23f71";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260726-1701-4a23f71";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260728-2032-8e0cc22";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260728-2032-8e0cc22";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260728-2032-8e0cc22";
+import { evaluateMiningJob } from "./valuation.js?v=fresh-20260728-2032-8e0cc22";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260728-2032-8e0cc22";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
@@ -120,8 +122,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       shipRecord.status = worker.state;
       shipRecord.cargo = { ...worker.cargo };
       if (shipRecord.maintenanceStatus !== "available") return;
+      // Non-preemptive by design: a worker keeps its commitment until the
+      // delivery completes. Only idle workers reconsider.
       if (worker.assignment) return;
-      const order = chooseOrder();
+      const order = chooseOrder(worker);
       if (!order) { publishIdleDecision(shipRecord); return; }
       const destination = sites.get(order.siteId)?.position;
       if (!destination) return;
@@ -156,16 +160,79 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     });
   }
 
-  function chooseOrder() {
-    const sprcOrder = getSprcMiningOrders()[0];
-    if (sprcOrder) return sprcOrder;
-    for (let offset = 0; offset < STANDING_MINING_ORDERS.length; offset += 1) {
-      const order = STANDING_MINING_ORDERS[(operation.nextOrderIndex + offset) % STANDING_MINING_ORDERS.length];
+  // Compare every candidate job by EXPECTED NET VALUE — payout minus travel,
+  // wear, and risk — instead of a hidden priority constant. Urgent SPRC work
+  // wins here because Sal bids the price up, and the reasons are inspectable.
+  function chooseOrder(worker = null) {
+    const position = worker?.position ?? sites.get("scrap-porch")?.position ?? { x: 0, y: 0 };
+    const candidates = [...getSprcMiningOrders(), ...getAvailableStandingOrders()];
+    if (candidates.length === 0) return null;
+
+    const scored = candidates
+      .map((order) => ({ order, valuation: valueOrderForWorker(order, position) }))
+      .filter((entry) => entry.valuation.acceptable)
+      .sort((first, second) => second.valuation.metrics.netValue - first.valuation.metrics.netValue);
+    if (scored.length === 0) return null;
+
+    const best = scored[0];
+    const runnerUp = scored[1] ?? null;
+    operation.lastSelection = {
+      workerShipId: worker?.id ?? null,
+      chosenOrderId: best.order.id,
+      netValue: Math.round(best.valuation.metrics.netValue),
+      reasons: best.valuation.reasons,
+      rejected: scored.slice(1, 4).map((entry) => ({ orderId: entry.order.id, netValue: Math.round(entry.valuation.metrics.netValue) })),
+      at: now(),
+    };
+    if (worker) {
+      state.ledger.recordEvent("institution.jobValued", {
+        institutionId: operation.institution.id, shipInstitutionId: worker.id, shipName: worker.name,
+        chosenOrderId: best.order.id, netValue: Math.round(best.valuation.metrics.netValue),
+        runnerUpOrderId: runnerUp?.order.id ?? null, runnerUpNetValue: runnerUp ? Math.round(runnerUp.valuation.metrics.netValue) : null,
+        reasons: best.valuation.reasons,
+      }, { visible: false });
+    }
+    return best.order;
+  }
+
+  function getAvailableStandingOrders() {
+    return STANDING_MINING_ORDERS.filter((order) => {
       const alreadyAssigned = Object.values(operation.allocations).some((allocation) => allocation.orderId === order.id && allocation.status === "active");
       const buyer = state.logistics?.institutions?.[order.buyerInstitutionId];
-      if (!alreadyAssigned && (buyer?.accounts?.operating?.balance ?? 0) >= order.amount * order.paymentPerUnit) return order;
-    }
-    return null;
+      return !alreadyAssigned && (buyer?.accounts?.operating?.balance ?? 0) >= order.amount * order.paymentPerUnit;
+    });
+  }
+
+  function valueOrderForWorker(order, position) {
+    const destination = sites.get(order.siteId)?.position ?? position;
+    const deposit = getDepositCandidates(order.resourceId, position)[0] ?? null;
+    // Round trip: out to the nearest known deposit, then in to the buyer.
+    const toDeposit = deposit ? Math.hypot(deposit.x - position.x, deposit.y - position.y) : Math.hypot(destination.x - position.x, destination.y - position.y);
+    const toBuyer = deposit ? Math.hypot(destination.x - deposit.x, destination.y - deposit.y) : 0;
+    // A worker on an SPRC run harvests a full load regardless of order size and
+    // sells the remainder into local supply, so a small remainder order is
+    // still worth taking. Counting that surplus keeps short orders viable.
+    const contractPayout = order.kind === "sprc"
+      ? (order.equivalentAmount ?? order.amount) * (order.pricePerEquivalent ?? 0)
+      : order.amount * (order.paymentPerUnit ?? 0);
+    const harvestTarget = order.kind === "sprc" ? MINING_ALLOCATION_SIZE : order.amount;
+    const surplusUnits = Math.max(0, harvestTarget - order.amount);
+    const surplusPayout = surplusUnits * Math.max(1, Math.floor(getResourceTradeValue(order.resourceId) * 0.7));
+    const payout = contractPayout + surplusPayout;
+
+    return evaluateMiningJob({
+      jobId: order.id,
+      payout,
+      units: order.amount,
+      travelDistance: toDeposit + toBuyer,
+      // Price wear against what a service REALLY costs now, not a constant —
+      // this is how a repair-price rise reaches the miner's own decisions.
+      wearCostPerPoint: getServiceCost(state, operation.institution.id, "maintenance", MINING_SERVICE_PRICE),
+      risk: 0,
+      traits: operation.controller?.traits ?? {},
+      policy: {},
+      opportunityCost: 0,
+    });
   }
 
   function getSprcMiningOrders() {
@@ -183,16 +250,20 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         return {
           kind: "sprc", id: order.id, contractId: order.contractId, siteId: order.destinationSiteId, siteName: "Scrap Porch",
           resourceId, resourceName: resourceId.replaceAll("-", " "), amount: Math.ceil(Math.min(remainingEquivalents, MINING_ALLOCATION_SIZE * equivalence) / equivalence),
-          equivalentAmount: Math.min(remainingEquivalents, MINING_ALLOCATION_SIZE * equivalence), priority: order.objectiveType === "emergency-repair" ? 1000 : 800,
+          equivalentAmount: Math.min(remainingEquivalents, MINING_ALLOCATION_SIZE * equivalence),
+          // No hidden priority constant: the order competes on the price Sal
+          // is actually offering, evaluated as net value like any other job.
+          pricePerEquivalent: order.pricePerEquivalent ?? 0,
+          objectiveType: order.objectiveType,
         };
       })
-      .filter(Boolean)
-      .sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
+      .filter(Boolean);
   }
 
   function publishIdleDecision(shipRecord) {
     const reasons = [...getSprcMiningOrders(), ...STANDING_MINING_ORDERS].map((order) => {
       const occupied = Object.values(operation.allocations).some((allocation) => allocation.orderId === order.id && allocation.status === "active");
+      if (order.kind === "sprc") return `${order.id}:${occupied ? "allocated" : "open"}`;
       const balance = state.logistics?.institutions?.[order.buyerInstitutionId]?.accounts?.operating?.balance ?? 0;
       return `${order.id}:${occupied ? "allocated" : balance < order.amount * order.paymentPerUnit ? "unfunded" : "open"}`;
     });
@@ -335,19 +406,55 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       if (event.type !== "sprc.repairCompleted") continue;
       const shipRecord = operation.ships[event.payload.subjectId];
       if (!shipRecord || shipRecord.maintenanceStatus === "available") continue;
-      const price = event.payload.serviceRevenue ?? MINING_SERVICE_PRICE;
-      const account = operation.institution.accounts.operating;
-      if (account.balance < price) continue;
-      account.balance -= price;
-      account.transactions.push({ id: `MIN-SVC-${event.id}`, at: now(), type: "maintenance-expense", amount: -price, balance: account.balance, referenceId: event.payload.repairOrderId });
-      if (state.sprc?.account) state.sprc.account.balance += price;
-      shipRecord.wear = 0;
-      shipRecord.pendingIssue = null;
-      shipRecord.maintenanceStatus = "available";
-      shipRecord.currentSiteId = "scrap-porch";
-      workers.find((worker) => worker.id === shipRecord.id)?.completeService();
-      record("mining.maintenanceCompleted", `${shipRecord.name} paid SPRC ${price} cr, completed service, and returned to mining duty.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, repairOrderId: event.payload.repairOrderId, payment: price, accountBalance: account.balance });
+      // Queue the settlement instead of paying inline: the event is consumed
+      // once, so an unaffordable bill must persist as an explicit debt rather
+      // than being skipped and stranding the ship forever.
+      operation.pendingServiceSettlements ??= [];
+      operation.pendingServiceSettlements.push({
+        shipId: shipRecord.id,
+        repairOrderId: event.payload.repairOrderId,
+        price: event.payload.serviceRevenue ?? MINING_SERVICE_PRICE,
+        owedSince: now(),
+      });
     }
+    settlePendingServiceCharges();
+  }
+
+  // Pay off completed repairs as cash allows. An unpayable bill stays queued
+  // and visible rather than silently disappearing.
+  function settlePendingServiceCharges() {
+    const pending = operation.pendingServiceSettlements ?? [];
+    if (pending.length === 0) return;
+    operation.pendingServiceSettlements = pending.filter((settlement) => {
+      const shipRecord = operation.ships[settlement.shipId];
+      if (!shipRecord) return false;
+      const account = operation.institution.accounts.operating;
+      if (account.balance < settlement.price) {
+        if (!settlement.reported) {
+          settlement.reported = true;
+          record("mining.serviceDebtOutstanding", `${shipRecord.name} owes SPRC ${settlement.price} cr for completed service and cannot pay yet; the ship stays in the berth until it can.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, repairOrderId: settlement.repairOrderId, owed: settlement.price, accountBalance: Math.round(account.balance) });
+        }
+        return true; // keep owing; retried next tick
+      }
+      applyServiceSettlement(shipRecord, settlement, account);
+      return false;
+    });
+  }
+
+  function applyServiceSettlement(shipRecord, settlement, account) {
+    const { price, repairOrderId } = settlement;
+    account.balance -= price;
+    account.transactions.push({ id: `MIN-SVC-${repairOrderId ?? now()}`, at: now(), type: "maintenance-expense", amount: -price, balance: account.balance, referenceId: repairOrderId });
+    if (state.sprc?.account) state.sprc.account.balance += price;
+    // Book what upkeep actually costs Cinder. Its own job pricing reads this,
+    // so when Sal raises repair prices the miner's cost-to-serve rises too.
+    recordServiceCost(state, { institutionId: operation.institution.id, serviceType: "maintenance", price, at: now() });
+    shipRecord.wear = 0;
+    shipRecord.pendingIssue = null;
+    shipRecord.maintenanceStatus = "available";
+    shipRecord.currentSiteId = "scrap-porch";
+    workers.find((worker) => worker.id === shipRecord.id)?.completeService();
+    record("mining.maintenanceCompleted", `${shipRecord.name} paid SPRC ${price} cr, completed service, and returned to mining duty.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, repairOrderId, payment: price, accountBalance: account.balance });
   }
 
   function recordWorkerEvent(shipRecord, actionType, payload) {

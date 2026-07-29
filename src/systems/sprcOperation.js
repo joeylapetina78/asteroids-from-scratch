@@ -1,9 +1,13 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260726-1701-4a23f71";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260726-1701-4a23f71";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js";
+import { depositCredits } from "./accounts.js?v=fresh-20260728-2032-8e0cc22";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260728-2032-8e0cc22";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260728-2032-8e0cc22";
 import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js";
 import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js";
-import { matchMaintenanceService } from "./maintenanceService.js";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260728-2032-8e0cc22";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260728-2032-8e0cc22";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260728-2032-8e0cc22";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260728-2032-8e0cc22";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260728-2032-8e0cc22";
 
 export const SPRC = Object.freeze({
   actorId: "organization:sprc",
@@ -24,6 +28,20 @@ export const SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK = Object.freeze({
 const ROUTES_BEFORE_PROVISIONAL_REPAIR = 2;
 const PLATE_BATCH_SECONDS = 30;
 const REPAIR_SECONDS = 30;
+// Overhead the mill adds converting raw stock into a finished part, and the
+// labor/facility Sal charges for occupying a berth. Both feed service pricing
+// alongside the live material cost basis.
+const MILL_CONVERSION_COST = 12;
+const REPAIR_LABOR_COST = 70;
+const REPAIR_FACILITY_COST = 35;
+// Fallback unit costs used only before anything has actually been bought.
+const REFERENCE_UNIT_COSTS = Object.freeze({ "hull-plate": 80, "machine-part": 70, copper: 60, silicate: 20, "iron-nickel": 34, aluminum: 68 });
+// Reprice an unfilled order at most this often, and never above this multiple
+// of its original ask — an escalation the world can see, not a runaway bid.
+const REPRICE_INTERVAL_MS = 60 * 1000;
+const REPRICE_MAX_MULTIPLE = 2;
+// How often a repair Sal could not admit is retried.
+const SERVICE_RETRY_INTERVAL_MS = 15 * 1000;
 const DIRECT_PROCUREMENT = Object.freeze({
   copper: { price: 60, title: "SPRC Control Conductor", description: "copper units" },
   silicate: { price: 20, title: "SPRC Machine-Part Silicate", description: "silicate units" },
@@ -117,6 +135,7 @@ export function ensureSprcOperation(state, now = Date.now()) {
   sprc.serviceSubjects ??= sprc.haulers;
   Object.entries(sprc.haulers ?? {}).forEach(([id, hauler]) => { sprc.serviceSubjects[id] = hauler; });
   sprc.repairQueue ??= [];
+  sprc.deferredServiceRequests ??= {};
   sprc.productionOrders ??= {};
   sprc.productionQueue ??= [];
   sprc.needs ??= {};
@@ -156,6 +175,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   function update() {
     sprc.account.protectedReserve = sprc.operatingPlan.protectedCashReserve;
     consumeLedgerEvents();
+    retryDeferredServiceRequests();
     expireProcurementOrders();
     completeDueProduction();
     completeDueRepairs();
@@ -163,6 +183,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     startNextRepair();
     assessOpenRepairs();
     assessOperatingPlan();
+    repriceOpenProcurement();
     restoreContractDefinitions();
     onChange(getSnapshot());
   }
@@ -201,21 +222,107 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       subject = sprc.serviceSubjects[subjectId] = { id: subjectId, shipVin: payload.referenceId ?? payload.shipVin ?? subjectId, shipName: payload.subjectName ?? payload.npcName ?? subjectId, homeOrganizationId: payload.payerInstitutionId, craftClass: payload.craftClass, condition: "serviceable", maintenanceStatus: "available", repairHistory: [], currentLocationSiteId: payload.locationSiteId, availableForWork: true };
     }
     const requirements = SERVICE_REPAIR_RECIPES[payload.issueType];
-    const match = matchMaintenanceService({ request: { ...payload, subjectId }, institution: sprc.institution, facilities: Object.values(sprc.facilities), repairRecipe: requirements, inventories: sprc.inventories, procurableItemIds: ["hull-plate", "machine-part", "copper", "silicate"] });
+    // Quote-then-gate: price the job as soon as the capability is known, and let
+    // the affordability check judge the customer against THAT price. The
+    // accepted quote is the single price used for reservation, completion, and
+    // settlement — the admission price and the billed price cannot diverge.
+    let priceValuation = null;
+    const match = matchMaintenanceService({
+      request: { ...payload, subjectId },
+      institution: sprc.institution,
+      facilities: Object.values(sprc.facilities),
+      repairRecipe: requirements,
+      inventories: sprc.inventories,
+      procurableItemIds: ["hull-plate", "machine-part", "copper", "silicate"],
+      priceService: ({ capability }) => {
+        priceValuation = valueRepairService(requirements, capability, payload);
+        return priceValuation.recommendedPrice;
+      },
+    });
     if (!match.eligible) {
-      appendHistory("repair.declined", { subjectId, issueType: payload.issueType, reason: match.reason });
-      state.ledger.recordEvent("sprc.repairDeclined", { subjectId, issueType: payload.issueType, reason: match.reason }, { visible: true });
+      // Not silent limbo: park the request in a retryable state so a change in
+      // the payer's cash, Sal's stock, or his prices can admit it later.
+      deferServiceRequest(payload, subjectId, match);
       return null;
     }
     const existing = Object.values(sprc.repairOrders).some((repair) => (repair.subjectId ?? repair.subjectHaulerId) === subjectId && !["completed", "canceled"].includes(repair.status));
     if (existing) return null;
+    clearDeferredServiceRequest(subjectId);
     const id = nextId("repair", "SPRC-RPR");
-    const order = sprc.repairOrders[id] = { id, facilityId: match.facility.id, serviceCapabilityId: match.capability.id, subjectId, subjectHaulerId: subjectId, subjectShipVin: subject.shipVin, craftClass: payload.craftClass, payerInstitutionId: payload.payerInstitutionId, servicePrice: payload.servicePrice ?? match.capability.servicePrice, condition: payload.issueType, origin: { type: "operational-wear", wear: payload.wear, issueCount: payload.issueCount, causedByCarefulMode: payload.causedByCarefulMode }, requirements: { produced: { ...requirements.produced }, raw: { ...requirements.raw } }, reserved: { produced: {}, raw: {} }, status: "waiting-stock", priority: payload.issueType.includes("failure") || payload.issueType === "control-fault" ? 80 : 60, createdAt: now(), startedAt: null, completesAt: null };
+    const acceptedPrice = match.quotedPrice;
+    const order = sprc.repairOrders[id] = { id, facilityId: match.facility.id, serviceCapabilityId: match.capability.id, subjectId, subjectHaulerId: subjectId, subjectShipVin: subject.shipVin, craftClass: payload.craftClass, payerInstitutionId: payload.payerInstitutionId, servicePrice: acceptedPrice, quotedPrice: acceptedPrice, referenceServicePrice: payload.servicePrice ?? match.capability.servicePrice, priceValuation: priceValuation ? summarizeValuation(priceValuation) : null, condition: payload.issueType, origin: { type: "operational-wear", wear: payload.wear, issueCount: payload.issueCount, causedByCarefulMode: payload.causedByCarefulMode }, requirements: { produced: { ...requirements.produced }, raw: { ...requirements.raw } }, reserved: { produced: {}, raw: {} }, status: "waiting-stock", priority: payload.issueType.includes("failure") || payload.issueType === "control-fault" ? 80 : 60, createdAt: now(), startedAt: null, completesAt: null };
     sprc.repairQueue.push(id);
+    state.ledger.recordEvent("institution.servicePriced", {
+      institutionId: sprc.institution.id, actorName: sprc.controller?.name ?? "Sal", repairOrderId: id, subjectId,
+      servicePrice: order.servicePrice, referencePrice: order.referenceServicePrice, reasons: priceValuation.reasons,
+    }, { visible: true, message: `${sprc.controller?.name ?? "Sal"} quotes ${order.servicePrice} cr to repair ${subject.shipName} (materials at live cost).` });
     subject.condition = payload.issueType; subject.maintenanceStatus = "queued"; subject.availableForWork = false; subject.currentLocationSiteId = payload.locationSiteId;
     appendHistory("repair.created", { repairOrderId: id, subjectId, haulerId: subjectId, issueType: payload.issueType, wear: payload.wear });
     state.ledger.recordEvent("sprc.repairCreated", { repairOrderId: id, subjectId, haulerId: subjectId, shipName: subject.shipName, craftClass: payload.craftClass, condition: order.condition }, { visible: true });
     return order;
+  }
+
+  // A repair Sal could not admit is held as an explicit, retryable request
+  // rather than vanishing. Retried on the operating tick, so a payer that earns
+  // more, stock that arrives, or a price that moves can still get the job done.
+  function deferServiceRequest(payload, subjectId, match) {
+    sprc.deferredServiceRequests ??= {};
+    const existing = sprc.deferredServiceRequests[subjectId];
+    const record = sprc.deferredServiceRequests[subjectId] = {
+      subjectId,
+      request: { ...payload, subjectId },
+      status: "awaiting-retry",
+      reason: match.reason,
+      quotedPrice: match.quotedPrice ?? null,
+      availableCash: match.availableCash ?? null,
+      attempts: (existing?.attempts ?? 0) + 1,
+      firstDeferredAt: existing?.firstDeferredAt ?? now(),
+      lastAttemptAt: now(),
+    };
+    appendHistory("repair.declined", { subjectId, issueType: payload.issueType, reason: match.reason, quotedPrice: record.quotedPrice, attempts: record.attempts });
+    // Announce only the first deferral; retries stay quiet until something changes.
+    if (!existing) {
+      state.ledger.recordEvent("sprc.repairDeferred", {
+        subjectId, issueType: payload.issueType, reason: match.reason,
+        quotedPrice: record.quotedPrice, availableCash: record.availableCash,
+        retryable: true,
+      }, { visible: true, message: `${sprc.controller?.name ?? "Sal"} cannot start work on ${payload.subjectName ?? subjectId} yet (${match.reason}); the request stays open.` });
+    }
+    return record;
+  }
+
+  function clearDeferredServiceRequest(subjectId) {
+    if (sprc.deferredServiceRequests?.[subjectId]) delete sprc.deferredServiceRequests[subjectId];
+  }
+
+  function retryDeferredServiceRequests() {
+    const deferred = Object.values(sprc.deferredServiceRequests ?? {});
+    if (deferred.length === 0) return;
+    deferred.forEach((record) => {
+      if (record.status !== "awaiting-retry") return;
+      if (now() - record.lastAttemptAt < SERVICE_RETRY_INTERVAL_MS) return;
+      // Re-read the payer's CURRENT balance; the stale snapshot is why the
+      // original attempt failed.
+      const refreshed = { ...record.request, payer: getCurrentPayerSnapshot(record.request) };
+      record.lastAttemptAt = now();
+      const order = createServiceRepairOrder(refreshed);
+      if (order) {
+        state.ledger.recordEvent("sprc.repairRetryAdmitted", {
+          subjectId: record.subjectId, repairOrderId: order.id, servicePrice: order.servicePrice, attempts: record.attempts,
+        }, { visible: true, message: `${sprc.controller?.name ?? "Sal"} can now take ${record.subjectId} into the berth at ${order.servicePrice} cr.` });
+      }
+    });
+  }
+
+  // Live payer cash, preferring the real institution account over the snapshot
+  // the requester sent when it first asked.
+  function getCurrentPayerSnapshot(request) {
+    const payerId = request.payerInstitutionId;
+    const account =
+      state.miningOperation?.institution?.id === payerId ? state.miningOperation.institution.accounts.operating :
+      state.logistics?.institutions?.[payerId]?.accounts?.operating ?? null;
+    if (!account) return request.payer;
+    return { balance: account.balance ?? 0, committed: account.committed ?? 0, protectedCash: request.payer?.protectedCash ?? 0 };
   }
 
   function createProvisionalRepairOrder(haulerId) {
@@ -445,7 +552,17 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       order.status = "completed";
       order.completedAt = now();
       sprc.facilities.maw.activeProductionOrderId = null;
-      appendHistory("production.completed", { productionOrderId: order.id, output: order.output });
+      // Carry input costs into the finished good: raw material price →
+      // produced part → repair price. This is the cost-propagation link.
+      recordProduction(state, {
+        institutionId: sprc.institution.id,
+        outputItemId: order.output.itemId,
+        outputUnits: order.output.amount,
+        inputs: order.inputs,
+        conversionCost: MILL_CONVERSION_COST,
+        at: now(),
+      });
+      appendHistory("production.completed", { productionOrderId: order.id, output: order.output, unitCost: Math.round(getUnitCost(state, sprc.institution.id, order.output.itemId) * 100) / 100 });
       state.ledger.recordEvent("sprc.productionCompleted", { productionOrderId: order.id, ...order.output }, { visible: true });
     });
   }
@@ -641,19 +758,26 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     const id = nextId("procurement", "SPRC-PO");
     const directMaterial = DIRECT_PROCUREMENT[need.itemId] ?? null;
     const procurementItemId = directMaterial ? need.itemId : "structural-feedstock";
-    const amount = directMaterial
-      ? Math.max(1, need.missingAmount, sprc.operatingPlan.procurementBatchSizes?.[need.itemId] ?? 1)
-      : Math.max(1, need.missingAmount);
-    const pricePerEquivalent = directMaterial?.price ?? 34;
+    // Sal prices this order from live circumstances rather than a constant:
+    // urgency and scarcity raise what he will pay, his traits set how steeply,
+    // and protected cash bounds the batch. Reasons are kept for inspection.
+    const valuation = valueProcurement(need, procurementItemId, directMaterial);
+    const amount = valuation.metrics.units;
+    const pricePerEquivalent = valuation.recommendedPrice;
     const maximumPayment = amount * pricePerEquivalent;
-    const affordability = getProcurementAffordability(maximumPayment);
-    if (!affordability.affordable) {
+    if (!valuation.affordable) {
       response.status = "blocked";
       response.reason = `SPRC cannot commit ${maximumPayment} credits without crossing its protected reserve.`;
+      response.valuation = summarizeValuation(valuation);
       need.lastOutcome = { type: "insufficient-spendable-cash", required: maximumPayment, spendable: getSpendableCash(), at: now() };
-      appendHistory("procurement.blocked", { needId: need.id, required: maximumPayment, spendable: getSpendableCash() });
+      appendHistory("procurement.blocked", { needId: need.id, required: maximumPayment, spendable: getSpendableCash(), reasons: valuation.reasons });
+      state.ledger.recordEvent("institution.valuationDeclined", {
+        institutionId: sprc.institution.id, actorName: sprc.controller?.name ?? "Sal", subject: procurementItemId,
+        decision: valuation.decision, reasons: valuation.reasons,
+      }, { visible: false });
       return;
     }
+    response.valuation = summarizeValuation(valuation);
     sprc.account.committed += maximumPayment;
     const record = sprc.procurementOrders[id] = {
       id, type: directMaterial ? "shop-input-procurement" : "structural-feedstock-procurement", procurementItemId, needId: need.id, needIds: [need.id],
@@ -666,11 +790,141 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       status: "offered", createdAt: now(), deadlineAt: now() + 45 * 60 * 1000, deadlineExtensionCount: 0,
       contractId: `contract:${id}`,
     };
+    record.valuation = summarizeValuation(valuation);
     response.procurementOrderId = id;
     registerProcurementContract(record);
     state.contracts.records[record.contractId] ??= buildContractDefinition(record);
-    appendHistory("procurement.created", { procurementOrderId: id, needId: need.id, repairOrderId: need.sourceRepairOrderId, amount });
+    appendHistory("procurement.created", { procurementOrderId: id, needId: need.id, repairOrderId: need.sourceRepairOrderId, amount, pricePerEquivalent, reasons: valuation.reasons });
+    state.ledger.recordEvent("institution.pricedOffer", {
+      institutionId: sprc.institution.id, actorName: sprc.controller?.name ?? "Sal",
+      procurementOrderId: id, contractId: record.contractId, itemId: procurementItemId,
+      units: amount, unitPrice: pricePerEquivalent, urgency: need.urgency, reasons: valuation.reasons,
+    }, { visible: true, message: `${sprc.controller?.name ?? "Sal"} offers ${pricePerEquivalent} cr/unit for ${amount} ${procurementItemId} (${need.urgency}).` });
     state.ledger.recordEvent("contract.offered", { contractId: record.contractId, contractTitle: directMaterial?.title ?? "SPRC Structural Feedstock", sourceNeedId: need.id }, { visible: true });
+  }
+
+  // Assemble the live circumstances Sal's procurement valuation reads.
+  function valueProcurement(need, procurementItemId, directMaterial) {
+    const policy = { ...getResolvedPolicy(), protectedCash: sprc.operatingPlan.protectedCashReserve ?? 0 };
+    const isFeedstock = procurementItemId === "structural-feedstock";
+    const onHand = isFeedstock ? getStructuralFeedstockOnHand() : getAvailable("raw", procurementItemId);
+    const incoming = getIncomingEquivalents(procurementItemId);
+    const target = isFeedstock
+      ? (sprc.operatingPlan.inventoryTargets.structuralFeedstockEquivalents ?? 0)
+      : (sprc.operatingPlan.inventoryTargets[procurementItemId] ?? 0) + Math.max(0, need.missingAmount);
+    // Outcome-equivalent stock already held (e.g. aluminum covers feedstock).
+    const substitutes = isFeedstock
+      ? Object.keys(SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK).filter((itemId) => (sprc.inventories.raw[itemId] ?? 0) > 0)
+      : [];
+
+    return evaluateProcurement({
+      itemId: procurementItemId,
+      baseUnitPrice: directMaterial?.price ?? 34,
+      marketUnitValue: getResourceTradeValue(isFeedstock ? "iron-nickel" : procurementItemId),
+      urgency: need.urgency ?? "routine",
+      inventory: { onHand, incoming, target },
+      requestedUnits: Math.max(1, need.missingAmount),
+      batchSize: sprc.operatingPlan.procurementBatchSizes?.[procurementItemId] ?? (isFeedstock ? 4 : 1),
+      account: sprc.account,
+      policy,
+      traits: sprc.controller?.traits ?? {},
+      relationship: null,
+      substitutes,
+    });
+  }
+
+  function getStructuralFeedstockOnHand() {
+    return Object.entries(SPRC_ACCEPTED_STRUCTURAL_FEEDSTOCK)
+      .reduce((sum, [itemId, equivalents]) => sum + (sprc.inventories.raw[itemId] ?? 0) * equivalents, 0);
+  }
+
+  function getIncomingEquivalents(procurementItemId) {
+    return Object.values(sprc.procurementOrders)
+      .filter((order) => ["offered", "active"].includes(order.status) && (order.procurementItemId ?? "structural-feedstock") === procurementItemId)
+      .reduce((sum, order) => sum + Math.max(0, order.requiredEquivalentUnits - order.deliveredEquivalentUnits), 0);
+  }
+
+  // Live material cost of a repair recipe + labor/facility, priced with Sal's
+  // margin. Replacement cost caps the quote so a repair never exceeds what
+  // swapping the part outright would cost.
+  function valueRepairService(requirements, capability, payload = {}) {
+    const institutionId = sprc.institution.id;
+    const materialCost =
+      getBundleCost(state, institutionId, requirements.produced ?? {}, REFERENCE_UNIT_COSTS) +
+      getBundleCost(state, institutionId, requirements.raw ?? {}, REFERENCE_UNIT_COSTS);
+    // Replacing outright means buying the parts new AND paying to fit them, so
+    // the cap must sit above cost-to-provide or it would erase any margin.
+    const replacementParts = Object.entries({ ...(requirements.produced ?? {}), ...(requirements.raw ?? {}) })
+      .reduce((sum, [itemId, amount]) => sum + getReplacementUnitCost(state, institutionId, itemId, REFERENCE_UNIT_COSTS[itemId] ?? 0) * amount, 0);
+    const replacementCost = replacementParts * 2.5 + REPAIR_LABOR_COST + REPAIR_FACILITY_COST;
+
+    return evaluateServicePrice({
+      serviceId: capability?.id ?? "repair",
+      materialCost,
+      laborCost: REPAIR_LABOR_COST,
+      facilityCost: REPAIR_FACILITY_COST,
+      replacementCost,
+      basePrice: payload.servicePrice ?? capability?.servicePrice ?? 0,
+      traits: sprc.controller?.traits ?? {},
+      policy: getResolvedPolicy(),
+      relationship: getRelationshipProjection(state, { fromId: institutionId, toId: payload.payerInstitutionId }),
+    });
+  }
+
+  // Periodically revisit unfilled offers. If nobody has taken the work, Sal
+  // raises his bid — bounded, throttled, and logged, so escalation is legible.
+  function repriceOpenProcurement() {
+    Object.values(sprc.procurementOrders).forEach((order) => {
+      if (!["offered", "active"].includes(order.status)) return;
+      if (order.deliveredEquivalentUnits > 0) return;
+      if (Object.values(order.allocations ?? {}).some((allocation) => allocation.status === "active")) return;
+      const lastPricedAt = order.lastRepricedAt ?? order.createdAt ?? 0;
+      if (now() - lastPricedAt < REPRICE_INTERVAL_MS) return;
+
+      const need = sprc.needs[order.needId] ?? Object.values(sprc.needs).find((entry) => (order.needIds ?? []).includes(entry.id));
+      if (!need) return;
+      const directMaterial = DIRECT_PROCUREMENT[order.procurementItemId] ?? null;
+      const valuation = valueProcurement(need, order.procurementItemId, directMaterial);
+      order.originalPricePerEquivalent ??= order.pricePerEquivalent;
+      const ceiling = Math.round(order.originalPricePerEquivalent * REPRICE_MAX_MULTIPLE);
+      const nextPrice = Math.min(valuation.recommendedPrice, ceiling);
+      order.lastRepricedAt = now();
+      if (nextPrice <= order.pricePerEquivalent) return;
+
+      // Commit the extra cash the higher bid needs, or keep the old price.
+      const additional = (nextPrice - order.pricePerEquivalent) * order.requiredEquivalentUnits;
+      if (additional > getSpendableCash()) {
+        appendHistory("procurement.repriceDeferred", { procurementOrderId: order.id, wanted: nextPrice, spendable: getSpendableCash() });
+        return;
+      }
+      const previousPrice = order.pricePerEquivalent;
+      order.pricePerEquivalent = nextPrice;
+      order.maximumPayment = order.requiredEquivalentUnits * nextPrice;
+      order.committedPayment = (order.committedPayment ?? 0) + additional;
+      sprc.account.committed += additional;
+      order.repriceCount = (order.repriceCount ?? 0) + 1;
+      order.valuation = summarizeValuation(valuation);
+      const contract = state.contracts.records[order.contractId];
+      if (contract) contract.reward = { credits: order.maximumPayment };
+      appendHistory("procurement.repriced", { procurementOrderId: order.id, previousPrice, nextPrice, reasons: valuation.reasons });
+      state.ledger.recordEvent("institution.offerRepriced", {
+        institutionId: sprc.institution.id, actorName: sprc.controller?.name ?? "Sal", contractId: order.contractId,
+        itemId: order.procurementItemId, previousPrice, unitPrice: nextPrice, repriceCount: order.repriceCount,
+        reasons: [`No supplier took the work at ${previousPrice} cr/unit.`, ...valuation.reasons],
+      }, { visible: true, message: `${sprc.controller?.name ?? "Sal"} raises ${order.procurementItemId} to ${nextPrice} cr/unit — no takers at ${previousPrice}.` });
+    });
+  }
+
+  function summarizeValuation(valuation) {
+    return {
+      decision: valuation.decision,
+      recommendedPrice: valuation.recommendedPrice,
+      minAcceptablePrice: valuation.minAcceptablePrice,
+      maxAcceptablePrice: valuation.maxAcceptablePrice,
+      reasons: valuation.reasons,
+      metrics: valuation.metrics,
+      at: now(),
+    };
   }
 
   function acceptProcurement(contractId) {
@@ -732,6 +986,21 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     if (creditSupplier) creditSupplier(paymentDue);
     else if (supplierInstitutionId === "player") depositCredits(state, paymentDue);
     order.supplierDeliveries.push({ supplierInstitutionId, materialId, acceptedUnits, equivalentUnits, paid: paymentDue, at: now() });
+    // Book what this material ACTUALLY cost. Sal's service prices read this,
+    // so an expensive purchase raises repair prices without any hand-tuning.
+    recordAcquisition(state, {
+      institutionId: sprc.institution.id,
+      itemId: materialId,
+      units: acceptedUnits,
+      totalCost: paymentDue,
+      source: `procurement:${order.id}`,
+      at: now(),
+    });
+    state.ledger.recordEvent("institution.costBasisUpdated", {
+      institutionId: sprc.institution.id, itemId: materialId, units: acceptedUnits, paid: paymentDue,
+      unitCost: acceptedUnits > 0 ? Math.round((paymentDue / acceptedUnits) * 100) / 100 : 0,
+      averageUnitCost: Math.round(getUnitCost(state, sprc.institution.id, materialId) * 100) / 100,
+    }, { visible: false });
     if (allocation) {
       allocation.deliveredEquivalentUnits += equivalentUnits;
       if (allocation.deliveredEquivalentUnits >= allocation.reservedEquivalentUnits) allocation.status = "completed";
@@ -755,6 +1024,15 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
         if (response.procurementOrderId === order.id && response.status === "active") response.status = "completed";
       });
       if (isPlayerSupplier) sprc.actor.relationship.playerReliability += 1;
+      // Multi-dimensional projection alongside the legacy scalar: who supplied,
+      // how completely, and how that shapes future terms and access.
+      recordDeliveryOutcome(state, {
+        fromId: sprc.institution.id,
+        toId: supplierInstitutionId,
+        onTime: order.deadlineAt >= now(),
+        complete: true,
+        at: now(),
+      });
       appendHistory("procurement.completed", { procurementOrderId: order.id, paid: order.paidAmount, paymentShortfall: contract.paymentShortfall });
       state.ledger.recordEvent("contract.paid", { contractId, creditsPaid: order.paidAmount, payerAccountId: sprc.account.id, sourceNeedId: order.needId }, { visible: true });
     }
