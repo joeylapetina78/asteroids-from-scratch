@@ -12,13 +12,16 @@ test("addToTank never exceeds the cap or falls below zero", () => {
 });
 
 test("structural material is the efficient hull patch, others are emergency-only", () => {
-  assert.equal(getResourceProcessValue("iron-nickel", "hull-repair"), 5);
-  assert.equal(getResourceProcessValue("aluminum", "hull-repair"), 10, "aluminum = 2x iron per SPRC equivalence");
-  assert.equal(getResourceProcessValue("titanium", "hull-repair"), 15);
-  assert.equal(getResourceProcessValue("water-ice", "hull-repair"), 1, "fuel material is a poor emergency patch");
-  assert.equal(getResourceProcessValue("copper", "hull-repair"), 1, "conductor is a poor emergency patch");
-  // 20 iron-nickel fills exactly one full reserve tank (= one full hull repair).
-  assert.equal(getResourceProcessValue("iron-nickel", "hull-repair") * 20, 100);
+  const iron = getResourceProcessValue("iron-nickel", "hull-repair");
+  assert.equal(iron, 20);
+  assert.equal(getResourceProcessValue("aluminum", "hull-repair"), iron * 2, "aluminum = 2x iron per SPRC equivalence");
+  assert.equal(getResourceProcessValue("titanium", "hull-repair"), iron * 3);
+  const emergency = getResourceProcessValue("water-ice", "hull-repair");
+  assert.equal(emergency, 4, "fuel material is a poor emergency patch");
+  assert.equal(getResourceProcessValue("copper", "hull-repair"), 4, "conductor is a poor emergency patch");
+  assert.equal(iron / emergency, 5, "structural stays 5x better than a jury-rig");
+  // 5 iron-nickel now fills one full reserve tank (= one full hull repair).
+  assert.equal(iron * 5, 100);
 });
 
 test("converting resource into reserve consumes input and respects the reserve cap", () => {
