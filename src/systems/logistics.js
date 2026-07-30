@@ -1,8 +1,9 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260728-2032-8e0cc22";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260728-2032-8e0cc22";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260728-2032-8e0cc22";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260728-2032-8e0cc22";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260728-2032-8e0cc22";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260729-2014-6808582";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260729-2014-6808582";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260729-2014-6808582";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260729-2014-6808582";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260729-2014-6808582";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260729-2014-6808582";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -203,6 +204,74 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     });
   }
 
+  // Diagnostics for an idle carrier. The chain matters most here: "no cargo"
+  // is usually caused by a source hub being empty, which is caused by whoever
+  // was supposed to supply it.
+  function publishCarrierDiagnosticBlocker(shipId, hauler, candidates, declined) {
+    const context = getCarrierContext(shipId);
+    const site = hauler.currentSiteId;
+    const localTemplates = STANDING_FREIGHT_TEMPLATES.filter((template) => template.originSiteId === site);
+    const outOfStock = localTemplates.filter((template) => (logistics.institutions[template.sourceInstitutionId]?.inventories?.[template.commodity] ?? 0) < template.amount);
+
+    const causes = [];
+    outOfStock.forEach((template) => {
+      // Who is supposed to be filling that shelf? Point at the supplier so the
+      // chain continues into their own reasoning.
+      const supplierId = state.miningOperation?.institution?.id ?? null;
+      causes.push({
+        kind: BLOCKER_KIND.SOURCE_OUT_OF_STOCK,
+        summary: `${siteName(template.originSiteId)} has no ${template.commodityName} to ship (${template.sourceInstitutionId} holds ${logistics.institutions[template.sourceInstitutionId]?.inventories?.[template.commodity] ?? 0})`,
+        subjectId: template.sourceInstitutionId,
+        objectId: template.id,
+        waitingFor: `${template.commodityName} to arrive in local supply`,
+        wakeOn: ["inventory-delivered"],
+        causedBy: supplierId ? [{ actorId: supplierId, note: `no ${template.commodityName} has been delivered` }] : [],
+        at: now(),
+      });
+    });
+    candidates.filter((candidate) => !candidate.plan.eligible && candidate.plan.reason === "below-carrier-cost").forEach((candidate) => {
+      causes.push({
+        kind: BLOCKER_KIND.BELOW_COST,
+        summary: `${candidate.template.id} pays ${candidate.rate} but costs ${Math.round(candidate.ask?.metrics?.costToServe ?? 0)} to run`,
+        subjectId: shipId,
+        objectId: candidate.template.id,
+        waitingFor: `a rate of at least ${candidate.ask?.minAcceptablePrice ?? "cost"}`,
+        wakeOn: ["freight-repriced"],
+        at: now(),
+      });
+    });
+    candidates.filter((candidate) => !candidate.plan.eligible && candidate.plan.reason === "payer-cannot-fund").forEach((candidate) => {
+      causes.push({
+        kind: BLOCKER_KIND.PAYER_CANNOT_FUND,
+        summary: `${candidate.template.issuerInstitutionId} cannot fund ${candidate.rate} cr for ${candidate.template.id}`,
+        subjectId: candidate.template.issuerInstitutionId,
+        objectId: candidate.template.id,
+        waitingFor: "the issuer to hold enough cash",
+        wakeOn: ["issuer-income"],
+        at: now(),
+      });
+    });
+
+    recordDiagnostic(state, shipId, {
+      actorName: context.carrierName ?? shipId,
+      actorKind: "ship",
+      controllerId: hauler.carrierInstitutionId,
+      locationSiteId: site,
+      intention: null,
+    }, now());
+    recordBlocker(state, shipId, createBlocker({
+      kind: BLOCKER_KIND.NO_ELIGIBLE_CARGO,
+      summary: `${context.pilotName ?? shipId} is docked at ${siteName(site)} with no eligible freight${declined ? ` (${formatReason(declined.plan.reason)})` : ""}`,
+      subjectId: shipId,
+      objectId: site,
+      waitingFor: outOfStock.length ? "cargo to appear in local supply" : "an offer that clears its cost",
+      wakeOn: ["inventory-delivered", "freight-repriced", "offer-posted"],
+      causedBy: causes,
+      detail: { evaluated: candidates.length, declinedReason: declined?.plan.reason ?? "none-offered" },
+      at: now(),
+    }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+  }
+
   function assignNpcShipment(shipId) {
     const hauler = logistics.haulers[shipId];
     const ship = shipById.get(shipId);
@@ -240,6 +309,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const selected = candidates.filter((candidate) => candidate.plan.eligible).sort((a, b) => b.plan.score - a.plan.score)[0];
     if (!selected) {
       const declined = candidates.find((candidate) => !candidate.plan.eligible);
+      publishCarrierDiagnosticBlocker(shipId, hauler, candidates, declined);
       publishDecisionOnce(shipId, `no-work:${hauler.currentSiteId}:${declined?.plan.reason ?? "none-offered"}`, `${getCarrierContext(shipId).pilotName} is docked at ${siteName(hauler.currentSiteId)} but found no eligible freight${declined ? ` (${formatReason(declined.plan.reason)})` : ""}; checking service needs.`, { reason: declined?.plan.reason ?? "no-offer", currentSiteId: hauler.currentSiteId });
       if (candidates.some((candidate) => candidate.plan.reason === "maintenance-policy")) return assignMaintenanceAction(shipId, { force: true });
       return null;
@@ -257,6 +327,35 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       appendHistory("freight.declined", { shipId, templateId: template.id, reason: "execution-route-rejected" });
     } else {
       hauler.lastDecisionKey = null;
+      // Diagnostics: committed to a run, with the cost/ask that justified it and
+      // the alternatives that lost.
+      recordDiagnostic(state, shipId, {
+        actorName: getCarrierContext(shipId).carrierName ?? shipId,
+        actorKind: "ship",
+        controllerId: hauler.carrierInstitutionId,
+        state: DIAGNOSTIC_STATE.COMMITTED,
+        summary: `Hauling ${template.commodityName} ${template.originName} → ${template.destinationName} for ${shipment.payment} cr`,
+        locationSiteId: hauler.currentSiteId,
+        intention: { id: shipment.id, kind: "transport", goal: `deliver ${template.commodityName} to ${template.destinationName}`, objectId: template.id, contractId: shipment.contractId ?? null, reserved: { containerId: shipment.containerId } },
+        blocker: null,
+        waitingFor: null,
+        wakeOn: ["shipment-delivered", "breakdown"],
+        nextReconsiderAt: null,
+        refs: { contractIds: [shipment.contractId].filter(Boolean), targetIds: [template.destinationSiteId], dependencyIds: [shipment.containerId] },
+      }, now());
+      recordDecision(state, shipId, {
+        chosen: { id: template.id, label: `${template.commodityName} → ${template.destinationName}`, score: shipment.payment },
+        alternatives: candidates
+          .filter((candidate) => candidate.template.id !== template.id)
+          .map((candidate) => ({
+            id: candidate.template.id,
+            label: `${candidate.template.commodityName} → ${candidate.template.destinationName}`,
+            score: candidate.rate,
+            rejectedBecause: candidate.plan.eligible ? "lower score" : formatReason(candidate.plan.reason),
+          })),
+        reasons: selected.ask?.reasons ?? [],
+        at: now(),
+      });
       publishCarrierEvent("carrier.contractAccepted", shipId, { shipmentId: shipment.id, templateId: template.id, payment: shipment.payment, originSiteId: template.originSiteId, destinationSiteId: template.destinationSiteId, projectedWear: plan.projectedWear, carrierCost: Math.round(selected.ask?.metrics?.costToServe ?? 0), carrierAsk: selected.ask?.recommendedPrice ?? null }, `${getCarrierContext(shipId).pilotName} accepted ${shipment.payment} cr freight from ${template.originName} to ${template.destinationName}; account balance is ${account.balance} cr.`);
     }
     return shipment;

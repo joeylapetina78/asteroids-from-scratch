@@ -1,39 +1,42 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260728-2032-8e0cc22";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260728-2032-8e0cc22";
-import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260728-2032-8e0cc22";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260728-2032-8e0cc22";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260728-2032-8e0cc22";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260728-2032-8e0cc22";
-import { Game } from "./game.js?v=fresh-20260728-2032-8e0cc22";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260728-2032-8e0cc22";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260728-2032-8e0cc22";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260728-2032-8e0cc22";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260728-2032-8e0cc22";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260729-2014-6808582";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260729-2014-6808582";
+import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260729-2014-6808582";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260729-2014-6808582";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260729-2014-6808582";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260729-2014-6808582";
+import { Game } from "./game.js?v=fresh-20260729-2014-6808582";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260729-2014-6808582";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260729-2014-6808582";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260729-2014-6808582";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260729-2014-6808582";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260728-2032-8e0cc22";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260728-2032-8e0cc22";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260728-2032-8e0cc22";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260728-2032-8e0cc22";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260728-2032-8e0cc22";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260728-2032-8e0cc22";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260728-2032-8e0cc22";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260728-2032-8e0cc22";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260728-2032-8e0cc22";
-import { Processor } from "./systems/processor.js?v=fresh-20260728-2032-8e0cc22";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260728-2032-8e0cc22";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260728-2032-8e0cc22";
-import { createGameState } from "./state/gameState.js?v=fresh-20260728-2032-8e0cc22";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260728-2032-8e0cc22";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260728-2032-8e0cc22";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260728-2032-8e0cc22";
-import { createMiningOperation } from "./systems/miningOperation.js";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260728-2032-8e0cc22";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260729-2014-6808582";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260729-2014-6808582";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260729-2014-6808582";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260729-2014-6808582";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260729-2014-6808582";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260729-2014-6808582";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260729-2014-6808582";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260729-2014-6808582";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260729-2014-6808582";
+import { Processor } from "./systems/processor.js?v=fresh-20260729-2014-6808582";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260729-2014-6808582";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260729-2014-6808582";
+import { createGameState } from "./state/gameState.js?v=fresh-20260729-2014-6808582";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260729-2014-6808582";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260729-2014-6808582";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260729-2014-6808582";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260729-2014-6808582";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260729-2014-6808582";
+import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260729-2014-6808582";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260729-2014-6808582";
+import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260729-2014-6808582";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260729-2014-6808582";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260729-2014-6808582";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -5057,15 +5060,18 @@ function updateEventLedgerDisplay() {
 }
 
 function updateLedgerStreamDisplay() {
-  if (!ledgerStreamEvents || !ledgerStreamStats) {
+  // The compact activity feed was superseded by the Observatory's Ledger
+  // browser, so its list element may not exist. Stats and Population still
+  // render from here, so only the feed section is skipped.
+  if (!ledgerStreamStats) {
     return;
   }
 
   updateLedgerFilterOptions();
-  const visibleEvents = getCompactLedgerEvents(activeLedgerFilter);
+  const visibleEvents = ledgerStreamEvents ? getCompactLedgerEvents(activeLedgerFilter) : [];
   const eventsKey = `${activeLedgerFilter}|${visibleEvents.map((event) => `${event.message}:${event.count}`).join("|")}`;
 
-  if (renderedLedgerEventsKey !== eventsKey) {
+  if (ledgerStreamEvents && renderedLedgerEventsKey !== eventsKey) {
     renderedLedgerEventsKey = eventsKey;
     ledgerStreamEvents.replaceChildren(
       ...visibleEvents.map((eventGroup) => {
@@ -6094,3 +6100,712 @@ function applyIssuedLicense(pilot) {
     pilotNameEl.textContent = fullName;
   }
 }
+
+// ── Developer observability UI ──────────────────────────────────────────────
+// Point at an actor and ask "what are you doing, and why?". Reads the
+// diagnostics projection through actorInspector; never mutates simulation state.
+
+const actorDiagnosticPanel = document.querySelector("#actor-diagnostic");
+const actorDiagnosticName = document.querySelector("#actor-diagnostic-name");
+const actorDiagnosticKind = document.querySelector("#actor-diagnostic-kind");
+const actorDiagnosticBody = document.querySelector("#actor-diagnostic-body");
+const actorDiagnosticClose = document.querySelector("#actor-diagnostic-close");
+const observatoryPanel = document.querySelector("#observatory");
+const observatoryBody = document.querySelector("#observatory-body");
+const observatorySearch = document.querySelector("#observatory-search");
+const observatoryCount = document.querySelector("#observatory-count");
+const observatoryToggle = document.querySelector("#observatory-toggle");
+const observatoryCloseButton = document.querySelector("#observatory-close");
+
+const ACTOR_PICK_RADIUS = 60;
+let selectedActorId = null;
+let observatoryTab = "actors";
+
+function getInspectableWorldActors() {
+  return [...(game.npcShips ?? []), ...(game.workerShips ?? [])].filter((actor) => actor?.position && actor.id);
+}
+
+// Click an actor in the viewport to select it. Uses the camera to map the click
+// into world space, then picks the nearest actor within a generous radius.
+canvas?.addEventListener("click", (event) => {
+  const bounds = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / bounds.width;
+  const scaleY = canvas.height / bounds.height;
+  const screenX = (event.clientX - bounds.left) * scaleX;
+  const screenY = (event.clientY - bounds.top) * scaleY;
+  const worldX = screenX + (game.camera?.x ?? 0);
+  const worldY = screenY + (game.camera?.y ?? 0);
+
+  const nearest = getInspectableWorldActors()
+    .map((actor) => ({ actor, distance: Math.hypot(actor.position.x - worldX, actor.position.y - worldY) }))
+    .sort((first, second) => first.distance - second.distance)[0];
+
+  if (nearest && nearest.distance <= ACTOR_PICK_RADIUS) {
+    selectActorForDiagnostics(nearest.actor.id);
+  }
+});
+
+function selectActorForDiagnostics(actorId) {
+  selectedActorId = actorId;
+  if (actorDiagnosticPanel) actorDiagnosticPanel.hidden = false;
+  renderActorDiagnostic();
+}
+
+actorDiagnosticClose?.addEventListener("click", () => {
+  selectedActorId = null;
+  if (actorDiagnosticPanel) actorDiagnosticPanel.hidden = true;
+});
+
+observatoryToggle?.addEventListener("click", () => {
+  if (!observatoryPanel) return;
+  observatoryPanel.hidden = !observatoryPanel.hidden;
+  if (!observatoryPanel.hidden) renderObservatory();
+});
+observatoryCloseButton?.addEventListener("click", () => {
+  if (observatoryPanel) observatoryPanel.hidden = true;
+});
+observatorySearch?.addEventListener("input", () => renderObservatory());
+// Table tabs render into observatory-body; ledger/stats/population are their own
+// panes so the existing render functions keep driving them by id.
+const OBSERVATORY_TABLE_TABS = new Set(["actors", "blockers"]);
+
+function applyObservatoryTab() {
+  const isTable = OBSERVATORY_TABLE_TABS.has(observatoryTab);
+  if (observatoryBody) observatoryBody.hidden = !isTable;
+  if (observatorySearch) observatorySearch.hidden = !isTable;
+  if (observatoryCount) observatoryCount.hidden = !isTable;
+  ["ledger", "stats", "population"].forEach((pane) => {
+    const node = document.querySelector(`#observatory-pane-${pane}`);
+    if (node) node.hidden = observatoryTab !== pane;
+  });
+}
+
+document.querySelectorAll(".observatory-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    observatoryTab = tab.dataset.observatoryTab;
+    document.querySelectorAll(".observatory-tab").forEach((entry) => entry.classList.toggle("is-active", entry === tab));
+    applyObservatoryTab();
+    renderObservatory();
+  });
+});
+
+function diagElement(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null) node.textContent = String(text);
+  return node;
+}
+
+function diagSection(title, contentNode) {
+  const section = diagElement("div", "diag-section");
+  section.append(diagElement("h4", null, title), contentNode);
+  return section;
+}
+
+function diagRows(pairs) {
+  const list = diagElement("dl", "diag-rows");
+  pairs.filter(([, value]) => value !== null && value !== undefined && value !== "").forEach(([label, value]) => {
+    list.append(diagElement("dt", null, label), diagElement("dd", null, value));
+  });
+  return list;
+}
+
+function formatDiagRelativeTime(timestamp) {
+  if (!timestamp) return null;
+  const seconds = Math.round((timestamp - Date.now()) / 1000);
+  if (seconds > 0) return `in ${seconds}s`;
+  return `${Math.abs(seconds)}s ago`;
+}
+
+function formatCargoMap(cargoMap) {
+  const entries = Object.entries(cargoMap ?? {}).filter(([, quantity]) => quantity > 0);
+  return entries.length ? entries.map(([type, quantity]) => `${quantity} ${type}`).join(", ") : "";
+}
+
+function renderActorDiagnostic() {
+  if (!actorDiagnosticPanel || actorDiagnosticPanel.hidden || !selectedActorId || !actorDiagnosticBody) return;
+  const view = inspectActor(state, selectedActorId, { game });
+  if (!view) {
+    actorDiagnosticBody.replaceChildren(diagElement("p", "observatory-empty", "No diagnostic record for this actor yet."));
+    return;
+  }
+
+  actorDiagnosticName.textContent = view.name;
+  actorDiagnosticKind.textContent = `${view.kind}${view.controllerId ? ` · ${view.controllerId}` : ""}`;
+
+  const fragments = [];
+
+  const statusWrap = diagElement("div");
+  const cameraRow = diagElement("div", "diag-camera-row");
+  const focusedId = game.getCameraFocusId?.() ?? null;
+  if (focusedId === selectedActorId) {
+    const release = diagElement("button", "quick-link-button", "Release camera");
+    release.type = "button";
+    release.addEventListener("click", () => { game.setCameraFocus(null); renderActorDiagnostic(); });
+    cameraRow.append(diagElement("span", "diag-camera-note", "camera is following this actor"), release);
+  } else {
+    cameraRow.append(createCenterCameraButton(selectedActorId));
+  }
+  statusWrap.append(
+    diagElement("span", `diag-state is-${view.state}`, view.state),
+    cameraRow,
+    diagRows([
+      ["Location", view.locationSiteId ?? (view.position ? `${view.position.x}, ${view.position.y}` : null)],
+      ["Doing", view.summary],
+      ["Intention", view.intention?.goal],
+      ["Contract", view.intention?.contractId],
+    ]),
+  );
+  fragments.push(diagSection("Status", statusWrap));
+
+  if (view.blockerChain.length > 0) {
+    const chain = diagElement("div", "diag-chain");
+    view.blockerChain.forEach((line, index) => {
+      const row = diagElement("div", `diag-chain-line${index > 0 ? " is-cause" : ""}`);
+      row.style.marginLeft = `${line.indent * 12}px`;
+      row.append(diagElement("span", "diag-chain-kind", line.kind), diagElement("span", null, line.summary));
+      chain.append(row);
+    });
+    fragments.push(diagSection("Why it is stopped", chain));
+    fragments.push(diagSection("Waiting", diagRows([
+      ["Waiting for", view.waitingFor],
+      ["Wakes on", (view.wakeOn ?? []).join(", ")],
+      ["Reconsiders", formatDiagRelativeTime(view.nextReconsiderAt)],
+    ])));
+  }
+
+  if (view.lastDecision) {
+    const decisions = diagElement("div");
+    const chosen = diagElement("div", "diag-alt is-chosen");
+    chosen.append(
+      diagElement("span", null, `✓ ${view.lastDecision.chosen?.label ?? view.lastDecision.chosen?.id ?? "chosen"}`),
+      diagElement("span", "diag-alt-score", view.lastDecision.chosen?.score ?? ""),
+    );
+    decisions.append(chosen);
+    (view.lastDecision.alternatives ?? []).forEach((alternative) => {
+      const row = diagElement("div", "diag-alt");
+      row.append(diagElement("span", null, alternative.label ?? alternative.id), diagElement("span", "diag-alt-score", alternative.score ?? ""));
+      if (alternative.rejectedBecause) row.append(diagElement("span", "diag-alt-why", alternative.rejectedBecause));
+      decisions.append(row);
+    });
+    if (view.lastDecision.reasons?.length) {
+      const reasons = diagElement("ul", "diag-list");
+      view.lastDecision.reasons.forEach((reason) => reasons.append(diagElement("li", null, reason)));
+      decisions.append(reasons);
+    }
+    fragments.push(diagSection(`Last evaluation (${formatDiagRelativeTime(view.lastDecision.at) ?? "—"})`, decisions));
+  }
+
+  if (view.cargo) {
+    fragments.push(diagSection("Cargo", diagRows([
+      ["Held", formatCargoMap(view.cargo.held) || "empty"],
+      ["Committed to", view.cargo.committedTo],
+      ["Uncommitted", view.cargo.uncommitted ? (formatCargoMap(view.cargo.uncommitted) || "none") : "all cargo is committed"],
+    ])));
+  }
+  if (view.cash) {
+    fragments.push(diagSection("Cash", diagRows([
+      ["Balance", view.cash.balance],
+      ["Committed", view.cash.committed],
+      ["Protected", view.cash.protectedCash],
+      ["Available", view.cash.available],
+      ["Upkeep costs", view.cash.maintenanceCost],
+    ])));
+  }
+  if (view.condition) {
+    fragments.push(diagSection("Condition", diagRows([
+      ["Wear", view.condition.wear],
+      ["Status", view.condition.maintenanceStatus],
+      ["Pending issue", view.condition.pendingIssue],
+      ["Faults so far", view.condition.issueCount],
+    ])));
+  }
+
+  const offerList = diagElement("ul", "diag-list");
+  if (view.visibleOffers.length === 0) offerList.append(diagElement("li", null, "no public offers visible from here"));
+  view.visibleOffers.forEach((offer) => {
+    offerList.append(diagElement("li", null, `[${offer.kind}] ${offer.label} — ${offer.price} cr${offer.available === false ? " (no stock)" : ""}`));
+  });
+  const marketWrap = diagElement("div");
+  marketWrap.append(offerList, diagRows([
+    ["Beacon access", view.beaconAccess?.siteIds ? view.beaconAccess.siteIds.join(", ") : view.beaconAccess?.note],
+  ]));
+  fragments.push(diagSection("Visible markets", marketWrap));
+
+  if (view.institution) {
+    const institution = diagElement("div");
+    institution.append(diagRows([
+      ["Berth", view.institution.facilities?.berth],
+      ["Mill", view.institution.facilities?.mill],
+      ["Open orders", view.institution.openOrders.length],
+      ["Deferred requests", view.institution.deferred.length],
+    ]));
+    if (view.institution.openOrders.length) {
+      const orders = diagElement("ul", "diag-list");
+      view.institution.openOrders.forEach((order) => {
+        orders.append(diagElement("li", null, `${order.id}: ${order.delivered}/${order.required} ${order.item} @ ${order.unitPrice}${order.repriceCount ? ` (repriced ×${order.repriceCount})` : ""}`));
+      });
+      institution.append(orders);
+    }
+    if (view.institution.repairs.length) {
+      const repairs = diagElement("ul", "diag-list");
+      view.institution.repairs.forEach((repair) => {
+        repairs.append(diagElement("li", null, `${repair.id}: ${repair.subject} — ${repair.condition} [${repair.status}] ${repair.price} cr`));
+      });
+      institution.append(repairs);
+    }
+    if (view.institution.needs.length) {
+      const needs = diagElement("ul", "diag-list");
+      view.institution.needs.forEach((need) => needs.append(diagElement("li", null, `${need.itemId}: short ${need.missing} (${need.urgency})`)));
+      institution.append(needs);
+    }
+    fragments.push(diagSection("Institution", institution));
+  }
+
+  if (view.detail) {
+    fragments.push(diagSection("Snapshot", diagRows(
+      Object.entries(view.detail).map(([key, value]) => [key, typeof value === "object" ? JSON.stringify(value) : value]),
+    )));
+  }
+
+  actorDiagnosticBody.replaceChildren(...fragments);
+}
+
+function renderObservatory() {
+  if (!observatoryPanel || observatoryPanel.hidden || !observatoryBody) return;
+  // Ledger/stats/population panes are driven by the existing HUD render path.
+  if (!OBSERVATORY_TABLE_TABS.has(observatoryTab)) return;
+  const search = observatorySearch?.value?.trim() ?? "";
+  const rows = observatoryTab === "blockers"
+    ? listBlocked(state).map((record) => ({
+        actorId: record.actorId,
+        name: record.actorName,
+        kind: record.actorKind,
+        state: record.state,
+        blockerKind: record.blocker?.kind ?? record.state,
+        blockerSummary: record.blocker?.summary ?? record.summary,
+        waitingFor: record.waitingFor,
+        wakeOn: (record.wakeOn ?? []).join(", "),
+      }))
+    : listInspectableActors(state, { game });
+
+  const filtered = search
+    ? rows.filter((row) => JSON.stringify(row).toLowerCase().includes(search.toLowerCase()))
+    : rows;
+
+  if (observatoryCount) observatoryCount.textContent = `${filtered.length} / ${rows.length}`;
+
+  if (filtered.length === 0) {
+    observatoryBody.replaceChildren(diagElement("p", "observatory-empty", rows.length === 0
+      ? "No diagnostics recorded yet — run the simulation for a moment."
+      : "No rows match that filter."));
+    return;
+  }
+
+  const columns = observatoryTab === "blockers"
+    ? [["Actor", "name"], ["State", "state"], ["Blocker", "blockerKind"], ["Why", "blockerSummary"], ["Waiting for", "waitingFor"], ["Wakes on", "wakeOn"]]
+    : [["Actor", "name"], ["Kind", "kind"], ["State", "state"], ["Location", "locationSiteId"], ["Doing", "summary"], ["Blocker", "blockerKind"], ["Last action", "lastAction"]];
+
+  const table = diagElement("table", "observatory-table");
+  const headRow = diagElement("tr");
+  columns.forEach(([label]) => headRow.append(diagElement("th", null, label)));
+  headRow.append(diagElement("th", null, "View"));
+  const thead = diagElement("thead");
+  thead.append(headRow);
+  const tbody = diagElement("tbody");
+  filtered.forEach((row) => {
+    const tableRow = diagElement("tr");
+    columns.forEach(([, key]) => tableRow.append(diagElement("td", null, row[key] ?? "—")));
+    const viewCell = diagElement("td");
+    viewCell.append(createCenterCameraButton(row.actorId));
+    tableRow.append(viewCell);
+    tableRow.addEventListener("click", () => selectActorForDiagnostics(row.actorId));
+    tbody.append(tableRow);
+  });
+  table.append(thead, tbody);
+  observatoryBody.replaceChildren(table);
+}
+
+// Point the camera at an actor so you can actually see where it is. Only offered
+// for actors that exist physically in the world (institutions have no position).
+function createCenterCameraButton(actorId) {
+  const exists = getInspectableWorldActors().some((actor) => actor.id === actorId);
+  const button = diagElement("button", "quick-link-button", exists ? "Center" : "—");
+  button.type = "button";
+  button.disabled = !exists;
+  if (!exists) {
+    button.title = "No physical position (institution)";
+    return button;
+  }
+  button.title = "Center the camera on this actor (releases when you thrust)";
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    game.focusCameraOnActorId(actorId);
+    selectActorForDiagnostics(actorId);
+    if (observatoryPanel) observatoryPanel.hidden = true;
+  });
+  return button;
+}
+
+// Diagnostics are a projection, so refreshing is a cheap read — but there is no
+// need to rebuild tables every frame.
+window.setInterval(() => {
+  renderActorDiagnostic();
+  renderObservatory();
+}, 700);
+
+window.__asteroids.diagnostics = {
+  inspect: (actorId) => inspectActor(state, actorId, { game }),
+  list: () => listInspectableActors(state, { game }),
+  blocked: () => listBlocked(state),
+  select: selectActorForDiagnostics,
+};
+
+// ── Ledger event browser ────────────────────────────────────────────────────
+// The searchable historical record. Developer view: exposes everything. Future
+// in-world access rules (beacon access, authority, ownership, investigation,
+// concealment) belong in a separate access layer — deliberately NOT applied
+// here, so the player is never made omniscient by reusing this view.
+
+const ledgerSearchInput = document.querySelector("#ledger-search");
+const ledgerFilterActor = document.querySelector("#ledger-filter-actor");
+const ledgerFilterInstitution = document.querySelector("#ledger-filter-institution");
+const ledgerFilterLocation = document.querySelector("#ledger-filter-location");
+const ledgerFilterType = document.querySelector("#ledger-filter-type");
+const ledgerFilterContract = document.querySelector("#ledger-filter-contract");
+const ledgerFilterService = document.querySelector("#ledger-filter-service");
+const ledgerFilterRetention = document.querySelector("#ledger-filter-retention");
+const ledgerFilterVisibility = document.querySelector("#ledger-filter-visibility");
+const ledgerFilterRange = document.querySelector("#ledger-filter-range");
+const ledgerOnlyCausal = document.querySelector("#ledger-only-causal");
+const ledgerOnlyDurable = document.querySelector("#ledger-only-durable");
+const ledgerSortSelect = document.querySelector("#ledger-sort");
+const ledgerPauseButton = document.querySelector("#ledger-pause");
+const ledgerResetButton = document.querySelector("#ledger-reset-filters");
+const ledgerCountLabel = document.querySelector("#ledger-count");
+const ledgerTableWrap = document.querySelector("#ledger-table-wrap");
+const ledgerDetailPanel = document.querySelector("#ledger-detail");
+
+const LEDGER_PAGE_SIZE = 250;
+let ledgerPaused = false;
+let ledgerFrozenEvents = null;
+let ledgerSelectedEventId = null;
+let ledgerRenderKey = null;
+
+function readLedgerFilters() {
+  const rangeSeconds = Number(ledgerFilterRange?.value ?? 0);
+  return {
+    search: ledgerSearchInput?.value ?? "",
+    actorId: ledgerFilterActor?.value ?? "",
+    institutionId: ledgerFilterInstitution?.value ?? "",
+    locationId: ledgerFilterLocation?.value ?? "",
+    type: ledgerFilterType?.value ?? "",
+    contractId: ledgerFilterContract?.value ?? "",
+    serviceId: ledgerFilterService?.value ?? "",
+    retentionClass: ledgerFilterRetention?.value ?? "",
+    visibility: ledgerFilterVisibility?.value ?? "",
+    sinceMs: rangeSeconds > 0 ? Date.now() - rangeSeconds * 1000 : null,
+    onlyCausal: Boolean(ledgerOnlyCausal?.checked),
+    onlyDurable: Boolean(ledgerOnlyDurable?.checked),
+  };
+}
+
+// Developer view reads the whole stream, hidden events included.
+function getLedgerSourceEvents() {
+  if (ledgerPaused && ledgerFrozenEvents) return ledgerFrozenEvents;
+  return state.ledger.getRecentEvents(6000, { includeHidden: true });
+}
+
+function setLedgerSelectOptions(select, options, placeholder) {
+  if (!select) return;
+  const previous = select.value;
+  const desired = [`|${placeholder}`, ...options.map((option) => `${option.id}|${option.name}`)].join("\n");
+  if (select.dataset.optionsKey === desired) {
+    select.value = previous;
+    return;
+  }
+  select.dataset.optionsKey = desired;
+  const placeholderOption = document.createElement("option");
+  placeholderOption.value = "";
+  placeholderOption.textContent = placeholder;
+  const nodes = [placeholderOption, ...options.map((option) => {
+    const node = document.createElement("option");
+    node.value = option.id;
+    node.textContent = option.name;
+    return node;
+  })];
+  select.replaceChildren(...nodes);
+  select.value = options.some((option) => option.id === previous) ? previous : "";
+}
+
+function formatEventAge(time) {
+  const seconds = Math.max(0, Math.round((Date.now() - time) / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+}
+
+function ledgerReferenceLabel(references) {
+  const first = references[0];
+  if (!first) return null;
+  return references.length > 1 ? `${first.name} +${references.length - 1}` : first.name;
+}
+
+function renderLedgerBrowser({ force = false } = {}) {
+  if (!observatoryPanel || observatoryPanel.hidden || observatoryTab !== "ledger" || !ledgerTableWrap) return;
+
+  const sourceEvents = getLedgerSourceEvents();
+  const options = collectFilterOptions(sourceEvents);
+  setLedgerSelectOptions(ledgerFilterActor, options.actors, "any actor");
+  setLedgerSelectOptions(ledgerFilterInstitution, options.institutions, "any institution");
+  setLedgerSelectOptions(ledgerFilterLocation, options.locations, "any location");
+  setLedgerSelectOptions(ledgerFilterType, options.types, "any event type");
+  setLedgerSelectOptions(ledgerFilterContract, options.contracts, "any contract");
+  setLedgerSelectOptions(ledgerFilterService, options.services, "any service");
+
+  const filters = readLedgerFilters();
+  const matched = sortEvents(filterEvents(sourceEvents, filters), ledgerSortSelect?.value ?? "newest");
+  const page = matched.slice(0, LEDGER_PAGE_SIZE);
+
+  if (ledgerCountLabel) {
+    ledgerCountLabel.textContent = `${matched.length} / ${sourceEvents.length}${matched.length > page.length ? ` (showing ${page.length})` : ""}${ledgerPaused ? " · paused" : ""}`;
+  }
+
+  // Cheap identity check so we do not rebuild the table every tick.
+  const key = [
+    ledgerPaused, ledgerSortSelect?.value, ledgerSelectedEventId,
+    JSON.stringify(filters), page.length, page[0]?.id, page[page.length - 1]?.id,
+  ].join("|");
+  if (!force && key === ledgerRenderKey) return;
+  ledgerRenderKey = key;
+
+  if (page.length === 0) {
+    ledgerTableWrap.replaceChildren(diagElement("p", "observatory-empty",
+      sourceEvents.length === 0 ? "No events recorded yet." : "No events match these filters."));
+    return;
+  }
+
+  const columns = [
+    ["Age", (event) => formatEventAge(event.time)],
+    ["Type", (event) => event.type],
+    ["Ret", (event) => describeEventRetention(event).slice(0, 4)],
+    ["Vis", (event) => getEventVisibility(event).slice(0, 4)],
+    ["Actor", (event) => ledgerReferenceLabel(extractEventReferences(event).actor)],
+    ["Institution", (event) => ledgerReferenceLabel(extractEventReferences(event).institution)],
+    ["Location", (event) => ledgerReferenceLabel(extractEventReferences(event).location)],
+    ["Contract / service", (event) => {
+      const references = extractEventReferences(event);
+      return ledgerReferenceLabel([...references.contract, ...references.service]);
+    }],
+    ["Summary", (event) => summarizeEvent(event)],
+  ];
+
+  const table = diagElement("table", "observatory-table ledger-table");
+  const headRow = diagElement("tr");
+  columns.forEach(([label]) => headRow.append(diagElement("th", null, label)));
+  const thead = diagElement("thead");
+  thead.append(headRow);
+  const tbody = diagElement("tbody");
+
+  page.forEach((event) => {
+    const row = diagElement("tr", `ledger-row is-${describeEventRetention(event)}${event.id === ledgerSelectedEventId ? " is-selected" : ""}`);
+    columns.forEach(([, read]) => row.append(diagElement("td", null, read(event) ?? "—")));
+    row.addEventListener("click", () => {
+      ledgerSelectedEventId = event.id;
+      renderLedgerBrowser({ force: true });
+    });
+    tbody.append(row);
+  });
+
+  table.append(thead, tbody);
+  ledgerTableWrap.replaceChildren(table);
+  renderLedgerDetail(sourceEvents);
+}
+
+// Clickable actions for a referenced entity. Only offers camera centering when
+// the entity actually has a live physical position.
+function ledgerEntityActions(kind, reference) {
+  const wrap = diagElement("span", "ledger-entity-actions");
+  const hasBody = getInspectableWorldActors().some((actor) => actor.id === reference.id);
+  const hasDiagnostic = Boolean(listInspectableActors(state, { game }).find((entry) => entry.actorId === reference.id));
+
+  const filterButton = diagElement("button", "quick-link-button", "Filter");
+  filterButton.type = "button";
+  filterButton.title = "Filter the ledger to this entity";
+  filterButton.addEventListener("click", () => {
+    const target = {
+      actor: ledgerFilterActor, institution: ledgerFilterInstitution, location: ledgerFilterLocation,
+      contract: ledgerFilterContract, service: ledgerFilterService,
+    }[kind];
+    if (target) {
+      target.value = reference.id;
+      renderLedgerBrowser({ force: true });
+    }
+  });
+  wrap.append(filterButton);
+
+  if (hasDiagnostic) {
+    const inspectButton = diagElement("button", "quick-link-button", "Inspect");
+    inspectButton.type = "button";
+    inspectButton.title = "Open this actor's diagnostic panel";
+    inspectButton.addEventListener("click", () => selectActorForDiagnostics(reference.id));
+    wrap.append(inspectButton);
+  }
+  if (hasBody) {
+    const centerButton = diagElement("button", "quick-link-button", "Center");
+    centerButton.type = "button";
+    centerButton.title = "Center the camera on this entity";
+    centerButton.addEventListener("click", () => {
+      game.focusCameraOnActorId(reference.id);
+      if (observatoryPanel) observatoryPanel.hidden = true;
+    });
+    wrap.append(centerButton);
+  }
+  return wrap;
+}
+
+function ledgerRelatedGroup(title, entries, note) {
+  if (!entries || entries.length === 0) return null;
+  const list = diagElement("ul", "diag-list ledger-related");
+  entries.forEach((entry) => {
+    const item = diagElement("li");
+    const link = diagElement("button", "ledger-event-link", `#${entry.event.id} ${entry.event.type}`);
+    link.type = "button";
+    link.title = summarizeEvent(entry.event);
+    link.addEventListener("click", () => {
+      ledgerSelectedEventId = entry.event.id;
+      renderLedgerBrowser({ force: true });
+    });
+    item.append(link);
+    if (entry.via) item.append(diagElement("span", "ledger-related-via", ` via ${entry.via}`));
+    list.append(item);
+  });
+  const section = diagSection(`${title} (${entries.length})`, list);
+  if (note) section.append(diagElement("p", "ledger-note", note));
+  return section;
+}
+
+function renderLedgerDetail(sourceEvents) {
+  if (!ledgerDetailPanel) return;
+  const event = sourceEvents.find((candidate) => candidate.id === ledgerSelectedEventId);
+  if (!event) {
+    ledgerDetailPanel.replaceChildren(diagElement("p", "observatory-empty", "Select an event to inspect its references, causes, and raw payload."));
+    return;
+  }
+
+  const described = describeEvent(sourceEvents, event);
+  const fragments = [];
+
+  fragments.push(diagSection("Event", diagRows([
+    ["ID", `#${described.id}`],
+    ["Type", described.type],
+    ["When", new Date(described.time).toLocaleString()],
+    ["Age", formatEventAge(described.time)],
+    ["Retention", described.retentionClass],
+    ["Visibility", described.visibility],
+    ["Feed", described.visible ? "player-visible" : "hidden (developer only)"],
+  ])));
+
+  fragments.push(diagSection("What happened", diagElement("p", "ledger-summary", described.summary)));
+
+  // Involved entities, each with actions.
+  const referenceGroups = [
+    ["actor", "Actors & ships"],
+    ["institution", "Institutions"],
+    ["asset", "Assets"],
+    ["location", "Locations"],
+    ["contract", "Contracts"],
+    ["service", "Services & orders"],
+  ];
+  referenceGroups.forEach(([kind, title]) => {
+    const list = described.references[kind];
+    if (!list || list.length === 0) return;
+    const container = diagElement("div", "ledger-entities");
+    list.forEach((reference) => {
+      const row = diagElement("div", "ledger-entity");
+      row.append(diagElement("span", "ledger-entity-name", reference.name));
+      row.append(diagElement("span", "ledger-entity-field", reference.field));
+      row.append(ledgerEntityActions(kind, reference));
+      container.append(row);
+    });
+    fragments.push(diagSection(title, container));
+  });
+
+  if (Object.keys(described.amounts).length > 0) {
+    fragments.push(diagSection("Amounts", diagRows(Object.entries(described.amounts))));
+  }
+
+  if (described.causes.length > 0) {
+    fragments.push(diagSection("Explicit cause references", diagRows(
+      described.causes.map((cause) => [cause.field, cause.id]),
+    )));
+  }
+
+  // Sequences. Labels distinguish proven causal references from structural
+  // same-record links so nothing reads as inferred causation.
+  const related = [
+    ledgerRelatedGroup("Caused by", described.related.causedBy, "Events naming a record this event explicitly cites."),
+    ledgerRelatedGroup("Caused", described.related.caused, "Later events whose own cause field names a record here."),
+    ledgerRelatedGroup("Earlier in this record", described.related.preceded, "Same contract/order — sequence, not proven causation."),
+    ledgerRelatedGroup("Followed by", described.related.followed, "Same contract/order, later in time."),
+    ledgerRelatedGroup("Same contract", described.related.sameContract),
+    ledgerRelatedGroup("Same actor", described.related.sameActor),
+    ledgerRelatedGroup("Same asset", described.related.sameAsset),
+  ].filter(Boolean);
+  if (related.length === 0) {
+    fragments.push(diagSection("Sequences", diagElement("p", "ledger-note", "No explicit references link this event to others.")));
+  } else {
+    fragments.push(...related);
+  }
+
+  // Raw payload, developer-only, collapsed by default.
+  const details = document.createElement("details");
+  details.className = "ledger-raw";
+  const summaryNode = document.createElement("summary");
+  summaryNode.textContent = "Raw payload (developer)";
+  const pre = diagElement("pre", "ledger-raw-json", JSON.stringify(described.payload, null, 2));
+  details.append(summaryNode, pre);
+  fragments.push(details);
+
+  ledgerDetailPanel.replaceChildren(...fragments);
+}
+
+[ledgerSearchInput, ledgerFilterActor, ledgerFilterInstitution, ledgerFilterLocation, ledgerFilterType,
+  ledgerFilterContract, ledgerFilterService, ledgerFilterRetention, ledgerFilterVisibility,
+  ledgerFilterRange, ledgerOnlyCausal, ledgerOnlyDurable, ledgerSortSelect].forEach((control) => {
+  control?.addEventListener("input", () => renderLedgerBrowser({ force: true }));
+  control?.addEventListener("change", () => renderLedgerBrowser({ force: true }));
+});
+
+// Pause freezes only the DISPLAY. The simulation and the ledger keep running;
+// unpausing shows everything that arrived meanwhile.
+ledgerPauseButton?.addEventListener("click", () => {
+  ledgerPaused = !ledgerPaused;
+  ledgerFrozenEvents = ledgerPaused ? state.ledger.getRecentEvents(6000, { includeHidden: true }) : null;
+  ledgerPauseButton.textContent = ledgerPaused ? "Resume" : "Pause";
+  ledgerPauseButton.classList.toggle("is-active", ledgerPaused);
+  renderLedgerBrowser({ force: true });
+});
+
+ledgerResetButton?.addEventListener("click", () => {
+  [ledgerSearchInput, ledgerFilterActor, ledgerFilterInstitution, ledgerFilterLocation, ledgerFilterType,
+    ledgerFilterContract, ledgerFilterService, ledgerFilterRetention, ledgerFilterVisibility].forEach((control) => {
+    if (control) control.value = "";
+  });
+  if (ledgerFilterRange) ledgerFilterRange.value = "0";
+  if (ledgerOnlyCausal) ledgerOnlyCausal.checked = false;
+  if (ledgerOnlyDurable) ledgerOnlyDurable.checked = false;
+  renderLedgerBrowser({ force: true });
+});
+
+window.setInterval(() => renderLedgerBrowser(), 900);
+
+window.__asteroids.ledgerBrowser = {
+  filters: readLedgerFilters,
+  describe: (eventId) => {
+    const events = state.ledger.getRecentEvents(6000, { includeHidden: true });
+    return describeEvent(events, events.find((event) => event.id === eventId));
+  },
+  select: (eventId) => { ledgerSelectedEventId = eventId; renderLedgerBrowser({ force: true }); },
+  isPaused: () => ledgerPaused,
+};

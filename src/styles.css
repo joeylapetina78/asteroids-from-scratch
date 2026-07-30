@@ -3040,3 +3040,322 @@ body.is-viewport-fullscreen .viewport-panel #game {
 #current-objectives .obj-flash-retiring {
   animation: obj-task-retire 1.1s ease-out forwards;
 }
+
+/* ── Developer observability: actor diagnostics + observatory ─────────────── */
+
+.quick-link-button {
+  border: 1px solid rgba(115, 210, 255, 0.32);
+  border-radius: 4px;
+  padding: 2px 8px;
+  background: rgba(10, 20, 30, 0.7);
+  color: #9ee8ff;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.quick-link-button:hover { border-color: rgba(115, 210, 255, 0.8); }
+
+.actor-diagnostic {
+  position: fixed;
+  top: 64px;
+  right: 12px;
+  z-index: 9000;
+  width: min(430px, calc(100vw - 24px));
+  max-height: min(76vh, 780px);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  border: 1px solid rgba(115, 210, 255, 0.4);
+  border-radius: 8px;
+  background: rgba(6, 10, 16, 0.96);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+  color: #dbe6f5;
+  font-size: 0.74rem;
+}
+
+.actor-diagnostic[hidden] { display: none; }
+
+.actor-diagnostic-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(115, 210, 255, 0.2);
+}
+
+.actor-diagnostic-head strong { display: block; color: #ffffff; font-size: 0.86rem; }
+.actor-diagnostic-head span { color: #7f8da2; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.actor-diagnostic-head button,
+.observatory-head button[aria-label] {
+  border: 1px solid rgba(115, 210, 255, 0.3);
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  color: #9ee8ff;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.actor-diagnostic-body { overflow: auto; padding: 10px 12px 14px; display: grid; gap: 12px; }
+
+.diag-section { display: grid; gap: 4px; }
+.diag-section > h4 {
+  margin: 0;
+  color: #cdb4ff;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.diag-rows { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
+.diag-rows dt { color: #7f8da2; }
+.diag-rows dd { margin: 0; color: #dbe6f5; word-break: break-word; }
+
+.diag-state {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #061410;
+  background: #6fe3a0;
+}
+.diag-state.is-waiting, .diag-state.is-deferred { background: #ffd36b; }
+.diag-state.is-disabled, .diag-state.is-insolvent { background: #ff8f7a; }
+.diag-state.is-committed, .diag-state.is-working { background: #9ee8ff; }
+
+.diag-list { margin: 0; padding-left: 16px; display: grid; gap: 2px; color: #b9c6d8; }
+
+.diag-chain { display: grid; gap: 3px; }
+.diag-chain-line { display: grid; grid-template-columns: auto 1fr; gap: 6px; align-items: baseline; }
+.diag-chain-line .diag-chain-kind { color: #7f8da2; font-size: 0.64rem; }
+.diag-chain-line.is-cause::before { content: "└"; color: #4d5a6b; }
+
+.diag-alt { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 2px 0; border-bottom: 1px solid rgba(115, 210, 255, 0.08); }
+.diag-alt-score { color: #ffd36b; font-variant-numeric: tabular-nums; }
+.diag-alt-why { grid-column: 1 / -1; color: #7f8da2; font-size: 0.68rem; }
+.diag-alt.is-chosen .diag-alt-score { color: #6fe3a0; }
+
+.observatory {
+  position: fixed;
+  inset: 40px 12px 12px;
+  z-index: 9500;
+  display: grid;
+  /* Header row, then ONE content row that every pane shares. Without this the
+     extra panes create implicit rows and push the header (and its close
+     button) out of view. */
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid rgba(115, 210, 255, 0.4);
+  border-radius: 8px;
+  background: rgba(4, 8, 13, 0.98);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+  color: #dbe6f5;
+  font-size: 0.74rem;
+}
+
+.observatory[hidden] { display: none; }
+
+.observatory-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(115, 210, 255, 0.2);
+}
+.observatory-head > strong { color: #ffffff; font-size: 0.9rem; }
+.observatory-tabs { display: flex; gap: 6px; }
+.observatory-tab {
+  border: 1px solid rgba(115, 210, 255, 0.25);
+  border-radius: 4px;
+  padding: 3px 10px;
+  background: transparent;
+  color: #9ee8ff;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.observatory-tab.is-active { background: rgba(115, 210, 255, 0.18); border-color: rgba(115, 210, 255, 0.7); color: #ffffff; }
+#observatory-search {
+  flex: 1;
+  min-width: 120px;
+  border: 1px solid rgba(115, 210, 255, 0.25);
+  border-radius: 4px;
+  padding: 4px 8px;
+  background: rgba(10, 18, 26, 0.9);
+  color: #dbe6f5;
+  font: inherit;
+  font-size: 0.72rem;
+}
+.observatory-count { color: #7f8da2; font-size: 0.68rem; white-space: nowrap; }
+.observatory-head { flex-wrap: wrap; }
+/* Close button must never be pushed off or scrolled away. */
+#observatory-close { margin-left: auto; flex: 0 0 auto; }
+.observatory-body { grid-row: 2; min-height: 0; overflow: auto; padding: 0; }
+
+.observatory-table { width: 100%; border-collapse: collapse; }
+.observatory-table th,
+.observatory-table td { padding: 5px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid rgba(115, 210, 255, 0.1); }
+.observatory-table th {
+  position: sticky;
+  top: 0;
+  background: rgba(8, 14, 22, 0.98);
+  color: #cdb4ff;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.observatory-table tbody tr:hover { background: rgba(115, 210, 255, 0.06); cursor: pointer; }
+.observatory-table td.is-numeric { font-variant-numeric: tabular-nums; text-align: right; }
+.observatory-empty { padding: 16px; color: #7f8da2; }
+
+/* Observatory panes: ledger / stats / population reuse their original markup.
+   All panes share the single content row so the header stays put. */
+.observatory-pane { grid-row: 2; min-height: 0; overflow: auto; padding: 10px 14px; }
+.observatory-pane[hidden] { display: none; }
+.observatory-pane.ledger-stream {
+  position: static;
+  inset: auto;
+  width: auto;
+  max-height: none;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.diag-camera-row { display: flex; align-items: center; gap: 8px; margin: 6px 0 2px; }
+.diag-camera-note { color: #6fe3a0; font-size: 0.68rem; }
+.observatory-table td .quick-link-button { padding: 1px 7px; font-size: 0.68rem; }
+.observatory-table td .quick-link-button:disabled { opacity: 0.35; cursor: default; }
+
+/* ── Ledger event browser ─────────────────────────────────────────────────── */
+
+.observatory-pane-ledger { padding: 0; overflow: hidden; }
+
+.ledger-browser {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.ledger-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(115, 210, 255, 0.16);
+  background: rgba(8, 14, 22, 0.9);
+}
+
+.ledger-filters input[type="search"],
+.ledger-filters select {
+  border: 1px solid rgba(115, 210, 255, 0.25);
+  border-radius: 4px;
+  padding: 3px 6px;
+  background: rgba(10, 18, 26, 0.9);
+  color: #dbe6f5;
+  font: inherit;
+  font-size: 0.7rem;
+  max-width: 190px;
+}
+.ledger-filters input[type="search"] { min-width: 190px; flex: 1 1 190px; }
+
+.ledger-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #9fb0c6;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.quick-link-button.is-active { background: rgba(255, 211, 107, 0.2); border-color: rgba(255, 211, 107, 0.75); color: #ffd36b; }
+
+.ledger-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
+  min-height: 0;
+}
+
+.ledger-table-wrap { overflow: auto; min-height: 0; }
+
+.ledger-detail {
+  overflow: auto;
+  min-height: 0;
+  padding: 10px 12px 16px;
+  border-left: 1px solid rgba(115, 210, 255, 0.16);
+  background: rgba(6, 11, 18, 0.85);
+  display: grid;
+  gap: 11px;
+  align-content: start;
+}
+
+.ledger-table td { font-size: 0.7rem; }
+.ledger-table td:nth-child(3),
+.ledger-table td:nth-child(4) { text-transform: uppercase; letter-spacing: 0.04em; color: #7f8da2; }
+
+/* Retention class is legible at a glance from the row's left edge. */
+.ledger-row { border-left: 3px solid transparent; }
+.ledger-row.is-ephemeral { border-left-color: rgba(127, 141, 162, 0.5); }
+.ledger-row.is-operational { border-left-color: rgba(158, 232, 255, 0.7); }
+.ledger-row.is-durable { border-left-color: rgba(255, 211, 107, 0.9); }
+.ledger-row.is-durable td:nth-child(2) { color: #ffd36b; }
+.ledger-row.is-selected { background: rgba(115, 210, 255, 0.14); }
+
+.ledger-summary { margin: 0; color: #dbe6f5; line-height: 1.45; }
+.ledger-note { margin: 2px 0 0; color: #6d7a8c; font-size: 0.66rem; line-height: 1.4; }
+
+.ledger-entities { display: grid; gap: 4px; }
+.ledger-entity {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(115, 210, 255, 0.08);
+}
+.ledger-entity-name { color: #dbe6f5; }
+.ledger-entity-field { grid-row: 2; color: #6d7a8c; font-size: 0.64rem; }
+.ledger-entity-actions { grid-row: 1 / span 2; display: flex; align-items: center; gap: 4px; }
+.ledger-entity-actions .quick-link-button { padding: 1px 6px; font-size: 0.64rem; }
+
+.ledger-related { gap: 3px; }
+.ledger-event-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #9ee8ff;
+  font: inherit;
+  font-size: 0.7rem;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+.ledger-event-link:hover { color: #ffffff; }
+.ledger-related-via { color: #6d7a8c; font-size: 0.64rem; }
+
+.ledger-raw { border-top: 1px solid rgba(115, 210, 255, 0.16); padding-top: 8px; }
+.ledger-raw summary { color: #cdb4ff; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; }
+.ledger-raw-json {
+  margin: 6px 0 0;
+  padding: 8px;
+  max-height: 260px;
+  overflow: auto;
+  border-radius: 4px;
+  background: rgba(2, 5, 9, 0.9);
+  color: #b9c6d8;
+  font-size: 0.64rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 1100px) {
+  .ledger-split { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .ledger-detail { border-left: 0; border-top: 1px solid rgba(115, 210, 255, 0.16); max-height: 40vh; }
+}

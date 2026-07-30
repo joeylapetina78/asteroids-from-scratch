@@ -1,4 +1,11 @@
-const DEFAULT_HISTORY_LIMIT = 250;
+// The ledger is the world's historical record, not just a live feed: the
+// Observatory browses it to reconstruct sequences, and future investigation,
+// legal, and reputation systems will read the same history. A 250-event window
+// discarded that history within a couple of minutes of play, so keep far more.
+// This is not a retention policy — see eventRetention.js for the per-class
+// policy that will eventually summarize ephemeral chatter and keep durable
+// history indefinitely.
+const DEFAULT_HISTORY_LIMIT = 6000;
 
 // Destruction events carry a `cause` naming who actually did it. Only these
 // causes belong to the controlled pilot; patrol/hub turrets and environmental

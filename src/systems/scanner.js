@@ -1,5 +1,5 @@
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./resourceDefinitions.js";
-import { drawResourceShape } from "../entities/ResourcePickup.js";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260729-2014-6808582";
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260729-2014-6808582";
 
 const SCAN_RANGE = 1800;
 const SCAN_HALF_ANGLE = Math.PI / 5;
@@ -23,8 +23,11 @@ export function createScanner(canvas) {
       const siteTargets = scanTargets.includes("sites")
         ? findWorldSites(ship, sites, { targetSiteId: options.targetSiteId })
         : [];
+      // Actor targets carry an actorId so a scan result can be opened in the
+      // developer diagnostic panel, not just drawn as a marker.
+      const actorTargets = scanTargets.includes("actors") ? findActors(ship, options.actors ?? []) : [];
 
-      this.targets = [...resourceTargets, ...siteTargets]
+      this.targets = [...resourceTargets, ...siteTargets, ...actorTargets]
         .sort((first, second) => first.distance - second.distance);
       this.markerAge = this.targets.length > 0 ? 0 : SCAN_MARKER_SECONDS;
     },
@@ -77,6 +80,27 @@ function findWorldSites(ship, sites, { targetSiteId = null } = {}) {
       const distance = Math.hypot(offsetX, offsetY);
 
       return { position: site.position, type: "site", distance, offsetX, offsetY };
+    })
+    .filter((result) => result.distance > 0 && result.distance <= SITE_SCAN_RANGE);
+}
+
+// Any actor with a position and an id: NPC carriers, mining workers, and later
+// anything else worth interrogating.
+function findActors(ship, actors) {
+  return actors
+    .filter((actor) => actor?.position && actor.id && actor.isAlive !== false)
+    .map((actor) => {
+      const offsetX = actor.position.x - ship.position.x;
+      const offsetY = actor.position.y - ship.position.y;
+      return {
+        position: actor.position,
+        type: "actor",
+        actorId: actor.id,
+        actorName: actor.name ?? actor.id,
+        distance: Math.hypot(offsetX, offsetY),
+        offsetX,
+        offsetY,
+      };
     })
     .filter((result) => result.distance > 0 && result.distance <= SITE_SCAN_RANGE);
 }

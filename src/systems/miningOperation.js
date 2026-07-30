@@ -1,8 +1,9 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260728-2032-8e0cc22";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260728-2032-8e0cc22";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260728-2032-8e0cc22";
-import { evaluateMiningJob } from "./valuation.js?v=fresh-20260728-2032-8e0cc22";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260728-2032-8e0cc22";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260729-2014-6808582";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260729-2014-6808582";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260729-2014-6808582";
+import { evaluateMiningJob } from "./valuation.js?v=fresh-20260729-2014-6808582";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260729-2014-6808582";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260729-2014-6808582";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
@@ -116,6 +117,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   function update() {
     consumeMaintenanceEvents();
     assessExpansion();
+    publishFleetDiagnostic();
     workers.forEach((worker) => {
       const shipRecord = operation.ships[worker.id];
       shipRecord.position = { x: worker.position.x, y: worker.position.y };
@@ -128,7 +130,19 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       const order = chooseOrder(worker);
       if (!order) { publishIdleDecision(shipRecord); return; }
       const destination = sites.get(order.siteId)?.position;
-      if (!destination) return;
+      if (!destination) {
+        recordWorkerIdentity(worker, shipRecord);
+        recordBlocker(state, worker.id, createBlocker({
+          kind: BLOCKER_KIND.NO_ROUTE,
+          summary: `${worker.name} picked ${order.id} but ${order.siteId} is not a known destination`,
+          subjectId: worker.id,
+          objectId: order.siteId,
+          waitingFor: "a reachable destination for the chosen order",
+          wakeOn: ["order-posted"],
+          at: now(),
+        }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+        return;
+      }
       const allocation = {
         id: `allocation:${order.id}:${++operation.counter}`,
         orderId: order.id,
@@ -146,7 +160,22 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
           supplierInstitutionId: operation.institution.id,
           equivalentUnits: order.equivalentAmount,
         });
-        if (!reservation) return;
+        if (!reservation) {
+          // The best-valued order is already fully reserved by other suppliers.
+          // Without this the worker would sit silently idle with no explanation.
+          recordWorkerIdentity(worker, shipRecord);
+          recordBlocker(state, worker.id, createBlocker({
+            kind: BLOCKER_KIND.ORDER_FULLY_ALLOCATED,
+            summary: `${worker.name} wanted ${order.id} but every unit on it is already reserved`,
+            subjectId: worker.id,
+            objectId: order.id,
+            waitingFor: "units to free up on the order, or a better-paying alternative",
+            wakeOn: ["allocation-released", "order-posted", "order-repriced"],
+            detail: { orderId: order.id, requestedEquivalents: order.equivalentAmount },
+            at: now(),
+          }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+          return;
+        }
       }
       operation.allocations[allocation.id] = allocation;
       shipRecord.lastDecisionKey = null;
@@ -156,6 +185,37 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         depositCandidates: getDepositCandidates(order.resourceId, worker.position),
       });
       if (order.kind !== "sprc") operation.nextOrderIndex = (STANDING_MINING_ORDERS.indexOf(order) + 1) % STANDING_MINING_ORDERS.length;
+      // Diagnostics: this actor is now committed, and we keep why it chose this
+      // job over the alternatives it weighed.
+      const selection = operation.lastSelection;
+      recordDiagnostic(state, worker.id, {
+        actorName: worker.name,
+        actorKind: "ship",
+        controllerId: operation.institution.id,
+        state: DIAGNOSTIC_STATE.COMMITTED,
+        summary: `Mining ${order.amount} ${order.resourceName} for ${order.siteName}`,
+        locationSiteId: null,
+        position: { x: Math.round(worker.position.x), y: Math.round(worker.position.y) },
+        intention: { id: allocation.id, kind: "extraction", goal: `deliver ${order.amount} ${order.resourceId} to ${order.siteName}`, objectId: order.id, contractId: order.contractId ?? order.id, reserved: { equivalentUnits: allocation.equivalentAmount } },
+        blocker: null,
+        waitingFor: null,
+        wakeOn: ["delivery.completed", "ship-disabled"],
+        nextReconsiderAt: null,
+        refs: { contractIds: [order.contractId ?? order.id], targetIds: [order.siteId], dependencyIds: [] },
+      }, now());
+      if (selection?.chosenOrderId === order.id) {
+        recordDecision(state, worker.id, {
+          chosen: { id: order.id, label: `${order.resourceName} → ${order.siteName}`, score: selection.netValue },
+          alternatives: (selection.rejected ?? []).map((entry) => ({
+            id: entry.orderId,
+            label: entry.orderId,
+            score: entry.netValue,
+            rejectedBecause: `lower net value (${entry.netValue} vs ${selection.netValue})`,
+          })),
+          reasons: selection.reasons ?? [],
+          at: now(),
+        });
+      }
       record("mining.contractAccepted", `${operation.controller.name} dispatched ${worker.name} for ${order.amount} ${order.resourceName} at ${order.siteName}.`, { orderId: order.id, allocationId: allocation.id, siteId: order.siteId, resourceId: order.resourceId, quantity: order.amount, shipInstitutionId: worker.id, shipName: worker.name });
     });
   }
@@ -163,6 +223,86 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   // Compare every candidate job by EXPECTED NET VALUE — payout minus travel,
   // wear, and risk — instead of a hidden priority constant. Urgent SPRC work
   // wins here because Sal bids the price up, and the reasons are inspectable.
+  // Identity fields every worker diagnostic needs, so a blocker written from any
+  // path still names who is stuck and who controls them.
+  function recordWorkerIdentity(worker, shipRecord) {
+    recordDiagnostic(state, worker.id, {
+      actorName: worker.name ?? shipRecord?.name ?? worker.id,
+      actorKind: "ship",
+      controllerId: operation.institution.id,
+      locationSiteId: shipRecord?.currentSiteId ?? null,
+      position: { x: Math.round(worker.position.x), y: Math.round(worker.position.y) },
+    }, now());
+  }
+
+  // The mining institution's own explanation. Blocker chains from hubs and
+  // carriers point here, so this must say why its fleet is not supplying them.
+  function publishFleetDiagnostic() {
+    const ships = Object.values(operation.ships);
+    const committed = workers.filter((worker) => worker.assignment).length;
+    const inService = ships.filter((ship) => ship.maintenanceStatus !== "available").length;
+    const idle = ships.length - committed - inService;
+    const account = operation.institution.accounts.operating;
+
+    let blocker = null;
+    let actorState = committed > 0 ? DIAGNOSTIC_STATE.WORKING : DIAGNOSTIC_STATE.FREE;
+    let summary = `${committed}/${ships.length} ship(s) working, ${idle} idle, ${inService} in service`;
+
+    if (committed === ships.length && ships.length > 0) {
+      actorState = DIAGNOSTIC_STATE.WORKING;
+      summary = `All ${ships.length} ships are committed elsewhere`;
+      blocker = createBlocker({
+        kind: BLOCKER_KIND.ALL_SUPPLIERS_COMMITTED,
+        summary: `Every Cinder ship is committed; those jobs currently have higher net value`,
+        subjectId: operation.institution.id,
+        waitingFor: "a ship to finish its run",
+        wakeOn: ["delivery.completed", "order-repriced"],
+        // The workers themselves explain what they chose and why.
+        causedBy: workers.filter((worker) => worker.assignment).slice(0, 3).map((worker) => ({ actorId: worker.id })),
+        detail: { fleetSize: ships.length, committed, idle, inService },
+        at: now(),
+      });
+    } else if (idle > 0) {
+      actorState = DIAGNOSTIC_STATE.WAITING;
+      summary = `${idle} ship(s) idle with nothing worth taking`;
+      const idleWorker = workers.find((worker) => !worker.assignment && operation.ships[worker.id]?.maintenanceStatus === "available");
+      blocker = createBlocker({
+        kind: BLOCKER_KIND.NO_ELIGIBLE_WORK,
+        summary: `${idle} Cinder ship(s) have no order worth their cost`,
+        subjectId: operation.institution.id,
+        waitingFor: "an order that clears cost",
+        wakeOn: ["order-posted", "order-repriced"],
+        causedBy: idleWorker ? [{ actorId: idleWorker.id }] : [],
+        detail: { fleetSize: ships.length, committed, idle, inService },
+        at: now(),
+      });
+    }
+
+    recordDiagnostic(state, operation.institution.id, {
+      actorName: operation.institution.name ?? "Cinder Contracting",
+      actorKind: "institution",
+      controllerId: operation.controller?.id ?? operation.institution.controllerInstitutionId,
+      state: actorState,
+      summary,
+      blocker,
+      waitingFor: blocker?.waitingFor ?? null,
+      wakeOn: blocker?.wakeOn ?? ["order-posted"],
+      nextReconsiderAt: null,
+      refs: { targetIds: ships.map((ship) => ship.id), contractIds: [], dependencyIds: [] },
+      detail: {
+        cash: Math.round(account.balance ?? 0),
+        availableCash: Math.round(Math.max(0, (account.balance ?? 0) - MINING_PROTECTED_CASH)),
+        protectedCash: MINING_PROTECTED_CASH,
+        fleetSize: ships.length,
+        committed,
+        idle,
+        inService,
+        completedContracts: operation.completedContracts,
+        maintenanceCost: Math.round(getServiceCost(state, operation.institution.id, "maintenance", 0)) || null,
+      },
+    }, now());
+  }
+
   function chooseOrder(worker = null) {
     const position = worker?.position ?? sites.get("scrap-porch")?.position ?? { x: 0, y: 0 };
     const candidates = [...getSprcMiningOrders(), ...getAvailableStandingOrders()];
@@ -267,6 +407,25 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       const balance = state.logistics?.institutions?.[order.buyerInstitutionId]?.accounts?.operating?.balance ?? 0;
       return `${order.id}:${occupied ? "allocated" : balance < order.amount * order.paymentPerUnit ? "unfunded" : "open"}`;
     });
+    // Diagnostics: an idle worker records WHY nothing was worth taking, naming
+    // the orders it looked at and their disposition.
+    recordDiagnostic(state, shipRecord.id, {
+      actorName: shipRecord.name,
+      actorKind: "ship",
+      controllerId: operation.institution.id,
+      intention: null,
+      refs: { targetIds: [], contractIds: [], dependencyIds: [] },
+    }, now());
+    recordBlocker(state, shipRecord.id, createBlocker({
+      kind: BLOCKER_KIND.NO_ELIGIBLE_WORK,
+      summary: `${shipRecord.name} is idle: no mining order is both open and worth its cost`,
+      subjectId: shipRecord.id,
+      waitingFor: "an open order that clears its cost, or a buyer that can fund one",
+      wakeOn: ["order-posted", "order-repriced", "allocation-released", "buyer-funded"],
+      detail: { candidates: reasons },
+      at: now(),
+    }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+
     const key = reasons.join("|");
     if (shipRecord.lastDecisionKey === key) return;
     shipRecord.lastDecisionKey = key;
@@ -397,6 +556,19 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     shipRecord.pendingIssue = issue.issueType;
     shipRecord.maintenanceStatus = "returning-for-service";
     ship.returnForService({ destination: serviceSite.position, destinationSiteId: "scrap-porch", issueType: issue.issueType });
+    // Diagnostics: disabled and dependent on a service provider. The blocker
+    // points at SPRC, so the why-chain continues into Sal's own state.
+    recordBlocker(state, shipRecord.id, createBlocker({
+      kind: BLOCKER_KIND.AWAITING_SERVICE,
+      summary: `${shipRecord.name} developed ${issue.issueType.replaceAll("-", " ")} and needs service at Scrap Porch`,
+      subjectId: shipRecord.id,
+      objectId: "sprc",
+      waitingFor: "a repair berth and the materials the fix needs",
+      wakeOn: ["sprc.repairCompleted", "sprc.repairRetryAdmitted"],
+      causedBy: [{ actorId: "sprc", note: "Scrap Porch Recovery Cooperative holds the repair" }],
+      detail: { issueType: issue.issueType, requiredCapabilities: issue.requiredCapabilities, wear: shipRecord.wear },
+      at: now(),
+    }), { state: DIAGNOSTIC_STATE.DISABLED, at: now() });
     record("mining.maintenanceRequired", `${shipRecord.name} developed ${issue.issueType.replaceAll("-", " ")} after mining work and is returning to Scrap Porch.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, issueType: issue.issueType, wear: shipRecord.wear, requiredCapabilities: issue.requiredCapabilities });
   }
 
@@ -430,6 +602,16 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       if (!shipRecord) return false;
       const account = operation.institution.accounts.operating;
       if (account.balance < settlement.price) {
+        recordBlocker(state, shipRecord.id, createBlocker({
+          kind: BLOCKER_KIND.UNPAID_SERVICE_DEBT,
+          summary: `${shipRecord.name} owes SPRC ${settlement.price} cr for completed service and cannot pay`,
+          subjectId: shipRecord.id,
+          objectId: settlement.repairOrderId,
+          waitingFor: `${Math.max(0, Math.round(settlement.price - account.balance))} more credits`,
+          wakeOn: ["mining-income", "wholesale-income"],
+          detail: { owed: settlement.price, balance: Math.round(account.balance) },
+          at: now(),
+        }), { state: DIAGNOSTIC_STATE.INSOLVENT, at: now() });
         if (!settlement.reported) {
           settlement.reported = true;
           record("mining.serviceDebtOutstanding", `${shipRecord.name} owes SPRC ${settlement.price} cr for completed service and cannot pay yet; the ship stays in the berth until it can.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, repairOrderId: settlement.repairOrderId, owed: settlement.price, accountBalance: Math.round(account.balance) });
@@ -454,6 +636,12 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     shipRecord.maintenanceStatus = "available";
     shipRecord.currentSiteId = "scrap-porch";
     workers.find((worker) => worker.id === shipRecord.id)?.completeService();
+    // Diagnostics: serviced, paid, and free again.
+    clearBlocker(state, shipRecord.id, {
+      state: DIAGNOSTIC_STATE.FREE,
+      summary: `${shipRecord.name} paid ${price} cr for service and is available for work`,
+      at: now(),
+    });
     record("mining.maintenanceCompleted", `${shipRecord.name} paid SPRC ${price} cr, completed service, and returned to mining duty.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, repairOrderId, payment: price, accountBalance: account.balance });
   }
 

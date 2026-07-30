@@ -1,44 +1,44 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260728-2032-8e0cc22";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260728-2032-8e0cc22";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260728-2032-8e0cc22";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260728-2032-8e0cc22";
-import { Ship } from "./entities/Ship.js?v=fresh-20260728-2032-8e0cc22";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260728-2032-8e0cc22";
-import { applyPanelPatch, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260728-2032-8e0cc22";
-import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260728-2032-8e0cc22";
-import { createCamera } from "./systems/camera.js";
-import { createInput } from "./systems/input.js?v=fresh-20260728-2032-8e0cc22";
-import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260728-2032-8e0cc22";
-import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260728-2032-8e0cc22";
-import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260728-2032-8e0cc22";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260728-2032-8e0cc22";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260728-2032-8e0cc22";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260728-2032-8e0cc22";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260728-2032-8e0cc22";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260728-2032-8e0cc22";
-import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260728-2032-8e0cc22";
-import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260728-2032-8e0cc22";
-import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260728-2032-8e0cc22";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260728-2032-8e0cc22";
-import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260728-2032-8e0cc22";
-import { getStandingMiningJobsForSite } from "./systems/miningOperation.js";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260728-2032-8e0cc22";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260728-2032-8e0cc22";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260728-2032-8e0cc22";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260728-2032-8e0cc22";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260728-2032-8e0cc22";
-import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260728-2032-8e0cc22";
-import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260728-2032-8e0cc22";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260728-2032-8e0cc22";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260728-2032-8e0cc22";
-import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260728-2032-8e0cc22";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260728-2032-8e0cc22";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260728-2032-8e0cc22";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260728-2032-8e0cc22";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260728-2032-8e0cc22";
-import { createGameState } from "./state/gameState.js?v=fresh-20260728-2032-8e0cc22";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260728-2032-8e0cc22";
-import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260728-2032-8e0cc22";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260729-2014-6808582";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260729-2014-6808582";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260729-2014-6808582";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260729-2014-6808582";
+import { Ship } from "./entities/Ship.js?v=fresh-20260729-2014-6808582";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260729-2014-6808582";
+import { applyPanelPatch, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260729-2014-6808582";
+import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260729-2014-6808582";
+import { createCamera } from "./systems/camera.js?v=fresh-20260729-2014-6808582";
+import { createInput } from "./systems/input.js?v=fresh-20260729-2014-6808582";
+import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260729-2014-6808582";
+import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260729-2014-6808582";
+import { createNpcRouteShips } from "./systems/npcRoutes.js?v=fresh-20260729-2014-6808582";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260729-2014-6808582";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260729-2014-6808582";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260729-2014-6808582";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260729-2014-6808582";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260729-2014-6808582";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260729-2014-6808582";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260729-2014-6808582";
+import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260729-2014-6808582";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260729-2014-6808582";
+import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260729-2014-6808582";
+import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260729-2014-6808582";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260729-2014-6808582";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260729-2014-6808582";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260729-2014-6808582";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260729-2014-6808582";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260729-2014-6808582";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260729-2014-6808582";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260729-2014-6808582";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260729-2014-6808582";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260729-2014-6808582";
+import { createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260729-2014-6808582";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260729-2014-6808582";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260729-2014-6808582";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260729-2014-6808582";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260729-2014-6808582";
+import { createGameState } from "./state/gameState.js?v=fresh-20260729-2014-6808582";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260729-2014-6808582";
+import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260729-2014-6808582";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -1089,7 +1089,21 @@ export class Game {
     this.updateCollector(deltaSeconds);
     this.collectPickups();
     this.scanner.update(deltaSeconds);
-    this.camera.follow(this.ship, deltaSeconds);
+    // Developer camera focus: follow an inspected actor instead of the ship.
+    // Any flight input hands the camera straight back, so this can never trap
+    // the player. Reads the input keys rather than the derived isThrusting flag,
+    // which is recomputed every frame and easy to miss.
+    if (this.cameraFocusTarget) {
+      const flyingKeys = ["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE"];
+      const flying = this.ship.isThrusting || flyingKeys.some((key) => this.input.isDown(key));
+      // Note: while ship input is suspended (docked, story beats) neither signal
+      // fires — but the player cannot fly then either, and the panel's explicit
+      // "Release camera" button always works.
+      if (this.cameraFocusTarget.isAlive === false || flying) {
+        this.cameraFocusTarget = null;
+      }
+    }
+    this.camera.follow(this.cameraFocusTarget ?? this.ship, deltaSeconds);
     this.updateStoryEventSensors(activeAsteroids, activeLifeforms, deltaSeconds);
     if (this.state.components.scanner.scanergy !== previousScanergy) {
       this.onHudChange(this.state);
@@ -4779,6 +4793,23 @@ export class Game {
     }
 
     this.onHudChange(this.state);
+  }
+
+  // Point the camera at any actor with a position (NPC carrier, mining worker).
+  // Pass null to hand control back to the ship. Purely a viewing aid — it
+  // changes nothing about simulation or input.
+  setCameraFocus(target) {
+    this.cameraFocusTarget = target ?? null;
+    return this.cameraFocusTarget;
+  }
+
+  focusCameraOnActorId(actorId) {
+    const actor = [...(this.npcShips ?? []), ...(this.workerShips ?? [])].find((entry) => entry.id === actorId);
+    return this.setCameraFocus(actor ?? null);
+  }
+
+  getCameraFocusId() {
+    return this.cameraFocusTarget?.id ?? null;
   }
 
   isEngineFailed() {

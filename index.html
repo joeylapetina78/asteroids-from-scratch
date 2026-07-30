@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260728-2032-8e0cc22" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260729-2014-6808582" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,37 +57,119 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260728-2032-8e0cc22</span>
+      <span class="build-tag">build: fresh-20260729-2014-6808582</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
       <a href="./?resetSave=1&amp;devStart=explorer">Explorer</a>
       <a href="./?resetSave=1&amp;devStart=panorama">Panorama</a>
+      <button id="observatory-toggle" type="button" class="quick-link-button">Observatory</button>
       <a href="https://joeylapetina78.github.io/asteroids-from-scratch/">Public build</a>
       <a href="https://github.com/joeylapetina78/asteroids-from-scratch">GitHub</a>
       <a href="https://cash.app/$joeylapetina">Murmur alms</a>
     </nav>
-    <aside class="ledger-stream" aria-label="Live event ledger diagnostics">
-      <section class="ledger-stream-events-section">
-        <div class="ledger-stream-heading">
-          <h2>Ledger</h2>
-          <label class="ledger-stream-filter-label" for="ledger-stream-filter">Show</label>
-          <select id="ledger-stream-filter" class="ledger-stream-filter" aria-label="Filter ledger activity">
-            <option value="all">All activity</option>
-            <option value="player">My pilot</option>
-          </select>
+    <!-- Developer diagnostic panel: "what are you doing, and why?" for one
+         selected actor. Opened by clicking an actor in the viewport. -->
+    <aside id="actor-diagnostic" class="actor-diagnostic" aria-label="Actor diagnostics" hidden>
+      <header class="actor-diagnostic-head">
+        <div>
+          <strong id="actor-diagnostic-name">No actor selected</strong>
+          <span id="actor-diagnostic-kind"></span>
         </div>
-        <ol id="ledger-stream-events" class="ledger-stream-list"></ol>
-      </section>
-      <section>
-        <h2>Stats</h2>
-        <dl id="ledger-stream-stats" class="ledger-stream-stats"></dl>
-      </section>
-      <section>
-        <h2>Population</h2>
-        <ol id="ledger-stream-population" class="ledger-stream-list ledger-stream-population"></ol>
-      </section>
+        <button id="actor-diagnostic-close" type="button" aria-label="Close diagnostics">×</button>
+      </header>
+      <div id="actor-diagnostic-body" class="actor-diagnostic-body"></div>
     </aside>
+
+    <!-- Developer observatory: searchable tables of every actor and every
+         current blocker. Toggled from the quick links. -->
+    <div id="observatory" class="observatory" aria-label="Developer observatory" hidden>
+      <header class="observatory-head">
+        <strong>Observatory</strong>
+        <nav class="observatory-tabs">
+          <button type="button" class="observatory-tab is-active" data-observatory-tab="actors">Actors</button>
+          <button type="button" class="observatory-tab" data-observatory-tab="blockers">Blockers</button>
+          <button type="button" class="observatory-tab" data-observatory-tab="ledger">Ledger</button>
+          <button type="button" class="observatory-tab" data-observatory-tab="stats">Stats</button>
+          <button type="button" class="observatory-tab" data-observatory-tab="population">Population</button>
+        </nav>
+        <input id="observatory-search" type="search" placeholder="filter by name, state, blocker…" spellcheck="false" />
+        <span id="observatory-count" class="observatory-count"></span>
+        <button id="observatory-close" type="button" aria-label="Close observatory">×</button>
+      </header>
+      <!-- Table panes (Actors / Blockers) render into observatory-body. The
+           ledger, stats, and population panes keep their original ids so the
+           existing render functions in main.js drive them unchanged. -->
+      <div id="observatory-body" class="observatory-body"></div>
+      <!-- Ledger event browser: the searchable historical record. -->
+      <div id="observatory-pane-ledger" class="observatory-pane observatory-pane-ledger" hidden>
+        <div class="ledger-browser">
+          <div class="ledger-filters" role="group" aria-label="Ledger filters">
+            <input id="ledger-search" type="search" placeholder="search summary, type, payload…" spellcheck="false" />
+            <select id="ledger-filter-actor" aria-label="Filter by actor"></select>
+            <select id="ledger-filter-institution" aria-label="Filter by institution"></select>
+            <select id="ledger-filter-location" aria-label="Filter by location"></select>
+            <select id="ledger-filter-type" aria-label="Filter by event type"></select>
+            <select id="ledger-filter-contract" aria-label="Filter by contract"></select>
+            <select id="ledger-filter-service" aria-label="Filter by service or repair"></select>
+            <select id="ledger-filter-retention" aria-label="Filter by retention class">
+              <option value="">any retention</option>
+              <option value="ephemeral">ephemeral</option>
+              <option value="operational">operational</option>
+              <option value="durable">durable</option>
+            </select>
+            <select id="ledger-filter-visibility" aria-label="Filter by visibility state">
+              <option value="">any visibility</option>
+              <option value="public">public</option>
+              <option value="private">private</option>
+              <option value="restricted">restricted</option>
+              <option value="hidden">hidden</option>
+              <option value="encrypted">encrypted</option>
+              <option value="suppressed">suppressed</option>
+              <option value="falsified">falsified</option>
+              <option value="disputed">disputed</option>
+              <option value="partially-known">partially known</option>
+              <option value="discoverable">discoverable</option>
+            </select>
+            <select id="ledger-filter-range" aria-label="Filter by time range">
+              <option value="0">all time</option>
+              <option value="60">last minute</option>
+              <option value="300">last 5 minutes</option>
+              <option value="900">last 15 minutes</option>
+              <option value="3600">last hour</option>
+            </select>
+            <label class="ledger-toggle"><input id="ledger-only-causal" type="checkbox" /> causal links only</label>
+            <label class="ledger-toggle"><input id="ledger-only-durable" type="checkbox" /> durable only</label>
+            <select id="ledger-sort" aria-label="Sort order">
+              <option value="newest">newest first</option>
+              <option value="oldest">oldest first</option>
+            </select>
+            <button id="ledger-pause" type="button" class="quick-link-button">Pause</button>
+            <button id="ledger-reset-filters" type="button" class="quick-link-button">Clear</button>
+            <span id="ledger-count" class="observatory-count"></span>
+          </div>
+          <div class="ledger-split">
+            <div id="ledger-table-wrap" class="ledger-table-wrap"></div>
+            <aside id="ledger-detail" class="ledger-detail">
+              <p class="observatory-empty">Select an event to inspect its references, causes, and raw payload.</p>
+            </aside>
+          </div>
+        </div>
+      </div>
+      <div id="observatory-pane-stats" class="observatory-pane ledger-stream" hidden>
+        <section>
+          <h2>Stats</h2>
+          <dl id="ledger-stream-stats" class="ledger-stream-stats"></dl>
+        </section>
+      </div>
+      <div id="observatory-pane-population" class="observatory-pane ledger-stream" hidden>
+        <section>
+          <h2>Population</h2>
+          <ol id="ledger-stream-population" class="ledger-stream-list ledger-stream-population"></ol>
+        </section>
+      </div>
+    </div>
+
     <main class="game-shell">
       <div class="play-layout">
         <section class="component-stack">
@@ -777,6 +859,6 @@
 
     <div id="attention-callouts" class="attention-callouts" aria-hidden="true"></div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260728-2032-8e0cc22"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260729-2014-6808582"></script>
   </body>
 </html>

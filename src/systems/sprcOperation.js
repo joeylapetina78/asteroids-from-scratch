@@ -1,13 +1,14 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260728-2032-8e0cc22";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260728-2032-8e0cc22";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260728-2032-8e0cc22";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260728-2032-8e0cc22";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260728-2032-8e0cc22";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260728-2032-8e0cc22";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260728-2032-8e0cc22";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260728-2032-8e0cc22";
+import { depositCredits } from "./accounts.js?v=fresh-20260729-2014-6808582";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260729-2014-6808582";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260729-2014-6808582";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260729-2014-6808582";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260729-2014-6808582";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260729-2014-6808582";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260729-2014-6808582";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260729-2014-6808582";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260729-2014-6808582";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260729-2014-6808582";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260729-2014-6808582";
 
 export const SPRC = Object.freeze({
   actorId: "organization:sprc",
@@ -184,6 +185,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     assessOpenRepairs();
     assessOperatingPlan();
     repriceOpenProcurement();
+    publishInstitutionDiagnostic();
     restoreContractDefinitions();
     onChange(getSnapshot());
   }
@@ -280,6 +282,22 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       lastAttemptAt: now(),
     };
     appendHistory("repair.declined", { subjectId, issueType: payload.issueType, reason: match.reason, quotedPrice: record.quotedPrice, attempts: record.attempts });
+    // Diagnostics: the SUBJECT is deferred, and the blocker names the real
+    // reason plus what will let it through.
+    recordBlocker(state, subjectId, createBlocker({
+      kind: match.reason === "payer-cannot-afford" ? BLOCKER_KIND.PAYER_CANNOT_AFFORD : BLOCKER_KIND.AWAITING_SERVICE,
+      summary: `Service deferred (${match.reason})${record.quotedPrice ? ` at a quote of ${record.quotedPrice} cr` : ""}`,
+      subjectId,
+      objectId: sprc.institution.id,
+      waitingFor: match.reason === "payer-cannot-afford"
+        ? `the payer to hold ${record.quotedPrice} cr above its reserve`
+        : "SPRC capability, facility, or materials",
+      wakeOn: ["payer-balance-changed", "materials-delivered", "sprc-retry"],
+      nextReconsiderAt: now() + SERVICE_RETRY_INTERVAL_MS,
+      causedBy: match.reason === "payer-cannot-afford" ? [] : [{ actorId: sprc.institution.id, note: "SPRC cannot start the work yet" }],
+      detail: { reason: match.reason, quotedPrice: record.quotedPrice, availableCash: record.availableCash, attempts: record.attempts },
+      at: now(),
+    }), { state: DIAGNOSTIC_STATE.DEFERRED, at: now() });
     // Announce only the first deferral; retries stay quiet until something changes.
     if (!existing) {
       state.ledger.recordEvent("sprc.repairDeferred", {
@@ -913,6 +931,93 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
         reasons: [`No supplier took the work at ${previousPrice} cr/unit.`, ...valuation.reasons],
       }, { visible: true, message: `${sprc.controller?.name ?? "Sal"} raises ${order.procurementItemId} to ${nextPrice} cr/unit — no takers at ${previousPrice}.` });
     });
+  }
+
+  // Publish SPRC's own current explanation: what it is working on, what is
+  // holding it up, and what will move it. This is the node the ships' blocker
+  // chains point into, so it must name the real bottleneck.
+  function publishInstitutionDiagnostic() {
+    const institutionId = sprc.institution.id;
+    const repairs = sprc.repairQueue.map((id) => sprc.repairOrders[id]).filter(Boolean);
+    const active = repairs.find((repair) => repair.status === "repairing") ?? null;
+    const blockedRepair = repairs.find((repair) => ["waiting-stock", "waiting-production"].includes(repair.status)) ?? null;
+    const unfilled = Object.values(sprc.procurementOrders).filter((order) => ["offered", "active"].includes(order.status));
+    const deferredCount = Object.keys(sprc.deferredServiceRequests ?? {}).length;
+
+    let blocker = null;
+    let actorState = active ? DIAGNOSTIC_STATE.WORKING : DIAGNOSTIC_STATE.FREE;
+    let summary = active
+      ? `Repairing ${active.subjectId} for ${active.servicePrice} cr`
+      : `Idle: ${repairs.length} queued repair(s), ${unfilled.length} open purchase order(s)`;
+
+    if (blockedRepair) {
+      const missing = getRepairMissing(blockedRepair);
+      const missingItems = Object.entries(missing.items ?? {}).filter(([, amount]) => amount > 0);
+      // The order(s) that would unblock it, so the chain can continue. A
+      // missing PRODUCED part (hull-plate, machine-part) is relieved by orders
+      // for its recipe INPUTS, not by an order for the part itself — so prefer
+      // a direct match and otherwise treat every open order as a relief path.
+      const directOrders = unfilled.filter((order) => missingItems.some(([itemId]) => order.procurementItemId === itemId || order.acceptedMaterials?.[itemId]));
+      const relatedOrders = directOrders.length > 0 ? directOrders : unfilled;
+      const causes = relatedOrders.map((order) => ({
+        kind: BLOCKER_KIND.UNFILLED_ORDER,
+        summary: `${order.id} for ${order.requiredEquivalentUnits} ${order.procurementItemId} at ${order.pricePerEquivalent} cr/unit is unfilled (${order.deliveredEquivalentUnits} delivered)`,
+        subjectId: institutionId,
+        objectId: order.id,
+        waitingFor: "a supplier to deliver against the order",
+        wakeOn: ["material-delivered", "order-repriced"],
+        // Point at the supplier institution so its own blocker continues the chain.
+        causedBy: state.miningOperation ? [{ actorId: state.miningOperation.institution?.id, note: "no supplier has taken the order" }] : [],
+        at: now(),
+      }));
+
+      actorState = DIAGNOSTIC_STATE.WAITING;
+      summary = `Repair ${blockedRepair.id} is held for materials`;
+      blocker = createBlocker({
+        kind: missingItems.length ? BLOCKER_KIND.AWAITING_MATERIAL : BLOCKER_KIND.AWAITING_PRODUCTION,
+        summary: missingItems.length
+          ? `Short ${missingItems.map(([itemId, amount]) => `${amount} ${itemId}`).join(", ")} for ${blockedRepair.id}`
+          : `Waiting on the mill to finish parts for ${blockedRepair.id}`,
+        subjectId: institutionId,
+        objectId: blockedRepair.id,
+        waitingFor: missingItems.length ? missingItems.map(([itemId]) => itemId).join(", ") : "production to complete",
+        wakeOn: ["material-delivered", "production-completed"],
+        causedBy: causes,
+        detail: { missing: missing.items, repairStatus: blockedRepair.status },
+        at: now(),
+      });
+    }
+
+    recordDiagnostic(state, institutionId, {
+      actorName: sprc.actor?.name ?? "Scrap Porch Recovery Cooperative",
+      actorKind: "institution",
+      controllerId: sprc.institution.controllerInstitutionId,
+      state: actorState,
+      summary,
+      locationSiteId: sprc.institution.siteId,
+      intention: active ? { id: active.id, kind: "service", goal: `repair ${active.subjectId}`, objectId: active.id, contractId: null, reserved: active.reserved } : null,
+      blocker,
+      waitingFor: blocker?.waitingFor ?? null,
+      wakeOn: blocker?.wakeOn ?? ["maintenance.requested", "material-delivered"],
+      nextReconsiderAt: blocker ? now() + SERVICE_RETRY_INTERVAL_MS : null,
+      refs: {
+        contractIds: unfilled.map((order) => order.contractId).filter(Boolean),
+        targetIds: repairs.map((repair) => repair.subjectId),
+        dependencyIds: unfilled.map((order) => order.id),
+      },
+      detail: {
+        cash: Math.round(sprc.account.balance),
+        committed: Math.round(sprc.account.committed ?? 0),
+        protectedCash: sprc.operatingPlan.protectedCashReserve,
+        availableCash: Math.round(getSpendableCash()),
+        inventories: sprc.inventories,
+        openOrders: unfilled.length,
+        deferredRequests: deferredCount,
+        queuedRepairs: repairs.length,
+        berth: sprc.facilities.berthTwo.status,
+        mill: sprc.facilities.maw.activeProductionOrderId ? "busy" : "idle",
+      },
+    }, now());
   }
 
   function summarizeValuation(valuation) {
