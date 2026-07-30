@@ -1,4 +1,4 @@
-import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260728-2032-8e0cc22";
+import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260729-2014-6808582";
 
 // For now, routes are authored from existing world sites. Later this can become
 // the same data layer that powers trade lanes, missions, patrols, and piracy.

@@ -1,5 +1,5 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260728-2032-8e0cc22";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260728-2032-8e0cc22";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260729-2014-6808582";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260729-2014-6808582";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
