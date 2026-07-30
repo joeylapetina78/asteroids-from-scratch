@@ -1,9 +1,9 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-0650-ae6e94a";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-0650-ae6e94a";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-0650-ae6e94a";
-import { evaluateMiningJob } from "./valuation.js?v=fresh-20260730-0650-ae6e94a";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260730-0650-ae6e94a";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-0650-ae6e94a";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-0718-5f47a46";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-0718-5f47a46";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-0718-5f47a46";
+import { evaluateMiningJob } from "./valuation.js?v=fresh-20260730-0718-5f47a46";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260730-0718-5f47a46";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-0718-5f47a46";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
