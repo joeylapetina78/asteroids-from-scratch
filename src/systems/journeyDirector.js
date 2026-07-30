@@ -1,8 +1,8 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260730-0718-5f47a46";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260730-0718-5f47a46";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260730-0718-5f47a46";
-import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260730-0718-5f47a46";
-import { createMissionRunner } from "./missionRunner.js?v=fresh-20260730-0718-5f47a46";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260730-1748-485ac03";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260730-1748-485ac03";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260730-1748-485ac03";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260730-1748-485ac03";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260730-1748-485ac03";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),

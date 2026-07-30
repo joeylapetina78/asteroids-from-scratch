@@ -1,3 +1,5 @@
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260730-1748-485ac03";
+
 export const POWER_TYPES = Object.freeze({
   DEFINE_PLACE: "define-place",
   OWN_PROPERTY: "own-property",
@@ -112,6 +114,13 @@ export function limitsAllowAction(limits = {}, { action, rightType, assetId = nu
   }
 
   if (limits.resources && resourceType && !limits.resources.includes(resourceType)) {
+    return false;
+  }
+
+  // A right may be granted over a whole resource family rather than an
+  // enumerated list, so a grant stays correct when new materials are added to
+  // the family it covers.
+  if (limits.resourceFamilies && resourceType && !limits.resourceFamilies.includes(getResourceFamily(resourceType))) {
     return false;
   }
 

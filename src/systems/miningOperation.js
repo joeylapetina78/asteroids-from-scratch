@@ -1,9 +1,11 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-0718-5f47a46";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-0718-5f47a46";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-0718-5f47a46";
-import { evaluateMiningJob } from "./valuation.js?v=fresh-20260730-0718-5f47a46";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260730-0718-5f47a46";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-0718-5f47a46";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-1748-485ac03";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-1748-485ac03";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-1748-485ac03";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260730-1748-485ac03";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260730-1748-485ac03";
+import { evaluateMiningJob } from "./valuation.js?v=fresh-20260730-1748-485ac03";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260730-1748-485ac03";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-1748-485ac03";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
@@ -28,8 +30,6 @@ const MINING_ISSUES = Object.freeze([
   { issueType: "field-control-failure", requiredCapabilities: ["field-control"] },
   { issueType: "preventive-calibration", requiredCapabilities: ["field-control"] },
 ]);
-const NORMAL_WORK_WEAR = 0.125;
-const ACCELERATED_WORK_WEAR = 0.4;
 const MINING_SERVICE_PRICE = 220;
 const MINING_PROTECTED_CASH = 120;
 
@@ -83,6 +83,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   operation.wear ??= 0;
   operation.lastMaintenanceEventId ??= 0;
   operation.depositKnowledge ??= {};
+  operation.rightsDenied ??= {};
   operation.projects ??= { "cinder-four": { id: "cinder-four", name: "Commission Cinder Four", status: "planned", requiredCredits: EXPANSION_COST, demandSince: null, approvedAt: null, completedAt: null } };
   MINING_WORKER_DEFAULTS.forEach((defaults) => {
     operation.ships[defaults.id] ??= createWorkerRecord(defaults);
@@ -337,10 +338,44 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
 
   function getAvailableStandingOrders() {
     return STANDING_MINING_ORDERS.filter((order) => {
+      if (!mayPostMiningOrder(order)) return false;
       const alreadyAssigned = Object.values(operation.allocations).some((allocation) => allocation.orderId === order.id && allocation.status === "active");
       const buyer = state.logistics?.institutions?.[order.buyerInstitutionId];
       return !alreadyAssigned && (buyer?.accounts?.operating?.balance ?? 0) >= order.amount * order.paymentPerUnit;
     });
+  }
+
+  // A hub may only post mining demand for resource families it holds the right
+  // to. This defers entirely to the shared rule checker — no hub is named here,
+  // and moving a family between hubs is a data edit in the authority seeds.
+  //
+  // Denials are recorded ONCE per order, not per evaluation: this runs on every
+  // idle worker every tick, and an unconditional record here would flood the
+  // ledger the way the delivery rejections did.
+  function mayPostMiningOrder(order) {
+    const decision = canActorDoAction(state, {
+      actorId: order.buyerInstitutionId.startsWith("institution:") ? order.buyerInstitutionId : `institution:${order.buyerInstitutionId}`,
+      action: "mine",
+      placeId: `hub:${order.siteId}`,
+      resourceType: order.resourceId,
+      at: now(),
+    });
+    if (decision.allowed) {
+      delete operation.rightsDenied[order.id];
+      return true;
+    }
+    if (!operation.rightsDenied[order.id]) {
+      operation.rightsDenied[order.id] = { reason: decision.reason, at: now() };
+      record("institution.miningRightDenied", `${siteName(order.siteId)} cannot post mining demand for ${order.resourceName}: ${getResourceFamily(order.resourceId)} is outside the resource families it holds mining rights for.`, {
+        orderId: order.id,
+        buyerInstitutionId: order.buyerInstitutionId,
+        siteId: order.siteId,
+        resourceId: order.resourceId,
+        resourceFamily: getResourceFamily(order.resourceId),
+        reason: decision.reason,
+      });
+    }
+    return false;
   }
 
   function valueOrderForWorker(order, position) {
@@ -594,7 +629,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     allocation.completedAt = now();
     const shipRecord = operation.ships[ship.id];
     shipRecord.currentSiteId = siteId;
-    const workWear = state._devStartId ? ACCELERATED_WORK_WEAR : NORMAL_WORK_WEAR;
+    const workWear = getMiningWorkWear();
     shipRecord.wear = Math.min(1, (shipRecord.wear ?? 0) + workWear);
     operation.completedContracts += 1;
     operation.wear = Object.values(operation.ships).reduce((sum, record) => sum + (record.wear ?? 0), 0) / Object.keys(operation.ships).length;

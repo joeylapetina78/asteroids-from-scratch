@@ -344,9 +344,8 @@ test("sustained critical demand lets Cinder fund and commission a fourth worker"
   assert.equal(mining.getState().institution.accounts.operating.balance, 250);
 });
 
-test("accelerated development wear sends the oldest Cinder craft to service after its first completed job", () => {
+test("a worn Cinder craft is sent to service when a delivery crosses the wear threshold", () => {
   const state = createGameState();
-  state._devStartId = "panorama";
   state.logistics = createInitialLogisticsState(1_000);
   const game = { worldSites: [
     { id: "yard-exchange", position: { x: 380, y: -180 } },
@@ -355,6 +354,8 @@ test("accelerated development wear sends the oldest Cinder craft to service afte
   ], addWorkerShip: () => {} };
   const manager = createMiningOperation({ state, game, now: () => 1_000 });
   const worker = manager.worker;
+  // One routine delivery away from needing service.
+  manager.getState().ships[worker.id].wear = 0.98;
   worker.cargo[worker.assignment.resourceId] = worker.assignment.quantity;
   worker.deliver();
   assert.equal(manager.getState().ships[worker.id].maintenanceStatus, "returning-for-service");
@@ -444,7 +445,6 @@ test("a mining institution delivery conserves material and payment into freight 
 test("an unregistered Cinder craft receives paid technology service through SPRC's public capability", () => {
   let clock = 1_000;
   const state = createGameState();
-  state._devStartId = "accelerated-maintenance-test";
   state.logistics = createInitialLogisticsState(clock);
   const game = {
     worldSites: [
@@ -459,7 +459,8 @@ test("an unregistered Cinder craft receives paid technology service through SPRC
   const worker = mining.worker;
   const workerRecord = mining.getState().ships[worker.id];
   workerRecord.issueCount = 1;
-  workerRecord.wear = 0.2;
+  // Just under the threshold so routine deliveries carry it into service.
+  workerRecord.wear = 0.95;
   const minerCashBefore = mining.getState().institution.accounts.operating.balance;
   const sprcCashBefore = state.sprc.account.balance;
 

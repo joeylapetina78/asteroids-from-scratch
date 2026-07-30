@@ -265,14 +265,13 @@ test("a deferred repair records the deferral, the quote, and the retry time", ()
 
 test("a disabled worker points its blocker at the service provider", () => {
   const { state, game, sprc } = createWorld();
-  // Accelerated wear so two deliveries cross the maintenance threshold.
-  state._devStartId = "accelerated-maintenance-test";
   sprc.update();
   const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => 1_000 });
   const worker = mining.workers[0];
   const shipRecord = mining.getState().ships[worker.id];
   shipRecord.issueCount = 1;
-  shipRecord.wear = 0.2;
+  // Start just under the threshold so two routine deliveries cross it.
+  shipRecord.wear = 0.95;
 
   // Two completed deliveries push it over the wear threshold into service.
   for (let completed = 0; completed < 2; completed += 1) {

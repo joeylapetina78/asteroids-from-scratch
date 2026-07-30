@@ -1,7 +1,7 @@
-import { POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260730-0718-5f47a46";
-import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260730-0718-5f47a46";
-import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260730-0718-5f47a46";
-import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260730-0718-5f47a46";
+import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260730-1748-485ac03";
+import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260730-1748-485ac03";
+import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260730-1748-485ac03";
+import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260730-1748-485ac03";
 
 const RIGHT_TO_POWER = Object.freeze({
   [RIGHT_TYPES.TRANSIT]: POWER_TYPES.AUTHORIZE_WORK,
@@ -12,6 +12,31 @@ const RIGHT_TO_POWER = Object.freeze({
   [RIGHT_TYPES.TRADE]: POWER_TYPES.CONDUCT_COMMERCE,
   [RIGHT_TYPES.ENFORCEMENT]: POWER_TYPES.ENFORCE_RULES,
 });
+
+// Which resource families each institution may post mining demand for.
+//
+// This is the whole rule. Nothing downstream checks a hub by name: the seed
+// turns each row into an ordinary authority grant, and the existing rule
+// checker enforces it like any other right. Adding a hub, moving a family, or
+// granting a second family is a data edit here.
+//
+// The Scrap Porch hub institution is `scrap-forge`; SPRC is a separate
+// cooperative at the same site. SPRC's repair supply spans three families, so
+// it holds a broad grant rather than a single-family one — gating a
+// cooperative that buys copper, silicate, iron-nickel and aluminum to one
+// family would stop the repair economy dead.
+export const INSTITUTION_MINING_RIGHTS = Object.freeze([
+  { institutionId: "scrap-forge", placeId: "hub:scrap-porch", families: ["volatile"] },
+  { institutionId: "the-ledge", placeId: "hub:the-ledge", families: ["industrial"] },
+  { institutionId: "yard-exchange", placeId: "hub:yard-exchange", families: ["structural"] },
+  { institutionId: "sprc", placeId: "hub:scrap-porch", families: ["structural", "industrial", "conductor"] },
+]);
+
+const MINING_RIGHT_HUBS = Object.freeze([
+  { id: "hub:scrap-porch", sourceId: "scrap-porch", name: "Scrap Porch" },
+  { id: "hub:the-ledge", sourceId: "the-ledge", name: "The Ledge" },
+  { id: "hub:yard-exchange", sourceId: "yard-exchange", name: "Yard Exchange" },
+]);
 
 export function seedAuthorityFoundation(state) {
   upsertPlace(state, {
@@ -50,6 +75,40 @@ export function seedAuthorityFoundation(state) {
           regionRightStatus: right.status,
         },
       });
+    });
+  });
+
+  seedInstitutionMiningRights(state);
+}
+
+// Hubs become places so a mining right can be scoped to one, and each
+// institution gets a family-limited grant the shared rule checker enforces.
+function seedInstitutionMiningRights(state) {
+  MINING_RIGHT_HUBS.forEach((hub) => {
+    upsertPlace(state, {
+      id: hub.id,
+      type: PLACE_TYPES.HUB,
+      sourceId: hub.sourceId,
+      name: hub.name,
+      parentPlaceId: "system:first-reach",
+    });
+  });
+
+  INSTITUTION_MINING_RIGHTS.forEach((right) => {
+    const holderId = normalizeInstitutionId(right.institutionId);
+
+    upsertAuthorityGrant(state, {
+      id: `authority:${holderId}:${RIGHT_TYPES.MINING}:${right.placeId}`,
+      holderId,
+      powerType: RIGHT_TO_POWER[RIGHT_TYPES.MINING],
+      jurisdictionType: PLACE_TYPES.HUB,
+      jurisdictionId: right.placeId,
+      grantedById: "institution:frontier-regional-authority",
+      status: "active",
+      limits: {
+        rightTypes: [RIGHT_TYPES.MINING],
+        resourceFamilies: [...right.families],
+      },
     });
   });
 }

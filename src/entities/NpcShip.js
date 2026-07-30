@@ -1,5 +1,6 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260730-0718-5f47a46";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260730-0718-5f47a46";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260730-1748-485ac03";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260730-1748-485ac03";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260730-1748-485ac03";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -59,7 +60,6 @@ export class NpcShip {
     this.operationalStatus = "seeking-work";
     this.activeShipmentId = null;
     this.wear = 0;
-    this.wearMode = "normal";
     this.wearIssueCount = 0;
     this.carefulWearSinceIssue = 0;
     this.pendingWearIssue = null;
@@ -386,10 +386,10 @@ export class NpcShip {
     this.navigationMetrics.distanceTraveled += traveled;
     if (this.isCarefulMode) this.navigationMetrics.carefulDistance += traveled;
     if (this.operationalStatus === "available") {
-      const accelerated = this.wearMode === "accelerated";
-      const corridorWearRate = accelerated ? (this.isCarefulMode ? 0.00022 : 0.0001) : (this.isCarefulMode ? 0.000088 : 0.00004);
-      const openFieldWearRate = accelerated ? (this.isCarefulMode ? 0.00034 : 0.00016) : (this.isCarefulMode ? 0.000136 : 0.000064);
-      const wearIncrement = traveled * (this.activeCorridorId ? corridorWearRate : openFieldWearRate);
+      const wearIncrement = traveled * getTravelWearRate({
+        corridor: Boolean(this.activeCorridorId),
+        careful: this.isCarefulMode,
+      });
       this.wear += wearIncrement;
       if (this.isCarefulMode) this.carefulWearSinceIssue += wearIncrement;
       this.emitWearIssueIfNeeded();
