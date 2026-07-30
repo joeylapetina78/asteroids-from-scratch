@@ -428,3 +428,42 @@ test("the operation releases the allocation when an order can never accept the l
   const diagnostic = getDiagnostic(state, worker.id);
   assert.ok(diagnostic?.blocker, "the stranded worker is visible in diagnostics, not just the event feed");
 });
+
+// ── Aiming while station-keeping ───────────────────────────────────────────
+// A worker that brakes without turning freezes its heading on arrival. Because
+// firing needs the target inside a narrow arc, a worker that coasted in
+// sideways could never fire, never break the rock, and so never re-target.
+
+function miningWorkerOnAsteroid({ angle }) {
+  const worker = new MiningWorkerShip({ id: "worker:aim", name: "Aim Test", x: 0, y: 0, angle });
+  worker.assign({
+    allocationId: "a1", contractId: "c1", resourceId: "silicate", quantity: 3,
+    destination: { x: 5000, y: 5000 }, depositCandidates: [],
+  });
+  const asteroid = { position: { x: 130, y: 0 }, velocity: { x: 0, y: 0 }, radius: 50, resources: { silicate: 4 } };
+  const world = { asteroids: [asteroid], pickups: [], pullPickup: () => {}, collectPickup: () => null };
+  return { worker, world, asteroid };
+}
+
+test("a worker parked on a rock keeps turning onto its firing arc", () => {
+  // Arrives pointing 90 degrees off — the normal result of braking from a
+  // course that carried it past the rock.
+  const { worker, world } = miningWorkerOnAsteroid({ angle: Math.PI / 2 });
+  const distanceToRock = 130;
+  assert.ok(distanceToRock <= 250 * 0.72, "the worker is inside station-keeping range");
+
+  for (let step = 0; step < 200; step += 1) worker.update(1 / 60, world);
+
+  const bearing = Math.abs(worker.angle % (Math.PI * 2));
+  assert.ok(bearing < 0.16 || bearing > Math.PI * 2 - 0.16,
+    `worker should rotate onto the target bearing, ended at ${bearing.toFixed(3)} rad`);
+  assert.ok(worker.pendingShots.length > 0, "and actually fire, instead of sitting on a full rock");
+});
+
+test("station-keeping does not push the worker off the rock", () => {
+  const { worker, world } = miningWorkerOnAsteroid({ angle: Math.PI / 2 });
+  for (let step = 0; step < 200; step += 1) worker.update(1 / 60, world);
+  const drift = Math.hypot(worker.position.x, worker.position.y);
+  assert.ok(drift < 60, `holding station should not fly the worker away, drifted ${drift.toFixed(1)}`);
+  assert.equal(worker.state, "mining");
+});

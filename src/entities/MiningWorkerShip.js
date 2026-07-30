@@ -1,9 +1,12 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260730-0650-ae6e94a";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260730-0650-ae6e94a";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260730-0718-5f47a46";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260730-0718-5f47a46";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
 const MINING_ARC = 0.16;
+// How close a worker parks to the rock it is cutting. Inside this it holds
+// station and keeps rotating to stay on target rather than drifting off aim.
+const HOLD_RANGE = MINING_RANGE * 0.72;
 const SHOT_SPEED = 300;
 const COLLECT_RANGE = 34;
 const HOME_RANGE = 86;
@@ -112,7 +115,15 @@ export class MiningWorkerShip {
     const targetAngle = Math.atan2(this.targetAsteroid.position.y - this.position.y, this.targetAsteroid.position.x - this.position.x);
     const angleError = Math.abs(wrapAngle(targetAngle - this.angle));
     this.state = targetDistance <= MINING_RANGE ? "mining" : "outbound";
-    this.flyTo(deltaSeconds, this.targetAsteroid.position, MINING_RANGE * 0.72);
+    if (targetDistance <= HOLD_RANGE) {
+      // Station-keeping still has to track the rock. Braking alone freezes the
+      // heading, and a worker that coasted in sideways could then never satisfy
+      // MINING_ARC again: it would sit on a full asteroid forever, firing
+      // nothing, never breaking it, and so never re-targeting either.
+      this.holdAndAim(deltaSeconds, targetAngle);
+    } else {
+      this.flyTo(deltaSeconds, this.targetAsteroid.position, HOLD_RANGE);
+    }
     if (targetDistance <= MINING_RANGE && angleError <= MINING_ARC && this.fireCooldown === 0) {
       this.fireCooldown = 0.48;
       this.pendingShots.push(this.createShot());
@@ -166,6 +177,12 @@ export class MiningWorkerShip {
 
   brake(deltaSeconds) {
     advanceFlightBody(this, deltaSeconds, { turn: 0, thrust: false, brake: true }, FLIGHT);
+  }
+
+  // Hold position but keep turning onto the bearing. Asteroids drift, so a
+  // worker that stops tracking loses its firing arc even if it arrived aimed.
+  holdAndAim(deltaSeconds, targetAngle) {
+    advanceFlightBody(this, deltaSeconds, { turn: getTurnTowardAngle(this.angle, targetAngle), thrust: false, brake: true }, FLIGHT);
   }
 
   createShot() {
