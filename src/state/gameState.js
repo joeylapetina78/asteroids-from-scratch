@@ -1,13 +1,14 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260730-1748-485ac03";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260730-1748-485ac03";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260730-1748-485ac03";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260730-1748-485ac03";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260730-1748-485ac03";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260730-1748-485ac03";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260730-1748-485ac03";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260730-1748-485ac03";
-import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260730-1748-485ac03";
-import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260730-1748-485ac03";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260730-1853-344c233";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260730-1853-344c233";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260730-1853-344c233";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260730-1853-344c233";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260730-1853-344c233";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260730-1853-344c233";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260730-1853-344c233";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260730-1853-344c233";
+import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260730-1853-344c233";
+import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260730-1853-344c233";
+import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260730-1853-344c233";
 
 export function createGameState() {
   const state = {
@@ -49,6 +50,7 @@ export function createGameState() {
     worldRecords: createEmptyWorldRecords(),
     sprc: createInitialSprcState(),
     logistics: createInitialLogisticsState(),
+    population: createInitialPopulationState(),
     towing: createInitialTowServiceState(),
     cargoCustody: {
       holderEntityId: null,

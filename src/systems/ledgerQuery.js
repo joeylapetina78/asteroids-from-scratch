@@ -6,7 +6,7 @@
 // between events come only from explicit references or same-id structural
 // links; nothing is inferred from timestamps.
 
-import { classifyEvent, getRetentionClass, RETENTION_CLASS } from "./eventRetention.js?v=fresh-20260730-1748-485ac03";
+import { classifyEvent, getRetentionClass, RETENTION_CLASS } from "./eventRetention.js?v=fresh-20260730-1853-344c233";
 
 export const REFERENCE_KIND = Object.freeze({
   ACTOR: "actor",
@@ -33,6 +33,8 @@ const REFERENCE_FIELDS = Object.freeze({
   institutionId: { kind: REFERENCE_KIND.INSTITUTION, nameKeys: ["institutionName"] },
   carrierInstitutionId: { kind: REFERENCE_KIND.INSTITUTION, nameKeys: ["carrierName"] },
   buyerInstitutionId: { kind: REFERENCE_KIND.INSTITUTION, nameKeys: [] },
+  populationId: { kind: REFERENCE_KIND.INSTITUTION, nameKeys: [] },
+  hubInstitutionId: { kind: REFERENCE_KIND.INSTITUTION, nameKeys: [] },
   supplierInstitutionId: { kind: REFERENCE_KIND.INSTITUTION, nameKeys: [] },
   payerInstitutionId: { kind: REFERENCE_KIND.INSTITUTION, nameKeys: [] },
   issuerInstitutionId: { kind: REFERENCE_KIND.INSTITUTION, nameKeys: [] },

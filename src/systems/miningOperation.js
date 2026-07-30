@@ -1,11 +1,11 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-1748-485ac03";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-1748-485ac03";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-1748-485ac03";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260730-1748-485ac03";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260730-1748-485ac03";
-import { evaluateMiningJob } from "./valuation.js?v=fresh-20260730-1748-485ac03";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260730-1748-485ac03";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-1748-485ac03";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-1853-344c233";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-1853-344c233";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-1853-344c233";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260730-1853-344c233";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260730-1853-344c233";
+import { evaluateMiningJob } from "./valuation.js?v=fresh-20260730-1853-344c233";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260730-1853-344c233";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-1853-344c233";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
@@ -60,6 +60,13 @@ export function settleStandingMiningOrder({ state, orderId, resourceId, amount, 
   if ((buyer.accounts.operating.balance ?? 0) < payment) return null;
   buyer.inventories[resourceId] = (buyer.inventories[resourceId] ?? 0) + delivered;
   buyer.accounts.operating.balance -= payment;
+  // Book what the hub actually paid for this ore. Without it the hub's cost
+  // basis stays zero, so anything it builds from the ore looks like it cost
+  // only the conversion fee and it cannot price its own goods honestly.
+  recordAcquisition(state, {
+    institutionId: buyer.id, itemId: resourceId, units: delivered,
+    totalCost: payment, source: "standing-mining-order", at: now,
+  });
   if (supplierAccount) {
     supplierAccount.balance += payment;
     supplierAccount.transactions?.push({ id: `MIN-TX-${referenceId ?? now}`, at: now, type: "mining-income", amount: payment, balance: supplierAccount.balance, referenceId });

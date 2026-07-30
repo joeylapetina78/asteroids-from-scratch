@@ -74,6 +74,9 @@ const EXPLICIT_CLASSES = Object.freeze({
   "contract.deadlineExtended": RETENTION_CLASS.OPERATIONAL,
   "ship.panelConditionChanged": RETENTION_CLASS.OPERATIONAL,
   "ship.repairReserveEmpty": RETENTION_CLASS.OPERATIONAL,
+  "population.demandRaised": RETENTION_CLASS.OPERATIONAL,
+  "population.productionStarted": RETENTION_CLASS.OPERATIONAL,
+  "population.productionCompleted": RETENTION_CLASS.OPERATIONAL,
 
   // ── Durable history ──────────────────────────────────────────────────
   "sprc.repairCompleted": RETENTION_CLASS.DURABLE,
@@ -87,6 +90,10 @@ const EXPLICIT_CLASSES = Object.freeze({
   "ship.registered": RETENTION_CLASS.DURABLE,
   "title.lienAttached": RETENTION_CLASS.DURABLE,
   "contract.paid": RETENTION_CLASS.DURABLE,
+  // Money changing hands and goods leaving the world are both history.
+  "population.goodsPurchased": RETENTION_CLASS.DURABLE,
+  "population.goodsConsumed": RETENTION_CLASS.DURABLE,
+  "population.incomeReceived": RETENTION_CLASS.DURABLE,
   "contract.expired": RETENTION_CLASS.DURABLE,
   "legal.zoneFlag": RETENTION_CLASS.DURABLE,
   "institution.action": RETENTION_CLASS.DURABLE,
@@ -104,6 +111,7 @@ const PREFIX_CLASSES = Object.freeze([
   ["sprc.", RETENTION_CLASS.OPERATIONAL],
   ["institution.", RETENTION_CLASS.OPERATIONAL],
   ["contract.", RETENTION_CLASS.OPERATIONAL],
+  ["population.", RETENTION_CLASS.OPERATIONAL],
 ]);
 
 export function getRetentionClass(eventType) {
