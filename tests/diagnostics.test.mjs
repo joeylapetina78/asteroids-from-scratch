@@ -23,6 +23,7 @@ import { createGameState } from "../src/state/gameState.js";
 import { createSprcOperation, SPRC } from "../src/systems/sprcOperation.js";
 import { createMiningOperation } from "../src/systems/miningOperation.js";
 import { createInitialLogisticsState, createLogisticsManager } from "../src/systems/logistics.js";
+import { MiningWorkerShip } from "../src/entities/MiningWorkerShip.js";
 
 // ── Shape and querying ─────────────────────────────────────────────────────
 
@@ -307,4 +308,123 @@ test("completing service clears the blocker and returns the actor to available",
   assert.equal(record.blocker, null, "the blocker is cleared");
   assert.ok([DIAGNOSTIC_STATE.FREE, DIAGNOSTIC_STATE.COMMITTED].includes(record.state), `returned to service (got ${record.state})`);
   assert.equal(listBlocked(state).some((entry) => entry.actorId === worker.id), false, "and it leaves the blocked list");
+});
+
+// ── Refused delivery: no frame spam, no stranded worker ────────────────────
+// Regression cover for a livelock that filled 5972 of 6000 ledger slots with a
+// single event type, destroying all other history, while the worker sat holding
+// cargo for an order that would never accept it.
+
+function createWorkerHarness({ onDelivery }) {
+  const events = [];
+  const worker = new MiningWorkerShip({
+    id: "worker:test", name: "Test Worker", institutionId: "miner:test", controllerInstitutionId: "person:test",
+    x: 0, y: 0,
+    onEvent: (type, payload) => events.push({ type, payload }),
+    onDelivery,
+  });
+  worker.assign({
+    allocationId: "alloc-1", contractId: "contract:TEST-1", resourceId: "iron-nickel",
+    quantity: 6, harvestTargetQuantity: 6, destination: { x: 0, y: 0 }, depositCandidates: [],
+  });
+  worker.cargo["iron-nickel"] = 6;
+  return { worker, events };
+}
+
+// Drive the ship's own update loop at the destination, which is what invoked
+// deliver() every frame.
+function runFrames(worker, frames, deltaSeconds = 1 / 60) {
+  const world = { pickups: [], asteroids: [], collectPickup: () => null };
+  for (let frame = 0; frame < frames; frame += 1) worker.update(deltaSeconds, world);
+}
+
+test("a transient refusal is reported once, not once per frame", () => {
+  const { worker, events } = createWorkerHarness({
+    onDelivery: () => ({ acceptedUnits: 0, paid: 0, refusal: { reason: "buyer-cannot-fund", permanent: false } }),
+  });
+
+  runFrames(worker, 120); // two seconds at 60fps
+  const rejected = events.filter((entry) => entry.type === "delivery.rejected");
+  assert.equal(rejected.length, 1, `expected a single report, got ${rejected.length}`);
+  assert.equal(worker.state, "delivery-blocked");
+  assert.ok(worker.assignment, "a transient refusal keeps the commitment");
+  assert.equal(rejected[0].payload.reason, "buyer-cannot-fund");
+  assert.ok(rejected[0].payload.retryInSeconds > 0, "the retry delay is stated");
+});
+
+test("a transient refusal retries after the backoff, not before", () => {
+  let attempts = 0;
+  const { worker } = createWorkerHarness({
+    onDelivery: () => {
+      attempts += 1;
+      return { acceptedUnits: 0, paid: 0, refusal: { reason: "buyer-cannot-fund", permanent: false } };
+    },
+  });
+
+  runFrames(worker, 60); // 1 second — inside the backoff
+  assert.equal(attempts, 1, "no retry while backing off");
+  runFrames(worker, 60 * 6); // past the 5s window
+  assert.ok(attempts >= 2, "it does try again once the window passes");
+  assert.ok(attempts < 10, `retries stay throttled (saw ${attempts})`);
+});
+
+test("a permanent refusal releases the assignment and keeps the cargo", () => {
+  const { worker, events } = createWorkerHarness({
+    onDelivery: () => ({ acceptedUnits: 0, paid: 0, refusal: { reason: "order-paid", permanent: true } }),
+  });
+
+  runFrames(worker, 120);
+
+  assert.equal(worker.assignment, null, "the dead commitment is dropped");
+  assert.equal(worker.cargo["iron-nickel"], 6, "the mined material is retained, not destroyed");
+  assert.equal(worker.state, "idle", "the worker is free to take other work");
+  const abandoned = events.filter((entry) => entry.type === "delivery.abandoned");
+  assert.equal(abandoned.length, 1, "reported exactly once");
+  assert.equal(abandoned[0].payload.reason, "order-paid");
+  assert.equal(abandoned[0].payload.cargoRetained, 6);
+  assert.equal(events.filter((entry) => entry.type === "delivery.rejected").length, 0,
+    "a permanent refusal is an abandonment, not a rejection to retry");
+});
+
+test("a successful delivery still completes and clears any prior block", () => {
+  let accept = false;
+  const { worker, events } = createWorkerHarness({
+    onDelivery: () => (accept
+      ? { acceptedUnits: 6, paid: 120 }
+      : { acceptedUnits: 0, paid: 0, refusal: { reason: "buyer-cannot-fund", permanent: false } }),
+  });
+
+  runFrames(worker, 30);
+  assert.equal(worker.state, "delivery-blocked");
+  accept = true;
+  runFrames(worker, 60 * 6);
+
+  assert.equal(worker.assignment, null);
+  assert.equal(worker.deliveryBlock, null, "the block is cleared on success");
+  assert.equal(worker.cargo["iron-nickel"], 0, "the load was handed over");
+  assert.equal(events.filter((entry) => entry.type === "delivery.completed").length, 1);
+});
+
+test("the operation releases the allocation when an order can never accept the load", () => {
+  const { state, game, sprc } = createWorld();
+  sprc.update();
+  const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => 1_000 });
+  const worker = mining.workers.find((entry) => entry.assignment?.contractId?.startsWith("contract:SPRC"));
+  if (!worker) return; // no SPRC allocation this run; the unit tests above cover the path
+
+  const allocationId = worker.assignment.allocationId;
+  const order = Object.values(state.sprc.procurementOrders).find((entry) => entry.contractId === worker.assignment.contractId);
+  // Someone else filled and closed the order while this worker was inbound.
+  order.deliveredEquivalentUnits = order.requiredEquivalentUnits;
+  order.status = "paid";
+
+  worker.cargo[worker.assignment.resourceId] = worker.assignment.harvestTargetQuantity;
+  worker.deliver();
+
+  assert.equal(worker.assignment, null, "the worker is released");
+  assert.ok(worker.cargo[Object.keys(worker.cargo)[0]] > 0, "and keeps what it mined");
+  assert.equal(mining.getState().allocations[allocationId].status, "released",
+    "the allocation returns its reserved units to the order");
+  const diagnostic = getDiagnostic(state, worker.id);
+  assert.ok(diagnostic?.blocker, "the stranded worker is visible in diagnostics, not just the event feed");
 });

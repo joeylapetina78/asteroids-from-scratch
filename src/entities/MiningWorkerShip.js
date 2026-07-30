@@ -1,5 +1,5 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260729-2014-6808582";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260729-2014-6808582";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260730-0650-ae6e94a";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260730-0650-ae6e94a";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
@@ -7,6 +7,9 @@ const MINING_ARC = 0.16;
 const SHOT_SPEED = 300;
 const COLLECT_RANGE = 34;
 const HOME_RANGE = 86;
+// How long a worker waits before re-offering a load a buyer just refused for a
+// transient reason. Without this the arrival callback retries every frame.
+const DELIVERY_RETRY_SECONDS = 5;
 const TRACTOR_RANGE = 440;
 const TRACTOR_FORCE = 760;
 
@@ -26,6 +29,7 @@ export class MiningWorkerShip {
     this.isThrusting = false;
     this.state = "idle";
     this.assignment = null;
+    this.deliveryBlock = null;
     this.serviceReturn = null;
     this.miningDisabled = false;
     this.targetAsteroid = null;
@@ -66,9 +70,13 @@ export class MiningWorkerShip {
     if (!this.assignment) return this.brake(deltaSeconds);
 
     if (this.cargoAmount() >= this.assignment.harvestTargetQuantity) {
-      this.state = "returning";
+      // Stay reported as blocked while waiting out a refusal, otherwise this
+      // would flip back to "returning" every frame and hide the block from the
+      // observatory and from anything else reading the state.
+      const waitingOutRefusal = this.deliveryBlock && this.pulse < this.deliveryBlock.retryAt;
+      this.state = waitingOutRefusal ? "delivery-blocked" : "returning";
       this.targetAsteroid = null;
-      return this.flyTo(deltaSeconds, this.assignment.destination, HOME_RANGE, () => this.deliver());
+      return this.flyTo(deltaSeconds, this.assignment.destination, HOME_RANGE, () => this.tryDeliver());
     }
 
     const pickup = nearest(world.pickups.filter((item) => this.canRecoverPickup(item) && normalizeResourceType(item.type) === this.assignment.resourceId), this.position);
@@ -175,6 +183,25 @@ export class MiningWorkerShip {
   consumeShots() { const shots = this.pendingShots; this.pendingShots = []; return shots; }
   cargoAmount() { return this.cargo[this.assignment?.resourceId] ?? 0; }
 
+  // Hand the assignment back but KEEP the cargo. The load stays aboard as
+  // uncommitted material the worker can sell or re-target, rather than being
+  // destroyed or held hostage by a contract that will never accept it.
+  releaseAssignment(reason = "released") {
+    const assignment = this.assignment;
+    if (!assignment) return null;
+    this.assignment = null;
+    this.deliveryBlock = null;
+    this.state = "idle";
+    return { ...assignment, reason };
+  }
+
+  // `flyTo` invokes its arrival callback every frame while inside stopRange, so
+  // this is the throttle: a refused delivery must not be retried per frame.
+  tryDeliver() {
+    if (this.deliveryBlock && this.pulse < this.deliveryBlock.retryAt) return;
+    this.deliver();
+  }
+
   deliver() {
     const assignment = this.assignment;
     const amount = this.cargoAmount();
@@ -182,15 +209,53 @@ export class MiningWorkerShip {
     const result = this.onDelivery({ ...assignment, amount, ship: this }) ?? { acceptedUnits: 0, paid: 0 };
     const acceptedUnits = Math.min(amount, Math.max(0, result.acceptedUnits ?? 0));
     if (acceptedUnits <= 0) {
-      this.state = "delivery-blocked";
-      this.onEvent("delivery.rejected", { contractId: assignment.contractId, resourceId: assignment.resourceId, quantity: amount });
+      this.handleRefusedDelivery(assignment, amount, result.refusal ?? null);
       return;
     }
+    this.deliveryBlock = null;
     const surplusSoldUnits = Math.min(amount - acceptedUnits, Math.max(0, result.surplusSoldUnits ?? 0));
     this.cargo[assignment.resourceId] = Math.max(0, amount - acceptedUnits - surplusSoldUnits);
     this.assignment = null;
     this.state = "idle";
     this.onEvent("delivery.completed", { contractId: assignment.contractId, resourceId: assignment.resourceId, quantity: acceptedUnits, paid: result.paid ?? 0 });
+  }
+
+  // A buyer refused the load. Report it ONCE per episode, then either wait for
+  // a transient condition to clear or, if the refusal is permanent, give the
+  // assignment back so the worker is not stranded holding unwanted cargo.
+  handleRefusedDelivery(assignment, amount, refusal) {
+    const reason = refusal?.reason ?? "delivery-refused";
+    const permanent = Boolean(refusal?.permanent);
+
+    if (permanent) {
+      // completeDelivery has already returned the allocation; drop the
+      // commitment and keep the material.
+      this.releaseAssignment(reason);
+      this.onEvent("delivery.abandoned", {
+        contractId: assignment.contractId,
+        resourceId: assignment.resourceId,
+        quantity: amount,
+        reason,
+        cargoRetained: amount,
+      });
+      return;
+    }
+
+    this.state = "delivery-blocked";
+    const alreadyReported = this.deliveryBlock?.reason === reason;
+    this.deliveryBlock = {
+      reason,
+      retryAt: this.pulse + DELIVERY_RETRY_SECONDS,
+      attempts: (this.deliveryBlock?.attempts ?? 0) + 1,
+    };
+    if (alreadyReported) return;
+    this.onEvent("delivery.rejected", {
+      contractId: assignment.contractId,
+      resourceId: assignment.resourceId,
+      quantity: amount,
+      reason,
+      retryInSeconds: DELIVERY_RETRY_SECONDS,
+    });
   }
 
   draw(context, camera) {

@@ -1,9 +1,9 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260729-2014-6808582";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260729-2014-6808582";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260729-2014-6808582";
-import { evaluateMiningJob } from "./valuation.js?v=fresh-20260729-2014-6808582";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260729-2014-6808582";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260729-2014-6808582";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-0650-ae6e94a";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-0650-ae6e94a";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-0650-ae6e94a";
+import { evaluateMiningJob } from "./valuation.js?v=fresh-20260730-0650-ae6e94a";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260730-0650-ae6e94a";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-0650-ae6e94a";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
@@ -484,12 +484,55 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     record("mining.expansionCompleted", `${operation.controller.name} commissioned Cinder Four for ${project.requiredCredits} cr; the new worker entered service at Scrap Porch.`, { projectId: project.id, shipInstitutionId: shipRecord.id, shipName: shipRecord.name, cost: project.requiredCredits, accountBalance: account.balance });
   }
 
+  // A refusal the worker can do nothing about: hand the allocation back so its
+  // reserved units return to the order, and tell the worker to drop the
+  // commitment (it keeps the cargo as uncommitted material).
+  function refusePermanently(allocation, ship, reason) {
+    if (allocation && allocation.status === "active") {
+      allocation.status = "released";
+      allocation.releasedAt = now();
+      allocation.outcomeReason = reason;
+    }
+    const released = ship?.releaseAssignment?.(reason) ?? null;
+    if (released && allocation) {
+      record("mining.deliveryAbandoned", `${ship.name} could not deliver ${allocation.orderId} (${formatRefusal(reason)}); the load stays aboard as uncommitted cargo.`, {
+        shipInstitutionId: ship.id, shipName: ship.name, orderId: allocation.orderId,
+        allocationId: allocation.id, reason, resourceId: released.resourceId,
+      });
+      const shipRecord = operation.ships[ship.id];
+      if (shipRecord) {
+        recordWorkerIdentity(ship, shipRecord);
+        recordBlocker(state, ship.id, createBlocker({
+          kind: BLOCKER_KIND.NO_ELIGIBLE_WORK,
+          summary: `${ship.name} is holding uncommitted ${released.resourceId} that ${allocation.orderId} would not accept (${formatRefusal(reason)})`,
+          subjectId: ship.id,
+          objectId: allocation.orderId,
+          waitingFor: "a buyer for the cargo already aboard, or new work",
+          wakeOn: ["order-posted", "order-repriced", "cargo-sold"],
+          detail: { reason, orderId: allocation.orderId, resourceId: released.resourceId },
+          at: now(),
+        }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+      }
+    }
+    return { acceptedUnits: 0, paid: 0, refusal: { reason, permanent: true } };
+  }
+
+  function refuseForNow(reason) {
+    return { acceptedUnits: 0, paid: 0, refusal: { reason, permanent: false } };
+  }
+
+  function formatRefusal(reason) {
+    return String(reason).replaceAll("-", " ");
+  }
+
   function completeDelivery({ allocationId, contractId, resourceId, amount, ship }) {
     const allocation = operation.allocations[allocationId];
-    if (!allocation || allocation.status !== "active") return { acceptedUnits: 0, paid: 0 };
+    // The allocation is gone or already closed — nothing will ever accept this
+    // load against it.
+    if (!allocation || allocation.status !== "active") return refusePermanently(allocation, ship, "allocation-closed");
     if (allocation.orderKind === "sprc") {
       const procurement = state.sprc?.procurementOrders?.[allocation.orderId];
-      if (!procurement) return { acceptedUnits: 0, paid: 0 };
+      if (!procurement) return refusePermanently(allocation, ship, "order-missing");
       const result = sprcOperation.deliverMaterial({
         contractId, materialId: resourceId, amount: Math.min(amount, allocation.amount), supplierInstitutionId: operation.institution.id,
         creditSupplier: (payment) => {
@@ -497,15 +540,30 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
           operation.institution.accounts.operating.transactions.push({ id: `MIN-TX-${allocation.id}`, at: now(), type: "mining-income", amount: payment, balance: operation.institution.accounts.operating.balance, referenceId: allocation.id });
         },
       });
-      if (!result?.acceptedUnits) return { acceptedUnits: 0, paid: 0 };
+      if (!result?.acceptedUnits) {
+        // An order that is finished, expired, or already full will never take
+        // this load; anything else may clear on its own.
+        const closed = ["paid", "expired", "canceled", "payment-shortfall"].includes(procurement.status);
+        const full = procurement.deliveredEquivalentUnits >= procurement.requiredEquivalentUnits;
+        return closed || full
+          ? refusePermanently(allocation, ship, closed ? `order-${procurement.status}` : "order-already-filled")
+          : refuseForNow("order-not-accepting");
+      }
       finishDelivery({ allocation, ship, siteId: procurement.destinationSiteId, resourceId, delivered: result.acceptedUnits, payment: result.paid, orderLabel: procurement.id });
       const surplusSoldUnits = sellSurplusAtHub({ ship, siteId: procurement.destinationSiteId, resourceId, acceptedUnits: result.acceptedUnits });
       return { ...result, surplusSoldUnits };
     }
     const order = STANDING_MINING_ORDERS.find((candidate) => candidate.id === contractId);
-    if (!order) return { acceptedUnits: 0, paid: 0 };
+    if (!order) return refusePermanently(allocation, ship, "order-missing");
     const settlement = settleStandingMiningOrder({ state, orderId: contractId, resourceId, amount: Math.min(amount, allocation.amount), supplierAccount: operation.institution.accounts.operating, referenceId: allocation.id, now: now() });
-    if (!settlement) return { acceptedUnits: 0, paid: 0 };
+    if (!settlement) {
+      // A standing order only fails to settle when the buyer cannot fund it or
+      // the material does not match. Funding can recover; a mismatch cannot.
+      const mismatched = order.resourceId !== resourceId;
+      return mismatched
+        ? refusePermanently(allocation, ship, "resource-mismatch")
+        : refuseForNow("buyer-cannot-fund");
+    }
     const { delivered, payment } = settlement;
     finishDelivery({ allocation, ship, siteId: order.siteId, resourceId, delivered, payment, orderLabel: order.id });
     const surplusSoldUnits = sellSurplusAtHub({ ship, siteId: order.siteId, resourceId, acceptedUnits: delivered });
