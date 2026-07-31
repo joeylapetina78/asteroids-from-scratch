@@ -10,9 +10,9 @@
 // draws from a family and substitutes freely within it. A hub does not need
 // iron-nickel specifically; it needs structural material.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260730-2000-278126d";
-import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260730-2000-278126d";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260730-2000-278126d";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260730-2038-909a1a1";
+import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260730-2038-909a1a1";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260730-2038-909a1a1";
 
 // How many seconds of consumption a hub tries to keep on the shelf. Higher
 // means fatter buffers and less frequent, larger orders.
@@ -81,14 +81,30 @@ export function getFamilyIncoming(state, hubInstitutionId, family) {
   return fromMining + fromFreight;
 }
 
+// Units this hub has agreed to sell to another hub and not yet delivered.
+//
+// Read straight off state rather than importing the procurement module, which
+// depends on this one. An accepted sale raises the supplier's own target, and
+// that is precisely what makes it commission more mining: it digs for a sale it
+// agreed to, not because an authored order said so.
+export function getCommittedSales(state, hubInstitutionId, family) {
+  return Object.values(state.hubProcurement?.orders ?? {})
+    .filter((order) => order.supplierInstitutionId === hubInstitutionId
+      && order.family === family
+      && ["accepted", "ready"].includes(order.status))
+    .reduce((sum, order) => sum + Math.max(0, (order.units ?? 0) - (order.deliveredUnits ?? 0)), 0);
+}
+
 // The full picture for one hub and one family: what it holds, what is coming,
-// what it wants, and the gap that justifies an order.
+// what it owes, what it wants, and the gap that justifies an order.
 export function getInventoryPosition(state, hubInstitutionId, family, coverageSeconds = TARGET_COVERAGE_SECONDS) {
   const hub = state.logistics?.institutions?.[hubInstitutionId] ?? null;
-  const target = getFamilyTargets(hubInstitutionId, coverageSeconds)[family] ?? 0;
+  const ownTarget = getFamilyTargets(hubInstitutionId, coverageSeconds)[family] ?? 0;
+  const committedSales = getCommittedSales(state, hubInstitutionId, family);
+  const target = ownTarget + committedSales;
   const onHand = getFamilyOnHand(hub, family);
   const incoming = getFamilyIncoming(state, hubInstitutionId, family);
-  return { family, target, onHand, incoming, gap: Math.max(0, target - onHand - incoming) };
+  return { family, target, ownTarget, committedSales, onHand, incoming, gap: Math.max(0, target - onHand - incoming) };
 }
 
 // Families this hub may commission extraction for.

@@ -1,12 +1,12 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-2000-278126d";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-2000-278126d";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-2000-278126d";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260730-2000-278126d";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260730-2000-278126d";
-import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260730-2000-278126d";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260730-2000-278126d";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260730-2000-278126d";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-2000-278126d";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-2038-909a1a1";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-2038-909a1a1";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-2038-909a1a1";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260730-2038-909a1a1";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260730-2038-909a1a1";
+import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260730-2038-909a1a1";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260730-2038-909a1a1";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260730-2038-909a1a1";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-2038-909a1a1";
 
 // Authored identity only: which hub buys which material at which site, and the
 // reference price. Quantity and price are NOT taken from here any more — see

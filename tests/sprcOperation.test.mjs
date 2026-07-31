@@ -828,12 +828,19 @@ test("failed route execution cannot commit inventory, custody, or payment", () =
   assert.equal(harness.state.logistics.institutions["scrap-forge"].accounts.operating.committed, committedBefore);
 });
 
-test("haulers wait instead of fabricating freight when a source inventory is empty", () => {
+test("haulers wait instead of fabricating freight when no source has stock", () => {
   const harness = createLogisticsHarness();
-  harness.state.logistics.institutions["yard-exchange"].inventories["iron-nickel"] = 0;
+  // Haulers may now take work from either end of a relationship, so emptying
+  // one shelf only sends them elsewhere. The invariant under test is that
+  // freight is never conjured from stock that does not exist.
+  Object.values(harness.state.logistics.institutions).forEach((institution) => {
+    if (institution.inventories) Object.keys(institution.inventories).forEach((itemId) => { institution.inventories[itemId] = 0; });
+  });
   harness.manager.update();
-  assert.equal(Object.values(harness.state.logistics.shipments).some((shipment) => shipment.assigneeId === "hauler-yard-scrap"), false);
-  assert.equal(harness.state.logistics.institutions["yard-exchange"].inventories["iron-nickel"], 0);
+  assert.equal(Object.keys(harness.state.logistics.shipments).length, 0, "nothing was shipped");
+  Object.values(harness.state.logistics.institutions).forEach((institution) => {
+    Object.values(institution.inventories ?? {}).forEach((units) => assert.equal(units, 0, "and no stock appeared"));
+  });
 });
 
 test("NPC haulers move only with real conserved standing shipments", () => {
