@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260731-1824-94364a5" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260731-1848-975f9ca" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260731-1824-94364a5</span>
+      <span class="build-tag">build: fresh-20260731-1848-975f9ca</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -109,6 +109,13 @@
         <div class="contract-filters" role="group" aria-label="Contract filters">
           <input id="contract-search" type="search" placeholder="search title, party, material…" spellcheck="false" />
           <select id="contract-filter-party" aria-label="Filter by actor or institution"></select>
+          <select id="contract-filter-state" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option value="available">Up for grabs</option>
+            <option value="taken">Being worked</option>
+            <option value="blocked">Stuck</option>
+            <option value="done">Completed</option>
+          </select>
           <select id="contract-filter-kind" aria-label="Filter by contract kind">
             <option value="">All kinds</option>
             <option value="extraction">Extraction</option>
@@ -119,7 +126,7 @@
           </select>
           <span id="contract-board-summary" class="contract-summary"></span>
         </div>
-        <div id="contract-groups" class="contract-groups"></div>
+        <div id="contract-table" class="contract-table-wrap"></div>
       </div>
       <div id="observatory-pane-ledger" class="observatory-pane observatory-pane-ledger" hidden>
         <div class="ledger-browser">
@@ -878,6 +885,6 @@
 
     <div id="attention-callouts" class="attention-callouts" aria-hidden="true"></div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260731-1824-94364a5"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260731-1848-975f9ca"></script>
   </body>
 </html>

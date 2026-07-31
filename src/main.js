@@ -1,45 +1,45 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260731-1824-94364a5";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260731-1824-94364a5";
-import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260731-1824-94364a5";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260731-1824-94364a5";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260731-1824-94364a5";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260731-1824-94364a5";
-import { Game } from "./game.js?v=fresh-20260731-1824-94364a5";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260731-1824-94364a5";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260731-1824-94364a5";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260731-1824-94364a5";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260731-1824-94364a5";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260731-1848-975f9ca";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260731-1848-975f9ca";
+import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260731-1848-975f9ca";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260731-1848-975f9ca";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260731-1848-975f9ca";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260731-1848-975f9ca";
+import { Game } from "./game.js?v=fresh-20260731-1848-975f9ca";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260731-1848-975f9ca";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260731-1848-975f9ca";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260731-1848-975f9ca";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260731-1848-975f9ca";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260731-1824-94364a5";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260731-1824-94364a5";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260731-1824-94364a5";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260731-1824-94364a5";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260731-1824-94364a5";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260731-1824-94364a5";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260731-1824-94364a5";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260731-1824-94364a5";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260731-1824-94364a5";
-import { Processor } from "./systems/processor.js?v=fresh-20260731-1824-94364a5";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260731-1824-94364a5";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260731-1824-94364a5";
-import { createGameState } from "./state/gameState.js?v=fresh-20260731-1824-94364a5";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260731-1824-94364a5";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260731-1824-94364a5";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260731-1824-94364a5";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260731-1824-94364a5";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260731-1824-94364a5";
-import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260731-1824-94364a5";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260731-1824-94364a5";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260731-1824-94364a5";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260731-1824-94364a5";
-import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260731-1824-94364a5";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260731-1824-94364a5";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260731-1824-94364a5";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260731-1824-94364a5";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260731-1848-975f9ca";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260731-1848-975f9ca";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260731-1848-975f9ca";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260731-1848-975f9ca";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260731-1848-975f9ca";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260731-1848-975f9ca";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260731-1848-975f9ca";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260731-1848-975f9ca";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260731-1848-975f9ca";
+import { Processor } from "./systems/processor.js?v=fresh-20260731-1848-975f9ca";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260731-1848-975f9ca";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260731-1848-975f9ca";
+import { createGameState } from "./state/gameState.js?v=fresh-20260731-1848-975f9ca";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260731-1848-975f9ca";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260731-1848-975f9ca";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260731-1848-975f9ca";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260731-1848-975f9ca";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260731-1848-975f9ca";
+import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260731-1848-975f9ca";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260731-1848-975f9ca";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260731-1848-975f9ca";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260731-1848-975f9ca";
+import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260731-1848-975f9ca";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260731-1848-975f9ca";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260731-1848-975f9ca";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260731-1848-975f9ca";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -6211,23 +6211,52 @@ document.querySelectorAll(".observatory-tab").forEach((tab) => {
 const contractSearch = document.querySelector("#contract-search");
 const contractFilterParty = document.querySelector("#contract-filter-party");
 const contractFilterKind = document.querySelector("#contract-filter-kind");
+const contractFilterState = document.querySelector("#contract-filter-state");
 const contractBoardSummary = document.querySelector("#contract-board-summary");
-const contractGroups = document.querySelector("#contract-groups");
+const contractTable = document.querySelector("#contract-table");
 
-const CONTRACT_GROUPS = [
-  [CONTRACT_STATE.AVAILABLE, "Up for grabs", "Posted, and nobody has taken it."],
-  [CONTRACT_STATE.TAKEN, "Being worked", "Somebody has committed to it."],
-  [CONTRACT_STATE.BLOCKED, "Stuck", "Posted but unable to proceed."],
-  [CONTRACT_STATE.DONE, "Completed", "Finished and settled."],
-];
+const CONTRACT_STATE_LABELS = {
+  [CONTRACT_STATE.AVAILABLE]: "Up for grabs",
+  [CONTRACT_STATE.TAKEN]: "Being worked",
+  [CONTRACT_STATE.BLOCKED]: "Stuck",
+  [CONTRACT_STATE.DONE]: "Completed",
+};
 
-[contractSearch, contractFilterParty, contractFilterKind].forEach((control) => {
+// Sort so the board reads as a priority list: what nobody has taken first,
+// then what is stuck, then live work, then history.
+const CONTRACT_STATE_ORDER = [CONTRACT_STATE.AVAILABLE, CONTRACT_STATE.BLOCKED, CONTRACT_STATE.TAKEN, CONTRACT_STATE.DONE];
+
+[contractSearch, contractFilterParty, contractFilterKind, contractFilterState].forEach((control) => {
   control?.addEventListener("input", () => renderContractBoard());
   control?.addEventListener("change", () => renderContractBoard());
 });
 
+// Send the observer to the ledger already searching for this contract, so
+// "what actually happened to it" is one click rather than a manual hunt.
+function openContractInLedger(contractId) {
+  const ledgerTab = document.querySelector('[data-observatory-tab="ledger"]');
+  if (!ledgerTab || !contractId) return;
+  ledgerTab.click();
+  const search = document.querySelector("#ledger-search");
+  if (search) {
+    search.value = contractId;
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+}
+
+function contractLinkButton(label, title, onClick, enabled = true) {
+  const button = diagElement("button", "quick-link-button", enabled ? label : "—");
+  button.type = "button";
+  button.disabled = !enabled;
+  button.title = enabled ? title : "Nothing to open";
+  if (enabled) {
+    button.addEventListener("click", (event) => { event.stopPropagation(); onClick(); });
+  }
+  return button;
+}
+
 function renderContractBoard() {
-  if (!contractGroups || observatoryTab !== "contracts") return;
+  if (!contractTable || observatoryTab !== "contracts") return;
   const all = listContracts(state);
 
   // Keep the party list in sync without losing the current selection.
@@ -6245,46 +6274,76 @@ function renderContractBoard() {
     }
   }
 
+  const wanted = contractFilterState?.value || null;
   const rows = filterContracts(all, {
     party: contractFilterParty?.value || null,
     kind: contractFilterKind?.value || null,
     search: contractSearch?.value ?? "",
-  });
+  }).filter((contract) => !wanted || contract.state === wanted);
+
   const counts = summarizeContracts(rows);
   if (contractBoardSummary) {
     contractBoardSummary.textContent = `${rows.length} of ${all.length} · ${counts.available ?? 0} open, ${counts.taken ?? 0} working, ${counts.done ?? 0} done, ${counts.blocked ?? 0} stuck`;
   }
 
-  const sections = CONTRACT_GROUPS.map(([groupState, label, hint]) => {
-    const group = rows.filter((contract) => contract.state === groupState);
-    const section = diagElement("section", `contract-group contract-group-${groupState}`);
-    const head = diagElement("header", "contract-group-head");
-    head.append(diagElement("h4", null, `${label} (${group.length})`), diagElement("span", "contract-group-hint", hint));
-    section.append(head);
+  if (rows.length === 0) {
+    contractTable.replaceChildren(diagElement("p", "observatory-empty", all.length === 0
+      ? "No contracts yet — run the simulation for a moment."
+      : "No contracts match those filters."));
+    return;
+  }
 
-    if (group.length === 0) {
-      section.append(diagElement("p", "contract-empty", "Nothing here right now."));
-      return section;
-    }
-    group.forEach((contract) => {
-      const row = diagElement("article", "contract-row");
-      const title = diagElement("div", "contract-title");
-      title.append(diagElement("span", `contract-kind contract-kind-${contract.kind}`, contract.kind));
-      title.append(diagElement("strong", null, contract.title ?? contract.id));
-      row.append(title);
-
-      const parties = diagElement("div", "contract-parties");
-      parties.append(diagElement("span", "contract-party", `wants: ${contract.issuerName ?? "—"}`));
-      parties.append(diagElement("span", "contract-party", `doing: ${contract.supplierName ?? "unclaimed"}`));
-      if (contract.value) parties.append(diagElement("span", "contract-value", `${Math.round(contract.value)} cr`));
-      row.append(parties);
-
-      if (contract.note) row.append(diagElement("div", "contract-note", contract.note));
-      section.append(row);
-    });
-    return section;
+  const sorted = [...rows].sort((first, second) => {
+    const byState = CONTRACT_STATE_ORDER.indexOf(first.state) - CONTRACT_STATE_ORDER.indexOf(second.state);
+    return byState !== 0 ? byState : (second.at ?? 0) - (first.at ?? 0);
   });
-  contractGroups.replaceChildren(...sections);
+
+  const columns = [
+    ["Status", (row) => CONTRACT_STATE_LABELS[row.state] ?? row.state],
+    ["Kind", (row) => row.kind],
+    ["Contract", (row) => row.title],
+    ["Wants", (row) => row.issuerName],
+    ["Doing", (row) => row.supplierName ?? "unclaimed"],
+    ["Units", (row) => row.units],
+    ["Unit price", (row) => (row.unitPrice ? `${Math.round(row.unitPrice)} cr` : null)],
+    ["Value", (row) => (row.value ? `${Math.round(row.value)} cr` : null)],
+    ["Material", (row) => (row.resourceId ? `${String(row.resourceId).replaceAll("-", " ")}${row.family ? ` (${row.family})` : ""}` : null)],
+    ["Where", (row) => row.siteId],
+    ["Detail", (row) => row.note],
+  ];
+
+  const table = diagElement("table", "observatory-table contract-board-table");
+  const headRow = diagElement("tr");
+  columns.forEach(([label]) => headRow.append(diagElement("th", null, label)));
+  headRow.append(diagElement("th", null, "View"));
+  const thead = diagElement("thead");
+  thead.append(headRow);
+
+  const tbody = diagElement("tbody");
+  sorted.forEach((row) => {
+    const tableRow = diagElement("tr", `contract-state-${row.state}`);
+    columns.forEach(([, read]) => {
+      const value = read(row);
+      tableRow.append(diagElement("td", null, value === null || value === undefined || value === "" ? "—" : value));
+    });
+
+    // The party worth watching is whoever is doing the work; failing that,
+    // whoever is waiting on it.
+    const focusId = row.supplierId ?? row.issuerId;
+    const viewCell = diagElement("td", "contract-view-cell");
+    viewCell.append(createCenterCameraButton(focusId));
+    viewCell.append(contractLinkButton("Ledger", "Search the ledger for this contract", () => openContractInLedger(row.id), Boolean(row.id)));
+    tableRow.append(viewCell);
+
+    // Clicking the row opens whoever is involved in the actor panel, where the
+    // why-chain and the rest of their state already live.
+    tableRow.addEventListener("click", () => { if (focusId) selectActorForDiagnostics(focusId); });
+    if (row.detail?.length) tableRow.title = row.detail.join(" | ");
+    tbody.append(tableRow);
+  });
+
+  table.append(thead, tbody);
+  contractTable.replaceChildren(table);
 }
 
 function diagElement(tag, className, text) {
