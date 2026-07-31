@@ -9,6 +9,7 @@ import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { listInspectableActors } from "../src/systems/actorInspector.js";
 import { recordAcquisition } from "../src/systems/costBasis.js";
+import { formatBlockerChain, resolveBlockerChain } from "../src/systems/diagnostics.js";
 
 function createWorld({ stock = {}, hubCash = 5_000 } = {}) {
   let clock = 1_000_000;
@@ -188,9 +189,19 @@ test("a hub with no eligible family material reports the shortage it is waiting 
 
   assert.equal(world.events("population.productionStarted")
     .filter((entry) => entry.payload.needId === need.id).length, 0, "nothing was built");
-  const diagnostic = world.state.diagnostics.actors["population:yard-exchange"];
-  assert.ok(diagnostic.blocker, "and the population says what is missing");
-  assert.match(diagnostic.blocker.summary, /structural|industrial|cannot build|no material/i);
+
+  // The shortage belongs to the HUB. The population is a customer, not a
+  // manufacturer, so its own blocker says only that it is waiting to buy.
+  const hubRecord = world.state.diagnostics.actors["yard-exchange"];
+  assert.ok(hubRecord?.blocker, "the hub reports its own shortage");
+  assert.equal(hubRecord.actorKind, "institution");
+  assert.match(hubRecord.blocker.summary, /cannot build .*: no structural\/industrial material/i);
+
+  const popRecord = world.state.diagnostics.actors["population:yard-exchange"];
+  assert.ok(popRecord.blocker, "the population is waiting");
+  assert.match(popRecord.blocker.summary, /waiting to buy/i);
+  assert.doesNotMatch(popRecord.blocker.summary, /cannot build/i,
+    "a household must never be described as failing to manufacture");
 });
 
 test("the flexible need is met by any family, without a recipe", () => {
@@ -361,4 +372,77 @@ test("population inventory is consumption, not a stockpile the hub can resell", 
   assert.equal(world.record().needs[need.id].consumed, 1, "and was consumed by the population");
   assert.equal(world.events("population.goodsConsumed").filter((e) => e.payload.needId === need.id).length, 1,
     "with an explicit consumption event");
+});
+
+// ── Hub and population are separate actors in the observatory ──────────────
+
+test("the why-chain runs from the waiting population into the hub's shortage", () => {
+  const world = createWorld({ stock: {} });
+  const need = POPULATION_NEEDS["life-support-pack"];
+  world.advance(need.demandIntervalSeconds);
+  world.population.update();
+
+  const popRecord = world.state.diagnostics.actors["population:yard-exchange"];
+  const lines = formatBlockerChain(resolveBlockerChain(world.state, popRecord.blocker)).map((line) => line.summary);
+  assert.ok(lines.length > 1, `the chain should continue into the hub, got: ${JSON.stringify(lines)}`);
+  assert.match(lines[0], /waiting to buy/i);
+  assert.ok(lines.slice(1).some((line) => /cannot build|no material|cannot supply/i.test(line)),
+    `the cause should be the hub's shortage, got: ${JSON.stringify(lines)}`);
+});
+
+test("a hub explains that it cannot simply mine what it is missing", () => {
+  // Yard Exchange holds structural rights only, so volatile must be bought.
+  const world = createWorld({ stock: {} });
+  const need = POPULATION_NEEDS["life-support-pack"];
+  world.advance(need.demandIntervalSeconds);
+  world.population.update();
+
+  const hubRecord = world.state.diagnostics.actors["yard-exchange"];
+  assert.ok(hubRecord?.blocker);
+  const chain = formatBlockerChain(resolveBlockerChain(world.state, hubRecord.blocker)).map((line) => line.summary).join(" | ");
+  assert.match(chain, /no mining right for volatile|must buy this material/i,
+    `the hub should say why it cannot dig it up itself, got: ${chain}`);
+});
+
+test("every hub has its own population, and each is its own actor", () => {
+  const world = createWorld({ stock: FULL_STOCK });
+  world.advance(200);
+  world.population.update();
+  const actors = listInspectableActors(world.state);
+  const populations = actors.filter((entry) => entry.kind === "population");
+  assert.equal(populations.length, 3, "Yard Exchange, Scrap Porch and The Ledge each have one");
+  const controllers = populations.map((entry) => entry.controllerId).sort();
+  assert.deepEqual(controllers, ["scrap-forge", "the-ledge", "yard-exchange"]);
+  // And each population is a different actor from the hub that supplies it.
+  assert.ok(populations.every((entry) => entry.actorId !== entry.controllerId));
+});
+
+test("a correctly funded population outearns its own demand and never runs dry", () => {
+  const world = createWorld({ stock: FULL_STOCK, hubCash: 200_000 });
+  // Keep the hub stocked so demand is never supply-limited.
+  for (let tick = 0; tick < 200; tick += 1) {
+    world.advance(30);
+    Object.assign(world.hub.inventories, FULL_STOCK);
+    world.population.update();
+    assert.ok(world.record().householdCash >= 0, "household cash never goes negative");
+  }
+  const spendRate = Object.values(POPULATION_NEEDS)
+    .reduce((sum, need) => sum + need.price / need.demandIntervalSeconds, 0);
+  const profile = POPULATION_PROFILES[0];
+  const incomeRate = profile.incomeAmount / profile.incomeIntervalSeconds;
+  assert.ok(incomeRate > spendRate,
+    `income ${incomeRate.toFixed(2)} cr/s must exceed demand ${spendRate.toFixed(2)} cr/s`);
+  assert.ok(world.record().householdCash > 0, "and it still has money at the end");
+});
+
+test("household cash is capped, and the uncreated surplus is recorded", () => {
+  const world = createWorld({ stock: {} });   // nothing to buy, so income only
+  const profile = POPULATION_PROFILES[0];
+  for (let tick = 0; tick < 20; tick += 1) {
+    world.advance(profile.incomeIntervalSeconds);
+    world.population.update();
+  }
+  assert.equal(world.record().householdCash, profile.householdCashCap, "cash sits at the cap");
+  const capped = world.events("population.incomeReceived").filter((entry) => entry.payload.cappedAway > 0);
+  assert.ok(capped.length > 0, "and the credits that were never created are logged");
 });

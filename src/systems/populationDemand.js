@@ -23,9 +23,10 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260730-1853-344c233";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260730-1853-344c233";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-1853-344c233";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260730-1920-f5dc6a1";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260730-1920-f5dc6a1";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260730-1920-f5dc6a1";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-1920-f5dc6a1";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -86,6 +87,23 @@ export const POPULATION_NEEDS = Object.freeze({
   },
 });
 
+// Populations are where credits enter the world. Income has to comfortably
+// outrun what the four needs cost, or the demand sink throttles itself and the
+// hub economy starves for reasons that have nothing to do with supply.
+//
+// The four needs together cost 6.89 cr/s at full cadence:
+//   Settlement Supply Unit  400 / 180s = 2.22
+//   Life-Support Pack       330 / 150s = 2.20
+//   Household Goods Unit    360 / 210s = 1.71
+//   General Materials        90 / 120s = 0.75
+//
+// Income below is 10 cr/s, about 1.45x that, so a population never runs dry.
+// The cash cap is the valve: income is credited only up to it and the surplus
+// is discarded and logged, so credit creation stays bounded and prices keep
+// meaning something over a long session. The cap is set above a full backlog of
+// every need (3630 cr) so a burst of demand is always payable.
+const NEED_IDS = ["settlement-supply-unit", "life-support-pack", "household-goods-unit", "general-materials"];
+
 export const POPULATION_PROFILES = Object.freeze([
   {
     id: "population:yard-exchange",
@@ -93,11 +111,35 @@ export const POPULATION_PROFILES = Object.freeze([
     hubInstitutionId: "yard-exchange",
     siteId: "yard-exchange",
     size: 140,
-    householdCash: 1200,
-    householdCashCap: 1200,
-    incomeAmount: 400,
-    incomeIntervalSeconds: 180,
-    needIds: ["settlement-supply-unit", "life-support-pack", "household-goods-unit", "general-materials"],
+    householdCash: 4000,
+    householdCashCap: 4000,
+    incomeAmount: 1200,
+    incomeIntervalSeconds: 120,
+    needIds: NEED_IDS,
+  },
+  {
+    id: "population:scrap-porch",
+    name: "Scrap Porch Population",
+    hubInstitutionId: "scrap-forge",
+    siteId: "scrap-porch",
+    size: 95,
+    householdCash: 4000,
+    householdCashCap: 4000,
+    incomeAmount: 1200,
+    incomeIntervalSeconds: 120,
+    needIds: NEED_IDS,
+  },
+  {
+    id: "population:the-ledge",
+    name: "The Ledge Population",
+    hubInstitutionId: "the-ledge",
+    siteId: "the-ledge",
+    size: 60,
+    householdCash: 4000,
+    householdCashCap: 4000,
+    incomeAmount: 1200,
+    incomeIntervalSeconds: 120,
+    needIds: NEED_IDS,
   },
 ]);
 
@@ -224,11 +266,23 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
     const before = populationRecord.householdCash;
     populationRecord.householdCash = Math.min(populationRecord.householdCashCap, populationRecord.householdCash + populationRecord.incomeAmount);
     const received = populationRecord.householdCash - before;
+    const discarded = populationRecord.incomeAmount - received;
     populationRecord.totalIncome += received;
-    if (received <= 0) return;
-    emit("population.incomeReceived", `${populationRecord.name} received ${received} cr of background income.`, {
+    populationRecord.totalDiscarded = (populationRecord.totalDiscarded ?? 0) + discarded;
+
+    // Saturation is reported on the transition, not every interval. At the cap
+    // this fires forever otherwise, and a recurring event that says nothing new
+    // is how the ledger got flooded before.
+    const saturated = received <= 0;
+    const wasSaturated = populationRecord.saturated === true;
+    populationRecord.saturated = saturated;
+    if (saturated && wasSaturated) return;
+
+    emit("population.incomeReceived", saturated
+      ? `${populationRecord.name} is at its household cash cap; ${discarded} cr of income was not created.`
+      : `${populationRecord.name} received ${received} cr of background income.`, {
       populationId: populationRecord.id, amount: received, householdCash: populationRecord.householdCash,
-      cappedAway: populationRecord.incomeAmount - received,
+      cappedAway: discarded, totalDiscarded: populationRecord.totalDiscarded, atCap: saturated,
     });
   }
 
@@ -365,7 +419,58 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
     return { purchased: need.id };
   }
 
-  function publishDiagnostic(populationRecord, blockers) {
+  // The hub is its own actor with its own problems. A hub that cannot build is
+  // the HUB's blocker, not its population's — the population is a customer, not
+  // a manufacturer, and reporting a factory's shortage on a household's card is
+  // what made these two look like one actor.
+  function publishHubDiagnostic(hub, hubBlockers) {
+    const books = sellerTrade(hub);
+    const stockSummary = Object.entries(hub.inventories ?? {}).filter(([, units]) => units > 0)
+      .map(([resourceId, units]) => `${units} ${resourceId.replaceAll("-", " ")}`).join(", ") || "no material";
+    const summary = hubBlockers.length === 0
+      ? `${hubName(hub)} is supplying its population (${stockSummary}, ${Math.round(hub.accounts.operating.balance)} cr)`
+      : `${hubName(hub)} cannot supply ${hubBlockers.length} product(s): ${hubBlockers[0].shortfall}`;
+
+    recordDiagnostic(state, hub.id, {
+      actorName: hubName(hub),
+      actorKind: "institution",
+      locationSiteId: hub.id,
+      state: hubBlockers.length > 0 ? DIAGNOSTIC_STATE.WAITING : DIAGNOSTIC_STATE.FREE,
+      summary,
+      detail: {
+        treasury: Math.round(hub.accounts.operating.balance),
+        materials: { ...(hub.inventories ?? {}) },
+        finishedGoods: { ...(hub.finishedGoods ?? {}) },
+        unitsSold: books.unitsSold, revenue: books.revenue,
+        costOfGoodsSold: books.costOfGoodsSold, margin: books.margin,
+        productionSpend: books.productionSpend,
+        minesFamilies: minedFamilies(hub.id),
+      },
+    }, now());
+
+    if (hubBlockers.length === 0) {
+      clearBlocker(state, hub.id, { state: DIAGNOSTIC_STATE.FREE, summary, at: now() });
+      return;
+    }
+    const worst = hubBlockers[0];
+    recordBlocker(state, hub.id, createBlocker({
+      kind: worst.kind,
+      summary: worst.summary,
+      subjectId: hub.id,
+      objectId: worst.needId,
+      waitingFor: worst.waitingFor,
+      wakeOn: ["material-delivered", "order-posted", "freight-delivered"],
+      // No causedBy yet: the eventual cause is an unfilled procurement order
+      // against the hub that CAN mine this family, and that order does not
+      // exist until the hub can post one. Pointing at itself would only be a
+      // cycle, so the constraint is stated in the blocker instead.
+      causedBy: [],
+      detail: { needId: worst.needId, blockedProducts: hubBlockers.map((entry) => entry.needId) },
+      at: now(),
+    }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+  }
+
+  function publishDiagnostic(populationRecord, blockers, waitingOnHub = []) {
     const outstanding = Object.values(populationRecord.needs).reduce((sum, entry) => sum + entry.backlog, 0);
     const summary = outstanding === 0
       ? `${populationRecord.name} has everything it needs (${Math.round(populationRecord.householdCash)} cr on hand)`
@@ -389,40 +494,77 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
       },
     }, now());
 
-    if (blockers.length === 0) {
+    // A population is only ever blocked by two things of its own: it cannot
+    // pay, or its supplier has not got the goods. The second is recorded as
+    // waiting on the hub, and the WHY continues into the hub's own blocker
+    // rather than being restated here.
+    if (blockers.length === 0 && waitingOnHub.length === 0) {
       // clearBlocker nulls the summary unless one is supplied, which would
       // leave the population nameless in the observatory list.
       clearBlocker(state, populationRecord.id, { state: DIAGNOSTIC_STATE.FREE, summary, at: now() });
       return;
     }
-    const worst = blockers[0];
+
+    const own = blockers[0] ?? null;
+    const blocker = own ?? {
+      needId: waitingOnHub[0],
+      kind: BLOCKER_KIND.AWAITING_PRODUCTION,
+      summary: `${populationRecord.name} is waiting to buy ${POPULATION_NEEDS[waitingOnHub[0]]?.label ?? waitingOnHub[0]}`,
+      waitingFor: `${hubName(getHub(populationRecord))} to have one in stock`,
+    };
     recordBlocker(state, populationRecord.id, createBlocker({
-      kind: worst.kind,
-      summary: worst.summary,
+      kind: blocker.kind,
+      summary: blocker.summary,
       subjectId: populationRecord.id,
       objectId: populationRecord.hubInstitutionId,
-      waitingFor: worst.waitingFor,
-      wakeOn: ["material-delivered", "order-posted", "population.incomeReceived"],
-      causedBy: [{ actorId: populationRecord.hubInstitutionId, note: worst.cause }],
-      detail: { needId: worst.needId, blockedNeeds: blockers.map((entry) => entry.needId) },
+      waitingFor: blocker.waitingFor,
+      wakeOn: ["goods-available", "population.incomeReceived"],
+      // Point at the supplier as an actor. resolveBlockerChain walks into the
+      // hub's own record, so the chain reads: population waiting -> hub cannot
+      // build -> hub holds no right to mine that family.
+      causedBy: own ? [] : [{ actorId: populationRecord.hubInstitutionId }],
+      detail: { needId: blocker.needId, unaffordable: blockers.map((entry) => entry.needId), awaitingSupply: waitingOnHub },
       at: now(),
     }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
   }
 
-  function describeBlocker(needId, reason, populationRecord) {
+  // Population-side only: the household could not pay.
+  function describePopulationBlocker(needId, populationRecord) {
+    const need = POPULATION_NEEDS[needId];
+    return {
+      needId,
+      kind: BLOCKER_KIND.PAYER_CANNOT_AFFORD,
+      summary: `${populationRecord.name} cannot afford ${need?.label ?? needId} at ${need?.price ?? 0} cr`,
+      waitingFor: "background income",
+    };
+  }
+
+  // Hub-side only: the seller could not build or stock the product.
+  function describeHubBlocker(needId, reason, hub) {
     const need = POPULATION_NEEDS[needId];
     const label = need?.label ?? needId;
+    const families = describeFamilies(need);
+    const cannotMine = missingFamilies(hub.id, need);
+    const mustBuy = cannotMine.length > 0
+      ? `${hubName(hub)} holds no mining right for ${cannotMine.join("/")}, so it must buy this material from another hub`
+      : null;
+
     switch (reason) {
-      case "population-cannot-afford":
-        return { needId, kind: BLOCKER_KIND.PAYER_CANNOT_AFFORD, summary: `${populationRecord.name} cannot afford ${label} at ${need.price} cr`, waitingFor: "background income", cause: "the household has not been paid yet" };
       case "hub-lacks-input-material":
-        return { needId, kind: BLOCKER_KIND.AWAITING_MATERIAL, summary: `${populationRecord.hubInstitutionId} cannot build ${label}: no ${describeFamilies(need)} material in stock`, waitingFor: `${describeFamilies(need)} material`, cause: "the hub has nothing eligible to convert" };
+        return { needId, kind: BLOCKER_KIND.AWAITING_MATERIAL, shortfall: `no ${families} material`, mustBuy,
+          summary: `${hubName(hub)} cannot build ${label}: no ${families} material in stock${mustBuy ? ` — ${mustBuy}` : ""}`,
+          waitingFor: mustBuy ? `${cannotMine.join("/")} material bought from a hub that may mine it` : `${families} material` };
       case "hub-lacks-substitute-material":
-        return { needId, kind: BLOCKER_KIND.AWAITING_MATERIAL, summary: `${populationRecord.hubInstitutionId} has no material to meet ${label}`, waitingFor: "any approved substitute material", cause: "the hub is out of stock entirely" };
+        return { needId, kind: BLOCKER_KIND.AWAITING_MATERIAL, shortfall: "no material at all", mustBuy,
+          summary: `${hubName(hub)} has no material to meet ${label}`,
+          waitingFor: "any approved substitute material" };
       case "hub-cannot-fund-production":
-        return { needId, kind: BLOCKER_KIND.PAYER_CANNOT_AFFORD, summary: `${populationRecord.hubInstitutionId} cannot fund ${label} production`, waitingFor: "revenue or a cheaper input", cause: "the hub's operating account is short" };
+        return { needId, kind: BLOCKER_KIND.PAYER_CANNOT_AFFORD, shortfall: "no funds to convert material", mustBuy: null,
+          summary: `${hubName(hub)} cannot fund ${label} production`,
+          waitingFor: "sales revenue or a cheaper input" };
       default:
-        return { needId, kind: BLOCKER_KIND.AWAITING_MATERIAL, summary: `${label} is unavailable`, waitingFor: "stock", cause: reason };
+        return { needId, kind: BLOCKER_KIND.AWAITING_MATERIAL, shortfall: reason, mustBuy,
+          summary: `${hubName(hub)} cannot supply ${label}`, waitingFor: "stock" };
     }
   }
 
@@ -434,23 +576,33 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
       accrueIncome(populationRecord);
       generateDemand(populationRecord);
 
-      const blockers = [];
+      // Two separate books of problems, because these are two separate actors.
+      const populationBlockers = [];
+      const hubBlockers = [];
+      const waitingOnHub = [];
       Object.values(populationRecord.needs).forEach((needState) => {
         const need = POPULATION_NEEDS[needState.needId];
         if (!need || needState.backlog <= 0) return;
         const bought = tryPurchase(populationRecord, hub, needState);
         if (bought?.purchased) return;
-        // Could not buy. For a manufactured need the usual answer is that the
-        // hub has not built one yet, so ask it to start.
-        if (need.kind === NEED_KIND.MANUFACTURED && bought?.blocked === "hub-has-no-stock") {
-          const started = startProduction(populationRecord, hub, need);
-          if (started?.blocked) blockers.push(describeBlocker(need.id, started.blocked, populationRecord));
+
+        if (bought?.blocked === "population-cannot-afford") {
+          populationBlockers.push(describePopulationBlocker(need.id, populationRecord));
           return;
         }
-        if (bought?.blocked) blockers.push(describeBlocker(need.id, bought.blocked, populationRecord));
+        // Everything else is the supplier's problem. The population is simply
+        // waiting for stock it is willing and able to pay for.
+        waitingOnHub.push(need.id);
+        if (need.kind === NEED_KIND.MANUFACTURED && bought?.blocked === "hub-has-no-stock") {
+          const started = startProduction(populationRecord, hub, need);
+          if (started?.blocked) hubBlockers.push(describeHubBlocker(need.id, started.blocked, hub));
+          return;
+        }
+        if (bought?.blocked) hubBlockers.push(describeHubBlocker(need.id, bought.blocked, hub));
       });
 
-      publishDiagnostic(populationRecord, blockers);
+      publishHubDiagnostic(hub, hubBlockers);
+      publishDiagnostic(populationRecord, populationBlockers, waitingOnHub);
     });
   }
 
@@ -460,6 +612,33 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
 
 function describeDraw(draw) {
   return Object.entries(draw).map(([resourceId, units]) => `${units} ${resourceId.replaceAll("-", " ")}`).join(" + ");
+}
+
+// Display name for a hub institution. The logistics records carry ids only.
+const HUB_NAMES = Object.freeze({
+  "yard-exchange": "Yard Exchange",
+  "scrap-forge": "Scrap Porch",
+  "the-ledge": "The Ledge",
+});
+
+function hubName(hub) {
+  if (!hub) return "the hub";
+  return hub.name ?? HUB_NAMES[hub.id] ?? hub.id;
+}
+
+// Families this institution may commission extraction for.
+function minedFamilies(institutionId) {
+  return INSTITUTION_MINING_RIGHTS
+    .filter((right) => right.institutionId === institutionId)
+    .flatMap((right) => right.families);
+}
+
+// Families a need pulls on that this hub may NOT mine, and therefore has to
+// buy from whichever hub can. This is the interdependence, stated plainly.
+function missingFamilies(institutionId, need) {
+  if (!need?.families) return [];
+  const mine = minedFamilies(institutionId);
+  return need.families.filter((family) => !mine.includes(family));
 }
 
 function describeFamilies(need) {

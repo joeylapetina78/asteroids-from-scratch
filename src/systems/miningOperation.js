@@ -1,11 +1,11 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-1853-344c233";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-1853-344c233";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-1853-344c233";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260730-1853-344c233";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260730-1853-344c233";
-import { evaluateMiningJob } from "./valuation.js?v=fresh-20260730-1853-344c233";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260730-1853-344c233";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-1853-344c233";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-1920-f5dc6a1";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-1920-f5dc6a1";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-1920-f5dc6a1";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260730-1920-f5dc6a1";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260730-1920-f5dc6a1";
+import { evaluateMiningJob } from "./valuation.js?v=fresh-20260730-1920-f5dc6a1";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260730-1920-f5dc6a1";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-1920-f5dc6a1";
 
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
