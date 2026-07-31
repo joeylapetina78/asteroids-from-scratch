@@ -6,7 +6,7 @@
 // between events come only from explicit references or same-id structural
 // links; nothing is inferred from timestamps.
 
-import { classifyEvent, getRetentionClass, RETENTION_CLASS } from "./eventRetention.js?v=fresh-20260730-2038-909a1a1";
+import { classifyEvent, getRetentionClass, RETENTION_CLASS } from "./eventRetention.js?v=fresh-20260731-1759-df6d692";
 
 export const REFERENCE_KIND = Object.freeze({
   ACTOR: "actor",

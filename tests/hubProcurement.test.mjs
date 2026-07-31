@@ -227,7 +227,11 @@ test("delivering a procurement run pays the supplier, pays the carrier, and clos
   const closed = state.hubProcurement.orders[order.id];
   assert.equal(closed.status, PROCUREMENT_STATUS.DELIVERED, "the order is closed, not merely restocked");
   assert.equal(closed.deliveredUnits, order.units);
-  assert.ok(hub(order.supplierInstitutionId).accounts.operating.balance > sellerBefore, "the supplier was paid");
+  const sale = hub(order.supplierInstitutionId).accounts.operating.transactions
+    .find((entry) => entry.type === "goods-sale" && entry.referenceId === shipment.templateId);
+  assert.ok(sale, "the supplier booked the sale");
+  assert.equal(sale.amount, shipment.goodsPayment, "and was paid the agreed price");
+  assert.ok(sellerBefore !== undefined);
   assert.equal((hub(order.buyerInstitutionId).inventories[order.resourceId] ?? 0) - buyerStockBefore, order.units,
     "and the material reached the buyer");
   const carrier = state.logistics.institutions[state.logistics.haulers[shipment.assigneeId].carrierInstitutionId];
@@ -279,6 +283,10 @@ test("a hauler can take a run from the far end when it has nothing local", () =>
     }
   });
   procurement.update();
+  // A long lane opens under-priced and relies on the buyer's repricing loop to
+  // raise it. Post a rate that clears the deadhead so this stays a test of
+  // whether a hauler CAN work the far end, not of the opening rate.
+  state.logistics.postedFreightRates = { [`procurement-${order.id}`]: 900 };
   manager.update();
 
   const shipment = Object.values(state.logistics.shipments)[0];

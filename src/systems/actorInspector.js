@@ -4,12 +4,12 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260730-2038-909a1a1";
-import { collectIntentions } from "./intentions.js?v=fresh-20260730-2038-909a1a1";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260730-2038-909a1a1";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260730-2038-909a1a1";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260730-2038-909a1a1";
-import { STANDING_FREIGHT_TEMPLATES } from "./logistics.js?v=fresh-20260730-2038-909a1a1";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260731-1759-df6d692";
+import { collectIntentions } from "./intentions.js?v=fresh-20260731-1759-df6d692";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260731-1759-df6d692";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260731-1759-df6d692";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260731-1759-df6d692";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260731-1759-df6d692";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
@@ -155,7 +155,7 @@ function getVisibleOffers(state, { siteId, isMiner }) {
       });
   }
 
-  STANDING_FREIGHT_TEMPLATES.filter((template) => template.originSiteId === siteId).forEach((template) => {
+  getProcurementFreightOffers(state).filter((template) => template.originSiteId === siteId).forEach((template) => {
     const rate = state.logistics?.postedFreightRates?.[template.id] ?? template.payment;
     const stock = state.logistics?.institutions?.[template.sourceInstitutionId]?.inventories?.[template.commodity] ?? 0;
     offers.push({

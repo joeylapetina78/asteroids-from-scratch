@@ -23,6 +23,7 @@ import { createGameState } from "../src/state/gameState.js";
 import { createSprcOperation, SPRC } from "../src/systems/sprcOperation.js";
 import { createMiningOperation } from "../src/systems/miningOperation.js";
 import { createInitialLogisticsState, createLogisticsManager } from "../src/systems/logistics.js";
+import { createHubProcurementOperation } from "../src/systems/hubProcurement.js";
 import { MiningWorkerShip } from "../src/entities/MiningWorkerShip.js";
 
 // ── Shape and querying ─────────────────────────────────────────────────────
@@ -225,11 +226,18 @@ test("a carrier that finds only below-cost freight records why it refused", () =
     operationalStatus: "seeking-work", activeShipmentId: null,
     canAcceptRoute: () => true, assignShipment: () => {}, assignment: null,
   }));
-  // Hubs now open with working stock, so empty the freight sources explicitly:
-  // this case is about what an idle carrier reports, not about start levels.
+  // Freight now exists only because a hub bought something, so set up a real
+  // purchase order and then empty the shelves: the carrier has work on the
+  // books that nobody can supply yet.
+  ["yard-exchange", "scrap-forge", "the-ledge"].forEach((id) => {
+    state.logistics.institutions[id].accounts.operating.balance = 20_000;
+  });
+  const procurement = createHubProcurementOperation({ state, now: () => 1_000 });
+  procurement.update();
   Object.values(state.logistics.institutions).forEach((institution) => {
     if (institution.inventories) Object.keys(institution.inventories).forEach((itemId) => { institution.inventories[itemId] = 0; });
   });
+  procurement.update();
   const manager = createLogisticsManager({ state, ships, now: () => 1_000 });
   manager.update();
 

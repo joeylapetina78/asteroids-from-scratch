@@ -16,6 +16,7 @@ import {
 import { STANDING_MINING_ORDERS, createMiningOperation, getPostedMiningOrders } from "../src/systems/miningOperation.js";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState, createLogisticsManager } from "../src/systems/logistics.js";
+import { createHubProcurementOperation } from "../src/systems/hubProcurement.js";
 import { getResourceFamily } from "../src/systems/resourceDefinitions.js";
 
 function createWorld() {
@@ -145,6 +146,15 @@ test("workers are only offered orders a hub is actually asking for", () => {
 function createFreightWorld() {
   const state = createGameState();
   state.logistics = createInitialLogisticsState(1_000);
+  // Freight is no longer authored: it exists because a hub bought something.
+  ["yard-exchange", "scrap-forge", "the-ledge"].forEach((id) => {
+    state.logistics.institutions[id].accounts.operating.balance = 20_000;
+  });
+  state.logistics.institutions["yard-exchange"].inventories["iron-nickel"] = 40;
+  state.logistics.institutions["scrap-forge"].inventories["water-ice"] = 40;
+  state.logistics.institutions["the-ledge"].inventories.silicate = 40;
+  const procurement = createHubProcurementOperation({ state, now: () => 1_000 });
+  procurement.update();
   const ships = Object.keys(state.logistics.haulers).map((id) => ({
     id, dockedSiteId: state.logistics.haulers[id].currentSiteId, wear: 0,
     operationalStatus: "seeking-work", activeShipmentId: null, assignment: null,
@@ -154,8 +164,12 @@ function createFreightWorld() {
     queueCargoTransfer(transfer) { this.transfers.push(transfer); },
     clearShipment() { this.assignment = null; },
   }));
-  const manager = createLogisticsManager({ state, ships, now: () => 1_000 });
-  return { state, manager, ships };
+  const manager = createLogisticsManager({
+    state, ships, now: () => 1_000,
+    onProcurementShipped: (orderId, shipmentId) => procurement.markShipped(orderId, shipmentId),
+    onProcurementDelivered: (orderId, settlement) => procurement.completeOrder(orderId, settlement),
+  });
+  return { state, manager, ships, procurement };
 }
 
 test("a hub that gives up material is paid for it", () => {
