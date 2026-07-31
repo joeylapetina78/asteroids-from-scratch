@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260731-1759-df6d692" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260731-1824-94364a5" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260731-1759-df6d692</span>
+      <span class="build-tag">build: fresh-20260731-1824-94364a5</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -89,6 +89,7 @@
         <nav class="observatory-tabs">
           <button type="button" class="observatory-tab is-active" data-observatory-tab="actors">Actors</button>
           <button type="button" class="observatory-tab" data-observatory-tab="blockers">Blockers</button>
+          <button type="button" class="observatory-tab" data-observatory-tab="contracts">Contracts</button>
           <button type="button" class="observatory-tab" data-observatory-tab="ledger">Ledger</button>
           <button type="button" class="observatory-tab" data-observatory-tab="stats">Stats</button>
           <button type="button" class="observatory-tab" data-observatory-tab="population">Population</button>
@@ -102,6 +103,24 @@
            existing render functions in main.js drive them unchanged. -->
       <div id="observatory-body" class="observatory-body"></div>
       <!-- Ledger event browser: the searchable historical record. -->
+      <!-- Contract board: every agreement in the world, grouped by whether it is
+           up for grabs, being worked, finished, or stuck. -->
+      <div id="observatory-pane-contracts" class="observatory-pane observatory-pane-contracts" hidden>
+        <div class="contract-filters" role="group" aria-label="Contract filters">
+          <input id="contract-search" type="search" placeholder="search title, party, material…" spellcheck="false" />
+          <select id="contract-filter-party" aria-label="Filter by actor or institution"></select>
+          <select id="contract-filter-kind" aria-label="Filter by contract kind">
+            <option value="">All kinds</option>
+            <option value="extraction">Extraction</option>
+            <option value="purchase">Purchase</option>
+            <option value="freight">Freight</option>
+            <option value="feedstock">Repair feedstock</option>
+            <option value="repair">Repair</option>
+          </select>
+          <span id="contract-board-summary" class="contract-summary"></span>
+        </div>
+        <div id="contract-groups" class="contract-groups"></div>
+      </div>
       <div id="observatory-pane-ledger" class="observatory-pane observatory-pane-ledger" hidden>
         <div class="ledger-browser">
           <div class="ledger-filters" role="group" aria-label="Ledger filters">
@@ -859,6 +878,6 @@
 
     <div id="attention-callouts" class="attention-callouts" aria-hidden="true"></div>
 
-    <script type="module" src="./src/main.js?v=fresh-20260731-1759-df6d692"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260731-1824-94364a5"></script>
   </body>
 </html>

@@ -1,44 +1,45 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260731-1759-df6d692";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260731-1759-df6d692";
-import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260731-1759-df6d692";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260731-1759-df6d692";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260731-1759-df6d692";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260731-1759-df6d692";
-import { Game } from "./game.js?v=fresh-20260731-1759-df6d692";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260731-1759-df6d692";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260731-1759-df6d692";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260731-1759-df6d692";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260731-1759-df6d692";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260731-1824-94364a5";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260731-1824-94364a5";
+import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260731-1824-94364a5";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260731-1824-94364a5";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260731-1824-94364a5";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260731-1824-94364a5";
+import { Game } from "./game.js?v=fresh-20260731-1824-94364a5";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260731-1824-94364a5";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260731-1824-94364a5";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260731-1824-94364a5";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260731-1824-94364a5";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260731-1759-df6d692";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260731-1759-df6d692";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260731-1759-df6d692";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260731-1759-df6d692";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260731-1759-df6d692";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260731-1759-df6d692";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260731-1759-df6d692";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260731-1759-df6d692";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260731-1759-df6d692";
-import { Processor } from "./systems/processor.js?v=fresh-20260731-1759-df6d692";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260731-1759-df6d692";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260731-1759-df6d692";
-import { createGameState } from "./state/gameState.js?v=fresh-20260731-1759-df6d692";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260731-1759-df6d692";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260731-1759-df6d692";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260731-1759-df6d692";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260731-1759-df6d692";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260731-1759-df6d692";
-import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260731-1759-df6d692";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260731-1759-df6d692";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260731-1759-df6d692";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260731-1759-df6d692";
-import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260731-1759-df6d692";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260731-1759-df6d692";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260731-1759-df6d692";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260731-1824-94364a5";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260731-1824-94364a5";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260731-1824-94364a5";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260731-1824-94364a5";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260731-1824-94364a5";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260731-1824-94364a5";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260731-1824-94364a5";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260731-1824-94364a5";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260731-1824-94364a5";
+import { Processor } from "./systems/processor.js?v=fresh-20260731-1824-94364a5";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260731-1824-94364a5";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260731-1824-94364a5";
+import { createGameState } from "./state/gameState.js?v=fresh-20260731-1824-94364a5";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260731-1824-94364a5";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260731-1824-94364a5";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260731-1824-94364a5";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260731-1824-94364a5";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260731-1824-94364a5";
+import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260731-1824-94364a5";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260731-1824-94364a5";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260731-1824-94364a5";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260731-1824-94364a5";
+import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260731-1824-94364a5";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260731-1824-94364a5";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260731-1824-94364a5";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260731-1824-94364a5";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -6188,7 +6189,7 @@ function applyObservatoryTab() {
   if (observatoryBody) observatoryBody.hidden = !isTable;
   if (observatorySearch) observatorySearch.hidden = !isTable;
   if (observatoryCount) observatoryCount.hidden = !isTable;
-  ["ledger", "stats", "population"].forEach((pane) => {
+  ["ledger", "stats", "population", "contracts"].forEach((pane) => {
     const node = document.querySelector(`#observatory-pane-${pane}`);
     if (node) node.hidden = observatoryTab !== pane;
   });
@@ -6202,6 +6203,89 @@ document.querySelectorAll(".observatory-tab").forEach((tab) => {
     renderObservatory();
   });
 });
+
+// ── Contract board ────────────────────────────────────────────────────────
+// Five systems offer work in five shapes. This shows all of it in one place,
+// grouped by whether anyone has taken it, so "what is everyone agreeing to"
+// is answerable without reading the ledger.
+const contractSearch = document.querySelector("#contract-search");
+const contractFilterParty = document.querySelector("#contract-filter-party");
+const contractFilterKind = document.querySelector("#contract-filter-kind");
+const contractBoardSummary = document.querySelector("#contract-board-summary");
+const contractGroups = document.querySelector("#contract-groups");
+
+const CONTRACT_GROUPS = [
+  [CONTRACT_STATE.AVAILABLE, "Up for grabs", "Posted, and nobody has taken it."],
+  [CONTRACT_STATE.TAKEN, "Being worked", "Somebody has committed to it."],
+  [CONTRACT_STATE.BLOCKED, "Stuck", "Posted but unable to proceed."],
+  [CONTRACT_STATE.DONE, "Completed", "Finished and settled."],
+];
+
+[contractSearch, contractFilterParty, contractFilterKind].forEach((control) => {
+  control?.addEventListener("input", () => renderContractBoard());
+  control?.addEventListener("change", () => renderContractBoard());
+});
+
+function renderContractBoard() {
+  if (!contractGroups || observatoryTab !== "contracts") return;
+  const all = listContracts(state);
+
+  // Keep the party list in sync without losing the current selection.
+  if (contractFilterParty) {
+    const parties = listContractParties(all);
+    const selected = contractFilterParty.value;
+    const signature = parties.map((party) => party.id).join("|");
+    if (contractFilterParty.dataset.signature !== signature) {
+      contractFilterParty.dataset.signature = signature;
+      contractFilterParty.replaceChildren(
+        Object.assign(document.createElement("option"), { value: "", textContent: "All parties" }),
+        ...parties.map((party) => Object.assign(document.createElement("option"), { value: party.id, textContent: party.name })),
+      );
+      contractFilterParty.value = parties.some((party) => party.id === selected) ? selected : "";
+    }
+  }
+
+  const rows = filterContracts(all, {
+    party: contractFilterParty?.value || null,
+    kind: contractFilterKind?.value || null,
+    search: contractSearch?.value ?? "",
+  });
+  const counts = summarizeContracts(rows);
+  if (contractBoardSummary) {
+    contractBoardSummary.textContent = `${rows.length} of ${all.length} · ${counts.available ?? 0} open, ${counts.taken ?? 0} working, ${counts.done ?? 0} done, ${counts.blocked ?? 0} stuck`;
+  }
+
+  const sections = CONTRACT_GROUPS.map(([groupState, label, hint]) => {
+    const group = rows.filter((contract) => contract.state === groupState);
+    const section = diagElement("section", `contract-group contract-group-${groupState}`);
+    const head = diagElement("header", "contract-group-head");
+    head.append(diagElement("h4", null, `${label} (${group.length})`), diagElement("span", "contract-group-hint", hint));
+    section.append(head);
+
+    if (group.length === 0) {
+      section.append(diagElement("p", "contract-empty", "Nothing here right now."));
+      return section;
+    }
+    group.forEach((contract) => {
+      const row = diagElement("article", "contract-row");
+      const title = diagElement("div", "contract-title");
+      title.append(diagElement("span", `contract-kind contract-kind-${contract.kind}`, contract.kind));
+      title.append(diagElement("strong", null, contract.title ?? contract.id));
+      row.append(title);
+
+      const parties = diagElement("div", "contract-parties");
+      parties.append(diagElement("span", "contract-party", `wants: ${contract.issuerName ?? "—"}`));
+      parties.append(diagElement("span", "contract-party", `doing: ${contract.supplierName ?? "unclaimed"}`));
+      if (contract.value) parties.append(diagElement("span", "contract-value", `${Math.round(contract.value)} cr`));
+      row.append(parties);
+
+      if (contract.note) row.append(diagElement("div", "contract-note", contract.note));
+      section.append(row);
+    });
+    return section;
+  });
+  contractGroups.replaceChildren(...sections);
+}
 
 function diagElement(tag, className, text) {
   const node = document.createElement(tag);
@@ -6387,6 +6471,7 @@ function renderActorDiagnostic() {
 
 function renderObservatory() {
   if (!observatoryPanel || observatoryPanel.hidden || !observatoryBody) return;
+  if (observatoryTab === "contracts") { renderContractBoard(); return; }
   // Ledger/stats/population panes are driven by the existing HUD render path.
   if (!OBSERVATORY_TABLE_TABS.has(observatoryTab)) return;
   const search = observatorySearch?.value?.trim() ?? "";

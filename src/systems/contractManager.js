@@ -1,14 +1,14 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260731-1759-df6d692";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260731-1759-df6d692";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260731-1759-df6d692";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260731-1759-df6d692";
-import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260731-1759-df6d692";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260731-1759-df6d692";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260731-1759-df6d692";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260731-1759-df6d692";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260731-1759-df6d692";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260731-1759-df6d692";
-import { canFundStandingMiningOrder, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260731-1759-df6d692";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260731-1824-94364a5";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260731-1824-94364a5";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260731-1824-94364a5";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260731-1824-94364a5";
+import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260731-1824-94364a5";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260731-1824-94364a5";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260731-1824-94364a5";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260731-1824-94364a5";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260731-1824-94364a5";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260731-1824-94364a5";
+import { canFundStandingMiningOrder, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260731-1824-94364a5";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
