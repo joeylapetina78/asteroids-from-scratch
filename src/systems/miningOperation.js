@@ -1,12 +1,17 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-1920-f5dc6a1";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-1920-f5dc6a1";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-1920-f5dc6a1";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260730-1920-f5dc6a1";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260730-1920-f5dc6a1";
-import { evaluateMiningJob } from "./valuation.js?v=fresh-20260730-1920-f5dc6a1";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260730-1920-f5dc6a1";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-1920-f5dc6a1";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260730-2000-278126d";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260730-2000-278126d";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-2000-278126d";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260730-2000-278126d";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260730-2000-278126d";
+import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260730-2000-278126d";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260730-2000-278126d";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260730-2000-278126d";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-2000-278126d";
 
+// Authored identity only: which hub buys which material at which site, and the
+// reference price. Quantity and price are NOT taken from here any more — see
+// getPostedMiningOrders, which derives both from a real inventory gap and
+// withholds the order entirely when the hub does not need anything.
 export const STANDING_MINING_ORDERS = Object.freeze([
   { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel", amount: 3, paymentPerUnit: 42 },
   { id: "mine-porch-water", siteId: "scrap-porch", siteName: "Scrap Porch", buyerInstitutionId: "scrap-forge", resourceId: "water-ice", resourceName: "Water Ice", amount: 3, paymentPerUnit: 46 },
@@ -33,8 +38,68 @@ const MINING_ISSUES = Object.freeze([
 const MINING_SERVICE_PRICE = 220;
 const MINING_PROTECTED_CASH = 120;
 
-export function getStandingMiningJobsForSite(siteId, issuer = null) {
-  return STANDING_MINING_ORDERS.filter((order) => order.siteId === siteId).map((order) => ({
+// Largest single order a hub will place, so a big gap becomes several runs
+// rather than one impossible haul.
+const MAX_ORDER_UNITS = 6;
+// A hub keeps a working float back so buying ore never leaves it unable to pay
+// for the production the ore is for.
+const HUB_PROTECTED_CASH = 400;
+const HUB_TRAITS = Object.freeze({ urgencyBias: 0.5, caution: 0.5, growthBias: 0.3 });
+
+// The orders a hub is actually offering right now.
+//
+// An order exists only because the hub has a real gap between what it holds
+// (plus what is already coming) and what its population's consumption requires.
+// No gap, no order. Price comes from the shared valuation framework, so a hub
+// short of material bids up and one that is comfortable does not.
+export function getPostedMiningOrders(state, at = Date.now()) {
+  const posted = {};
+  STANDING_MINING_ORDERS.forEach((definition) => {
+    const family = getResourceFamily(definition.resourceId);
+    const position = getInventoryPosition(state, definition.buyerInstitutionId, family);
+    if (position.gap <= 0) return;
+
+    const buyer = state.logistics?.institutions?.[definition.buyerInstitutionId];
+    if (!buyer) return;
+    const valuation = evaluateProcurement({
+      itemId: definition.resourceId,
+      baseUnitPrice: definition.paymentPerUnit,
+      marketUnitValue: getResourceTradeValue(definition.resourceId),
+      urgency: position.onHand === 0 ? "critical" : "routine",
+      inventory: position,
+      requestedUnits: Math.min(position.gap, MAX_ORDER_UNITS),
+      account: buyer.accounts?.operating ?? {},
+      policy: { protectedCash: HUB_PROTECTED_CASH },
+      traits: HUB_TRAITS,
+    });
+    // An unaffordable order is withheld rather than posted and left to drain
+    // the treasury. The hub's own diagnostic explains the shortfall.
+    if (!valuation.affordable) {
+      posted[definition.id] = { ...definition, amount: 0, withheld: "buyer-cannot-fund", valuation, inventory: position, at };
+      return;
+    }
+    posted[definition.id] = {
+      ...definition,
+      amount: valuation.metrics.units,
+      paymentPerUnit: valuation.recommendedPrice,
+      valuation, inventory: position, withheld: null, at,
+    };
+  });
+  return posted;
+}
+
+// Orders a supplier can actually take: posted, funded, and still wanted.
+export function getOfferedMiningOrders(state, at = Date.now()) {
+  return Object.values(getPostedMiningOrders(state, at)).filter((order) => !order.withheld && order.amount > 0);
+}
+
+export function getStandingMiningJobsForSite(siteId, issuer = null, state = null) {
+  const offered = state ? getOfferedMiningOrders(state) : STANDING_MINING_ORDERS;
+  return getStandingMiningJobsFrom(offered, siteId, issuer);
+}
+
+function getStandingMiningJobsFrom(orders, siteId, issuer = null) {
+  return orders.filter((order) => order.siteId === siteId).map((order) => ({
     id: `player-${order.id}`,
     type: "resource-delivery",
     group: "standing-mining",
@@ -51,12 +116,25 @@ export function getStandingMiningJobsForSite(siteId, issuer = null) {
   }));
 }
 
+function resolvePostedOrder(state, orderId) {
+  return state.miningOperation?.postedOrders?.[orderId] ?? null;
+}
+
 export function settleStandingMiningOrder({ state, orderId, resourceId, amount, supplierAccount = null, referenceId = null, now = Date.now() }) {
   const order = STANDING_MINING_ORDERS.find((candidate) => candidate.id === orderId);
-  const delivered = Math.min(Math.max(0, amount ?? 0), order?.amount ?? 0);
+  const posted = resolvePostedOrder(state, orderId);
+  // Accept up to what the hub is actually asking for. Using the authored
+  // reference amount here would leave a supplier that brought the requested
+  // load dumping the remainder as cheap surplus.
+  const accepting = posted && !posted.withheld ? posted.amount : (order?.amount ?? 0);
+  const delivered = Math.min(Math.max(0, amount ?? 0), accepting);
   const buyer = state.logistics?.institutions?.[order?.buyerInstitutionId];
   if (!order || !buyer || order.resourceId !== resourceId || delivered <= 0) return null;
-  const payment = delivered * order.paymentPerUnit;
+  // Pay the rate the hub is currently posting. A delivery against an accepted
+  // contract is still honoured at the reference price when the hub has since
+  // withdrawn the order, so a supplier is never stiffed for arriving late.
+  const unitPrice = posted && !posted.withheld ? posted.paymentPerUnit : order.paymentPerUnit;
+  const payment = delivered * unitPrice;
   if ((buyer.accounts.operating.balance ?? 0) < payment) return null;
   buyer.inventories[resourceId] = (buyer.inventories[resourceId] ?? 0) + delivered;
   buyer.accounts.operating.balance -= payment;
@@ -71,15 +149,17 @@ export function settleStandingMiningOrder({ state, orderId, resourceId, amount, 
     supplierAccount.balance += payment;
     supplierAccount.transactions?.push({ id: `MIN-TX-${referenceId ?? now}`, at: now, type: "mining-income", amount: payment, balance: supplierAccount.balance, referenceId });
   }
-  return { order, buyer, delivered, payment };
+  return { order, buyer, delivered, payment, unitPrice };
 }
 
 export function canFundStandingMiningOrder({ state, orderId, amount = null }) {
   const order = STANDING_MINING_ORDERS.find((candidate) => candidate.id === orderId);
   const buyer = state.logistics?.institutions?.[order?.buyerInstitutionId];
   if (!order || !buyer) return false;
+  const posted = resolvePostedOrder(state, orderId);
+  const unitPrice = posted && !posted.withheld ? posted.paymentPerUnit : order.paymentPerUnit;
   const units = Math.min(Math.max(0, amount ?? order.amount), order.amount);
-  return (buyer.accounts.operating.balance ?? 0) >= units * order.paymentPerUnit;
+  return (buyer.accounts.operating.balance ?? 0) >= units * unitPrice;
 }
 
 export function createMiningOperation({ state, game, sprcOperation = null, now = () => Date.now() }) {
@@ -91,6 +171,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   operation.lastMaintenanceEventId ??= 0;
   operation.depositKnowledge ??= {};
   operation.rightsDenied ??= {};
+  operation.postedOrders ??= {};
   operation.projects ??= { "cinder-four": { id: "cinder-four", name: "Commission Cinder Four", status: "planned", requiredCredits: EXPANSION_COST, demandSince: null, approvedAt: null, completedAt: null } };
   MINING_WORKER_DEFAULTS.forEach((defaults) => {
     operation.ships[defaults.id] ??= createWorkerRecord(defaults);
@@ -123,6 +204,9 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   }
 
   function update() {
+    // Recompute what each hub is asking for before any worker reads the board,
+    // so an order reflects this tick's inventory rather than last tick's.
+    refreshPostedOrders();
     consumeMaintenanceEvents();
     assessExpansion();
     publishFleetDiagnostic();
@@ -311,6 +395,16 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     }, now());
   }
 
+  // Publish the live board onto state so other systems (and the inventory
+  // module's incoming calculation) can read it without importing this one.
+  function refreshPostedOrders() {
+    const posted = getPostedMiningOrders(state, now());
+    Object.keys(operation.postedOrders).forEach((orderId) => {
+      if (!posted[orderId]) delete operation.postedOrders[orderId];
+    });
+    Object.entries(posted).forEach(([orderId, order]) => { operation.postedOrders[orderId] = order; });
+  }
+
   function chooseOrder(worker = null) {
     const position = worker?.position ?? sites.get("scrap-porch")?.position ?? { x: 0, y: 0 };
     const candidates = [...getSprcMiningOrders(), ...getAvailableStandingOrders()];
@@ -344,7 +438,8 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   }
 
   function getAvailableStandingOrders() {
-    return STANDING_MINING_ORDERS.filter((order) => {
+    return Object.values(operation.postedOrders ?? {}).filter((order) => {
+      if (order.withheld || order.amount <= 0) return false;
       if (!mayPostMiningOrder(order)) return false;
       const alreadyAssigned = Object.values(operation.allocations).some((allocation) => allocation.orderId === order.id && allocation.status === "active");
       const buyer = state.logistics?.institutions?.[order.buyerInstitutionId];

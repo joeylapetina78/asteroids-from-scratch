@@ -17,6 +17,9 @@ function createWorld({ stock = {}, hubCash = 5_000 } = {}) {
   state.logistics = createInitialLogisticsState(clock);
   const hub = state.logistics.institutions["yard-exchange"];
   hub.accounts.operating.balance = hubCash;
+  // Hubs now start with operating stock. These tests control supply exactly,
+  // so clear the shelf before seeding only what the case is about.
+  hub.inventories = {};
   Object.entries(stock).forEach(([resourceId, units]) => { hub.inventories[resourceId] = units; });
   const population = createPopulationOperation({ state, now: () => clock });
   return {
@@ -24,7 +27,16 @@ function createWorld({ stock = {}, hubCash = 5_000 } = {}) {
     advance: (seconds) => { clock += seconds * 1000; },
     now: () => clock,
     record: () => population.getState().populations["population:yard-exchange"],
-    events: (type) => state.ledger.getEventsAfterId(0).filter((entry) => entry.type === type),
+    // All three settlements run. These cases are about the Yard Exchange pair,
+    // so ignore what Scrap Porch and The Ledge get up to.
+    events: (type) => state.ledger.getEventsAfterId(0).filter((entry) => {
+      if (entry.type !== type) return false;
+      const p = entry.payload ?? {};
+      if (p.populationId && p.populationId !== "population:yard-exchange") return false;
+      if (p.hubInstitutionId && p.hubInstitutionId !== "yard-exchange") return false;
+      if (p.buyerId && p.buyerId !== "population:yard-exchange") return false;
+      return true;
+    }),
   };
 }
 

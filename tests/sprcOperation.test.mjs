@@ -307,16 +307,28 @@ test("Cinder prioritizes and fulfills SPRC procurement through the public contra
   sprc.update();
   const order = Object.values(state.sprc.procurementOrders).find((entry) => entry.procurementItemId === "structural-feedstock");
   const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => 1_000 });
-  const workers = mining.workers.filter((entry) => entry.assignment?.contractId === order.contractId);
-  assert.equal(workers.length, 2, "Cinder splits Sal's order into one full six-unit run and one remainder run");
+  assert.ok(mining.workers.some((entry) => entry.assignment?.contractId === order.contractId),
+    "at least one Cinder ship took Sal's order on net value");
   const minerCashBefore = mining.getState().institution.accounts.operating.balance;
   const supplyStockBefore = state.logistics.institutions["scrap-forge"].inventories["iron-nickel"] ?? 0;
-  workers.forEach((worker) => {
-    worker.cargo[worker.assignment.resourceId] = worker.assignment.harvestTargetQuantity;
-    worker.deliver();
-  });
+  // Hub orders now compete for the same ships on price, so Sal's order is
+  // filled over however many runs it takes rather than split in a single pass.
+  let guard = 0;
+  while (order.status !== "paid" && guard < 12) {
+    guard += 1;
+    // Run the whole fleet, not just Sal's suppliers: ships on hub orders have
+    // to complete their runs and free up, exactly as they would in a live world.
+    mining.workers
+      .filter((entry) => entry.assignment)
+      .forEach((worker) => {
+        worker.cargo[worker.assignment.resourceId] = worker.assignment.harvestTargetQuantity;
+        worker.deliver();
+      });
+    mining.update();
+  }
   assert.equal(order.status, "paid");
-  assert.equal(mining.getState().institution.accounts.operating.balance - minerCashBefore, order.maximumPayment + 56);
+  assert.ok(mining.getState().institution.accounts.operating.balance - minerCashBefore >= order.maximumPayment,
+    "Cinder was paid at least the order value");
   assert.equal(state.sprc.inventories.raw["iron-nickel"], order.requiredEquivalentUnits);
   assert.equal(state.logistics.institutions["scrap-forge"].inventories["iron-nickel"] - supplyStockBefore, 4);
 });
@@ -333,6 +345,18 @@ test("sustained critical demand lets Cinder fund and commission a fourth worker"
   ], addWorkerShip: () => {} };
   const sprc = createSprcOperation({ state, now: () => clock });
   sprc.update();
+  // This case is about pressure from REPAIR supply specifically, so the fleet
+  // has to be occupied by Sal's work alone. Stock each hub past its target in
+  // the family it MINES, which withdraws the competing hub orders — but leave
+  // Scrap Porch without iron-nickel or silicate, because Sal buys those from
+  // its shelf and would never post a procurement order if they were there.
+  // Yard Exchange keeps a gap worth working so the third ship has somewhere to
+  // be: the pressure test needs the WHOLE fleet occupied, not just Sal's two.
+  state.logistics.institutions["yard-exchange"].inventories["iron-nickel"] = 1;
+  state.logistics.institutions["the-ledge"].inventories.silicate = 50;
+  state.logistics.institutions["scrap-forge"].inventories["water-ice"] = 50;
+  state.logistics.institutions["scrap-forge"].inventories["iron-nickel"] = 0;
+  state.logistics.institutions["scrap-forge"].inventories.silicate = 0;
   const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => clock });
   mining.update();
   clock += 6_000;
@@ -433,12 +457,18 @@ test("a mining institution delivery conserves material and payment into freight 
   const buyer = state.logistics.institutions["scrap-forge"];
   const buyerCashBefore = buyer.accounts.operating.balance;
   const minerCashBefore = manager.getState().institution.accounts.operating.balance;
+  const stockBefore = buyer.inventories["water-ice"] ?? 0;
   worker.cargo["water-ice"] = 3;
   worker.deliver();
 
-  assert.equal(buyer.inventories["water-ice"], 3);
-  assert.equal(buyerCashBefore - buyer.accounts.operating.balance, 138);
-  assert.equal(manager.getState().institution.accounts.operating.balance - minerCashBefore, 138);
+  // Hubs open with stock and the price is derived from the gap, so assert the
+  // movement rather than absolute levels: what the buyer paid is exactly what
+  // the miner earned, and the material arrived.
+  assert.equal(buyer.inventories["water-ice"] - stockBefore, 3);
+  const buyerPaid = buyerCashBefore - buyer.accounts.operating.balance;
+  assert.ok(buyerPaid > 0, "the buyer paid for the material");
+  assert.equal(manager.getState().institution.accounts.operating.balance - minerCashBefore, buyerPaid,
+    "every credit the buyer spent reached the miner");
   assert.equal(manager.getState().completedContracts, 1);
 });
 
@@ -465,6 +495,13 @@ test("an unregistered Cinder craft receives paid technology service through SPRC
   const sprcCashBefore = state.sprc.account.balance;
 
   for (let completed = 0; completed < 2; completed += 1) {
+    // Orders now exist only while a hub has a real gap. Draining the shelves
+    // keeps one open, so this stays a test about wear rather than about supply.
+    Object.values(state.logistics.institutions).forEach((institution) => {
+      if (institution.inventories) Object.keys(institution.inventories).forEach((itemId) => { institution.inventories[itemId] = 0; });
+    });
+    mining.update();
+    if (!worker.assignment) continue;
     worker.cargo[worker.assignment.resourceId] = worker.assignment.quantity;
     worker.deliver();
     mining.update();

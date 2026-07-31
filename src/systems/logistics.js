@@ -1,9 +1,10 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260730-1920-f5dc6a1";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260730-1920-f5dc6a1";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260730-1920-f5dc6a1";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260730-1920-f5dc6a1";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260730-1920-f5dc6a1";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-1920-f5dc6a1";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260730-2000-278126d";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260730-2000-278126d";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-2000-278126d";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260730-2000-278126d";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260730-2000-278126d";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260730-2000-278126d";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-2000-278126d";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -19,12 +20,18 @@ export const STANDING_FREIGHT_TEMPLATES = Object.freeze([
 ]);
 
 export function createInitialLogisticsState(now = Date.now()) {
+  // Hubs open holding a working stock of the family they MINE, and nothing of
+  // the families they must import. A settlement that has been feeding a
+  // population does not start with an empty warehouse, and starting every hub
+  // at zero made all three post critical-urgency mining orders at once and
+  // outbid Sal's repair work. Import families stay at zero on purpose: that
+  // shortfall is the interdependence, and it is what procurement has to solve.
   return {
     version: 1,
     institutions: {
-      "yard-exchange": { id: "yard-exchange", archetypeId: "trade-hub", accounts: { operating: { balance: 5000, committed: 0 } }, inventories: { "iron-nickel": 0, "water-ice": 0 }, renewableResources: ["iron-nickel"] },
-      "scrap-forge": { id: "scrap-forge", archetypeId: "resource-outpost", accounts: { operating: { balance: 3000, committed: 0 } }, inventories: { "water-ice": 0, "iron-nickel": 0 }, renewableResources: ["water-ice"] },
-      "the-ledge": { id: "the-ledge", archetypeId: "frontier-outpost", accounts: { operating: { balance: 4200, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 0 }, renewableResources: ["silicate"] },
+      "yard-exchange": { id: "yard-exchange", archetypeId: "trade-hub", accounts: { operating: { balance: 5000, committed: 0 } }, inventories: { "iron-nickel": 4, silicate: 0, "water-ice": 0 }, renewableResources: ["iron-nickel"] },
+      "scrap-forge": { id: "scrap-forge", archetypeId: "resource-outpost", accounts: { operating: { balance: 3000, committed: 0 } }, inventories: { "water-ice": 6, "iron-nickel": 0, silicate: 0 }, renewableResources: ["water-ice"] },
+      "the-ledge": { id: "the-ledge", archetypeId: "frontier-outpost", accounts: { operating: { balance: 4200, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 4, "water-ice": 0 }, renewableResources: ["silicate"] },
       "carrier:yard-hauler": { id: "carrier:yard-hauler", name: "Quill Independent Freight", referenceId: "FR-CARR-014", archetypeId: "hauling-business", controllerInstitutionId: "person:yard-hauler-operator", accounts: { operating: { id: "FR-ACCT-014", balance: 400, committed: 0, transactions: [] } }, policies: { transportation: { ...FIRST_REACH_CARRIER_POLICY, minimumOperatingCash: 180 } }, repairOptions: FIRST_REACH_REPAIR_OPTIONS.map((entry) => ({ ...entry })) },
       "person:yard-hauler-operator": { id: "person:yard-hauler-operator", name: "Dara Quill", referenceId: "HLC-001-HAULER-YARD-SCRAP", archetypeId: "person", controls: ["carrier:yard-hauler"], license: { id: "HLC-001-HAULER-YARD-SCRAP", class: "commercial-hauler", status: "active" } },
       "ship:hauler-yard-scrap": { id: "ship:hauler-yard-scrap", name: "Yard Hauler", referenceId: "HAUL-01-HAULER-YARD-SCRAP", archetypeId: "cargo-ship", controllerInstitutionId: "carrier:yard-hauler", wear: 0.4, issueCount: 0 },
@@ -374,12 +381,40 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     if (!affordability.affordable) return null;
     const source = logistics.institutions[template.sourceInstitutionId];
     if ((source.inventories[template.commodity] ?? 0) < template.amount) return null;
+
+    // Buy the goods from the seller. The buyer must be able to cover the sale
+    // AND the freight, or no shipment is created — an unaffordable trade is
+    // withheld rather than half-executed.
+    const goods = quoteGoods(template.sourceInstitutionId, template.commodity, template.amount);
+    const buyerId = template.destinationInstitutionId;
+    const buyerAccount = logistics.institutions[buyerId]?.accounts?.operating ?? {};
+    if ((buyerAccount.balance ?? 0) < goods.price + rate) {
+      recordBlocker(state, buyerId, createBlocker({
+        kind: BLOCKER_KIND.PAYER_CANNOT_AFFORD,
+        summary: `${buyerId} cannot buy ${template.amount} ${template.commodityName}: ${goods.price} cr of goods plus ${rate} cr freight exceeds its balance`,
+        subjectId: buyerId, objectId: template.id,
+        waitingFor: "revenue, or a cheaper supplier",
+        wakeOn: ["population.goodsPurchased", "order-repriced"],
+        detail: { templateId: template.id, goodsPrice: goods.price, freight: rate, balance: Math.round(buyerAccount.balance ?? 0) },
+        at: now(),
+      }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+      return null;
+    }
+
     source.inventories[template.commodity] -= template.amount;
+    recordAccountTransaction(buyerId, -goods.price, "goods-purchase", template.id, `Bought ${template.amount} ${template.commodityName} from ${template.sourceInstitutionId}`);
+    recordAccountTransaction(template.sourceInstitutionId, goods.price, "goods-sale", template.id, `Sold ${template.amount} ${template.commodityName} to ${buyerId}`);
+    state.ledger.recordEvent("logistics.goodsSold", {
+      sellerId: template.sourceInstitutionId, buyerId, commodity: template.commodity,
+      quantity: template.amount, price: goods.price, unitCost: Math.round(goods.unitCost),
+      freight: rate, reasons: goods.valuation.reasons,
+    }, { visible: true, message: `${template.sourceInstitutionId} sold ${template.amount} ${template.commodityName} to ${buyerId} for ${goods.price} cr, with ${rate} cr freight on top.` });
+
     issuer.accounts.operating.committed += rate;
     const id = `SHIP-${String(++logistics.counters.shipment).padStart(4, "0")}`;
     const containerId = `CONT-${String(++logistics.counters.container).padStart(4, "0")}`;
     const container = logistics.containers[containerId] = { id: containerId, shipmentId: id, commodity: template.commodity, quantity: template.amount, ownerInstitutionId: template.sourceInstitutionId, custodianInstitutionId: template.sourceInstitutionId, custody: [{ institutionId: template.sourceInstitutionId, action: "created", siteId: template.originSiteId, at: now() }] };
-    const shipment = logistics.shipments[id] = { id, templateId: template.id, contractId, responseId, assigneeType, assigneeId, containerId, originSiteId: template.originSiteId, destinationSiteId: template.destinationSiteId, sourceInstitutionId: template.sourceInstitutionId, destinationInstitutionId: template.destinationInstitutionId, issuerInstitutionId: template.issuerInstitutionId, commodity: template.commodity, quantity: template.amount, payment: rate, committedPayment: rate, basePayment: template.payment, status: "assigned", createdAt: now(), loadedAt: null };
+    const shipment = logistics.shipments[id] = { id, templateId: template.id, contractId, responseId, assigneeType, assigneeId, containerId, originSiteId: template.originSiteId, destinationSiteId: template.destinationSiteId, sourceInstitutionId: template.sourceInstitutionId, destinationInstitutionId: template.destinationInstitutionId, issuerInstitutionId: template.issuerInstitutionId, commodity: template.commodity, quantity: template.amount, payment: rate, committedPayment: rate, basePayment: template.payment, goodsPayment: goods.price, goodsUnitCost: goods.unitCost, status: "assigned", createdAt: now(), loadedAt: null };
     appendHistory("shipment.assigned", { shipmentId: id, containerId, assigneeId, commodity: template.commodity });
     if (assigneeType === "npc") {
       loadShipment(shipment);
@@ -471,6 +506,14 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     transferCustody(container, shipment.destinationInstitutionId, "unloaded", shipment.destinationSiteId);
     container.ownerInstitutionId = shipment.destinationInstitutionId;
     logistics.institutions[shipment.destinationInstitutionId].inventories[shipment.commodity] = (logistics.institutions[shipment.destinationInstitutionId].inventories[shipment.commodity] ?? 0) + shipment.quantity;
+    // Landed cost, not just the sale price: the buyer really paid for the
+    // goods and the freight to get them here, and anything built from this
+    // material should carry both.
+    recordAcquisition(state, {
+      institutionId: shipment.destinationInstitutionId, itemId: shipment.commodity,
+      units: shipment.quantity, totalCost: (shipment.goodsPayment ?? 0) + (shipment.payment ?? 0),
+      source: "freight-purchase", at: now(),
+    });
     const issuer = logistics.institutions[shipment.issuerInstitutionId];
     recordAccountTransaction(shipment.issuerInstitutionId, -shipment.payment, "freight-payment", shipment.id, `Paid freight delivery ${shipment.id}`);
     issuer.accounts.operating.committed = Math.max(0, issuer.accounts.operating.committed - shipment.payment);
@@ -543,6 +586,25 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     recordServiceCost(state, { institutionId: hauler.carrierInstitutionId, serviceType: "maintenance", price: amount, at: now() });
     publishCarrierEvent("carrier.repairPaid", shipId, { repairOrderId: referenceId, amount, transactionId: transaction.id, balance: transaction.balance }, `${getCarrierContext(shipId).carrierName} paid Scrap Porch ${amount} cr for repairs; operating balance is ${transaction.balance} cr.`);
     return transaction;
+  }
+
+  // What the supplying institution charges for the GOODS. Freight is a separate
+  // payment to the carrier; this is the sale itself, which previously never
+  // happened at all — a source hub simply lost material for nothing.
+  //
+  // The ask is built from what the material actually cost the seller, so the
+  // cost basis recorded when it bought ore propagates into what it resells for.
+  function quoteGoods(sellerInstitutionId, commodity, quantity) {
+    // Floored at plain market worth. A seller that has not recorded a cost
+    // basis yet would otherwise part with material for a single credit.
+    const marketUnitValue = getResourceTradeValue(commodity);
+    const unitCost = Math.max(getUnitCost(state, sellerInstitutionId, commodity) || 0, marketUnitValue);
+    const ask = evaluateSupplierAsk({
+      workId: `${quantity} ${commodity}`,
+      costComponents: { other: unitCost * quantity },
+      traits: { growthBias: 0.3, caution: 0.5 },
+    });
+    return { price: ask.recommendedPrice, unitCost, marketUnitValue, valuation: ask };
   }
 
   function recordAccountTransaction(institutionId, amount, type, referenceId, description) {

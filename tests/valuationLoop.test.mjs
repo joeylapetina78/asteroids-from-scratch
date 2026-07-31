@@ -91,8 +91,19 @@ test("full loop: purchase material at a valued price, then sell a repair priced 
 
   // 2. Deliver the material; payment and cost basis are recorded.
   const sprcCashBefore = state.sprc.account.balance;
+  // Hub orders compete for the same ships now, so Sal's order fills over as
+  // many runs as it takes. Run the fleet until it is paid.
+  let guard = 0;
+  while (order.status !== "paid" && guard < 12) {
+    guard += 1;
+    mining.workers.filter((entry) => entry.assignment).forEach((entry) => {
+      entry.cargo[entry.assignment.resourceId] = entry.assignment.harvestTargetQuantity;
+      entry.deliver();
+    });
+    mining.update();
+  }
   suppliers.forEach((worker) => {
-    worker.cargo[worker.assignment.resourceId] = worker.assignment.harvestTargetQuantity;
+    worker.cargo[worker.assignment?.resourceId ?? "iron-nickel"] = worker.assignment?.harvestTargetQuantity ?? 0;
     worker.deliver();
   });
   assert.equal(order.status, "paid");

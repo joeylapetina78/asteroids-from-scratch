@@ -225,8 +225,12 @@ test("a carrier that finds only below-cost freight records why it refused", () =
     operationalStatus: "seeking-work", activeShipmentId: null,
     canAcceptRoute: () => true, assignShipment: () => {}, assignment: null,
   }));
+  // Hubs now open with working stock, so empty the freight sources explicitly:
+  // this case is about what an idle carrier reports, not about start levels.
+  Object.values(state.logistics.institutions).forEach((institution) => {
+    if (institution.inventories) Object.keys(institution.inventories).forEach((itemId) => { institution.inventories[itemId] = 0; });
+  });
   const manager = createLogisticsManager({ state, ships, now: () => 1_000 });
-  // Freight sources are empty, so nothing is eligible.
   manager.update();
 
   const idle = Object.keys(state.logistics.haulers)

@@ -1,14 +1,14 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260730-1920-f5dc6a1";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260730-1920-f5dc6a1";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260730-1920-f5dc6a1";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260730-1920-f5dc6a1";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260730-1920-f5dc6a1";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260730-1920-f5dc6a1";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260730-1920-f5dc6a1";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260730-1920-f5dc6a1";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260730-1920-f5dc6a1";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-1920-f5dc6a1";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-1920-f5dc6a1";
+import { depositCredits } from "./accounts.js?v=fresh-20260730-2000-278126d";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260730-2000-278126d";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260730-2000-278126d";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260730-2000-278126d";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260730-2000-278126d";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260730-2000-278126d";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260730-2000-278126d";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260730-2000-278126d";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260730-2000-278126d";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260730-2000-278126d";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260730-2000-278126d";
 
 export const SPRC = Object.freeze({
   actorId: "organization:sprc",
@@ -1061,6 +1061,12 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     if (reservedEquivalentUnits <= 0) return null;
     const allocation = order.allocations[supplierInstitutionId] ??= { supplierInstitutionId, reservedEquivalentUnits: 0, deliveredEquivalentUnits: 0, status: "active", createdAt: now() };
     allocation.reservedEquivalentUnits += reservedEquivalentUnits;
+    // A supplier that filled an earlier reservation was marked completed.
+    // Taking a new reservation makes it active again — without this, the first
+    // supplier to finish a run could never come back for the remainder, and the
+    // order would sit part-filled forever while that supplier was refused with
+    // "order-not-accepting" on every attempt.
+    allocation.status = "active";
     appendHistory("procurement.allocated", { procurementOrderId: order.id, supplierInstitutionId, equivalentUnits: reservedEquivalentUnits });
     state.ledger.recordEvent("institution.contractAllocated", { contractId, procurementOrderId: order.id, supplierInstitutionId, equivalentUnits: reservedEquivalentUnits }, { visible: true, message: `${supplierInstitutionId} reserved ${reservedEquivalentUnits} equivalents on ${order.id}.` });
     return allocation;
