@@ -10,9 +10,9 @@
 // draws from a family and substitutes freely within it. A hub does not need
 // iron-nickel specifically; it needs structural material.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-0028-87a1d54";
-import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260801-0028-87a1d54";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260801-0028-87a1d54";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-0044-86882df";
+import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260801-0044-86882df";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260801-0044-86882df";
 
 // How many seconds of consumption a hub tries to keep on the shelf. Higher
 // means fatter buffers and less frequent, larger orders.

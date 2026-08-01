@@ -3379,3 +3379,9 @@ body.is-viewport-fullscreen .viewport-panel #game {
 .contract-board-table tbody tr.contract-state-done { border-left-color: #4fd88a; opacity: 0.72; }
 .contract-board-table tbody tr:hover { background: var(--hud-row-hover, rgba(255, 255, 255, 0.04)); cursor: pointer; }
 .contract-view-cell { white-space: nowrap; display: flex; gap: 4px; }
+
+/* Scripted story work and live institutional demand read very differently:
+   one is fixed and always there, the other exists only while somebody needs it
+   and its terms move. Mark them so they are never confused on the board. */
+.rook-job-option[data-job-provenance="generated"] { border-left: 3px solid #4f9dd8; }
+.rook-job-option[data-job-provenance="authored"] { border-left: 3px solid #8a7fd8; }
