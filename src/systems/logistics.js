@@ -1,11 +1,11 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-0014-16743da";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-0014-16743da";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0014-16743da";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260801-0014-16743da";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-0014-16743da";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-0014-16743da";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-0014-16743da";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0014-16743da";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-0028-87a1d54";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-0028-87a1d54";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0028-87a1d54";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260801-0028-87a1d54";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-0028-87a1d54";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-0028-87a1d54";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-0028-87a1d54";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0028-87a1d54";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -888,15 +888,23 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
   return { update, assignNpcShipment, acceptPlayerContract, loadPlayerContract, deliverPlayerContract, getState: () => logistics };
 }
 
-export function createStandingFreightJob(template, issuer = null) {
-  return { id: `player-${template.id}`, type: "cargo-run", group: "standing-freight", jobKind: "logistics", repeatable: true, jobTier: "standing", jobTierLabel: "Standing Freight", title: `${template.commodityName} to ${template.destinationName}`, issuer: issuer ?? template.originName, summary: `Load one sealed ${template.commodityName} container at ${template.originName} and deliver it to ${template.destinationName}.`, terms: { commodity: template.commodity, commodityName: template.commodityName, amount: template.amount, originSiteId: template.originSiteId, originName: template.originName, destinationSiteId: template.destinationSiteId, destinationName: template.destinationName, standingFreightTemplateId: template.id }, reward: { credits: template.payment }, clauses: ["This is a standing regional freight offer shared with independent and institutional carriers.", "One real container is assigned on acceptance; custody and inventory transfer are recorded.", "Load at origin and unload at destination."], };
+export function createStandingFreightJob(template, issuer = null, postedRate = null) {
+  // The player is offered the rate the carriers are actually being offered. It
+  // may have been raised above the opening budget to attract somebody, and
+  // quoting the base here would undercut the player against the NPC market.
+  const credits = postedRate ?? template.payment;
+  return { id: `player-${template.id}`, type: "cargo-run", group: "standing-freight", jobKind: "logistics", repeatable: true, jobTier: "standing", jobTierLabel: "Standing Freight", title: `${template.commodityName} to ${template.destinationName}`, issuer: issuer ?? template.originName, summary: `Load ${template.amount} ${template.commodityName} at ${template.originName} and deliver to ${template.destinationName}.`, terms: { commodity: template.commodity, commodityName: template.commodityName, amount: template.amount, originSiteId: template.originSiteId, originName: template.originName, destinationSiteId: template.destinationSiteId, destinationName: template.destinationName, standingFreightTemplateId: template.id }, reward: { credits }, clauses: ["This is a standing regional freight offer shared with independent and institutional carriers.", "One real container is assigned on acceptance; custody and inventory transfer are recorded.", `Load at ${template.originName} and unload at ${template.destinationName}.`], };
 }
 
 // The player sees the same board the carriers do: real runs, backed by real
 // purchase orders, and nothing at all where no hub has asked for anything.
 export function getStandingFreightJobsForSite(siteId, issuer = null, state = null) {
   if (!state) return [];
+  const posted = state.logistics?.postedFreightRates ?? {};
+  // Offered at BOTH ends of the lane. An NPC hauler may take a run from the far
+  // end and fly to the pickup, so the player sees the same board rather than
+  // only what happens to originate where they are standing.
   return getProcurementFreightOffers(state)
-    .filter((template) => template.originSiteId === siteId)
-    .map((template) => createStandingFreightJob(template, issuer));
+    .filter((template) => template.originSiteId === siteId || template.destinationSiteId === siteId)
+    .map((template) => createStandingFreightJob(template, issuer, posted[template.id] ?? null));
 }
