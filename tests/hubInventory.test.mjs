@@ -172,51 +172,6 @@ function createFreightWorld() {
   return { state, manager, ships, procurement };
 }
 
-test("a hub that gives up material is paid for it", () => {
-  const { state, manager } = createFreightWorld();
-  const before = Object.fromEntries(["yard-exchange", "scrap-forge", "the-ledge"]
-    .map((id) => [id, state.logistics.institutions[id].accounts.operating.balance]));
-  manager.update();
-
-  const shipment = Object.values(state.logistics.shipments)[0];
-  assert.ok(shipment, "a shipment was created");
-  assert.ok(shipment.goodsPayment > 0, "the goods themselves carry a price");
-  const seller = state.logistics.institutions[shipment.sourceInstitutionId];
-  // A hub can sell into one lane and buy on another in the same tick, so read
-  // the sale off its books rather than netting its balance.
-  const sale = seller.accounts.operating.transactions.find((entry) => entry.type === "goods-sale" && entry.referenceId === shipment.templateId);
-  assert.ok(sale, "the sale is on the supplying institution's books");
-  assert.equal(sale.amount, shipment.goodsPayment, "paid exactly the sale price");
-  assert.ok(shipment.goodsPayment >= shipment.quantity, "and material is never given away for pennies");
-  assert.ok(before[shipment.sourceInstitutionId] !== undefined);
-});
-
-test("the buyer pays for the goods and the freight separately", () => {
-  const { state, manager } = createFreightWorld();
-  manager.update();
-  const shipment = Object.values(state.logistics.shipments)[0];
-  const buyer = state.logistics.institutions[shipment.destinationInstitutionId];
-  const purchase = buyer.accounts.operating.transactions.find((entry) => entry.type === "goods-purchase");
-  assert.ok(purchase, "the buyer booked a goods purchase");
-  assert.equal(Math.abs(purchase.amount), shipment.goodsPayment);
-  assert.notEqual(shipment.goodsPayment, shipment.payment,
-    "the sale and the haulage are separate amounts");
-});
-
-test("a sale is recorded with both sides and moves no value out of the world", () => {
-  const { state, manager } = createFreightWorld();
-  const totalCash = () => Object.values(state.logistics.institutions)
-    .reduce((sum, institution) => sum + (institution.accounts?.operating?.balance ?? 0), 0);
-  const before = totalCash();
-  manager.update();
-  const sales = state.ledger.getEventsAfterId(0).filter((entry) => entry.type === "logistics.goodsSold");
-  assert.ok(sales.length > 0);
-  assert.ok(sales[0].payload.sellerId && sales[0].payload.buyerId);
-  assert.ok(sales[0].payload.price > 0);
-  // Buying goods only moves credits between institutions.
-  assert.equal(totalCash(), before, "a sale between institutions is a transfer, not a leak");
-});
-
 test("a buyer that cannot cover goods plus freight makes no shipment at all", () => {
   const { state, manager } = createFreightWorld();
   Object.values(state.logistics.institutions).forEach((institution) => {
@@ -229,5 +184,19 @@ test("a buyer that cannot cover goods plus freight makes no shipment at all", ()
   Object.entries(stockBefore).forEach(([id, inventories]) => {
     assert.deepEqual(state.logistics.institutions[id].inventories ?? {}, inventories,
       `${id} kept its material rather than giving it away unpaid`);
+  });
+});
+
+// Payment for goods now happens when title transfers, before a carrier is
+// involved at all — see hubProcurement.test.mjs. What freight must still do is
+// move property without buying it again.
+test("a carrier moving prepaid cargo does not buy it a second time", () => {
+  const { state, manager } = createFreightWorld();
+  manager.update();
+  Object.values(state.logistics.shipments).forEach((shipment) => {
+    if (!shipment.prepaid) return;
+    assert.equal(shipment.goodsPayment, 0, "prepaid cargo is not re-purchased");
+    assert.ok(shipment.payment > 0, "but the carrier is still paid to haul it");
+    assert.ok(shipment.manifestId, "and it moves under a manifest");
   });
 });

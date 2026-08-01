@@ -1,11 +1,11 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260731-2101-07d4f49";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260731-2101-07d4f49";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2101-07d4f49";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260731-2101-07d4f49";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260731-2101-07d4f49";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260731-2101-07d4f49";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260731-2101-07d4f49";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260731-2101-07d4f49";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260731-2325-7368fe3";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260731-2325-7368fe3";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2325-7368fe3";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260731-2325-7368fe3";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260731-2325-7368fe3";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260731-2325-7368fe3";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260731-2325-7368fe3";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260731-2325-7368fe3";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -340,10 +340,10 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const offered = getProcurementFreightOffers(state);
     const hasLoadableLocalWork = offered.some((entry) => entry.originSiteId === hauler.currentSiteId
       && countActiveForTemplate(entry.id) < 1
-      && (logistics.institutions[entry.sourceInstitutionId]?.inventories?.[entry.commodity] ?? 0) >= entry.amount);
+      && availableToLoad(entry) >= entry.amount);
     const candidates = offered
       .filter((entry) => countActiveForTemplate(entry.id) < 1)
-      .filter((entry) => (logistics.institutions[entry.sourceInstitutionId]?.inventories?.[entry.commodity] ?? 0) >= entry.amount)
+      .filter((entry) => availableToLoad(entry) >= entry.amount)
       // A hauler may take a contract from either end of the relationship: if it
       // is not already at the pickup, it flies there empty first and the cost of
       // that leg is priced into what it will accept.
@@ -429,6 +429,49 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     return shipment;
   }
 
+  // A run carrying goods that already belong to the destination. No sale, no
+  // payment to the seller: the only money here is the carrier's fee, which the
+  // owner of the cargo pays.
+  function createPrepaidShipment({ template, assigneeType, assigneeId, responseId, contractId, plan, repositionFrom, routeSites, rate, held }) {
+    const issuer = logistics.institutions[template.issuerInstitutionId];
+    issuer.accounts.operating.committed += rate;
+    const id = `SHIP-${String(++logistics.counters.shipment).padStart(4, "0")}`;
+    const containerId = `CONT-${String(++logistics.counters.container).padStart(4, "0")}`;
+    logistics.containers[containerId] = {
+      id: containerId, shipmentId: id, commodity: template.commodity, quantity: template.amount,
+      // Custody sits with the carrier; ownership never leaves the buyer.
+      ownerInstitutionId: template.destinationInstitutionId,
+      custodianInstitutionId: template.sourceInstitutionId,
+      manifestId: held.manifestId ?? null,
+      custody: [{ institutionId: template.sourceInstitutionId, action: "released-to-carrier", siteId: template.originSiteId, at: now() }],
+    };
+    const shipment = logistics.shipments[id] = {
+      id, templateId: template.id, contractId, responseId, assigneeType, assigneeId, containerId,
+      originSiteId: template.originSiteId, destinationSiteId: template.destinationSiteId,
+      sourceInstitutionId: template.sourceInstitutionId, destinationInstitutionId: template.destinationInstitutionId,
+      issuerInstitutionId: template.issuerInstitutionId, commodity: template.commodity, quantity: template.amount,
+      payment: rate, committedPayment: rate, basePayment: template.payment,
+      goodsPayment: 0, prepaid: true, manifestId: held.manifestId ?? null,
+      procurementOrderId: template.procurementOrderId ?? null, repositionedFrom: repositionFrom ?? null,
+      status: "assigned", createdAt: now(), loadedAt: null,
+    };
+    appendHistory("shipment.assigned", { shipmentId: id, containerId, assigneeId, commodity: template.commodity, prepaid: true });
+    state.ledger.recordEvent("logistics.prepaidCargoCollected", {
+      shipmentId: id, manifestId: held.manifestId ?? null, ownerId: template.destinationInstitutionId,
+      heldAtId: template.sourceInstitutionId, commodity: template.commodity, quantity: template.amount, freight: rate,
+    }, { visible: true, message: `A carrier collected ${template.amount} ${template.commodityName} held at ${template.originName} under ${held.manifestId ?? "manifest"} and owned by ${template.destinationName}.` });
+
+    const assignedShip = assigneeType === "npc" ? shipById.get(assigneeId) : null;
+    if (assigneeType === "npc" && assignedShip) {
+      loadShipment(shipment);
+      if (shipment.procurementOrderId) onProcurementShipped?.(shipment.procurementOrderId, shipment.id);
+      const hauler = logistics.haulers[assigneeId];
+      hauler.activeShipmentId = id; hauler.status = "transporting";
+      assignedShip.assignShipment({ shipmentId: id, destinationSiteId: template.destinationSiteId, route: routeSites });
+    }
+    return shipment;
+  }
+
   function createShipment({ template, assigneeType, assigneeId, responseId = null, contractId = null, plan = null, repositionFrom = null }) {
     const haulRoute = plan?.route ? buildPhysicalTransportationRoute(transportationNetwork, plan.route) : [];
     // A hauler taking work from the far end flies to the pickup empty first, so
@@ -446,7 +489,18 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const affordability = evaluateAffordability({ account: issuer.accounts.operating, policy: { protectedCash: 0 }, cost: rate });
     if (!affordability.affordable) return null;
     const source = logistics.institutions[template.sourceInstitutionId];
-    if ((source.inventories[template.commodity] ?? 0) < template.amount) return null;
+    if (!template.prepaid && (source.inventories[template.commodity] ?? 0) < template.amount) return null;
+
+    // Prepaid freight is moving property the buyer already owns: title changed
+    // hands when the sale completed, so there is nothing to buy here and the
+    // goods come out of the awaiting-pickup manifest rather than the seller's
+    // own shelf.
+    if (template.prepaid) {
+      const held = source.awaitingPickup?.[template.procurementOrderId];
+      if (!held || held.units < template.amount) return null;
+      delete source.awaitingPickup[template.procurementOrderId];
+      return createPrepaidShipment({ template, assigneeType, assigneeId, responseId, contractId, plan, repositionFrom, routeSites, rate, held });
+    }
 
     // Buy the goods from the seller. The buyer must be able to cover the sale
     // AND the freight, or no shipment is created — an unaffordable trade is
@@ -719,6 +773,16 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
   function formatReason(value) { return String(value).replaceAll("-", " "); }
 
   function transferCustody(container, institutionId, action, siteId) { container.custodianInstitutionId = institutionId; container.custody.push({ institutionId, action, siteId, at: now() }); }
+  // What a carrier can actually load. Prepaid freight draws from goods the
+  // buyer already owns and that are sitting at the seller awaiting pickup; only
+  // an unpaid run draws from the seller's own stock.
+  function availableToLoad(template) {
+    const source = logistics.institutions[template.sourceInstitutionId];
+    if (!template.prepaid) return source?.inventories?.[template.commodity] ?? 0;
+    const held = source?.awaitingPickup?.[template.procurementOrderId];
+    return held?.units ?? 0;
+  }
+
   function countActiveForTemplate(templateId) { return Object.values(logistics.shipments).filter((entry) => entry.templateId === templateId && ["assigned", "loaded"].includes(entry.status)).length; }
   function appendHistory(type, payload) { logistics.history.push({ id: `log-history-${logistics.history.length + 1}`, type, at: now(), ...payload }); }
   return { update, assignNpcShipment, acceptPlayerContract, loadPlayerContract, deliverPlayerContract, getState: () => logistics };

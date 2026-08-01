@@ -22,12 +22,12 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2101-07d4f49";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260731-2101-07d4f49";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260731-2101-07d4f49";
-import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260731-2101-07d4f49";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260731-2101-07d4f49";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260731-2101-07d4f49";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2325-7368fe3";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260731-2325-7368fe3";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260731-2325-7368fe3";
+import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260731-2325-7368fe3";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260731-2325-7368fe3";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260731-2325-7368fe3";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -97,6 +97,25 @@ export function listOrders(state, { status = null, buyerInstitutionId = null, su
 
 // Units a supplier has agreed to sell and not yet delivered. hubInventory adds
 // this to the supplier's own target, so an accepted sale is what makes it mine.
+// Material physically at this hub that belongs to somebody else, by resource.
+export function getAwaitingPickup(state, hubInstitutionId, resourceId = null) {
+  const held = state.logistics?.institutions?.[hubInstitutionId]?.awaitingPickup ?? {};
+  return Object.values(held)
+    .filter((entry) => !resourceId || entry.resourceId === resourceId)
+    .reduce((sum, entry) => sum + (entry.units ?? 0), 0);
+}
+
+// Material this hub has mined against a sale but not yet been paid for.
+export function getSaleReserve(state, hubInstitutionId, resourceId = null) {
+  const reserve = state.logistics?.institutions?.[hubInstitutionId]?.saleReserve ?? {};
+  const orders = state.hubProcurement?.orders ?? {};
+  return Object.entries(reserve).reduce((sum, [orderId, units]) => {
+    const order = orders[orderId];
+    if (resourceId && order?.resourceId !== resourceId) return sum;
+    return sum + (units ?? 0);
+  }, 0);
+}
+
 export function getCommittedSupply(state, supplierInstitutionId, family) {
   return listOrders(state, { supplierInstitutionId, status: [PROCUREMENT_STATUS.ACCEPTED, PROCUREMENT_STATUS.READY] })
     .filter((order) => order.family === family)
@@ -128,6 +147,11 @@ export function getProcurementFreightOffers(state) {
     issuerInstitutionId: order.buyerInstitutionId,
     sourceInstitutionId: order.supplierInstitutionId,
     destinationInstitutionId: order.buyerInstitutionId,
+    // The goods are already bought and already the buyer's. Freight moves
+    // property, it does not buy it, so the carrier run must not pay the seller
+    // a second time or draw from the seller's own stock.
+    prepaid: true,
+    manifestId: order.manifestId ?? null,
   }));
 }
 
@@ -138,6 +162,97 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   procurement.counter ??= 0;
 
   const institution = (id) => state.logistics?.institutions?.[id] ?? null;
+
+  // Four distinct places material can be, and it is only ever in one:
+  //
+  //   hub.inventories          the hub's own stock, free to consume
+  //   hub.saleReserve          mined against an accepted sale, earmarked, NOT
+  //                            yet paid for and NOT available to consume
+  //   hub.awaitingPickup       sold and paid for, owned by the BUYER, still
+  //                            sitting physically at the seller
+  //   buyer.inventories        delivered
+  //
+  // Keeping these apart is the whole point: a supplier that accepts a sale must
+  // not be able to mine the ore and then eat it itself.
+  function saleReserve(hub) {
+    hub.saleReserve ??= {};
+    return hub.saleReserve;
+  }
+
+  function awaitingPickup(hub) {
+    hub.awaitingPickup ??= {};
+    return hub.awaitingPickup;
+  }
+
+  // Move whatever the hub has spare into the allocations it owes, oldest first,
+  // so an early contract is not starved by a later one.
+  function fillReservations() {
+    listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })
+      .sort((first, second) => (first.acceptedAt ?? 0) - (second.acceptedAt ?? 0))
+      .forEach((order) => {
+        const supplier = institution(order.supplierInstitutionId);
+        if (!supplier) return;
+        const reserve = saleReserve(supplier);
+        const already = reserve[order.id] ?? 0;
+        const owed = Math.max(0, order.units - already);
+        if (owed <= 0) return;
+
+        const spare = supplier.inventories?.[order.resourceId] ?? 0;
+        const moved = Math.min(owed, spare);
+        if (moved <= 0) return;
+        supplier.inventories[order.resourceId] = spare - moved;
+        reserve[order.id] = already + moved;
+        emit("procurement.reserveFilled", `${hubName(order.supplierInstitutionId)} set aside ${moved} ${order2Label(order.resourceId)} against ${order.id} (${reserve[order.id]}/${order.units}).`, {
+          procurementOrderId: order.id, sellerId: order.supplierInstitutionId, buyerId: order.buyerInstitutionId,
+          resourceId: order.resourceId, moved, reserved: reserve[order.id], owed: order.units,
+        });
+      });
+  }
+
+  // The sale completes when the reserve is whole: the buyer pays, ownership
+  // moves, and the goods sit at the seller as the buyer's property awaiting
+  // transport. Freight is a separate arrangement the BUYER then makes.
+  function completeSalesWhenReserved() {
+    listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED }).forEach((order) => {
+      const supplier = institution(order.supplierInstitutionId);
+      const buyer = institution(order.buyerInstitutionId);
+      if (!supplier || !buyer) return;
+      const reserve = saleReserve(supplier);
+      if ((reserve[order.id] ?? 0) < order.units) return;
+
+      const price = order.committedPayment ?? order.units * order.pricePerUnit;
+      if ((buyer.accounts?.operating?.balance ?? 0) < price) return;
+
+      // Money moves once, here, for the goods themselves.
+      buyer.accounts.operating.balance -= price;
+      buyer.accounts.operating.committed = Math.max(0, (buyer.accounts.operating.committed ?? 0) - price);
+      supplier.accounts.operating.balance += price;
+
+      delete reserve[order.id];
+      const manifestId = `MANIFEST-${order.id}`;
+      awaitingPickup(supplier)[order.id] = {
+        manifestId,
+        orderId: order.id,
+        resourceId: order.resourceId,
+        units: order.units,
+        ownerInstitutionId: order.buyerInstitutionId,
+        heldAtInstitutionId: order.supplierInstitutionId,
+        paid: price,
+        titledAt: now(),
+      };
+      order.status = PROCUREMENT_STATUS.READY;
+      order.readyAt = now();
+      order.paidAt = now();
+      order.manifestId = manifestId;
+
+      emit("procurement.titleTransferred", `${hubName(order.buyerInstitutionId)} paid ${hubName(order.supplierInstitutionId)} ${price} cr for ${order.units} ${order2Label(order.resourceId)}. The ore is now theirs, still held at ${hubName(order.supplierInstitutionId)} under ${manifestId}, awaiting transport they arrange.`, {
+        procurementOrderId: order.id, manifestId,
+        buyerId: order.buyerInstitutionId, sellerId: order.supplierInstitutionId,
+        resourceId: order.resourceId, units: order.units, price,
+        heldAt: order.supplierInstitutionId, ownedBy: order.buyerInstitutionId,
+      });
+    });
+  }
 
   function emit(type, message, payload) {
     state.ledger.recordEvent(type, payload, { visible: true, message });
@@ -259,45 +374,23 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   }
 
   // ── 4: goods must actually exist before anything is hauled ───────────────
-  function markReadyWhenSupplied() {
-    // A run already on offer whose goods have since been used or sold goes back
-    // to waiting. Freight must never be offered against material that is gone.
-    listOrders(state, { status: PROCUREMENT_STATUS.READY }).forEach((order) => {
-      const supplier = institution(order.supplierInstitutionId);
-      if ((supplier?.inventories?.[order.resourceId] ?? 0) >= order.units) return;
-      order.status = PROCUREMENT_STATUS.ACCEPTED;
-      order.readyAt = null;
-    });
-
+  // A supplier that owes goods and cannot yet cover them says so, and the
+  // buyer can see exactly how short it is.
+  function reportOutstandingReservations() {
     listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED }).forEach((order) => {
       const supplier = institution(order.supplierInstitutionId);
-      const onHand = supplier?.inventories?.[order.resourceId] ?? 0;
-      if (onHand < order.units) {
-        recordBlocker(state, order.supplierInstitutionId, createBlocker({
-          kind: BLOCKER_KIND.AWAITING_MATERIAL,
-          summary: `${hubName(order.supplierInstitutionId)} owes ${order.units} ${order2Label(order.resourceId)} on ${order.id} and holds ${onHand}`,
-          subjectId: order.supplierInstitutionId, objectId: order.id,
-          waitingFor: `${order.units - onHand} more ${order2Label(order.resourceId)} out of the ground`,
-          wakeOn: ["mining.contractFulfilled"],
-          detail: { procurementOrderId: order.id, owed: order.units, onHand },
-          at: now(),
-        }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
-        return;
-      }
-      order.status = PROCUREMENT_STATUS.READY;
-      order.readyAt = now();
-      clearBlocker(state, order.supplierInstitutionId, {
-        state: DIAGNOSTIC_STATE.FREE,
-        summary: `${hubName(order.supplierInstitutionId)} has ${order.units} ${order2Label(order.resourceId)} ready for ${hubName(order.buyerInstitutionId)}`,
+      const reserved = saleReserve(supplier ?? {})[order.id] ?? 0;
+      recordBlocker(state, order.supplierInstitutionId, createBlocker({
+        kind: BLOCKER_KIND.AWAITING_MATERIAL,
+        summary: `${hubName(order.supplierInstitutionId)} owes ${order.units} ${order2Label(order.resourceId)} on ${order.id} and has set aside ${reserved}`,
+        subjectId: order.supplierInstitutionId, objectId: order.id,
+        waitingFor: `${order.units - reserved} more ${order2Label(order.resourceId)} mined against this contract`,
+        wakeOn: ["mining.contractFulfilled"],
+        detail: { procurementOrderId: order.id, owed: order.units, reserved },
         at: now(),
-      });
-      emit("procurement.readyForFreight", `${hubName(order.supplierInstitutionId)} has ${order.units} ${order2Label(order.resourceId)} ready; freight to ${hubName(order.buyerInstitutionId)} is now on offer.`, {
-        procurementOrderId: order.id, sellerId: order.supplierInstitutionId, buyerId: order.buyerInstitutionId,
-        units: order.units, freightBudget: order.freightBudget,
-      });
+      }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
     });
   }
-
   function releaseCommitment(order) {
     const buyer = institution(order.buyerInstitutionId);
     if (!buyer?.accounts?.operating) return;
@@ -406,7 +499,12 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     postNeeds();
     repriceUnfilledOrders();
     considerOffers();
-    markReadyWhenSupplied();
+    // Mined ore lands in the seller's own stock; move what is owed into the
+    // contract reserve before anything else can consume it, then settle any
+    // reserve that is now whole.
+    fillReservations();
+    completeSalesWhenReserved();
+    reportOutstandingReservations();
   }
 
   update();

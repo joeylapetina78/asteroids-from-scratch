@@ -23,10 +23,10 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260731-2101-07d4f49";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260731-2101-07d4f49";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260731-2101-07d4f49";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260731-2101-07d4f49";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260731-2325-7368fe3";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260731-2325-7368fe3";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260731-2325-7368fe3";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260731-2325-7368fe3";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",

@@ -688,9 +688,13 @@ test("player evergreen mining delivery enters the same freight inventory used by
   // inventory the carriers draw from.
   assert.ok(Object.values(harness.state.logistics.shipments).some((shipment) => shipment.commodity === "iron-nickel"),
     "the material the player delivered is being hauled by the same market");
-  // Whatever the carriers loaded out came from the same shelf the player filled.
-  assert.ok((buyer.inventories["iron-nickel"] ?? 0) < wanted,
-    "carriers drew from the same inventory the player delivered into");
+  // The player's delivery entered the hub's books, not a separate player-only
+  // pool. It may now be on the shelf, set aside against a sale, or already
+  // sold and awaiting pickup — all three are the same accounting.
+  const reserved = Object.values(buyer.saleReserve ?? {}).reduce((sum, units) => sum + units, 0);
+  const sold = Object.values(buyer.awaitingPickup ?? {}).reduce((sum, held) => sum + (held.units ?? 0), 0);
+  assert.ok((buyer.inventories["iron-nickel"] ?? 0) + reserved + sold >= wanted,
+    "the delivered material is accounted for somewhere in the hub's books");
 });
 
 test("an unfunded evergreen mining order rejects delivery without consuming material", () => {
@@ -880,6 +884,8 @@ test("haulers wait instead of fabricating freight when no source has stock", () 
   Object.values(harness.state.logistics.institutions).forEach((institution) => {
     if (institution.inventories) Object.keys(institution.inventories).forEach((itemId) => { institution.inventories[itemId] = 0; });
   });
+  // Sold goods live in awaitingPickup now, which is not the seller's stock.
+  Object.values(harness.state.logistics.institutions).forEach((institution) => { institution.awaitingPickup = {}; institution.saleReserve = {}; });
   harness.manager.update();
   assert.equal(Object.keys(harness.state.logistics.shipments).length, 0, "nothing was shipped");
   Object.values(harness.state.logistics.institutions).forEach((institution) => {

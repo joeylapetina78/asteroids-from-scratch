@@ -237,6 +237,8 @@ test("a carrier that finds only below-cost freight records why it refused", () =
   Object.values(state.logistics.institutions).forEach((institution) => {
     if (institution.inventories) Object.keys(institution.inventories).forEach((itemId) => { institution.inventories[itemId] = 0; });
   });
+  // Sold goods live in awaitingPickup now, which is not the seller's stock.
+  Object.values(state.logistics.institutions).forEach((institution) => { institution.awaitingPickup = {}; institution.saleReserve = {}; });
   procurement.update();
   const manager = createLogisticsManager({ state, ships, now: () => 1_000 });
   manager.update();

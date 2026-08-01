@@ -7,7 +7,9 @@ import {
   PROCUREMENT_STATUS,
   createHubProcurementOperation,
   getCommittedSupply,
+  getAwaitingPickup,
   getProcurementFreightOffers,
+  getSaleReserve,
   listOrders,
 } from "../src/systems/hubProcurement.js";
 import { getInventoryPosition } from "../src/systems/hubInventory.js";
@@ -142,6 +144,12 @@ test("no freight is offered while the supplier has nothing to give", () => {
   Object.values(state.logistics.institutions).forEach((institution) => {
     if (institution.inventories) Object.keys(institution.inventories).forEach((itemId) => { institution.inventories[itemId] = 0; });
   });
+  // Clear anything already sold and titled, too: an order that has completed
+  // is legitimately still haulable.
+  Object.values(state.logistics.institutions).forEach((institution) => { institution.awaitingPickup = {}; institution.saleReserve = {}; });
+  Object.values(state.hubProcurement.orders).forEach((order) => {
+    if (order.status === PROCUREMENT_STATUS.READY) order.status = PROCUREMENT_STATUS.ACCEPTED;
+  });
   procurement.update();
   assert.equal(getProcurementFreightOffers(state).length, 0, "nothing to haul yet");
   const owed = state.diagnostics?.actors?.["scrap-forge"];
@@ -227,10 +235,13 @@ test("delivering a procurement run pays the supplier, pays the carrier, and clos
   const closed = state.hubProcurement.orders[order.id];
   assert.equal(closed.status, PROCUREMENT_STATUS.DELIVERED, "the order is closed, not merely restocked");
   assert.equal(closed.deliveredUnits, order.units);
-  const sale = hub(order.supplierInstitutionId).accounts.operating.transactions
-    .find((entry) => entry.type === "goods-sale" && entry.referenceId === shipment.templateId);
-  assert.ok(sale, "the supplier booked the sale");
-  assert.equal(sale.amount, shipment.goodsPayment, "and was paid the agreed price");
+  // The supplier was paid when title passed, before any carrier was involved.
+  const titled = state.ledger.getEventsAfterId(0)
+    .find((entry) => entry.type === "procurement.titleTransferred" && entry.payload.procurementOrderId === order.id);
+  assert.ok(titled, "title transferred and the supplier was paid for the goods");
+  assert.equal(titled.payload.sellerId, order.supplierInstitutionId);
+  assert.equal(titled.payload.ownedBy, order.buyerInstitutionId);
+  assert.equal(shipment.goodsPayment, 0, "the carrier run does not buy the goods again");
   assert.ok(sellerBefore !== undefined);
   assert.equal((hub(order.buyerInstitutionId).inventories[order.resourceId] ?? 0) - buyerStockBefore, order.units,
     "and the material reached the buyer");
@@ -264,7 +275,7 @@ test("the whole chain is on the ledger, in order", () => {
     .map((entry) => entry.type);
   assert.ok(types.includes("procurement.orderPosted"));
   assert.ok(types.includes("procurement.orderAccepted"));
-  assert.ok(types.includes("procurement.readyForFreight"));
+  assert.ok(types.includes("procurement.titleTransferred"), "ownership changed hands before freight");
   assert.ok(types.includes("procurement.orderDelivered"));
   assert.ok(types.indexOf("procurement.orderPosted") < types.indexOf("procurement.orderDelivered"),
     "posted before delivered");
@@ -417,4 +428,92 @@ test("a buyer stuck at its ceiling says so once instead of retrying silently", (
   const exhausted = world.state.ledger.getEventsAfterId(0)
     .filter((entry) => entry.type === "procurement.repriceExhausted" && entry.payload.procurementOrderId === order.id);
   assert.equal(exhausted.length, 1, "reported once, not once per attempt");
+});
+
+// ── Contract-reserved supply: the four buckets stay separate ───────────────
+
+test("ore mined against a sale leaves the seller's own stock", () => {
+  const { state, procurement, hub } = createWorld();
+  const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })[0];
+  const supplier = hub(order.supplierInstitutionId);
+  supplier.inventories[order.resourceId] = order.units;
+  procurement.update();
+  assert.equal(supplier.inventories[order.resourceId] ?? 0, 0,
+    "the ore is no longer the seller's to spend");
+});
+
+test("a seller cannot consume what it has reserved for a sale", () => {
+  const { state, procurement, hub } = createWorld();
+  const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })[0];
+  const supplier = hub(order.supplierInstitutionId);
+  // Give it exactly what it owes and nothing spare.
+  supplier.inventories = { [order.resourceId]: order.units };
+  procurement.update();
+  const free = supplier.inventories[order.resourceId] ?? 0;
+  assert.equal(free, 0, "nothing is left on the shelf for its own production");
+});
+
+test("the sale completes when the reserve is whole, and title passes", () => {
+  const { state, procurement, hub } = createWorld();
+  const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })[0];
+  const supplier = hub(order.supplierInstitutionId);
+  const buyer = hub(order.buyerInstitutionId);
+  const sellerBefore = supplier.accounts.operating.balance;
+  const buyerBefore = buyer.accounts.operating.balance;
+
+  supplier.inventories[order.resourceId] = order.units;
+  procurement.update();
+
+  assert.equal(state.hubProcurement.orders[order.id].status, PROCUREMENT_STATUS.READY);
+  const price = order.committedPayment;
+  assert.equal(supplier.accounts.operating.balance - sellerBefore, price, "the seller was paid");
+  assert.equal(buyerBefore - buyer.accounts.operating.balance, price, "the buyer paid, once");
+
+  const held = supplier.awaitingPickup[order.id];
+  assert.ok(held, "the goods are on a manifest");
+  assert.equal(held.ownerInstitutionId, order.buyerInstitutionId, "owned by the buyer");
+  assert.equal(held.heldAtInstitutionId, order.supplierInstitutionId, "still sitting at the seller");
+  assert.equal(held.units, order.units);
+  assert.match(held.manifestId, /^MANIFEST-/);
+});
+
+test("goods awaiting pickup belong to the buyer, not the hub holding them", () => {
+  const { state, procurement, hub } = createWorld();
+  const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })[0];
+  const supplier = hub(order.supplierInstitutionId);
+  supplier.inventories[order.resourceId] = order.units;
+  procurement.update();
+  assert.equal(getAwaitingPickup(state, order.supplierInstitutionId, order.resourceId), order.units,
+    "held at the seller");
+  assert.equal(supplier.inventories[order.resourceId] ?? 0, 0,
+    "and not counted as the seller's own stock");
+});
+
+test("a partly filled reserve does not complete the sale", () => {
+  const { state, procurement, hub } = createWorld();
+  const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })[0];
+  const supplier = hub(order.supplierInstitutionId);
+  const sellerBefore = supplier.accounts.operating.balance;
+  // Clear opening stock AND anything already set aside, so the reserve holds
+  // strictly less than is owed.
+  supplier.inventories = { [order.resourceId]: Math.max(1, order.units - 1) };
+  supplier.saleReserve = {};
+  procurement.update();
+  assert.equal(state.hubProcurement.orders[order.id].status, PROCUREMENT_STATUS.ACCEPTED, "still owed");
+  assert.equal(supplier.accounts.operating.balance, sellerBefore, "and nobody has been paid");
+  assert.ok(getSaleReserve(state, order.supplierInstitutionId, order.resourceId) > 0, "but what arrived is set aside");
+});
+
+test("an earlier contract is filled before a later one", () => {
+  const { state, procurement, hub } = createWorld();
+  const accepted = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED });
+  const pair = accepted.filter((entry) => entry.supplierInstitutionId === accepted[0].supplierInstitutionId
+    && entry.resourceId === accepted[0].resourceId);
+  if (pair.length < 2) return;   // only one contract on this material this run
+  const [first, second] = pair.sort((a, b) => (a.acceptedAt ?? 0) - (b.acceptedAt ?? 0));
+  const supplier = hub(first.supplierInstitutionId);
+  supplier.inventories[first.resourceId] = first.units;
+  procurement.update();
+  assert.equal(state.hubProcurement.orders[first.id].status, PROCUREMENT_STATUS.READY, "the earlier one filled");
+  assert.equal(state.hubProcurement.orders[second.id].status, PROCUREMENT_STATUS.ACCEPTED, "the later one waits");
 });
