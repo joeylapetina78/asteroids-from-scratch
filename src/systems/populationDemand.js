@@ -23,10 +23,10 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260731-2007-6bc3845";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260731-2007-6bc3845";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260731-2007-6bc3845";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260731-2007-6bc3845";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260731-2047-e2997e1";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260731-2047-e2997e1";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260731-2047-e2997e1";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260731-2047-e2997e1";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -224,11 +224,28 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
     state.ledger.recordEvent(type, payload, { visible: true, message });
   }
 
+  // Material this hub has already sold to another hub and not yet handed over.
+  //
+  // Read straight off state rather than importing the procurement module, which
+  // depends on this one. Without this the local population eats goods that were
+  // promised elsewhere: the supplier mines the units, its own Life-Support
+  // production consumes them the same tick, the export order never reaches the
+  // quantity it owes, and it sits in "accepted" forever.
+  function reservedForSale(hub, resourceId) {
+    return Object.values(state.hubProcurement?.orders ?? {})
+      .filter((order) => order.supplierInstitutionId === hub.id
+        && order.resourceId === resourceId
+        && ["accepted", "ready"].includes(order.status))
+      .reduce((sum, order) => sum + Math.max(0, (order.units ?? 0) - (order.deliveredUnits ?? 0)), 0);
+  }
+
   // Which materials in hub stock may satisfy this need, cheapest first so the
   // hub spends its least valuable eligible material and substitution has real
-  // economics behind it.
+  // economics behind it. Units already sold are not on the shelf: the hub took
+  // the money, so that material is not its own to consume.
   function eligibleMaterials(hub, need) {
     return Object.entries(hubStock(hub))
+      .map(([resourceId, units]) => [resourceId, Math.max(0, units - reservedForSale(hub, resourceId))])
       .filter(([resourceId, units]) => units > 0 && (need.families === null || need.families.includes(getResourceFamily(resourceId))))
       .map(([resourceId, units]) => ({
         resourceId,
