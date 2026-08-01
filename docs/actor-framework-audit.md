@@ -1,8 +1,13 @@
 # Actor Framework — Convergence Audit
 
-> **Status:** §5 and part of step 0 have since been implemented — see the
-> "Implemented" notes inline. The audit body describes the state *before* that
-> work, and is kept as written so the diagnosis stays readable.
+> **Status:** §5, part of step 0, and step 1 have since been implemented — see
+> the "Implemented" notes inline and the progress table in §6. The audit body
+> describes the state *before* that work and is kept as written, so the
+> diagnosis stays readable and the before/after stays honest.
+>
+> Four commits: `eb0a500` seller concession (pre-audit), `5bdbcc3` actor
+> configuration, `f1a2625` extraction offer surface, `2a65aef` intention
+> coverage. 292 tests, 291 pass, 1 skipped.
 
 Architectural check only (2026-08-01, at `b752bfb` plus the uncommitted seller-concession
 work). No implementation. Follow-up to `actor-framework-inventory.md` (2026-07-28), which
@@ -292,6 +297,16 @@ record and one opportunity surface to aim them at; and the cost of *not* unifyin
 commitment is compounding — it went from two representations to three while the hub
 economy was built, and hubs and carriers are in none of the adapters.
 
+| Step | State |
+|---|---|
+| 0. Actor registry + config | **Partly done** — `actorConfig.js` resolves actors and traits; archetypes still dangling, `inspectActor` not yet routed through it |
+| 1. Intentions authoritative | **Adapters complete** — every committing system is covered and both duplicate shapes retired; domains still own the records |
+| 2. `canPerform` | Not started |
+| 3. Offer surface | **First slice done** for extraction (§5); freight, repair and purchase offers still bespoke |
+| 4. Motivations | Not started |
+| 5. Goals | Not started |
+| 6. Planning | Not started |
+
 Recommended order, each step justified by what it unblocks:
 
 **0. Actor registry + configuration surface** *(prerequisite, mostly data)*
@@ -305,6 +320,21 @@ dangling `archetypeId`s into real archetypes while doing it. *Unblocks: everythi
 Have hubs, carriers, populations and the farm write `IntentionRecord`s directly; retire
 `diagnostics.intention` in favour of a reference. *Unblocks: reconsideration, preemption,
 "what is this actor committed to" as one question. Stops the divergence now.*
+
+> **Implemented, adapter half.** `adaptHubPurchase`, `adaptHubSale` and
+> `adaptShipment` close the coverage gap, and both inline `diagnostics.intention`
+> shapes now hold the shared record. A purchase order adapts to *two* intentions,
+> because it binds two actors differently: the buyer from the moment it commits
+> money and still revisable (it reprices and reopens declined orders), the
+> supplier only once it has agreed to dig and then fixed — it shades its ask on
+> the next order, never this one. Allocations gained `resourceId`,
+> `destinationSiteName` and `contractId`, which a commitment should always have
+> carried; without them the adapter had to reach back into the offer.
+>
+> **Still open:** domains remain authoritative and the adapters are read-only, so
+> nothing yet *acts* on `mayReconsider`. Populations and the farm are unadapted —
+> a population holds a backlog counter rather than a commitment, and the farm's
+> orders reach no market. SPRC's customer-side service commitment has no record.
 
 **2. `canPerform(action, actor, target, context)`**
 Generalize `matchMaintenanceService`'s five checks (capability / facility / location+mobility
@@ -338,6 +368,29 @@ valuation. If Nell Winch can be made a recovery-oriented actor purely through
 configuration, the framework works. If it still needs a bespoke module, it doesn't.
 
 ---
+
+## 6b. Latent defects found while implementing, NOT fixed
+
+Both change economy behaviour, so they were left alone rather than slipped into a
+refactor pass.
+
+1. **`urgency: "critical"` does nothing.** `hubProcurement.postNeeds` and
+   `miningOperation.getPostedMiningOrders` both pass `urgency: position.onHand === 0
+   ? "critical" : "routine"`, but `URGENCY_BASE` in `valuation.js` only defines
+   `routine | urgent | emergency`. An unknown key falls back to `routine`, whose base
+   is `1`, so `urgencyFactor` returns exactly 1 no matter what. **The entire
+   empty-shelf urgency path is inert, and `urgencyBias` has never affected a hub's
+   bid.** Fixing it means changing `"critical"` to `"emergency"`, which raises hub
+   prices whenever a shelf hits zero — a real economy change that wants measuring.
+2. **`BASE_NPC_TOW_FEE = 140` and `MILL_CONVERSION_COST = 120` are at the
+   pre-redenomination tier** while `REPAIR_LABOR_COST = 700` and the rest are 10×.
+   The redenomination reached one dial (`getResourceTradeValue`) and nine constants
+   by hand; these two were missed. See §3 item 6.
+
+Also removed in passing, as genuinely dead rather than behavioural: `nextOrderIndex`
+was written on every mining assignment and never read, and its
+`STANDING_MINING_ORDERS.indexOf(order)` could only ever return `-1`, since `order`
+had been a spread copy since orders became derived.
 
 ## 7. Answering the framing question directly
 
