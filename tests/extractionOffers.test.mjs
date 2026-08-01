@@ -17,6 +17,7 @@ import {
 // procurement source lives with SPRC.
 import { createMiningOperation } from "../src/systems/miningOperation.js";
 import { createSprcOperation } from "../src/systems/sprcOperation.js";
+import { inspectActor } from "../src/systems/actorInspector.js";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
 
@@ -186,6 +187,21 @@ test("an issuer that withdraws at the last moment is not dispatched against", ()
   const mining = createMining(state);
   assert.ok(!Object.values(mining.getState().allocations).some((entry) => entry.orderId === "withdrawn-offer"),
     "no allocation is created against an offer the issuer pulled");
+});
+
+test("the actor panel shows the same board the miner chooses from, with real prices", () => {
+  const state = seededState();
+  const mining = createMining(state);
+  mining.update();
+  const worker = Object.values(state.miningOperation.ships)[0];
+
+  const view = inspectActor(state, worker.id, { game: { workerShips: [] } });
+  const extraction = (view.visibleOffers ?? []).filter((offer) => offer.kind === "extraction");
+  assert.ok(extraction.length > 0, "a miner can see what is on offer where it stands");
+  extraction.forEach((offer) => {
+    assert.ok(Number.isFinite(offer.price), `every price is a number, got ${offer.price} for ${offer.id}`);
+    assert.ok(offer.issuer, "and names who is paying");
+  });
 });
 
 test("a miner picks the best-paying offer regardless of who posted it", () => {

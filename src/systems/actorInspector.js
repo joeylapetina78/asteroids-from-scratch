@@ -4,12 +4,14 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260801-1108-165333d";
-import { collectIntentions } from "./intentions.js?v=fresh-20260801-1108-165333d";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260801-1108-165333d";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260801-1108-165333d";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-1108-165333d";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260801-1108-165333d";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260801-1111-2d580d2";
+import { collectIntentions } from "./intentions.js?v=fresh-20260801-1111-2d580d2";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260801-1111-2d580d2";
+import { getActorFinances } from "./actorConfig.js?v=fresh-20260801-1111-2d580d2";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260801-1111-2d580d2";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260801-1111-2d580d2";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260801-1111-2d580d2";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260801-1111-2d580d2";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
@@ -58,18 +60,19 @@ export function inspectActor(state, actorId, { game = null } = {}) {
   }
 
   // Cash: balance, and what is genuinely available after commitments/reserves.
+  //
+  // This used to try three state shapes in sequence and special-case SPRC by
+  // name to find a bank balance — the read side proving the write side had no
+  // shared substrate. It now asks the same actor configuration the decision
+  // side asks, so a new kind of actor is legible here for free.
   const controllerId = view.controllerId;
-  const account =
-    state.miningOperation?.institution?.id === controllerId ? state.miningOperation.institution.accounts.operating :
-    state.logistics?.institutions?.[controllerId]?.accounts?.operating ??
-    (controllerId === "sprc" ? state.sprc?.account : null);
-  if (account) {
-    const protectedCash = controllerId === "sprc" ? (state.sprc?.operatingPlan?.protectedCashReserve ?? 0) : 0;
+  const finances = getActorFinances(state, controllerId);
+  if (finances) {
     view.cash = {
-      balance: Math.round(account.balance ?? 0),
-      committed: Math.round(account.committed ?? 0),
-      protectedCash,
-      available: Math.round(Math.max(0, (account.balance ?? 0) - (account.committed ?? 0) - protectedCash)),
+      balance: Math.round(finances.balance),
+      committed: Math.round(finances.committed),
+      protectedCash: Math.round(finances.protectedCash),
+      available: Math.round(finances.available),
       maintenanceCost: Math.round(getServiceCost(state, controllerId, "maintenance", 0)) || null,
     };
   }
@@ -138,19 +141,28 @@ function getVisibleOffers(state, { siteId, isMiner }) {
   if (!siteId) return offers;
 
   if (isMiner) {
-    STANDING_MINING_ORDERS.filter((order) => order.siteId === siteId).forEach((order) => {
-      offers.push({ kind: "mining", id: order.id, label: `${order.resourceName} → ${order.siteName}`, price: order.amount * order.paymentPerUnit });
-    });
-    Object.values(state.sprc?.procurementOrders ?? {})
-      .filter((order) => ["offered", "active"].includes(order.status) && order.destinationSiteId === siteId)
-      .forEach((order) => {
-        const remaining = Math.max(0, order.requiredEquivalentUnits - order.deliveredEquivalentUnits);
+    // Every issuer, from the same board the miner actually chooses from.
+    //
+    // This used to read `amount * paymentPerUnit` off STANDING_MINING_ORDERS,
+    // which has carried neither field since orders became derived from a real
+    // inventory gap — so the price shown here was NaN — and it separately
+    // enumerated SPRC's purchase orders by name, missing every other issuer.
+    listExtractionOffers(state, {
+      allocations: state.miningOperation?.allocations ?? {},
+      harvestCapacity: MINING_ALLOCATION_SIZE,
+    })
+      .filter((offer) => offer.siteId === siteId)
+      .forEach((offer) => {
+        const price = offer.equivalentAmount != null
+          ? offer.equivalentAmount * (offer.pricePerEquivalent ?? 0)
+          : offer.amount * (offer.paymentPerUnit ?? 0);
         offers.push({
-          kind: "purchase-order",
-          id: order.id,
-          label: `${order.procurementItemId} ×${remaining} remaining @ ${order.pricePerEquivalent}/unit`,
-          price: remaining * order.pricePerEquivalent,
-          partialAllowed: true,
+          kind: "extraction",
+          id: offer.id,
+          label: `${offer.amount} ${offer.resourceName} → ${offer.siteName}`,
+          issuer: offer.issuerInstitutionId,
+          price: Math.round(price),
+          partialAllowed: Boolean(offer.concurrent),
         });
       });
   }

@@ -7,7 +7,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_TRAITS, findActorRecord, getActorAccount, getActorTraits, getControllerId } from "../src/systems/actorConfig.js";
+import { DEFAULT_TRAITS, findActorRecord, getActorAccount, getActorFinances, getActorProtectedCash, getActorTraits, getControllerId } from "../src/systems/actorConfig.js";
 import { evaluateProcurement, evaluateSupplierAsk } from "../src/systems/valuation.js";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
@@ -61,6 +61,46 @@ test("an account is found whether it sits on the institution or beside it", () =
   assert.ok(getActorAccount(state, "yard-exchange")?.balance > 0, "hub accounts hang off the institution");
   assert.ok(getActorAccount(state, "sprc")?.balance > 0, "SPRC keeps its account beside one");
   assert.equal(getActorAccount(state, "person:ivo-cinder"), null, "a person without an account has none");
+});
+
+test("the money an actor will not spend is found wherever that actor keeps it", () => {
+  const state = createWorld();
+  // Three systems named this three different ways, and a reader had to know
+  // which kind of actor it was looking at to find it.
+  assert.ok(getActorProtectedCash(state, "sprc") > 0, "SPRC publishes a live reserve on its account");
+  assert.ok(getActorProtectedCash(state, "carrier:yard-hauler") > 0, "a carrier keeps a transport-policy floor");
+  assert.equal(getActorProtectedCash(state, "person:ivo-cinder"), 0, "an actor with no float reports none, not undefined");
+});
+
+test("a live reserve beats the configured default", () => {
+  const state = createWorld();
+  const account = getActorAccount(state, "sprc");
+  account.protectedReserve = 4_242;
+  assert.equal(getActorProtectedCash(state, "sprc"), 4_242,
+    "an operating plan that revised its float is what the actor is actually holding back");
+});
+
+test("finances answer balance, committed and genuinely available in one call", () => {
+  const state = createWorld();
+  const account = getActorAccount(state, "yard-exchange");
+  account.balance = 10_000;
+  account.committed = 2_000;
+  account.protectedReserve = 1_500;
+
+  const finances = getActorFinances(state, "yard-exchange");
+  assert.equal(finances.balance, 10_000);
+  assert.equal(finances.committed, 2_000);
+  assert.equal(finances.protectedCash, 1_500);
+  assert.equal(finances.available, 6_500, "what is left after commitments and the float");
+  assert.equal(getActorFinances(state, "person:ivo-cinder"), null, "no account, no finances");
+});
+
+test("available never goes negative when commitments exceed the balance", () => {
+  const state = createWorld();
+  const account = getActorAccount(state, "the-ledge");
+  account.balance = 1_000;
+  account.committed = 5_000;
+  assert.equal(getActorFinances(state, "the-ledge").available, 0, "overcommitted is zero spendable, not a negative");
 });
 
 // ── The differentiation this exists to produce ─────────────────────────────

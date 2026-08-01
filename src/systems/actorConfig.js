@@ -75,4 +75,37 @@ export function getActorAccount(state, actorId) {
   return null;
 }
 
+// The float an actor keeps back — money it has but will not spend. Three
+// different systems named this three different ways, and a reader that wanted
+// it had to know which kind of actor it was looking at. Resolved in order of
+// specificity; an account may always carry its own reserve, which is how an
+// institution whose policy lives somewhere unusual reports one.
+export function getActorProtectedCash(state, actorId) {
+  // Live value first: an account that publishes a reserve is stating what it is
+  // holding back RIGHT NOW, which is what an operating plan revises. Policy is
+  // the configured default behind it.
+  const onAccount = getActorAccount(state, actorId)?.protectedReserve;
+  if (Number.isFinite(onAccount)) return onAccount;
+  const record = findActorRecord(state, actorId);
+  const explicit = record?.policies?.protectedCash;
+  if (Number.isFinite(explicit)) return explicit;
+  const carrierFloor = record?.policies?.transportation?.minimumOperatingCash;
+  return Number.isFinite(carrierFloor) ? carrierFloor : 0;
+}
+
+// Everything the read side needs about one actor's money, in one call.
+export function getActorFinances(state, actorId) {
+  const account = getActorAccount(state, actorId);
+  if (!account) return null;
+  const protectedCash = getActorProtectedCash(state, actorId);
+  const balance = account.balance ?? 0;
+  const committed = account.committed ?? 0;
+  return {
+    balance,
+    committed,
+    protectedCash,
+    available: Math.max(0, balance - committed - protectedCash),
+  };
+}
+
 export { DEFAULT_TRAITS };

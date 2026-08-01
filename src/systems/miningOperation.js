@@ -1,15 +1,15 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-1108-165333d";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-1108-165333d";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1108-165333d";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-1108-165333d";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-1108-165333d";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-1108-165333d";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-1108-165333d";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1108-165333d";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1108-165333d";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260801-1108-165333d";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1108-165333d";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1108-165333d";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-1111-2d580d2";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-1111-2d580d2";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1111-2d580d2";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-1111-2d580d2";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-1111-2d580d2";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-1111-2d580d2";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-1111-2d580d2";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1111-2d580d2";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1111-2d580d2";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260801-1111-2d580d2";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1111-2d580d2";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1111-2d580d2";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -31,7 +31,10 @@ const MINING_WORKER_DEFAULTS = Object.freeze([
   { id: "worker:cinder-three", name: "Cinder Three", referenceId: "MW-033-CINDER", currentSiteId: "the-ledge", initialWear: 0, offset: { x: 100, y: 80 } },
 ]);
 const EXPANSION_WORKER_DEFAULTS = Object.freeze({ id: "worker:cinder-four", name: "Cinder Four", referenceId: "MW-034-CINDER", currentSiteId: "scrap-porch", initialWear: 0.15, offset: { x: 110, y: -80 } });
-const MINING_ALLOCATION_SIZE = 6;
+// What a worker lifts in one trip. Exported because an issuer sizes its offer
+// to the carrier's capacity, and a reader showing the board has to ask the same
+// question the miner asks.
+export const MINING_ALLOCATION_SIZE = 6;
 const EXPANSION_COST = 3500;
 const EXPANSION_DEMAND_SECONDS = 12;
 // Rolling fleet policy. Cinder hires when the whole fleet has been busy long
