@@ -1,14 +1,70 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260801-0147-eb0a500";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260801-0147-eb0a500";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-0147-eb0a500";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-0147-eb0a500";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260801-0147-eb0a500";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260801-0147-eb0a500";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260801-0147-eb0a500";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260801-0147-eb0a500";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-0147-eb0a500";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0147-eb0a500";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0147-eb0a500";
+import { depositCredits } from "./accounts.js?v=fresh-20260801-1044-5bdbcc3";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260801-1044-5bdbcc3";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1044-5bdbcc3";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-1044-5bdbcc3";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260801-1044-5bdbcc3";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260801-1044-5bdbcc3";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260801-1044-5bdbcc3";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260801-1044-5bdbcc3";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-1044-5bdbcc3";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1044-5bdbcc3";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1044-5bdbcc3";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1044-5bdbcc3";
+
+// SPRC's open purchase orders, offered to anyone who digs.
+//
+// This lives here rather than in the mining system because it is SPRC's work,
+// not the miner's business. A miner values it against every other offer on the
+// board with no idea who posted it and no priority constant in its favour —
+// urgent repair feedstock competes purely on the price Sal is willing to pay.
+//
+// The offer is sized to the CARRIER's capacity, which the miner advertises in
+// `context.harvestCapacity`: how much can be lifted in one trip is the hauler's
+// business, and how much is wanted and what it pays is the issuer's.
+export function sprcProcurementOfferSource(state, context = {}) {
+  const sprcOperation = context.sprcOperation;
+  if (!sprcOperation || !state.sprc) return [];
+  const allocations = context.allocations ?? {};
+  const capacity = context.harvestCapacity ?? 1;
+
+  return Object.values(state.sprc.procurementOrders ?? {})
+    .filter((order) => ["offered", "active"].includes(order.status) && (order.committedPayment ?? 0) > 0)
+    .map((order) => {
+      const resourceId = Object.keys(order.acceptedMaterials ?? {}).find((id) => (order.acceptedMaterials[id] ?? 0) > 0);
+      const equivalence = order.acceptedMaterials?.[resourceId] ?? 0;
+      const activeReserved = Object.values(allocations)
+        .filter((allocation) => allocation.orderId === order.id && allocation.status === "active")
+        .reduce((sum, allocation) => sum + (allocation.equivalentAmount ?? allocation.amount ?? 0), 0);
+      const remainingEquivalents = Math.max(0, order.requiredEquivalentUnits - order.deliveredEquivalentUnits - activeReserved);
+      if (!resourceId || equivalence <= 0 || remainingEquivalents <= 0) return null;
+
+      const equivalentAmount = Math.min(remainingEquivalents, capacity * equivalence);
+      return createExtractionOffer({
+        id: order.id, contractId: order.contractId,
+        issuerInstitutionId: state.sprc.institution?.id ?? "sprc",
+        siteId: order.destinationSiteId, siteName: "Scrap Porch",
+        resourceId,
+        amount: Math.ceil(equivalentAmount / equivalence),
+        equivalentAmount,
+        pricePerEquivalent: order.pricePerEquivalent ?? 0,
+        // Sal buys a remainder but the worker still fills its hold, and selling
+        // the surplus into local supply is what keeps a short order worth taking.
+        harvestTarget: capacity, sellsSurplus: true,
+        // A large purchase order can be supplied by several miners at once:
+        // each offer is already sized against what is still unreserved, so
+        // exclusivity would starve it.
+        concurrent: true,
+        reserve: () => sprcOperation.reserveProcurementAllocation({
+          contractId: order.contractId,
+          supplierInstitutionId: context.minerInstitutionId,
+          equivalentUnits: equivalentAmount,
+        }),
+        kind: "sprc",
+        source: { system: "sprcOperation", record: "procurementOrder", objectiveType: order.objectiveType },
+      });
+    })
+    .filter(Boolean);
+}
 
 export const SPRC = Object.freeze({
   actorId: "organization:sprc",
@@ -172,6 +228,9 @@ export function ensureSprcOperation(state, now = Date.now()) {
 export function createSprcOperation({ state, registerContractDefinition = () => {}, now = () => Date.now(), onChange = () => {} }) {
   const sprc = ensureSprcOperation(state, now());
   restoreContractDefinitions();
+  // SPRC's purchase orders go on the same board every other issuer posts to.
+  // A miner weighs them on price alone and has no idea who Sal is.
+  registerExtractionOfferSource(state, "sprc-procurement", sprcProcurementOfferSource);
 
   function update() {
     sprc.account.protectedReserve = sprc.operatingPlan.protectedCashReserve;

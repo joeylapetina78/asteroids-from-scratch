@@ -4,12 +4,12 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260801-0147-eb0a500";
-import { collectIntentions } from "./intentions.js?v=fresh-20260801-0147-eb0a500";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260801-0147-eb0a500";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260801-0147-eb0a500";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-0147-eb0a500";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260801-0147-eb0a500";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260801-1044-5bdbcc3";
+import { collectIntentions } from "./intentions.js?v=fresh-20260801-1044-5bdbcc3";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260801-1044-5bdbcc3";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260801-1044-5bdbcc3";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-1044-5bdbcc3";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260801-1044-5bdbcc3";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;

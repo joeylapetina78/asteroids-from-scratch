@@ -1,13 +1,14 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-0147-eb0a500";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-0147-eb0a500";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0147-eb0a500";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-0147-eb0a500";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-0147-eb0a500";
-import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260801-0147-eb0a500";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-0147-eb0a500";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-0147-eb0a500";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-0147-eb0a500";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0147-eb0a500";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-1044-5bdbcc3";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-1044-5bdbcc3";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1044-5bdbcc3";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-1044-5bdbcc3";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-1044-5bdbcc3";
+import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260801-1044-5bdbcc3";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-1044-5bdbcc3";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1044-5bdbcc3";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1044-5bdbcc3";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1044-5bdbcc3";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1044-5bdbcc3";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -110,6 +111,51 @@ export function getOfferedMiningOrders(state, at = Date.now()) {
   return Object.values(getPostedMiningOrders(state, at)).filter((order) => !order.withheld && order.amount > 0);
 }
 
+// A hub may only commission extraction for the families it holds mining rights
+// to. This defers entirely to the shared rule checker — no hub is named here,
+// and moving a family between hubs is a data edit in the authority seeds.
+function mayCommissionExtraction(state, order, at) {
+  return canActorDoAction(state, {
+    actorId: order.buyerInstitutionId.startsWith("institution:") ? order.buyerInstitutionId : `institution:${order.buyerInstitutionId}`,
+    action: "mine",
+    placeId: `hub:${order.siteId}`,
+    resourceType: order.resourceId,
+    at,
+  });
+}
+
+// The settlements' own extraction demand, as an offer source.
+//
+// A pure function of (state, context) — nothing about it is privileged. A farm,
+// a fourth settlement or the player becomes another issuer by registering its
+// own source, with no change here or in the miner.
+export function hubStandingOfferSource(state, context = {}) {
+  const at = context.at ?? Date.now();
+  return getOfferedMiningOrders(state, at)
+    .filter((order) => {
+      const decision = mayCommissionExtraction(state, order, at);
+      context.noteRightsDenial?.(order, decision);
+      if (!decision.allowed) return false;
+      // Exclusivity is the surface's job, not this issuer's.
+      const buyer = state.logistics?.institutions?.[order.buyerInstitutionId];
+      return (buyer?.accounts?.operating?.balance ?? 0) >= order.amount * order.paymentPerUnit;
+    })
+    .map((order) => createExtractionOffer({
+      id: order.id,
+      issuerInstitutionId: order.buyerInstitutionId,
+      siteId: order.siteId, siteName: order.siteName,
+      resourceId: order.resourceId, resourceName: order.resourceName,
+      amount: order.amount, paymentPerUnit: order.paymentPerUnit,
+      // A settlement buys exactly what it asked for; there is no remainder.
+      harvestTarget: order.amount, sellsSurplus: false,
+      kind: "standing",
+      source: { system: "miningOperation", record: "postedOrder" },
+    }));
+}
+
+// SPRC registers its own work from `sprcOperation.js`. Nothing about it is
+// known here any more.
+
 // Requires state: the definitions carry no quantity or price any more, so a
 // job can only be built from what a hub is actually posting right now.
 export function getStandingMiningJobsForSite(siteId, issuer = null, state = null) {
@@ -196,6 +242,9 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   operation.depositKnowledge ??= {};
   operation.rightsDenied ??= {};
   operation.postedOrders ??= {};
+  // The settlements' demand becomes visible on the board because this operation
+  // exists to serve it, not because the board knows what a settlement is.
+  registerExtractionOfferSource(state, "hub-standing-orders", hubStandingOfferSource);
   operation.projects ??= { "cinder-four": { id: "cinder-four", name: "Commission Cinder Four", status: "planned", requiredCredits: EXPANSION_COST, demandSince: null, approvedAt: null, completedAt: null } };
   MINING_WORKER_DEFAULTS.forEach((defaults) => {
     operation.ships[defaults.id] ??= createWorkerRecord(defaults);
@@ -271,12 +320,11 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         status: "active",
         acceptedAt: now(),
       };
-      if (order.kind === "sprc") {
-        const reservation = sprcOperation.reserveProcurementAllocation({
-          contractId: order.contractId,
-          supplierInstitutionId: operation.institution.id,
-          equivalentUnits: order.equivalentAmount,
-        });
+      // The issuer's last chance to hold these units, if it asked for one. A
+      // refusal here means somebody else took them between valuing and
+      // committing — not that this kind of order is special.
+      if (order.reserve) {
+        const reservation = order.reserve();
         if (!reservation) {
           // The best-valued order is already fully reserved by other suppliers.
           // Without this the worker would sit silently idle with no explanation.
@@ -298,10 +346,9 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       shipRecord.lastDecisionKey = null;
       worker.assign({
         allocationId: allocation.id, contractId: order.contractId ?? order.id, resourceId: order.resourceId, quantity: order.amount, destination,
-        harvestTargetQuantity: order.kind === "sprc" ? MINING_ALLOCATION_SIZE : order.amount,
+        harvestTargetQuantity: order.harvestTarget ?? order.amount,
         depositCandidates: getDepositCandidates(order.resourceId, worker.position),
       });
-      if (order.kind !== "sprc") operation.nextOrderIndex = (STANDING_MINING_ORDERS.indexOf(order) + 1) % STANDING_MINING_ORDERS.length;
       // Diagnostics: this actor is now committed, and we keep why it chose this
       // job over the alternatives it weighed.
       const selection = operation.lastSelection;
@@ -430,9 +477,26 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     Object.entries(posted).forEach(([orderId, order]) => { operation.postedOrders[orderId] = order; });
   }
 
+  // What this operation needs to hand an offer source so it can decide what is
+  // still genuinely available: who is asking, and what is already committed.
+  function offerContext() {
+    return {
+      sprcOperation,
+      allocations: operation.allocations,
+      minerInstitutionId: operation.institution.id,
+      // What this operation can lift in one trip, so an issuer sizes its offer
+      // to the carrier rather than guessing.
+      harvestCapacity: MINING_ALLOCATION_SIZE,
+      at: now(),
+      noteRightsDenial,
+    };
+  }
+
   function chooseOrder(worker = null) {
     const position = worker?.position ?? sites.get("scrap-porch")?.position ?? { x: 0, y: 0 };
-    const candidates = [...getSprcMiningOrders(), ...getAvailableStandingOrders()];
+    // Every issuer, in one list, minus anything a worker is already on. The
+    // miner does not know who posted any of it.
+    const candidates = filterUncommittedOffers(listExtractionOffers(state, offerContext()), operation.allocations);
     if (candidates.length === 0) return null;
 
     const scored = candidates
@@ -462,47 +526,24 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     return best.order;
   }
 
-  function getAvailableStandingOrders() {
-    return Object.values(operation.postedOrders ?? {}).filter((order) => {
-      if (order.withheld || order.amount <= 0) return false;
-      if (!mayPostMiningOrder(order)) return false;
-      const alreadyAssigned = Object.values(operation.allocations).some((allocation) => allocation.orderId === order.id && allocation.status === "active");
-      const buyer = state.logistics?.institutions?.[order.buyerInstitutionId];
-      return !alreadyAssigned && (buyer?.accounts?.operating?.balance ?? 0) >= order.amount * order.paymentPerUnit;
-    });
-  }
-
-  // A hub may only post mining demand for resource families it holds the right
-  // to. This defers entirely to the shared rule checker — no hub is named here,
-  // and moving a family between hubs is a data edit in the authority seeds.
-  //
-  // Denials are recorded ONCE per order, not per evaluation: this runs on every
-  // idle worker every tick, and an unconditional record here would flood the
-  // ledger the way the delivery rejections did.
-  function mayPostMiningOrder(order) {
-    const decision = canActorDoAction(state, {
-      actorId: order.buyerInstitutionId.startsWith("institution:") ? order.buyerInstitutionId : `institution:${order.buyerInstitutionId}`,
-      action: "mine",
-      placeId: `hub:${order.siteId}`,
-      resourceType: order.resourceId,
-      at: now(),
-    });
+  // Denials are recorded ONCE per order, not per evaluation: an offer source
+  // runs for every idle worker every tick, and an unconditional record here
+  // would flood the ledger the way the delivery rejections did.
+  function noteRightsDenial(order, decision) {
     if (decision.allowed) {
       delete operation.rightsDenied[order.id];
-      return true;
+      return;
     }
-    if (!operation.rightsDenied[order.id]) {
-      operation.rightsDenied[order.id] = { reason: decision.reason, at: now() };
-      record("institution.miningRightDenied", `${siteName(order.siteId)} cannot post mining demand for ${order.resourceName}: ${getResourceFamily(order.resourceId)} is outside the resource families it holds mining rights for.`, {
-        orderId: order.id,
-        buyerInstitutionId: order.buyerInstitutionId,
-        siteId: order.siteId,
-        resourceId: order.resourceId,
-        resourceFamily: getResourceFamily(order.resourceId),
-        reason: decision.reason,
-      });
-    }
-    return false;
+    if (operation.rightsDenied[order.id]) return;
+    operation.rightsDenied[order.id] = { reason: decision.reason, at: now() };
+    record("institution.miningRightDenied", `${siteName(order.siteId)} cannot post mining demand for ${order.resourceName}: ${getResourceFamily(order.resourceId)} is outside the resource families it holds mining rights for.`, {
+      orderId: order.id,
+      buyerInstitutionId: order.buyerInstitutionId,
+      siteId: order.siteId,
+      resourceId: order.resourceId,
+      resourceFamily: getResourceFamily(order.resourceId),
+      reason: decision.reason,
+    });
   }
 
   function valueOrderForWorker(order, position) {
@@ -511,14 +552,15 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     // Round trip: out to the nearest known deposit, then in to the buyer.
     const toDeposit = deposit ? Math.hypot(deposit.x - position.x, deposit.y - position.y) : Math.hypot(destination.x - position.x, destination.y - position.y);
     const toBuyer = deposit ? Math.hypot(destination.x - deposit.x, destination.y - deposit.y) : 0;
-    // A worker on an SPRC run harvests a full load regardless of order size and
-    // sells the remainder into local supply, so a small remainder order is
-    // still worth taking. Counting that surplus keeps short orders viable.
-    const contractPayout = order.kind === "sprc"
-      ? (order.equivalentAmount ?? order.amount) * (order.pricePerEquivalent ?? 0)
+    // Some issuers buy in their own equivalent units rather than in units of
+    // the material, so which denomination pays is a property of the offer.
+    const contractPayout = order.equivalentAmount != null
+      ? order.equivalentAmount * (order.pricePerEquivalent ?? 0)
       : order.amount * (order.paymentPerUnit ?? 0);
-    const harvestTarget = order.kind === "sprc" ? MINING_ALLOCATION_SIZE : order.amount;
-    const surplusUnits = Math.max(0, harvestTarget - order.amount);
+    // Where a worker fills its hold past what the offer buys and may sell the
+    // remainder into local supply, that surplus is what keeps a short order
+    // worth taking. An offer that forbids it simply earns no surplus.
+    const surplusUnits = order.sellsSurplus ? Math.max(0, (order.harvestTarget ?? order.amount) - order.amount) : 0;
     const surplusPayout = surplusUnits * Math.max(1, Math.floor(getResourceTradeValue(order.resourceId) * 0.7));
     const payout = contractPayout + surplusPayout;
 
@@ -537,37 +579,15 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     });
   }
 
-  function getSprcMiningOrders() {
-    if (!sprcOperation || !state.sprc) return [];
-    return Object.values(state.sprc.procurementOrders)
-      .filter((order) => ["offered", "active"].includes(order.status) && (order.committedPayment ?? 0) > 0)
-      .map((order) => {
-        const resourceId = ["copper", "silicate", "iron-nickel", "aluminum"].find((id) => (order.acceptedMaterials?.[id] ?? 0) > 0);
-        const equivalence = order.acceptedMaterials?.[resourceId] ?? 0;
-        const activeReserved = Object.values(operation.allocations)
-          .filter((allocation) => allocation.orderId === order.id && allocation.status === "active")
-          .reduce((sum, allocation) => sum + (allocation.equivalentAmount ?? allocation.amount ?? 0), 0);
-        const remainingEquivalents = Math.max(0, order.requiredEquivalentUnits - order.deliveredEquivalentUnits - activeReserved);
-        if (!resourceId || equivalence <= 0 || remainingEquivalents <= 0) return null;
-        return {
-          kind: "sprc", id: order.id, contractId: order.contractId, siteId: order.destinationSiteId, siteName: "Scrap Porch",
-          resourceId, resourceName: resourceId.replaceAll("-", " "), amount: Math.ceil(Math.min(remainingEquivalents, MINING_ALLOCATION_SIZE * equivalence) / equivalence),
-          equivalentAmount: Math.min(remainingEquivalents, MINING_ALLOCATION_SIZE * equivalence),
-          // No hidden priority constant: the order competes on the price Sal
-          // is actually offering, evaluated as net value like any other job.
-          pricePerEquivalent: order.pricePerEquivalent ?? 0,
-          objectiveType: order.objectiveType,
-        };
-      })
-      .filter(Boolean);
-  }
-
   function publishIdleDecision(shipRecord) {
-    const reasons = [...getSprcMiningOrders(), ...STANDING_MINING_ORDERS].map((order) => {
-      const occupied = Object.values(operation.allocations).some((allocation) => allocation.orderId === order.id && allocation.status === "active");
-      if (order.kind === "sprc") return `${order.id}:${occupied ? "allocated" : "open"}`;
-      const balance = state.logistics?.institutions?.[order.buyerInstitutionId]?.accounts?.operating?.balance ?? 0;
-      return `${order.id}:${occupied ? "allocated" : balance < order.amount * order.paymentPerUnit ? "unfunded" : "open"}`;
+    // What was on the board and what was wrong with each of it. Read off the
+    // offers themselves, so a new issuer appears here without being named.
+    const reasons = listExtractionOffers(state, offerContext()).map((offer) => {
+      const occupied = Object.values(operation.allocations).some((allocation) => allocation.orderId === offer.id && allocation.status === "active");
+      if (occupied) return `${offer.id}:allocated`;
+      const balance = state.logistics?.institutions?.[offer.issuerInstitutionId]?.accounts?.operating?.balance ?? null;
+      const due = offer.equivalentAmount != null ? offer.equivalentAmount * (offer.pricePerEquivalent ?? 0) : offer.amount * (offer.paymentPerUnit ?? 0);
+      return `${offer.id}:${balance !== null && balance < due ? "unfunded" : "open"}`;
     });
     // Diagnostics: an idle worker records WHY nothing was worth taking, naming
     // the orders it looked at and their disposition.
@@ -991,7 +1011,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   }
 
   update();
-  return { update, getState: () => operation, worker: workers[0], workers };
+  // `chooseOrder` is exposed because selection is a question the shared layer
+  // will want to ask without committing an actor to the answer: what would this
+  // miner take right now, and why. It only records the reasoning.
+  return { update, getState: () => operation, chooseOrder, listOffers: () => listExtractionOffers(state, offerContext()), worker: workers[0], workers };
 }
 
 // Exported under the same name every other system uses for its seed, so an
@@ -1007,7 +1030,7 @@ function createInitialState(now) {
     institution: { id: "miner:cinder-contracting", name: "Cinder Contracting", archetypeId: "mining-contractor", controllerInstitutionId: "person:ivo-cinder", referenceId: "FR-MIN-031", accounts: { operating: { id: "FR-ACCT-031", balance: 260, committed: 0, transactions: [] } } },
     controller: { id: "person:ivo-cinder", name: "Ivo Cinder", archetypeId: "person", controls: ["miner:cinder-contracting"], traits: { caution: 0.4, growthBias: 0.55, urgencyBias: 0.5 }, license: { id: "MEX-031-CINDER", class: "commercial-extraction", status: "active" } },
     ships: Object.fromEntries(MINING_WORKER_DEFAULTS.map((defaults) => [defaults.id, createWorkerRecord(defaults)])),
-    allocations: {}, history: [{ id: "mining-history-1", type: "institution.instantiated", at: now }], nextOrderIndex: 1, counter: 0, completedContracts: 0, wear: 0, lastMaintenanceEventId: 0,
+    allocations: {}, history: [{ id: "mining-history-1", type: "institution.instantiated", at: now }], counter: 0, completedContracts: 0, wear: 0, lastMaintenanceEventId: 0,
   };
 }
 

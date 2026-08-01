@@ -24,13 +24,13 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0147-eb0a500";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-0147-eb0a500";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-0147-eb0a500";
-import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-0147-eb0a500";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260801-0147-eb0a500";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-0147-eb0a500";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-0147-eb0a500";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1044-5bdbcc3";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-1044-5bdbcc3";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-1044-5bdbcc3";
+import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-1044-5bdbcc3";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260801-1044-5bdbcc3";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1044-5bdbcc3";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-1044-5bdbcc3";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
