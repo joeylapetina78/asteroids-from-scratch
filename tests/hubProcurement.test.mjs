@@ -154,8 +154,8 @@ test("a supplier refuses a sale below what the goods cost it", () => {
   const order = listOrders(state, { status: PROCUREMENT_STATUS.OFFERED })[0]
     ?? listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })[0];
   order.status = PROCUREMENT_STATUS.OFFERED;
-  order.pricePerUnit = 1;
-  order.committedPayment = order.units;
+  order.pricePerUnit = 10;
+  order.committedPayment = order.units * 10;
   procurement.update();
   assert.equal(order.status, PROCUREMENT_STATUS.DECLINED);
   assert.equal(order.declinedReason, "below-supplier-cost");
@@ -351,11 +351,11 @@ test("a refused purchase is raised toward what the seller said it needs", () => 
   const order = listOrders(world.state)[0];
   // Lowball it and let the supplier refuse.
   order.status = PROCUREMENT_STATUS.OFFERED;
-  order.pricePerUnit = 1;
-  order.committedPayment = order.units;
+  order.pricePerUnit = 10;
+  order.committedPayment = order.units * 10;
   world.tick(1);
   assert.equal(order.status, PROCUREMENT_STATUS.DECLINED, "the supplier refused");
-  assert.ok(order.supplierFloor > 1, "and said what it would take");
+  assert.ok(order.supplierFloor > 10, "and said what it would take");
 
   const before = order.pricePerUnit;
   world.tick(90);   // past the throttle
@@ -369,14 +369,14 @@ test("a repriced order goes back on the table and closes once it clears the floo
   // Under-price it, but not so far that the buyer's own ceiling (twice its
   // opening judgement) puts the seller's floor out of reach.
   order.status = PROCUREMENT_STATUS.OFFERED;
-  order.originalPricePerUnit = 30;
-  order.pricePerUnit = 5;
-  order.committedPayment = order.units * 5;
+  order.originalPricePerUnit = 300;
+  order.pricePerUnit = 50;
+  order.committedPayment = order.units * 50;
   world.tick(1);
   assert.equal(order.status, PROCUREMENT_STATUS.DECLINED, "refused at the low price");
 
   world.tick(90);
-  assert.ok(order.pricePerUnit > 5, "the buyer moved");
+  assert.ok(order.pricePerUnit > 50, "the buyer moved");
   assert.notEqual(order.status, PROCUREMENT_STATUS.DECLINED,
     "and the order is live again rather than left dead at the old price");
 });
@@ -397,12 +397,12 @@ test("a buyer will not bid past twice its opening price", () => {
   const world = advanceWorld();
   const order = listOrders(world.state)[0];
   order.status = PROCUREMENT_STATUS.OFFERED;
-  order.originalPricePerUnit = 10;
-  order.pricePerUnit = 10;
-  order.supplierFloor = 10_000;      // a seller demanding the moon
-  order.supplierAsk = 10_000;
+  order.originalPricePerUnit = 100;
+  order.pricePerUnit = 100;
+  order.supplierFloor = 100_000;     // a seller demanding the moon
+  order.supplierAsk = 100_000;
   for (let tick = 0; tick < 6; tick += 1) world.tick(90);
-  assert.ok(order.pricePerUnit <= 20, `capped at twice the opening price, got ${order.pricePerUnit}`);
+  assert.ok(order.pricePerUnit <= 200, `capped at twice the opening price, got ${order.pricePerUnit}`);
 });
 
 test("a buyer that cannot fund the raise defers it and keeps its money", () => {
@@ -427,8 +427,8 @@ test("every raise records why it moved", () => {
   const world = advanceWorld();
   const order = listOrders(world.state)[0];
   order.status = PROCUREMENT_STATUS.OFFERED;
-  order.pricePerUnit = 1;
-  order.committedPayment = order.units;
+  order.pricePerUnit = 10;
+  order.committedPayment = order.units * 10;
   world.tick(1);
   world.tick(90);
   const repriced = world.state.ledger.getEventsAfterId(0)
@@ -445,9 +445,9 @@ test("a buyer stuck at its ceiling says so once instead of retrying silently", (
   const world = advanceWorld();
   const order = listOrders(world.state)[0];
   order.status = PROCUREMENT_STATUS.OFFERED;
-  order.originalPricePerUnit = 10;
-  order.pricePerUnit = 20;          // already at twice the opening price
-  order.supplierFloor = 10_000;
+  order.originalPricePerUnit = 100;
+  order.pricePerUnit = 200;         // already at twice the opening price
+  order.supplierFloor = 100_000;
   for (let tick = 0; tick < 5; tick += 1) world.tick(90);
   const exhausted = world.state.ledger.getEventsAfterId(0)
     .filter((entry) => entry.type === "procurement.repriceExhausted" && entry.payload.procurementOrderId === order.id);

@@ -66,7 +66,7 @@ test("Sal's unaccepted procurement offer is local, then becomes portable when ac
 
 test("Sal protects the cash reserve instead of posting an unfunded order", () => {
   const harness = createHarness();
-  harness.state.sprc.account.balance = 950;
+  harness.state.sprc.account.balance = 2000;
   harness.operation.update();
   const need = Object.values(harness.state.sprc.needs)[0];
   const response = Object.values(harness.state.sprc.responses)[0];
@@ -78,11 +78,11 @@ test("Sal protects the cash reserve instead of posting an unfunded order", () =>
 
 test("a blocked response is reconsidered when changed funds make it affordable", () => {
   const harness = createHarness();
-  harness.state.sprc.account.balance = 950;
+  harness.state.sprc.account.balance = 2000;
   harness.operation.update();
   const blocked = Object.values(harness.state.sprc.responses)[0];
   assert.equal(blocked.status, "blocked");
-  harness.state.sprc.account.balance = 1800;
+  harness.state.sprc.account.balance = 5000;
   harness.operation.update();
   assert.equal(blocked.status, "superseded");
   assert.equal(Object.keys(harness.state.sprc.procurementOrders).length, 1);
@@ -130,11 +130,14 @@ test("farm needs and commitments reconcile when circumstances change", () => {
 
 test("farm blocked procurement is reconsidered through the shared affordability rule", () => {
   const operation = createFarmOperation(1_000);
+  // The farm's own prices are unscaled — it is a separate, currently
+  // dead-ended economy — but its protected float scaled with the others, so it
+  // is short at 350 and comfortable at 7200.
   operation.institution.accounts.operating.balance = 350;
   let result = operation.assess();
   const blocked = Object.values(result.institution.responses).find((entry) => entry.resourceId === "water");
   assert.equal(blocked.status, "blocked");
-  operation.institution.accounts.operating.balance = 720;
+  operation.institution.accounts.operating.balance = 7200;
   result = operation.assess();
   assert.equal(blocked.status, "superseded");
   assert.equal(Object.values(result.institution.procurementOrders).length, 1);
@@ -152,10 +155,10 @@ test("SPRC response selection carries a score from the shared capability engine"
 
 test("SPRC protected cash policy is authoritative over its compatibility mirror", () => {
   const harness = createHarness();
-  harness.state.sprc.operatingPlan.protectedCashReserve = 1600;
+  harness.state.sprc.operatingPlan.protectedCashReserve = 16000;
   harness.state.sprc.account.protectedReserve = 0;
   harness.operation.update();
-  assert.equal(harness.state.sprc.account.protectedReserve, 1600);
+  assert.equal(harness.state.sprc.account.protectedReserve, 16000);
   assert.equal(Object.values(harness.state.sprc.responses)[0].status, "blocked");
 });
 
@@ -377,12 +380,12 @@ test("sustained critical demand lets Cinder fund and commission a fourth worker"
   const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => clock });
   mining.update();
   clock += 6_000;
-  mining.getState().institution.accounts.operating.balance = 600;
+  mining.getState().institution.accounts.operating.balance = 6000;
   mining.update();
   assert.equal(mining.getState().projects["cinder-four"].status, "completed");
   assert.ok(mining.getState().ships["worker:cinder-four"]);
   assert.equal(mining.workers.length, 4);
-  assert.equal(mining.getState().institution.accounts.operating.balance, 250);
+  assert.equal(mining.getState().institution.accounts.operating.balance, 2500);
 });
 
 test("a worn Cinder craft is sent to service when a delivery crosses the wear threshold", () => {
@@ -1110,7 +1113,7 @@ test("a ready hauler repair bypasses an earlier miner repair blocked on material
   harness.state.ledger.recordEvent("maintenance.requested", {
     subjectId: "worker:test-miner", subjectName: "Test Miner", referenceId: "MW-TEST", craftClass: "mining-craft",
     issueType: "field-control-failure", requiredCapabilities: ["field-control"], locationSiteId: "scrap-porch", mobility: "self-return",
-    payerInstitutionId: "miner:test", payer: { balance: 1000, committed: 0, protectedCash: 100 }, servicePrice: 220,
+    payerInstitutionId: "miner:test", payer: { balance: 100000, committed: 0, protectedCash: 10000 }, servicePrice: 2200,
   }, { visible: false });
   harness.state.ledger.recordEvent("logistics.maintenanceRequired", { npcId: SPRC.firstHaulerId, issueType: "preventive-service", wear: 4, issueCount: 1 }, { visible: false });
   harness.operation.update();
@@ -1143,7 +1146,7 @@ test("concurrent repairs share Sal's material orders instead of publishing tiny 
     harness.state.ledger.recordEvent("maintenance.requested", {
       subjectId: `worker:test-miner-${index}`, subjectName: `Test Miner ${index}`, referenceId: `MW-TEST-${index}`, craftClass: "mining-craft",
       issueType: "preventive-calibration", requiredCapabilities: ["field-control"], locationSiteId: "scrap-porch", mobility: "self-return",
-      payerInstitutionId: `miner:test-${index}`, payer: { balance: 1000, committed: 0, protectedCash: 100 }, servicePrice: 220,
+      payerInstitutionId: `miner:test-${index}`, payer: { balance: 100000, committed: 0, protectedCash: 10000 }, servicePrice: 2200,
     }, { visible: false });
   }
   harness.operation.update();

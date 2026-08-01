@@ -3,7 +3,7 @@ export const INSTITUTION_ARCHETYPES = Object.freeze({
     id: "repair-cooperative",
     capabilities: ["procure-input", "transform-input", "schedule-service", "allocate-project"],
     defaultPolicy: {
-      protectedCash: 600,
+      protectedCash: 6000,
       priorityWeights: { routine: 10, urgent: 60, emergency: 100 },
       purposeWeights: { "restore-operating-reserve": 15, "complete-accepted-service": 40, growth: 5 },
     },
@@ -16,7 +16,7 @@ export const INSTITUTION_ARCHETYPES = Object.freeze({
     id: "farm",
     capabilities: ["procure-input", "cultivate", "allocate-project"],
     defaultPolicy: {
-      protectedCash: 300,
+      protectedCash: 3000,
       priorityWeights: { routine: 10, urgent: 55, emergency: 100 },
       purposeWeights: { "protect-growing-cycle": 45, "restore-operating-reserve": 15, growth: 5 },
     },
@@ -28,7 +28,7 @@ export const INSTITUTION_ARCHETYPES = Object.freeze({
     id: "recovery-service",
     capabilities: ["quote-recovery", "dispatch-recovery", "tow-vehicle", "invoice-service"],
     defaultPolicy: {
-      protectedCash: 250,
+      protectedCash: 2500,
       priorityWeights: { routine: 10, urgent: 65, emergency: 100 },
       purposeWeights: { "preserve-loaded-delivery": 50, "service-return": 35, "stranded-pilot": 40 },
     },
@@ -38,7 +38,7 @@ export const INSTITUTION_ARCHETYPES = Object.freeze({
     id: "mining-contractor",
     capabilities: ["accept-extraction-order", "prospect", "mine", "collect", "deliver"],
     defaultPolicy: {
-      protectedCash: 120,
+      protectedCash: 1200,
       priorityWeights: { routine: 20, urgent: 55, emergency: 100 },
       purposeWeights: { "earn-operating-income": 40, "supply-regional-inventory": 25, "return-for-maintenance": 45 },
     },

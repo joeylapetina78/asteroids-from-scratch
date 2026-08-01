@@ -23,10 +23,10 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-0044-86882df";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260801-0044-86882df";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260801-0044-86882df";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0044-86882df";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-0101-86f0d11";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260801-0101-86f0d11";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260801-0101-86f0d11";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0101-86f0d11";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -42,9 +42,9 @@ export const POPULATION_NEEDS = Object.freeze({
     description: "Tools, pumps, replacement hardware, utility equipment, general infrastructure.",
     families: ["structural", "industrial"],
     materialUnits: 2,
-    productionCost: 300,
+    productionCost: 3000,
     productionSeconds: 90,
-    price: 400,
+    price: 4000,
     demandIntervalSeconds: 180,
     maxBacklog: 3,
   },
@@ -55,9 +55,9 @@ export const POPULATION_NEEDS = Object.freeze({
     description: "Water, coolant, filters, air-processing supplies, basic consumables.",
     families: ["volatile"],
     materialUnits: 2,
-    productionCost: 240,
+    productionCost: 2400,
     productionSeconds: 75,
-    price: 330,
+    price: 3300,
     demandIntervalSeconds: 150,
     maxBacklog: 3,
   },
@@ -68,9 +68,9 @@ export const POPULATION_NEEDS = Object.freeze({
     description: "Furniture, containers, appliances, clothing, simple electronics, everyday replacements.",
     families: ["structural", "industrial", "volatile"],
     materialUnits: 2,
-    productionCost: 260,
+    productionCost: 2600,
     productionSeconds: 80,
-    price: 360,
+    price: 3600,
     demandIntervalSeconds: 210,
     maxBacklog: 3,
   },
@@ -81,7 +81,7 @@ export const POPULATION_NEEDS = Object.freeze({
     description: "Miscellaneous maintenance and civilian consumption, met by any approved substitute.",
     families: null,
     materialUnits: 1,
-    price: 90,
+    price: 900,
     demandIntervalSeconds: 120,
     maxBacklog: 4,
   },
@@ -111,9 +111,9 @@ export const POPULATION_PROFILES = Object.freeze([
     hubInstitutionId: "yard-exchange",
     siteId: "yard-exchange",
     size: 140,
-    householdCash: 4000,
-    householdCashCap: 4000,
-    incomeAmount: 1200,
+    householdCash: 40000,
+    householdCashCap: 40000,
+    incomeAmount: 12000,
     incomeIntervalSeconds: 120,
     needIds: NEED_IDS,
   },
@@ -123,9 +123,9 @@ export const POPULATION_PROFILES = Object.freeze([
     hubInstitutionId: "scrap-forge",
     siteId: "scrap-porch",
     size: 95,
-    householdCash: 4000,
-    householdCashCap: 4000,
-    incomeAmount: 1200,
+    householdCash: 40000,
+    householdCashCap: 40000,
+    incomeAmount: 12000,
     incomeIntervalSeconds: 120,
     needIds: NEED_IDS,
   },
@@ -135,9 +135,9 @@ export const POPULATION_PROFILES = Object.freeze([
     hubInstitutionId: "the-ledge",
     siteId: "the-ledge",
     size: 60,
-    householdCash: 4000,
-    householdCashCap: 4000,
-    incomeAmount: 1200,
+    householdCash: 40000,
+    householdCashCap: 40000,
+    incomeAmount: 12000,
     incomeIntervalSeconds: 120,
     needIds: NEED_IDS,
   },

@@ -104,7 +104,22 @@ export function getResourceDefinition(resourceId) {
   return RESOURCE_DEFINITIONS[normalizeResourceType(resourceId)] ?? null;
 }
 
+// The institutional economy is denominated ten times larger than the raw
+// material table, so procedurally generated work sits on the same scale as the
+// authored missions rather than an order of magnitude below them. Applied here
+// because every derived price — mining offers, hub-to-hub sales, surplus
+// wholesale, freight budgets — is computed from this one number.
+//
+// This is a redenomination, not a rebalance: quantities, cadences and wear
+// rates are deliberately untouched.
+export const ECONOMY_SCALE = 10;
+
 export function getResourceTradeValue(resourceId) {
+  return (getResourceDefinition(resourceId)?.value ?? 0) * ECONOMY_SCALE;
+}
+
+// The unscaled table value, for anything that must stay in raw-material terms.
+export function getRawResourceValue(resourceId) {
   return getResourceDefinition(resourceId)?.value ?? 0;
 }
 

@@ -1,12 +1,12 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-0044-86882df";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-0044-86882df";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0044-86882df";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-0044-86882df";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-0044-86882df";
-import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260801-0044-86882df";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-0044-86882df";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-0044-86882df";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0044-86882df";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-0101-86f0d11";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-0101-86f0d11";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0101-86f0d11";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-0101-86f0d11";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-0101-86f0d11";
+import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260801-0101-86f0d11";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-0101-86f0d11";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-0101-86f0d11";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0101-86f0d11";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -29,14 +29,14 @@ const MINING_WORKER_DEFAULTS = Object.freeze([
 ]);
 const EXPANSION_WORKER_DEFAULTS = Object.freeze({ id: "worker:cinder-four", name: "Cinder Four", referenceId: "MW-034-CINDER", currentSiteId: "scrap-porch", initialWear: 0.15, offset: { x: 110, y: -80 } });
 const MINING_ALLOCATION_SIZE = 6;
-const EXPANSION_COST = 350;
+const EXPANSION_COST = 3500;
 const EXPANSION_DEMAND_SECONDS = 12;
 // Rolling fleet policy. Cinder hires when the whole fleet has been busy long
 // enough that work is plainly being turned away, and lets a ship go when it has
 // sat idle long enough that it is plainly not needed.
 const HIRE_AFTER_BUSY_SECONDS = 60;
 const RELEASE_AFTER_IDLE_SECONDS = 120;
-const HIRE_COST = 350;
+const HIRE_COST = 3500;
 // Never go to nothing, and never grow without limit.
 const MIN_FLEET = 1;
 const MAX_FLEET = 8;
@@ -49,15 +49,15 @@ const MINING_ISSUES = Object.freeze([
   { issueType: "field-control-failure", requiredCapabilities: ["field-control"] },
   { issueType: "preventive-calibration", requiredCapabilities: ["field-control"] },
 ]);
-const MINING_SERVICE_PRICE = 220;
-const MINING_PROTECTED_CASH = 120;
+const MINING_SERVICE_PRICE = 2200;
+const MINING_PROTECTED_CASH = 1200;
 
 // Largest single order a hub will place, so a big gap becomes several runs
 // rather than one impossible haul.
 const MAX_ORDER_UNITS = 6;
 // A hub keeps a working float back so buying ore never leaves it unable to pay
 // for the production the ore is for.
-const HUB_PROTECTED_CASH = 400;
+const HUB_PROTECTED_CASH = 4000;
 const HUB_TRAITS = Object.freeze({ urgencyBias: 0.5, caution: 0.5, growthBias: 0.3 });
 
 // The orders a hub is actually offering right now.

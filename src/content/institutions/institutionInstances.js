@@ -9,7 +9,7 @@ export function createSprcInstitutionInstance(now = Date.now()) {
       { id: "freight-craft-maintenance", craftClasses: ["freight-hauler"], issueTypes: ["maneuvering-strain", "hull-fatigue", "control-fault", "preventive-service"], repairCapabilities: ["structural-repair", "mechanical-repair", "control-systems"], facilityType: "repair-berth", servicePrice: 180 },
       { id: "mining-craft-maintenance", craftClasses: ["mining-craft"], issueTypes: ["structural-fatigue", "tractor-field-instability", "field-control-failure", "preventive-calibration"], repairCapabilities: ["structural-repair", "mechanical-repair", "tractor-field", "field-control"], facilityType: "repair-berth", servicePrice: 220 },
     ],
-    accounts: { operating: { id: "account:sprc-operating", balance: 1800, committed: 0, currency: "credits" } },
+    accounts: { operating: { id: "account:sprc-operating", balance: 18000, committed: 0, currency: "credits" } },
     policies: {
       protectedCash: 900,
       inventoryTargets: { structuralFeedstockEquivalents: 8, "hull-plate": 3, "machine-part": 2, copper: 1 },
@@ -42,7 +42,7 @@ export function createFarmInstitutionInstance(now = Date.now()) {
     name: "Sunward Acre",
     archetypeId: "farm",
     controllerInstitutionId: "tavi",
-    accounts: { operating: { id: "account:sunward-acre", balance: 720, committed: 0, currency: "credits" } },
+    accounts: { operating: { id: "account:sunward-acre", balance: 7200, committed: 0, currency: "credits" } },
     policies: { protectedCash: 300, inventoryTargets: { water: 12, seed: 4 }, safetyStock: { water: 3, seed: 1 } },
     inventories: { inputs: { water: 2, seed: 4 }, outputs: { crop: 0 }, reserved: { inputs: {}, outputs: {} } },
     projects: { greenhouse: { id: "greenhouse", status: "planned", requirements: { credits: 500 }, reserved: { credits: 0 }, priority: 10 } },

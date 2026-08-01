@@ -1,11 +1,11 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-0044-86882df";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-0044-86882df";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0044-86882df";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260801-0044-86882df";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-0044-86882df";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-0044-86882df";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-0044-86882df";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0044-86882df";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-0101-86f0d11";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-0101-86f0d11";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0101-86f0d11";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260801-0101-86f0d11";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-0101-86f0d11";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-0101-86f0d11";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-0101-86f0d11";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0101-86f0d11";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -18,7 +18,7 @@ const CARRIER_DEFAULT_TRAITS = Object.freeze({ caution: 0.5, growthBias: 0.3 });
 // plainly is not needed. Both are SUSTAINED conditions, not single ticks.
 const HAULER_HIRE_AFTER_BUSY_SECONDS = 60;
 const HAULER_RELEASE_AFTER_IDLE_SECONDS = 120;
-const HAULER_COST = 600;
+const HAULER_COST = 6000;
 const MIN_HAULERS = 1;
 const MAX_HAULERS = 6;
 
@@ -49,13 +49,13 @@ export function createInitialLogisticsState(now = Date.now()) {
   return {
     version: 1,
     institutions: {
-      "yard-exchange": { id: "yard-exchange", archetypeId: "trade-hub", accounts: { operating: { balance: 5000, committed: 0 } }, inventories: { "iron-nickel": 4, silicate: 0, "water-ice": 0 }, renewableResources: ["iron-nickel"] },
-      "scrap-forge": { id: "scrap-forge", archetypeId: "resource-outpost", accounts: { operating: { balance: 3000, committed: 0 } }, inventories: { "water-ice": 6, "iron-nickel": 0, silicate: 0 }, renewableResources: ["water-ice"] },
-      "the-ledge": { id: "the-ledge", archetypeId: "frontier-outpost", accounts: { operating: { balance: 4200, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 4, "water-ice": 0 }, renewableResources: ["silicate"] },
-      "carrier:yard-hauler": { id: "carrier:yard-hauler", name: "Quill Independent Freight", referenceId: "FR-CARR-014", archetypeId: "hauling-business", controllerInstitutionId: "person:yard-hauler-operator", accounts: { operating: { id: "FR-ACCT-014", balance: 400, committed: 0, transactions: [] } }, policies: { transportation: { ...FIRST_REACH_CARRIER_POLICY, minimumOperatingCash: 180 } }, repairOptions: FIRST_REACH_REPAIR_OPTIONS.map((entry) => ({ ...entry })) },
+      "yard-exchange": { id: "yard-exchange", archetypeId: "trade-hub", accounts: { operating: { balance: 50000, committed: 0 } }, inventories: { "iron-nickel": 4, silicate: 0, "water-ice": 0 }, renewableResources: ["iron-nickel"] },
+      "scrap-forge": { id: "scrap-forge", archetypeId: "resource-outpost", accounts: { operating: { balance: 30000, committed: 0 } }, inventories: { "water-ice": 6, "iron-nickel": 0, silicate: 0 }, renewableResources: ["water-ice"] },
+      "the-ledge": { id: "the-ledge", archetypeId: "frontier-outpost", accounts: { operating: { balance: 42000, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 4, "water-ice": 0 }, renewableResources: ["silicate"] },
+      "carrier:yard-hauler": { id: "carrier:yard-hauler", name: "Quill Independent Freight", referenceId: "FR-CARR-014", archetypeId: "hauling-business", controllerInstitutionId: "person:yard-hauler-operator", accounts: { operating: { id: "FR-ACCT-014", balance: 4000, committed: 0, transactions: [] } }, policies: { transportation: { ...FIRST_REACH_CARRIER_POLICY, minimumOperatingCash: 1800 } }, repairOptions: FIRST_REACH_REPAIR_OPTIONS.map((entry) => ({ ...entry })) },
       "person:yard-hauler-operator": { id: "person:yard-hauler-operator", name: "Dara Quill", referenceId: "HLC-001-HAULER-YARD-SCRAP", archetypeId: "person", controls: ["carrier:yard-hauler"], license: { id: "HLC-001-HAULER-YARD-SCRAP", class: "commercial-hauler", status: "active" } },
       "ship:hauler-yard-scrap": { id: "ship:hauler-yard-scrap", name: "Yard Hauler", referenceId: "HAUL-01-HAULER-YARD-SCRAP", archetypeId: "cargo-ship", controllerInstitutionId: "carrier:yard-hauler", wear: 0.4, issueCount: 0 },
-      "carrier:porch-runner": { id: "carrier:porch-runner", name: "Mara Venn Freight", referenceId: "FR-CARR-022", archetypeId: "hauling-business", controllerInstitutionId: "person:hauler-scrap-yard-operator", accounts: { operating: { id: "FR-ACCT-022", balance: 350, committed: 0, transactions: [] } }, policies: { transportation: { ...FIRST_REACH_CARRIER_POLICY, minimumOperatingCash: 180 } }, repairOptions: FIRST_REACH_REPAIR_OPTIONS.map((entry) => ({ ...entry })) },
+      "carrier:porch-runner": { id: "carrier:porch-runner", name: "Mara Venn Freight", referenceId: "FR-CARR-022", archetypeId: "hauling-business", controllerInstitutionId: "person:hauler-scrap-yard-operator", accounts: { operating: { id: "FR-ACCT-022", balance: 3500, committed: 0, transactions: [] } }, policies: { transportation: { ...FIRST_REACH_CARRIER_POLICY, minimumOperatingCash: 1800 } }, repairOptions: FIRST_REACH_REPAIR_OPTIONS.map((entry) => ({ ...entry })) },
       "person:hauler-scrap-yard-operator": { id: "person:hauler-scrap-yard-operator", archetypeId: "person", name: "Mara Venn", referenceId: "HLC-002-HAULER-SCRAP-YARD", controls: ["carrier:porch-runner"], license: { id: "HLC-002-HAULER-SCRAP-YARD", class: "commercial-hauler", status: "active" } },
       "ship:hauler-scrap-yard": { id: "ship:hauler-scrap-yard", name: "Porch Runner Two", referenceId: "HAUL-02-HAULER-SCRAP-YARD", archetypeId: "cargo-ship", controllerInstitutionId: "carrier:porch-runner", wear: 1.8, issueCount: 0 },
     },
@@ -71,7 +71,7 @@ export function createInitialLogisticsState(now = Date.now()) {
 export function ensureLogisticsState(state, now = Date.now()) {
   state.logistics ??= createInitialLogisticsState(now);
   state.logistics.institutions ??= {};
-  state.logistics.institutions["the-ledge"] ??= { id: "the-ledge", archetypeId: "frontier-outpost", accounts: { operating: { balance: 4200, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 0 }, renewableResources: ["silicate"] };
+  state.logistics.institutions["the-ledge"] ??= { id: "the-ledge", archetypeId: "frontier-outpost", accounts: { operating: { balance: 42000, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 0 }, renewableResources: ["silicate"] };
   ["carrier:yard-hauler", "carrier:porch-runner"].forEach((institutionId) => {
     const institution = state.logistics.institutions?.[institutionId];
     if (!institution) return;

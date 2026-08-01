@@ -1,14 +1,14 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260801-0044-86882df";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260801-0044-86882df";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-0044-86882df";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-0044-86882df";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260801-0044-86882df";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260801-0044-86882df";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260801-0044-86882df";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260801-0044-86882df";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-0044-86882df";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0044-86882df";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0044-86882df";
+import { depositCredits } from "./accounts.js?v=fresh-20260801-0101-86f0d11";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260801-0101-86f0d11";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-0101-86f0d11";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-0101-86f0d11";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260801-0101-86f0d11";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260801-0101-86f0d11";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260801-0101-86f0d11";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260801-0101-86f0d11";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-0101-86f0d11";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0101-86f0d11";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0101-86f0d11";
 
 export const SPRC = Object.freeze({
   actorId: "organization:sprc",
@@ -32,9 +32,9 @@ const REPAIR_SECONDS = 30;
 // Overhead the mill adds converting raw stock into a finished part, and the
 // labor/facility Sal charges for occupying a berth. Both feed service pricing
 // alongside the live material cost basis.
-const MILL_CONVERSION_COST = 12;
-const REPAIR_LABOR_COST = 70;
-const REPAIR_FACILITY_COST = 35;
+const MILL_CONVERSION_COST = 120;
+const REPAIR_LABOR_COST = 700;
+const REPAIR_FACILITY_COST = 350;
 // Fallback unit costs used only before anything has actually been bought.
 const REFERENCE_UNIT_COSTS = Object.freeze({ "hull-plate": 80, "machine-part": 70, copper: 60, silicate: 20, "iron-nickel": 34, aluminum: 68 });
 // Reprice an unfilled order at most this often, and never above this multiple
@@ -214,7 +214,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
 
   function createLegacyFreightRequest(payload) {
     const subject = sprc.serviceSubjects[payload.npcId];
-    return { ...payload, subjectId: payload.npcId, subjectName: subject.shipName, craftClass: "freight-hauler", locationSiteId: SPRC.siteId, mobility: "recovered", requiredCapabilities: payload.issueType === "hull-fatigue" ? ["structural-repair"] : payload.issueType === "control-fault" ? ["control-systems"] : ["mechanical-repair"], payer: { balance: 1000, committed: 0, protectedCash: 0 }, payerInstitutionId: subject.homeOrganizationId, servicePrice: 180 };
+    return { ...payload, subjectId: payload.npcId, subjectName: subject.shipName, craftClass: "freight-hauler", locationSiteId: SPRC.siteId, mobility: "recovered", requiredCapabilities: payload.issueType === "hull-fatigue" ? ["structural-repair"] : payload.issueType === "control-fault" ? ["control-systems"] : ["mechanical-repair"], payer: { balance: 10000, committed: 0, protectedCash: 0 }, payerInstitutionId: subject.homeOrganizationId, servicePrice: 1800 };
   }
 
   function createServiceRepairOrder(payload) {

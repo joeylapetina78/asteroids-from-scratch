@@ -22,12 +22,12 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0044-86882df";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-0044-86882df";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-0044-86882df";
-import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-0044-86882df";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260801-0044-86882df";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-0044-86882df";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0101-86f0d11";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-0101-86f0d11";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-0101-86f0d11";
+import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-0101-86f0d11";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260801-0101-86f0d11";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-0101-86f0d11";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -46,7 +46,7 @@ const MAX_ORDER_UNITS = 6;
 // Below this a hub waits rather than opening an order: single-unit top-ups
 // generate more paperwork and freight than the material is worth.
 const MIN_ORDER_UNITS = 2;
-const BUYER_PROTECTED_CASH = 300;
+const BUYER_PROTECTED_CASH = 3000;
 // A supplier will not owe more than it can realistically dig in the near term.
 // Without this it says yes to everything, every acceptance raises its own stock
 // target, and it ends up owing a hundred units it mines six at a time.
