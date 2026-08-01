@@ -464,11 +464,12 @@ test("a buyer stuck at its ceiling says so once instead of retrying silently", (
 // A hub that has overpaid for water ice in the past holds out to recover it,
 // which is what makes the volatile lane jam at all.
 //
-// 600 is chosen to sit above what ANY hub will bid, not above what one
-// particular hub bids: the most eager quartermaster tops out around 450 on an
-// empty shelf. Tuning this to a single buyer made the fixture break the moment
-// the hubs stopped sharing one temperament.
-function overpayForWaterIce(state, unitCost = 600) {
+// Pitched above the PRICE CEILING rather than above any observed bid: no
+// procurement valuation may exceed 2.5x the base worth, so 900 against a
+// 300 cr trade value is unreachable by construction. Tuning this to what a
+// particular hub happened to bid broke the fixture twice — once when the hubs
+// stopped sharing a temperament, once when empty-shelf urgency started working.
+function overpayForWaterIce(state, unitCost = 900) {
   recordAcquisition(state, {
     institutionId: "scrap-forge", itemId: "water-ice", units: 200, totalCost: 200 * unitCost,
   });

@@ -26,7 +26,38 @@ export const VALUATION_DECISION = Object.freeze({
 // Ceiling on how far any valuation may drift from its base worth, so a
 // desperate buyer cannot bid to infinity. Overridable per policy.
 const DEFAULT_PRICE_CEILING_MULTIPLE = 2.5;
-const URGENCY_BASE = Object.freeze({ routine: 1, urgent: 1.25, emergency: 1.55 });
+
+// The whole urgency vocabulary. Exported so call sites name a level rather than
+// spelling one, because they cannot be trusted to spell it: both hub call sites
+// passed "critical" for months, which is not a level, fell back to routine, and
+// silently made the entire empty-shelf path — and `urgencyBias` with it — do
+// nothing at all.
+//
+// The anchor is what an actor is unable to DO, not how it feels:
+//   routine    it is topping up
+//   urgent     coverage is thin and will run out
+//   emergency  something already committed to is blocked right now
+export const URGENCY = Object.freeze({
+  ROUTINE: "routine",
+  URGENT: "urgent",
+  EMERGENCY: "emergency",
+});
+
+const URGENCY_BASE = Object.freeze({ [URGENCY.ROUTINE]: 1, [URGENCY.URGENT]: 1.25, [URGENCY.EMERGENCY]: 1.55 });
+
+export function isKnownUrgency(urgency) {
+  return Object.hasOwn(URGENCY_BASE, urgency);
+}
+
+// How pressing a shortage is, from the shortage itself. Both hubs and miners
+// graded this with their own ternary; sharing it means one definition of "thin"
+// and one place to argue about it.
+export function urgencyFromCoverage({ onHand = 0, incoming = 0, target = 0 } = {}) {
+  if (target <= 0) return URGENCY.ROUTINE;
+  // Nothing on the shelf at all: whatever is asked for next cannot be served.
+  if (onHand <= 0) return URGENCY.EMERGENCY;
+  return (onHand + incoming) / target < 0.5 ? URGENCY.URGENT : URGENCY.ROUTINE;
+}
 
 export function createValuationResult({
   acceptable = false,
@@ -96,6 +127,10 @@ export function evaluateProcurement({
   const base = Math.max(baseUnitPrice, marketUnitValue);
   if (marketUnitValue > baseUnitPrice) reasons.push(`Market value of ${itemId} (${round(marketUnitValue)}) floors the authored reference ${baseUnitPrice}.`);
 
+  // A level nobody recognises is a bug at the call site, and it used to be
+  // invisible: it quietly priced as routine. Say so in the reasons, which is
+  // where every other pricing surprise already explains itself.
+  if (!isKnownUrgency(urgency)) reasons.push(`Unrecognised urgency '${urgency}' priced as ${URGENCY.ROUTINE} — the caller named a level that does not exist.`);
   const uFactor = urgencyFactor(urgency, traits.urgencyBias ?? 0.5);
   const sFactor = scarcityFactor(inventory, traits.caution ?? 0.5);
   const rFactor = relationshipFactor(relationship);

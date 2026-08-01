@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { VALUATION_DECISION, evaluateMiningJob, evaluateProcurement, evaluateServicePrice, evaluateSupplierAsk, relationshipFactor, scarcityFactor, urgencyFactor } from "../src/systems/valuation.js";
+import { URGENCY, VALUATION_DECISION, evaluateMiningJob, evaluateProcurement, evaluateServicePrice, evaluateSupplierAsk, isKnownUrgency, relationshipFactor, scarcityFactor, urgencyFactor, urgencyFromCoverage } from "../src/systems/valuation.js";
 import { getBundleCost, getServiceCost, getUnitCost, recordAcquisition, recordProduction, recordServiceCost } from "../src/systems/costBasis.js";
 import { INTENTION_STATUS, adaptMiningAllocation, adaptProcurementAllocation, getIntentionOutcome, getReservedResources, isActorCommitted, mayReconsider } from "../src/systems/intentions.js";
 import { RELATIONSHIP_DIMENSIONS, getRelationshipProjection, recordDeliveryOutcome, updateRelationshipProjection } from "../src/systems/relationshipProjections.js";
@@ -228,6 +228,66 @@ test("the shared layer can tell whether an actor is committed", () => {
   };
   assert.equal(isActorCommitted(state, "worker:cinder-one"), true);
   assert.equal(isActorCommitted(state, "worker:cinder-two"), false);
+});
+
+// ── Urgency: the level has to exist to do anything ─────────────────────────
+
+test("every urgency level actually moves the price", () => {
+  // The defect this guards: "critical" was passed for months, is not a level,
+  // fell back to routine, and made the whole empty-shelf path inert.
+  const eager = { urgencyBias: 0.9 };
+  const routine = urgencyFactor(URGENCY.ROUTINE, eager.urgencyBias);
+  const urgent = urgencyFactor(URGENCY.URGENT, eager.urgencyBias);
+  const emergency = urgencyFactor(URGENCY.EMERGENCY, eager.urgencyBias);
+  assert.equal(routine, 1, "routine is the baseline by definition");
+  assert.ok(urgent > routine && emergency > urgent, `the levels are ordered, got ${routine}/${urgent}/${emergency}`);
+});
+
+test("urgencyBias only bites above routine — which is why an inert level hid it", () => {
+  assert.equal(urgencyFactor(URGENCY.ROUTINE, 0.1), urgencyFactor(URGENCY.ROUTINE, 0.9),
+    "at routine, temperament cannot show; a level that silently becomes routine erases it");
+  assert.ok(urgencyFactor(URGENCY.EMERGENCY, 0.9) > urgencyFactor(URGENCY.EMERGENCY, 0.1),
+    "above routine, an anxious buyer pays more than a calm one");
+});
+
+test("an unrecognised level is priced as routine but says so", () => {
+  assert.equal(isKnownUrgency("critical"), false, "the level that caused this");
+  assert.equal(isKnownUrgency(URGENCY.EMERGENCY), true);
+  assert.equal(urgencyFactor("critical", 0.9), urgencyFactor(URGENCY.ROUTINE, 0.9), "still safe, still routine");
+
+  const result = evaluateProcurement({
+    itemId: "water-ice", baseUnitPrice: 300, urgency: "critical",
+    account: { balance: 10_000 }, traits: SAL_TRAITS,
+  });
+  assert.ok(result.reasons.some((reason) => /unrecognised urgency 'critical'/i.test(reason)),
+    "the mistake is visible in the reasons instead of vanishing");
+});
+
+test("urgency is graded from the shortage, not guessed at each call site", () => {
+  assert.equal(urgencyFromCoverage({ onHand: 0, incoming: 0, target: 12 }), URGENCY.EMERGENCY,
+    "an empty shelf cannot serve what is asked next");
+  assert.equal(urgencyFromCoverage({ onHand: 3, incoming: 0, target: 12 }), URGENCY.URGENT,
+    "under half covered is thin");
+  assert.equal(urgencyFromCoverage({ onHand: 9, incoming: 0, target: 12 }), URGENCY.ROUTINE,
+    "comfortable is routine");
+  assert.equal(urgencyFromCoverage({ onHand: 1, incoming: 0, target: 12 }), URGENCY.URGENT);
+  assert.equal(urgencyFromCoverage({ onHand: 1, incoming: 8, target: 12 }), URGENCY.ROUTINE,
+    "the same shelf is not urgent when the shortfall is already on its way");
+  assert.equal(urgencyFromCoverage({ onHand: 0, incoming: 0, target: 0 }), URGENCY.ROUTINE,
+    "wanting nothing is never urgent");
+});
+
+test("an empty shelf now costs more than a full one, which is the whole point", () => {
+  const bid = (inventory) => evaluateProcurement({
+    itemId: "water-ice", baseUnitPrice: 300, marketUnitValue: 300,
+    urgency: urgencyFromCoverage(inventory), inventory,
+    requestedUnits: 6, account: { balance: 100_000 }, traits: { urgencyBias: 0.8, caution: 0.5 },
+  }).recommendedPrice;
+
+  const empty = bid({ onHand: 0, incoming: 0, target: 12 });
+  const thin = bid({ onHand: 3, incoming: 0, target: 12 });
+  const stocked = bid({ onHand: 9, incoming: 0, target: 12 });
+  assert.ok(empty > thin && thin > stocked, `${empty} > ${thin} > ${stocked}`);
 });
 
 // ── Supplier-side pricing (third link of cost pass-through) ────────────────

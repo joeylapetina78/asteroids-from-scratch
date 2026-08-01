@@ -1,15 +1,15 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-1048-f1a2625";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-1048-f1a2625";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1048-f1a2625";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-1048-f1a2625";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-1048-f1a2625";
-import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260801-1048-f1a2625";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-1048-f1a2625";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1048-f1a2625";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1048-f1a2625";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260801-1048-f1a2625";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1048-f1a2625";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1048-f1a2625";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-1108-165333d";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-1108-165333d";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1108-165333d";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-1108-165333d";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-1108-165333d";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-1108-165333d";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-1108-165333d";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1108-165333d";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1108-165333d";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260801-1108-165333d";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1108-165333d";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1108-165333d";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -84,7 +84,7 @@ export function getPostedMiningOrders(state, at = Date.now()) {
       itemId: definition.resourceId,
       baseUnitPrice: getResourceTradeValue(definition.resourceId),
       marketUnitValue: getResourceTradeValue(definition.resourceId),
-      urgency: position.onHand === 0 ? "critical" : "routine",
+      urgency: urgencyFromCoverage(position),
       inventory: position,
       requestedUnits: Math.min(position.gap, MAX_ORDER_UNITS),
       account: buyer.accounts?.operating ?? {},

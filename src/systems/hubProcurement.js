@@ -24,13 +24,13 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1048-f1a2625";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-1048-f1a2625";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-1048-f1a2625";
-import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-1048-f1a2625";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260801-1048-f1a2625";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1048-f1a2625";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-1048-f1a2625";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1108-165333d";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-1108-165333d";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-1108-165333d";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-1108-165333d";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260801-1108-165333d";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1108-165333d";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-1108-165333d";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -331,7 +331,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
           itemId: supplier.resourceId,
           baseUnitPrice: getResourceTradeValue(supplier.resourceId),
           marketUnitValue: getResourceTradeValue(supplier.resourceId),
-          urgency: position.onHand === 0 ? "critical" : "routine",
+          urgency: urgencyFromCoverage(position),
           inventory: { onHand: position.onHand, incoming: position.incoming + onOrder, target: position.target },
           requestedUnits: units,
           account: buyer.accounts?.operating ?? {},
