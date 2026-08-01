@@ -15,9 +15,9 @@
 //   WHO IS DOING IT   supplier — null while it is still up for grabs
 //   WHERE IS IT       one of available / taken / done / blocked
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260731-1848-975f9ca";
-import { PROCUREMENT_STATUS, hubName, listOrders } from "./hubProcurement.js?v=fresh-20260731-1848-975f9ca";
-import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260731-1848-975f9ca";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260731-1932-02b4024";
+import { PROCUREMENT_STATUS, hubName, listOrders } from "./hubProcurement.js?v=fresh-20260731-1932-02b4024";
+import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260731-1932-02b4024";
 
 export const CONTRACT_STATE = Object.freeze({
   AVAILABLE: "available",   // posted, nobody has taken it
@@ -47,6 +47,19 @@ export function actorLabel(id) {
   return HUB_LABELS[id] ?? hubName(id) ?? id;
 }
 
+// Where an institution physically sits. A purchase order names the two parties
+// but not their sites, so the lane it implies is resolved here.
+const SITE_BY_INSTITUTION = Object.freeze({
+  "yard-exchange": "yard-exchange",
+  "scrap-forge": "scrap-porch",
+  "the-ledge": "the-ledge",
+  sprc: "scrap-porch",
+});
+
+function siteOf(institutionId) {
+  return SITE_BY_INSTITUTION[institutionId] ?? null;
+}
+
 // Ships and haulers carry their own names in their operation records, so the
 // board shows "Cinder Two" rather than an id.
 function nameFromState(state, id) {
@@ -57,14 +70,22 @@ function nameFromState(state, id) {
     ?? null;
 }
 
+// A null field means the underlying record genuinely does not carry it, not
+// that it was left out. Nothing here is inferred or filled in.
 function entry(state, fields) {
   return {
     id: null, kind: null, state: null, title: null,
-    issuerId: null, supplierId: null, siteId: null,
-    resourceId: null, family: null, units: null, unitPrice: null, value: null,
+    issuerId: null, buyerId: null, sellerId: null, supplierId: null,
+    originSiteId: null, siteId: null,
+    resourceId: null, family: null,
+    units: null, remainingUnits: null, unitPrice: null, value: null,
+    goodsPayment: null, servicePayment: null,
+    createdAt: null, closedAt: null,
     detail: null, note: null, at: null,
     ...fields,
     issuerName: nameFromState(state, fields.issuerId) ?? actorLabel(fields.issuerId),
+    buyerName: nameFromState(state, fields.buyerId) ?? actorLabel(fields.buyerId),
+    sellerName: nameFromState(state, fields.sellerId) ?? actorLabel(fields.sellerId),
     supplierName: nameFromState(state, fields.supplierId) ?? actorLabel(fields.supplierId),
   };
 }
@@ -86,13 +107,23 @@ function collectExtraction(state) {
       state: blocked ? CONTRACT_STATE.BLOCKED : (active.length > 0 ? CONTRACT_STATE.TAKEN : CONTRACT_STATE.AVAILABLE),
       title: `${order.resourceName ?? order.resourceId} for ${actorLabel(order.buyerInstitutionId)}`,
       issuerId: order.buyerInstitutionId,
+      buyerId: order.buyerInstitutionId,
+      sellerId: active[0]?.supplierInstitutionId ?? null,
       supplierId: active[0]?.workerShipId ?? null,
+      // No origin: the worker picks its own deposit, and which rock it chose is
+      // not recorded on the order.
+      originSiteId: null,
       siteId: order.siteId,
       resourceId: order.resourceId,
       family: getResourceFamily(order.resourceId),
       units: order.amount,
+      // Standing extraction records no partial fill, so remaining is unknown
+      // rather than assumed equal to the order size.
+      remainingUnits: null,
       unitPrice: order.paymentPerUnit ?? null,
       value: order.amount && order.paymentPerUnit ? order.amount * order.paymentPerUnit : null,
+      goodsPayment: order.amount && order.paymentPerUnit ? order.amount * order.paymentPerUnit : null,
+      createdAt: order.at ?? null,
       note: blocked
         ? `withheld: ${order.withheld}`
         : `${order.inventory?.onHand ?? 0} on hand vs target ${order.inventory?.target ?? 0}`,
@@ -109,8 +140,12 @@ function collectExtraction(state) {
       state: CONTRACT_STATE.DONE,
       title: `${allocation.orderId} filled`,
       issuerId: null,
+      sellerId: allocation.supplierInstitutionId ?? null,
       supplierId: allocation.workerShipId,
       units: allocation.amount ?? null,
+      remainingUnits: 0,
+      createdAt: allocation.acceptedAt ?? null,
+      closedAt: allocation.releasedAt ?? null,
       note: `delivered against ${allocation.orderId}`,
       at: allocation.acceptedAt ?? null,
     }));
@@ -136,12 +171,21 @@ function collectPurchases(state) {
     state: PURCHASE_STATE[order.status] ?? CONTRACT_STATE.AVAILABLE,
     title: `${actorLabel(order.buyerInstitutionId)} buys ${order.units} ${order.resourceId.replaceAll("-", " ")}`,
     issuerId: order.buyerInstitutionId,
+    buyerId: order.buyerInstitutionId,
+    sellerId: order.supplierInstitutionId,
     supplierId: order.status === PROCUREMENT_STATUS.OFFERED ? null : order.supplierInstitutionId,
+    originSiteId: siteOf(order.supplierInstitutionId),
+    siteId: siteOf(order.buyerInstitutionId),
     resourceId: order.resourceId,
     family: order.family,
     units: order.units,
+    remainingUnits: Math.max(0, (order.units ?? 0) - (order.deliveredUnits ?? 0)),
     unitPrice: order.pricePerUnit,
     value: order.committedPayment,
+    goodsPayment: order.committedPayment ?? null,
+    servicePayment: order.freightBudget ?? null,
+    createdAt: order.createdAt ?? null,
+    closedAt: order.deliveredAt ?? null,
     note: order.status === PROCUREMENT_STATUS.DECLINED
       ? (order.declinedReason ?? "declined")
       : `${order.status}${order.deliveredUnits ? ` · ${order.deliveredUnits} delivered` : ""}`,
@@ -159,12 +203,20 @@ function collectFreight(state) {
     state: shipment.status === "delivered" ? CONTRACT_STATE.DONE : CONTRACT_STATE.TAKEN,
     title: `${shipment.quantity} ${String(shipment.commodity).replaceAll("-", " ")} → ${actorLabel(shipment.destinationInstitutionId)}`,
     issuerId: shipment.issuerInstitutionId,
+    buyerId: shipment.destinationInstitutionId,
+    sellerId: shipment.sourceInstitutionId,
     supplierId: shipment.assigneeId ?? null,
+    originSiteId: shipment.originSiteId,
     siteId: shipment.destinationSiteId,
     resourceId: shipment.commodity,
     family: getResourceFamily(shipment.commodity),
     units: shipment.quantity,
+    remainingUnits: shipment.status === "delivered" ? 0 : shipment.quantity,
     value: shipment.payment,
+    goodsPayment: shipment.goodsPayment ?? null,
+    servicePayment: shipment.payment ?? null,
+    createdAt: shipment.createdAt ?? null,
+    closedAt: shipment.deliveredAt ?? null,
     note: `${shipment.status} · goods ${shipment.goodsPayment ?? 0} cr, freight ${shipment.payment ?? 0} cr`,
     at: shipment.createdAt ?? null,
   }));
@@ -179,11 +231,18 @@ function collectFreight(state) {
         state: CONTRACT_STATE.AVAILABLE,
         title: `${order.units} ${order.resourceId.replaceAll("-", " ")} → ${actorLabel(order.buyerInstitutionId)}`,
         issuerId: order.buyerInstitutionId,
+        buyerId: order.buyerInstitutionId,
+        sellerId: order.supplierInstitutionId,
         supplierId: null,
+        originSiteId: siteOf(order.supplierInstitutionId),
+        siteId: siteOf(order.buyerInstitutionId),
         resourceId: order.resourceId,
         family: order.family,
         units: order.units,
+        remainingUnits: order.units,
         value: order.freightBudget,
+        servicePayment: order.freightBudget ?? null,
+        createdAt: order.readyAt ?? order.createdAt ?? null,
         note: `awaiting a carrier · ${order.freightBudget} cr offered`,
         at: order.readyAt ?? null,
       }));
@@ -203,11 +262,17 @@ function collectSprc(state) {
       state: done ? CONTRACT_STATE.DONE : (takers.length > 0 ? CONTRACT_STATE.TAKEN : CONTRACT_STATE.AVAILABLE),
       title: `Sal buys ${order.requiredEquivalentUnits} ${String(order.procurementItemId ?? "material").replaceAll("-", " ")}`,
       issuerId: "sprc",
+      buyerId: "sprc",
+      sellerId: takers[0]?.supplierInstitutionId ?? null,
       supplierId: takers[0]?.supplierInstitutionId ?? null,
       siteId: order.destinationSiteId,
+      resourceId: order.procurementItemId ?? null,
       units: order.requiredEquivalentUnits,
+      remainingUnits: Math.max(0, (order.requiredEquivalentUnits ?? 0) - (order.deliveredEquivalentUnits ?? 0)),
       unitPrice: order.pricePerEquivalent,
       value: order.committedPayment ?? order.maximumPayment ?? null,
+      goodsPayment: order.paidAmount ?? order.committedPayment ?? null,
+      createdAt: order.createdAt ?? null,
       note: `${order.status} · ${order.deliveredEquivalentUnits ?? 0}/${order.requiredEquivalentUnits} delivered`,
       at: order.createdAt ?? null,
     }));
@@ -222,9 +287,18 @@ function collectSprc(state) {
         : (order.status === "waiting-stock" ? CONTRACT_STATE.BLOCKED : CONTRACT_STATE.TAKEN),
       title: `Repair ${actorLabel(order.subjectId) ?? order.subjectId} (${String(order.condition ?? "fault").replaceAll("-", " ")})`,
       issuerId: order.payerInstitutionId,
-      supplierId: "sprc",
+      buyerId: order.payerInstitutionId,
+      sellerId: "sprc",
+      // The subject is the ship on the bench, which is what there is to look at.
+      supplierId: order.subjectId ?? null,
+      siteId: order.facilityId ?? null,
+      resourceId: order.condition ?? null,
       units: 1,
+      remainingUnits: done ? 0 : 1,
       value: order.servicePrice ?? null,
+      servicePayment: order.servicePrice ?? null,
+      createdAt: order.createdAt ?? null,
+      closedAt: order.completesAt ?? null,
       note: order.status,
       at: order.createdAt ?? null,
     }));

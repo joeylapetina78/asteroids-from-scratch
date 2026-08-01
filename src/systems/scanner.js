@@ -1,5 +1,5 @@
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260731-1848-975f9ca";
-import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260731-1848-975f9ca";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260731-1932-02b4024";
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260731-1932-02b4024";
 
 const SCAN_RANGE = 1800;
 const SCAN_HALF_ANGLE = Math.PI / 5;

@@ -166,3 +166,78 @@ test("the board reads state without changing it", () => {
     posted: state.miningOperation.postedOrders,
   }), before, "a projection must not mutate the records it reads");
 });
+
+// ── Every field the records actually carry ─────────────────────────────────
+
+test("a purchase carries both parties, both sites, quantities and both payments", () => {
+  const { state } = createWorld();
+  const purchase = listContracts(state).find((contract) => contract.kind === CONTRACT_KIND.PURCHASE);
+  assert.ok(purchase);
+  assert.ok(purchase.buyerId && purchase.sellerId, "buyer and seller are distinct fields");
+  assert.notEqual(purchase.buyerId, purchase.sellerId, "and a hub never buys from itself");
+  assert.ok(purchase.originSiteId && purchase.siteId, "the lane has both ends");
+  assert.notEqual(purchase.originSiteId, purchase.siteId);
+  assert.ok(purchase.units > 0);
+  assert.equal(typeof purchase.remainingUnits, "number");
+  assert.ok(purchase.goodsPayment > 0, "the goods have a price");
+  assert.ok(purchase.servicePayment > 0, "and the haulage is budgeted separately");
+  assert.ok(purchase.createdAt, "and it is timestamped");
+});
+
+test("remaining quantity falls as a purchase is delivered", () => {
+  const { state } = createWorld();
+  const order = listOrders(state)[0];
+  const before = listContracts(state).find((contract) => contract.id === order.id).remainingUnits;
+  order.deliveredUnits = 2;
+  const after = listContracts(state).find((contract) => contract.id === order.id).remainingUnits;
+  assert.equal(after, before - 2);
+});
+
+test("a repair names its payer, its provider, and the ship on the bench", () => {
+  const { state } = createWorld();
+  state.sprc.repairOrders = {
+    "REP-1": {
+      id: "REP-1", status: "waiting-stock", payerInstitutionId: "carrier:yard-hauler",
+      subjectId: "hauler-yard-scrap", condition: "control-fault", servicePrice: 180,
+      facilityId: "scrap-porch", createdAt: 900,
+    },
+  };
+  const repair = listContracts(state).find((contract) => contract.id === "REP-1");
+  assert.equal(repair.buyerId, "carrier:yard-hauler", "the payer is the buyer");
+  assert.equal(repair.sellerId, "sprc", "the co-op provides the service");
+  assert.equal(repair.supplierId, "hauler-yard-scrap", "and the subject is the ship being worked on");
+  assert.equal(repair.servicePayment, 180);
+  assert.equal(repair.createdAt, 900);
+});
+
+test("fields the records do not carry are null, never guessed", () => {
+  const { state } = createWorld();
+  const extraction = listContracts(state).find((contract) => contract.kind === CONTRACT_KIND.EXTRACTION);
+  assert.ok(extraction);
+  // A miner chooses its own deposit and the order never records which, so there
+  // is no origin to show. Standing extraction likewise records no partial fill.
+  assert.equal(extraction.originSiteId, null, "no deposit is recorded on an extraction order");
+  assert.equal(extraction.remainingUnits, null, "and no partial fill is tracked");
+});
+
+test("a freight run reports its lane, its carrier, and both payments separately", () => {
+  const { state } = createWorld();
+  state.logistics.shipments = {
+    "SHIP-9": {
+      id: "SHIP-9", status: "loaded", commodity: "water-ice", quantity: 6,
+      originSiteId: "scrap-porch", destinationSiteId: "yard-exchange",
+      sourceInstitutionId: "scrap-forge", destinationInstitutionId: "yard-exchange",
+      issuerInstitutionId: "yard-exchange", assigneeId: "hauler-scrap-yard",
+      goodsPayment: 219, payment: 113, createdAt: 950,
+    },
+  };
+  const run = listContracts(state).find((contract) => contract.id === "SHIP-9");
+  assert.equal(run.originSiteId, "scrap-porch");
+  assert.equal(run.siteId, "yard-exchange");
+  assert.equal(run.sellerId, "scrap-forge");
+  assert.equal(run.buyerId, "yard-exchange");
+  assert.equal(run.supplierId, "hauler-scrap-yard");
+  assert.equal(run.goodsPayment, 219);
+  assert.equal(run.servicePayment, 113);
+  assert.equal(run.remainingUnits, 6, "still in flight");
+});
