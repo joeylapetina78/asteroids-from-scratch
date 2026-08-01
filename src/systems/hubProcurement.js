@@ -22,12 +22,12 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2047-e2997e1";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260731-2047-e2997e1";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260731-2047-e2997e1";
-import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260731-2047-e2997e1";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260731-2047-e2997e1";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260731-2047-e2997e1";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2101-07d4f49";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260731-2101-07d4f49";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260731-2101-07d4f49";
+import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260731-2101-07d4f49";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260731-2101-07d4f49";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260731-2101-07d4f49";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -47,6 +47,11 @@ const MAX_ORDER_UNITS = 6;
 // generate more paperwork and freight than the material is worth.
 const MIN_ORDER_UNITS = 2;
 const BUYER_PROTECTED_CASH = 300;
+// Repricing, mirroring how Sal reprices an unfilled purchase order: bounded so
+// a hub cannot bid itself into ruin, throttled so it does not thrash, and
+// logged with the reason it moved.
+const REPRICE_INTERVAL_MS = 60 * 1000;
+const REPRICE_MAX_MULTIPLE = 2;
 const BUYER_TRAITS = Object.freeze({ urgencyBias: 0.5, caution: 0.5, growthBias: 0.3 });
 
 const SITE_BY_INSTITUTION = Object.freeze({
@@ -192,6 +197,10 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
           buyerInstitutionId, supplierInstitutionId: supplier.institutionId,
           family: position.family, resourceId: supplier.resourceId,
           units: orderUnits, pricePerUnit: valuation.recommendedPrice,
+          // The ceiling is anchored to what this buyer first judged the goods
+          // worth, captured at creation. Capturing it at the first reprice
+          // instead would let a bad opening price become the baseline.
+          originalPricePerUnit: valuation.recommendedPrice,
           committedPayment, freightBudget,
           deliveredUnits: 0, status: PROCUREMENT_STATUS.OFFERED,
           reasons: valuation.reasons, createdAt: now(), shipmentId: null,
@@ -226,6 +235,11 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
         order.status = PROCUREMENT_STATUS.DECLINED;
         order.declinedReason = "below-supplier-cost";
         order.reasons = ask.reasons;
+        // What the seller said it needs. This is the number the buyer moves
+        // toward when it reprices, which is what lets the two sides converge
+        // instead of restating the same offer at each other.
+        order.supplierFloor = ask.minAcceptablePrice ?? null;
+        order.supplierAsk = ask.recommendedPrice ?? null;
         releaseCommitment(order);
         emit("procurement.orderDeclined", `${hubName(order.supplierInstitutionId)} will not sell ${order.units} ${order2Label(order.resourceId)} for ${order.committedPayment} cr; it needs at least ${ask.minAcceptablePrice}.`, {
           procurementOrderId: order.id, sellerId: order.supplierInstitutionId, buyerId: order.buyerInstitutionId,
@@ -313,8 +327,84 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     return order;
   }
 
+  // A purchase nobody will take raises what it offers, toward what the seller
+  // actually said the goods cost it. Bounded by a ceiling on the opening price,
+  // throttled to once a minute, and refused outright if the buyer cannot fund
+  // the higher bid — an unaffordable raise is deferred and logged, never taken
+  // out of the treasury.
+  function repriceUnfilledOrders() {
+    listOrders(state, { status: [PROCUREMENT_STATUS.OFFERED, PROCUREMENT_STATUS.DECLINED] }).forEach((order) => {
+      const lastPricedAt = order.lastRepricedAt ?? order.createdAt ?? 0;
+      if (now() - lastPricedAt < REPRICE_INTERVAL_MS) return;
+
+      const buyer = institution(order.buyerInstitutionId);
+      if (!buyer) return;
+      order.originalPricePerUnit ??= order.pricePerUnit;
+      const ceiling = Math.round(order.originalPricePerUnit * REPRICE_MAX_MULTIPLE);
+      // Move to what the seller said it needs, capped by what this buyer is
+      // willing to go to at all.
+      // The supplier quotes for the whole lot, so convert to a per-unit price
+      // before comparing it with what this buyer is offering per unit.
+      const units = Math.max(1, order.units ?? 1);
+      const floorPerUnit = order.supplierFloor ? Math.ceil(order.supplierFloor / units) : 0;
+      const askPerUnit = order.supplierAsk ? Math.ceil(order.supplierAsk / units) : 0;
+      const wanted = Math.max(floorPerUnit, askPerUnit, order.pricePerUnit + 1);
+      const nextPrice = Math.min(wanted, ceiling);
+      order.lastRepricedAt = now();
+
+      if (nextPrice <= order.pricePerUnit) {
+        // Already at the ceiling and still refused: say so once rather than
+        // silently retrying forever.
+        if (!order.repriceExhausted) {
+          order.repriceExhausted = true;
+          emit("procurement.repriceExhausted", `${hubName(order.buyerInstitutionId)} will not go above ${order.pricePerUnit} cr per unit for ${order2Label(order.resourceId)}; ${hubName(order.supplierInstitutionId)} wants ${order.supplierFloor ?? "more"}.`, {
+            procurementOrderId: order.id, buyerId: order.buyerInstitutionId, sellerId: order.supplierInstitutionId,
+            pricePerUnit: order.pricePerUnit, ceiling, supplierFloor: order.supplierFloor ?? null,
+          });
+        }
+        return;
+      }
+
+      const additional = (nextPrice - order.pricePerUnit) * order.units;
+      const spendable = (buyer.accounts?.operating?.balance ?? 0) - (buyer.accounts?.operating?.committed ?? 0) - BUYER_PROTECTED_CASH;
+      if (additional > spendable) {
+        emit("procurement.repriceDeferred", `${hubName(order.buyerInstitutionId)} would pay ${nextPrice} cr per unit for ${order2Label(order.resourceId)} but cannot commit the extra ${Math.round(additional)} cr.`, {
+          procurementOrderId: order.id, buyerId: order.buyerInstitutionId, wanted: nextPrice,
+          additional: Math.round(additional), spendable: Math.round(spendable),
+        });
+        return;
+      }
+
+      const previousPrice = order.pricePerUnit;
+      order.pricePerUnit = nextPrice;
+      order.committedPayment = order.units * nextPrice;
+      order.repriceCount = (order.repriceCount ?? 0) + 1;
+      order.repriceExhausted = false;
+      // A declined order goes back on the table at the new price rather than
+      // staying dead, which is the whole point of moving.
+      const wasDeclined = order.status === PROCUREMENT_STATUS.DECLINED;
+      if (wasDeclined) {
+        order.status = PROCUREMENT_STATUS.OFFERED;
+        order.declinedReason = null;
+      }
+      buyer.accounts.operating.committed = (buyer.accounts.operating.committed ?? 0) + (wasDeclined ? order.committedPayment : additional);
+
+      emit("institution.offerRepriced", `${hubName(order.buyerInstitutionId)} raises ${order2Label(order.resourceId)} to ${nextPrice} cr per unit — no deal at ${previousPrice}.`, {
+        procurementOrderId: order.id, buyerId: order.buyerInstitutionId, sellerId: order.supplierInstitutionId,
+        itemId: order.resourceId, previousPrice, unitPrice: nextPrice, repriceCount: order.repriceCount,
+        ceiling,
+        reasons: [
+          `${hubName(order.supplierInstitutionId)} would not sell at ${previousPrice} cr per unit.`,
+          order.supplierFloor ? `It needs at least ${order.supplierFloor} cr for the lot, ${floorPerUnit} per unit.` : "No counter-offer was given.",
+          `This buyer will not go above ${ceiling} cr per unit, twice its opening price.`,
+        ],
+      });
+    });
+  }
+
   function update() {
     postNeeds();
+    repriceUnfilledOrders();
     considerOffers();
     markReadyWhenSupplied();
   }

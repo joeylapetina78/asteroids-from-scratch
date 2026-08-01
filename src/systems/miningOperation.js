@@ -1,12 +1,12 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260731-2047-e2997e1";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260731-2047-e2997e1";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2047-e2997e1";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260731-2047-e2997e1";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260731-2047-e2997e1";
-import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260731-2047-e2997e1";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260731-2047-e2997e1";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260731-2047-e2997e1";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260731-2047-e2997e1";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260731-2101-07d4f49";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260731-2101-07d4f49";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2101-07d4f49";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260731-2101-07d4f49";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260731-2101-07d4f49";
+import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260731-2101-07d4f49";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260731-2101-07d4f49";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260731-2101-07d4f49";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260731-2101-07d4f49";
 
 // Identity only: which hub extracts which material at which site.
 //

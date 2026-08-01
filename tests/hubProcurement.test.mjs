@@ -297,3 +297,124 @@ test("a hauler can take a run from the far end when it has nothing local", () =>
     assert.ok(ship.assignment.route.length >= 2, "and was routed via the pickup");
   }
 });
+
+// ── Repricing: the two sides converge instead of restating offers ──────────
+
+function advanceWorld(minutes = 2) {
+  let clock = 1_000;
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(clock);
+  ["yard-exchange", "scrap-forge", "the-ledge"].forEach((id) => {
+    state.logistics.institutions[id].accounts.operating.balance = 60_000;
+  });
+  const procurement = createHubProcurementOperation({ state, now: () => clock });
+  return { state, procurement, tick: (seconds) => { clock += seconds * 1000; procurement.update(); }, now: () => clock };
+}
+
+test("a refused purchase is raised toward what the seller said it needs", () => {
+  const world = advanceWorld();
+  const order = listOrders(world.state)[0];
+  // Lowball it and let the supplier refuse.
+  order.status = PROCUREMENT_STATUS.OFFERED;
+  order.pricePerUnit = 1;
+  order.committedPayment = order.units;
+  world.tick(1);
+  assert.equal(order.status, PROCUREMENT_STATUS.DECLINED, "the supplier refused");
+  assert.ok(order.supplierFloor > 1, "and said what it would take");
+
+  const before = order.pricePerUnit;
+  world.tick(90);   // past the throttle
+  assert.ok(order.pricePerUnit > before, `price should rise from ${before}, got ${order.pricePerUnit}`);
+  assert.equal(order.repriceCount, 1);
+});
+
+test("a repriced order goes back on the table and closes once it clears the floor", () => {
+  const world = advanceWorld();
+  const order = listOrders(world.state)[0];
+  // Under-price it, but not so far that the buyer's own ceiling (twice its
+  // opening judgement) puts the seller's floor out of reach.
+  order.status = PROCUREMENT_STATUS.OFFERED;
+  order.originalPricePerUnit = 30;
+  order.pricePerUnit = 5;
+  order.committedPayment = order.units * 5;
+  world.tick(1);
+  assert.equal(order.status, PROCUREMENT_STATUS.DECLINED, "refused at the low price");
+
+  world.tick(90);
+  assert.ok(order.pricePerUnit > 5, "the buyer moved");
+  assert.notEqual(order.status, PROCUREMENT_STATUS.DECLINED,
+    "and the order is live again rather than left dead at the old price");
+});
+
+test("repricing is throttled, not run every tick", () => {
+  const world = advanceWorld();
+  const order = listOrders(world.state)[0];
+  order.status = PROCUREMENT_STATUS.OFFERED;
+  order.pricePerUnit = 1;
+  world.tick(1);
+  world.tick(90);
+  const afterFirst = order.repriceCount ?? 0;
+  for (let tick = 0; tick < 10; tick += 1) world.tick(1);
+  assert.equal(order.repriceCount ?? 0, afterFirst, "ten more seconds buys no further raises");
+});
+
+test("a buyer will not bid past twice its opening price", () => {
+  const world = advanceWorld();
+  const order = listOrders(world.state)[0];
+  order.status = PROCUREMENT_STATUS.OFFERED;
+  order.originalPricePerUnit = 10;
+  order.pricePerUnit = 10;
+  order.supplierFloor = 10_000;      // a seller demanding the moon
+  order.supplierAsk = 10_000;
+  for (let tick = 0; tick < 6; tick += 1) world.tick(90);
+  assert.ok(order.pricePerUnit <= 20, `capped at twice the opening price, got ${order.pricePerUnit}`);
+});
+
+test("a buyer that cannot fund the raise defers it and keeps its money", () => {
+  const world = advanceWorld();
+  const order = listOrders(world.state)[0];
+  order.status = PROCUREMENT_STATUS.OFFERED;
+  order.originalPricePerUnit = order.pricePerUnit;
+  order.supplierFloor = order.pricePerUnit * 2;
+  order.supplierAsk = order.pricePerUnit * 2;
+  const buyer = world.state.logistics.institutions[order.buyerInstitutionId];
+  buyer.accounts.operating.balance = 10;
+  const priceBefore = order.pricePerUnit;
+  const balanceBefore = buyer.accounts.operating.balance;
+  world.tick(90);
+  assert.equal(order.pricePerUnit, priceBefore, "the price did not move");
+  assert.equal(buyer.accounts.operating.balance, balanceBefore, "and nothing left the treasury");
+  const deferred = world.state.ledger.getEventsAfterId(0).filter((entry) => entry.type === "procurement.repriceDeferred");
+  assert.ok(deferred.length > 0, "the shortfall is on the record");
+});
+
+test("every raise records why it moved", () => {
+  const world = advanceWorld();
+  const order = listOrders(world.state)[0];
+  order.status = PROCUREMENT_STATUS.OFFERED;
+  order.pricePerUnit = 1;
+  order.committedPayment = order.units;
+  world.tick(1);
+  world.tick(90);
+  const repriced = world.state.ledger.getEventsAfterId(0)
+    .filter((entry) => entry.type === "institution.offerRepriced" && entry.payload.procurementOrderId === order.id);
+  assert.equal(repriced.length, 1);
+  const payload = repriced[0].payload;
+  assert.ok(payload.previousPrice < payload.unitPrice, "the move is recorded in both directions");
+  assert.ok(payload.reasons.length >= 2, "with reasons, not just numbers");
+  assert.ok(payload.reasons.some((reason) => /would not sell/i.test(reason)));
+  assert.ok(payload.ceiling, "and the limit it will not pass");
+});
+
+test("a buyer stuck at its ceiling says so once instead of retrying silently", () => {
+  const world = advanceWorld();
+  const order = listOrders(world.state)[0];
+  order.status = PROCUREMENT_STATUS.OFFERED;
+  order.originalPricePerUnit = 10;
+  order.pricePerUnit = 20;          // already at twice the opening price
+  order.supplierFloor = 10_000;
+  for (let tick = 0; tick < 5; tick += 1) world.tick(90);
+  const exhausted = world.state.ledger.getEventsAfterId(0)
+    .filter((entry) => entry.type === "procurement.repriceExhausted" && entry.payload.procurementOrderId === order.id);
+  assert.equal(exhausted.length, 1, "reported once, not once per attempt");
+});
