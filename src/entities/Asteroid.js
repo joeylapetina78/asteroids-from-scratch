@@ -1,4 +1,4 @@
-import { createRandom, randomRange } from "../systems/random.js?v=fresh-20260801-1152-2b2fe1f";
+import { createRandom, randomRange } from "../systems/random.js?v=fresh-20260801-1154-52a7508";
 
 // Asteroids are persistent world objects with a home origin. The spring back to
 // origin keeps local fields coherent while still allowing impacts to jostle

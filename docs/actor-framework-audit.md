@@ -461,6 +461,16 @@ adding data?**
   population profile, and mining rights. **The one thing worth building before the
   doubling proper is a single settlement seed record that emits all four.**
 
+**Intended behaviour, documented so nobody "fixes" it**
+- **A carrier that cannot afford recovery stays stranded.** Recovery is now priced
+  against real distance, so a poor carrier far from help may not be able to pay.
+  *Guaranteed recovery is not an invariant.* Do not lower an expensive lane's price
+  or add an automatic bailout — that removes the only consequence distance currently
+  has. Permanent ship loss, wrecks, salvage rights, insurance and replacement are a
+  later slice. What was fixed is only the noise: a stranded carrier now holds **one**
+  blocked record with an attempt count and logs once, rather than minting a new
+  record and ledger line every time it calls for help.
+
 **Safe to leave**
 - `state.towing` / `state.sprc` as singleton keys. A second recovery firm or repair
   co-op needs the state shape to become a map, which is a real refactor — but nothing

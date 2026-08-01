@@ -1,11 +1,11 @@
-import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-1152-2b2fe1f";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-1152-2b2fe1f";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-1152-2b2fe1f";
-import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1152-2b2fe1f";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-1152-2b2fe1f";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-1152-2b2fe1f";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1152-2b2fe1f";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-1152-2b2fe1f";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-1154-52a7508";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-1154-52a7508";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-1154-52a7508";
+import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1154-52a7508";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-1154-52a7508";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-1154-52a7508";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1154-52a7508";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-1154-52a7508";
 
 const REPAIR_SITE_ID = "scrap-porch";
 
@@ -20,6 +20,18 @@ const REPAIR_SITE_ID = "scrap-porch";
 // overrides to its instance policy, and the margin to its operator's traits.
 // Nell is a recovery-oriented actor because of what she has and values, and
 // there is no tow-specific pricing left to change.
+//
+// INTENDED BEHAVIOUR, NOT A BUG: a carrier that cannot afford recovery stays
+// stranded. Recovery is now priced against real distance, so the long lanes are
+// genuinely expensive and a poor carrier far from help may not be able to pay.
+// It is refused once, visibly, with `carrier-cannot-protect-operating-cash`, and
+// it does not retry until something changes.
+//
+// **Guaranteed recovery is not an invariant.** Do not "fix" an expensive lane by
+// lowering the price or adding an automatic bailout — that would remove the only
+// real consequence distance currently has. Permanent ship loss, wrecks, salvage
+// rights, insurance and replacement are a later slice; this is the state the
+// world sits in until they exist.
 
 export function createInitialTowServiceState(now = Date.now()) {
   return {
@@ -177,8 +189,21 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
   }
 
   function blockRequest(issue, reason, details = {}) {
+    // Being unable to afford recovery is a STATE, not an event. A stranded
+    // carrier that keeps calling for help must sit in one visible blocked
+    // record that counts the attempts, rather than minting a new one and a new
+    // ledger line every time it asks.
+    const standing = Object.values(towing.requests)
+      .find((request) => request.haulerId === issue.npcId && request.status === "blocked" && request.reason === reason);
+    if (standing) {
+      standing.attempts = (standing.attempts ?? 1) + 1;
+      standing.lastAttemptAt = now();
+      Object.assign(standing, details);
+      return standing;
+    }
+
     const id = `TOW-REQ-${String(++towing.counters.request).padStart(4, "0")}`;
-    const request = towing.requests[id] = { id, haulerId: issue.npcId, issue: { ...issue }, status: "blocked", reason, createdAt: now(), ...details };
+    const request = towing.requests[id] = { id, haulerId: issue.npcId, issue: { ...issue }, status: "blocked", reason, attempts: 1, lastAttemptAt: now(), createdAt: now(), ...details };
     state.ledger.recordEvent("towService.blocked", { institutionId: towing.institution.id, institutionName: towing.institution.name, actorInstitutionId: towing.controller.id, actorName: towing.controller.name, requestId: id, haulerId: issue.npcId, reason, ...details }, { visible: true, message: `${towing.controller.name} could not dispatch recovery for ${issue.npcName ?? issue.npcId}: ${reason.replaceAll("-", " ")}.` });
     return request;
   }

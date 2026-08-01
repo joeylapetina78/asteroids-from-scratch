@@ -1,15 +1,15 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-1152-2b2fe1f";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-1152-2b2fe1f";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1152-2b2fe1f";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-1152-2b2fe1f";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-1152-2b2fe1f";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-1152-2b2fe1f";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-1152-2b2fe1f";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1152-2b2fe1f";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-1152-2b2fe1f";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260801-1152-2b2fe1f";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1152-2b2fe1f";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1152-2b2fe1f";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-1154-52a7508";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-1154-52a7508";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1154-52a7508";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-1154-52a7508";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-1154-52a7508";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-1154-52a7508";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-1154-52a7508";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1154-52a7508";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-1154-52a7508";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260801-1154-52a7508";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1154-52a7508";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1154-52a7508";
 
 // Identity only: which hub extracts which material at which site.
 //

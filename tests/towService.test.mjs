@@ -128,6 +128,26 @@ test("a carrier that cannot protect its operating cash is refused, visibly", () 
   assert.ok(blocked.length > 0, "and says so on the record rather than silently not dispatching");
 });
 
+// A carrier that cannot afford recovery STAYS STRANDED. That is intended:
+// recovery is priced against real distance, so a poor carrier far from help may
+// simply not be able to pay, and that is the only consequence distance
+// currently has. Guaranteed recovery is not an invariant, and permanent loss,
+// wrecks and salvage are a later slice. What must not happen is noise.
+test("a stranded carrier holds one blocked state instead of spamming requests", () => {
+  const world = createWorld({ carrierBalance: 100 });
+  const first = requestRecovery(world);
+  assert.equal(first.status, "blocked");
+
+  for (let attempt = 0; attempt < 5; attempt += 1) requestRecovery(world);
+
+  const blocked = Object.values(world.state.towing.requests).filter((request) => request.status === "blocked");
+  assert.equal(blocked.length, 1, `one standing record, not one per call for help (got ${blocked.length})`);
+  assert.ok(blocked[0].attempts > 1, "which counts how often it has asked");
+
+  const noise = world.state.ledger.getEventsAfterId(0).filter((entry) => entry.type === "towService.blocked");
+  assert.equal(noise.length, 1, "and says so on the ledger once, not once per attempt");
+});
+
 // ── The relationship loop closes ───────────────────────────────────────────
 
 test("a completed recovery is remembered by both parties", () => {
