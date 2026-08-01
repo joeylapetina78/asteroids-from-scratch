@@ -200,3 +200,101 @@ test("a carrier moving prepaid cargo does not buy it a second time", () => {
     assert.ok(shipment.manifestId, "and it moves under a manifest");
   });
 });
+
+// ── Carriers spin up and down with the work ────────────────────────────────
+
+function createCarrierWorld() {
+  let clock = 1_000_000;
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(clock);
+  Object.values(state.logistics.institutions).forEach((institution) => {
+    if (institution.accounts?.operating) institution.accounts.operating.balance = 20_000;
+  });
+  const ships = Object.keys(state.logistics.haulers).map((id) => ({
+    id, dockedSiteId: state.logistics.haulers[id].currentSiteId, wear: 0,
+    operationalStatus: "seeking-work", activeShipmentId: null, assignment: null, transfers: [],
+    canAcceptRoute: () => true, assignShipment() { return true; },
+    queueCargoTransfer() {}, clearShipment() {},
+  }));
+  const commissioned = [];
+  const manager = createLogisticsManager({
+    state, ships, now: () => clock,
+    commissionHauler: (spec) => {
+      const ship = { id: spec.id, name: spec.name, isAlive: true, dockedSiteId: spec.homeSiteId, canAcceptRoute: () => true, assignShipment() { return true; }, queueCargoTransfer() {}, clearShipment() {} };
+      commissioned.push(ship);
+      return ship;
+    },
+  });
+  return { state, manager, ships, commissioned, advance: (seconds) => { clock += seconds * 1000; } };
+}
+
+const busy = (state) => Object.values(state.logistics.haulers).forEach((hauler) => { hauler.activeShipmentId = "SHIP-BUSY"; });
+const idle = (state) => Object.values(state.logistics.haulers).forEach((hauler) => { hauler.activeShipmentId = null; hauler.activeMovementId = null; });
+
+test("a carrier puts another ship into service when its own are all committed", () => {
+  const world = createCarrierWorld();
+  const before = Object.keys(world.state.logistics.haulers).length;
+  busy(world.state);
+  world.manager.update();
+  world.advance(61);
+  busy(world.state);
+  world.manager.update();
+  assert.ok(Object.keys(world.state.logistics.haulers).length > before, "the fleet grew");
+  assert.ok(world.commissioned.length > 0, "and the world was asked to build a hull");
+  const hired = world.state.ledger.getEventsAfterId(0).filter((entry) => entry.type === "carrier.haulerHired");
+  assert.ok(hired.length > 0);
+  assert.ok(hired[0].payload.cost > 0, "with what it cost");
+});
+
+test("a moment of everyone being busy does not buy a ship", () => {
+  const world = createCarrierWorld();
+  const before = Object.keys(world.state.logistics.haulers).length;
+  busy(world.state);
+  world.manager.update();
+  world.advance(40);
+  idle(world.state);            // the run is broken
+  world.manager.update();
+  world.advance(40);
+  busy(world.state);
+  world.manager.update();
+  assert.equal(Object.keys(world.state.logistics.haulers).length, before, "the clock restarted");
+});
+
+test("a carrier that cannot pay does not commission a ship", () => {
+  const world = createCarrierWorld();
+  const before = Object.keys(world.state.logistics.haulers).length;
+  Object.values(world.state.logistics.institutions).forEach((institution) => {
+    if (institution.accounts?.operating) institution.accounts.operating.balance = 5;
+  });
+  busy(world.state);
+  world.manager.update();
+  world.advance(61);
+  busy(world.state);
+  world.manager.update();
+  assert.equal(Object.keys(world.state.logistics.haulers).length, before, "no hull appeared");
+});
+
+test("a carrier lays up a ship with nothing to carry", () => {
+  const world = createCarrierWorld();
+  const before = Object.keys(world.state.logistics.haulers).length;
+  idle(world.state);
+  world.manager.update();
+  world.advance(121);
+  idle(world.state);
+  world.manager.update();
+  assert.ok(Object.keys(world.state.logistics.haulers).length < before, "the fleet shrank");
+  const laidUp = world.state.ledger.getEventsAfterId(0).filter((entry) => entry.type === "carrier.haulerLaidUp");
+  assert.ok(laidUp.length > 0);
+  assert.ok(laidUp[0].payload.idleSeconds >= 120, "and says how long it sat");
+});
+
+test("the region never runs out of haulers", () => {
+  const world = createCarrierWorld();
+  for (let round = 0; round < 10; round += 1) {
+    idle(world.state);
+    world.manager.update();
+    world.advance(121);
+    world.manager.update();
+  }
+  assert.ok(Object.keys(world.state.logistics.haulers).length >= 1, "somebody is always left to haul");
+});

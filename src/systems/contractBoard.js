@@ -15,9 +15,9 @@
 //   WHO IS DOING IT   supplier — null while it is still up for grabs
 //   WHERE IS IT       one of available / taken / done / blocked
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260731-2344-cae675b";
-import { PROCUREMENT_STATUS, hubName, listOrders } from "./hubProcurement.js?v=fresh-20260731-2344-cae675b";
-import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260731-2344-cae675b";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-0014-16743da";
+import { PROCUREMENT_STATUS, hubName, listOrders } from "./hubProcurement.js?v=fresh-20260801-0014-16743da";
+import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260801-0014-16743da";
 
 export const CONTRACT_STATE = Object.freeze({
   AVAILABLE: "available",   // posted, nobody has taken it

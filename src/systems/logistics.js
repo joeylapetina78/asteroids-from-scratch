@@ -1,17 +1,26 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260731-2344-cae675b";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260731-2344-cae675b";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2344-cae675b";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260731-2344-cae675b";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260731-2344-cae675b";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260731-2344-cae675b";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260731-2344-cae675b";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260731-2344-cae675b";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-0014-16743da";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-0014-16743da";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0014-16743da";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260801-0014-16743da";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-0014-16743da";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-0014-16743da";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-0014-16743da";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0014-16743da";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
 const FREIGHT_REPRICE_INTERVAL_MS = 45 * 1000;
 const FREIGHT_REPRICE_MAX_MULTIPLE = 2.5;
 const CARRIER_DEFAULT_TRAITS = Object.freeze({ caution: 0.5, growthBias: 0.3 });
+
+// Rolling carrier fleet policy, the same shape as Cinder's hiring: a carrier
+// buys a ship when its own are plainly all committed, and lays one up when it
+// plainly is not needed. Both are SUSTAINED conditions, not single ticks.
+const HAULER_HIRE_AFTER_BUSY_SECONDS = 60;
+const HAULER_RELEASE_AFTER_IDLE_SECONDS = 120;
+const HAULER_COST = 600;
+const MIN_HAULERS = 1;
+const MAX_HAULERS = 6;
 
 const SITE_NAMES = Object.freeze({
   "yard-exchange": "Yard Exchange",
@@ -95,7 +104,7 @@ export function ensureLogisticsState(state, now = Date.now()) {
   return state.logistics;
 }
 
-export function createLogisticsManager({ state, ships = [], destinations = [], now = () => Date.now(), onProcurementDelivered = null, onProcurementShipped = null }) {
+export function createLogisticsManager({ state, ships = [], destinations = [], now = () => Date.now(), onProcurementDelivered = null, onProcurementShipped = null, commissionHauler = null, decommissionHauler = null }) {
   const logistics = ensureLogisticsState(state, now());
   const shipById = new Map(ships.map((ship) => [ship.id, ship]));
   const destinationRecords = destinations.length > 0
@@ -111,6 +120,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
   function update() {
     consumeEvents();
     repriceUnclaimedFreight();
+    assessCarrierFleet();
     Object.entries(logistics.haulers).forEach(([shipId, hauler]) => {
       const ship = shipById.get(shipId);
       if (!ship) return;
@@ -781,6 +791,96 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     if (!template.prepaid) return source?.inventories?.[template.commodity] ?? 0;
     const held = source?.awaitingPickup?.[template.procurementOrderId];
     return held?.units ?? 0;
+  }
+
+  // A carrier that has had every ship committed for a minute buys another, and
+  // lays one up after two minutes idle. Ships are never laid up loaded, under
+  // tow, or if it would leave the region with none.
+  function assessCarrierFleet() {
+    logistics.fleetPolicy ??= {};
+    const carriers = new Set(Object.values(logistics.haulers).map((hauler) => hauler.carrierInstitutionId));
+
+    carriers.forEach((carrierId) => {
+      const carrier = logistics.institutions[carrierId];
+      if (!carrier?.accounts?.operating) return;
+      const owned = Object.entries(logistics.haulers).filter(([, hauler]) => hauler.carrierInstitutionId === carrierId);
+      if (owned.length === 0) return;
+      const policy = logistics.fleetPolicy[carrierId] ??= { allBusySince: null };
+
+      const allBusy = owned.every(([, hauler]) => hauler.activeShipmentId || hauler.activeMovementId);
+      if (!allBusy) policy.allBusySince = null;
+      else policy.allBusySince ??= now();
+
+      const busyLongEnough = policy.allBusySince != null
+        && now() - policy.allBusySince >= HAULER_HIRE_AFTER_BUSY_SECONDS * 1000;
+      const totalHaulers = Object.keys(logistics.haulers).length;
+
+      if (busyLongEnough && totalHaulers < MAX_HAULERS && commissionHauler) {
+        if (carrier.accounts.operating.balance - HAULER_COST < 0) {
+          appendHistory("carrier.hireDeferred", { carrierInstitutionId: carrierId, cost: HAULER_COST, balance: Math.round(carrier.accounts.operating.balance) });
+        } else if (hireHauler(carrierId, carrier, owned)) {
+          policy.allBusySince = null;   // earn the next one from scratch
+          return;
+        }
+      }
+
+      // ── laying one up ─────────────────────────────────────────────────
+      if (Object.keys(logistics.haulers).length <= MIN_HAULERS) return;
+      owned.forEach(([haulerId, hauler]) => {
+        if (hauler.activeShipmentId || hauler.activeMovementId) { hauler.idleSince = null; return; }
+        hauler.idleSince ??= now();
+        if (now() - hauler.idleSince < HAULER_RELEASE_AFTER_IDLE_SECONDS * 1000) return;
+        const ship = shipById.get(haulerId);
+        // Never lay up a ship that is carrying something or under tow: the
+        // cargo would go with it.
+        if (ship?.activeTowRequestId || ship?.cargoTransfers?.length) return;
+        if (Object.keys(logistics.haulers).length <= MIN_HAULERS) return;
+        layUpHauler(haulerId, hauler, carrierId, carrier);
+      });
+    });
+  }
+
+  function hireHauler(carrierId, carrier, owned) {
+    const index = (logistics.counters.hauler = (logistics.counters.hauler ?? 0) + 1);
+    const id = `hauler-hired-${index}`;
+    const homeSiteId = logistics.haulers[owned[0][0]]?.currentSiteId ?? "yard-exchange";
+    const created = commissionHauler({ id, name: `Relief Hauler ${index}`, homeSiteId, seed: 10 + index });
+    if (!created) return false;
+
+    carrier.accounts.operating.balance -= HAULER_COST;
+    recordAccountTransaction(carrierId, 0, "capital-expense", id, `Commissioned ${created.name}`);
+    const shipInstitutionId = `ship:${id}`;
+    logistics.institutions[shipInstitutionId] = {
+      id: shipInstitutionId, name: created.name, referenceId: `HAUL-${index}-RELIEF`,
+      archetypeId: "cargo-ship", controllerInstitutionId: carrierId, wear: 0, issueCount: 0,
+    };
+    logistics.haulers[id] = {
+      shipInstitutionId, carrierInstitutionId: carrierId, currentSiteId: homeSiteId,
+      activeShipmentId: null, activeMovementId: null, maintenanceRequested: false,
+      lastDecisionKey: null, status: "seeking-work", idleSince: null,
+    };
+    shipById.set(id, created);
+    appendHistory("carrier.hauerHired", { carrierInstitutionId: carrierId, haulerId: id, cost: HAULER_COST });
+    state.ledger.recordEvent("carrier.haulerHired", {
+      carrierInstitutionId: carrierId, haulerId: id, shipName: created.name,
+      cost: HAULER_COST, fleetSize: Object.keys(logistics.haulers).length,
+      balance: Math.round(carrier.accounts.operating.balance),
+    }, { visible: true, message: `${carrier.name ?? carrierId} put ${created.name} into service for ${HAULER_COST} cr — every ship it had was committed with freight still waiting.` });
+    return true;
+  }
+
+  function layUpHauler(haulerId, hauler, carrierId, carrier) {
+    const idleSeconds = Math.round((now() - (hauler.idleSince ?? now())) / 1000);
+    const ship = shipById.get(haulerId);
+    if (ship) ship.isAlive = false;
+    shipById.delete(haulerId);
+    delete logistics.haulers[haulerId];
+    decommissionHauler?.(haulerId);
+    appendHistory("carrier.haulerLaidUp", { carrierInstitutionId: carrierId, haulerId, idleSeconds });
+    state.ledger.recordEvent("carrier.haulerLaidUp", {
+      carrierInstitutionId: carrierId, haulerId, idleSeconds,
+      fleetSize: Object.keys(logistics.haulers).length,
+    }, { visible: true, message: `${carrier.name ?? carrierId} laid up ${haulerId} after ${idleSeconds}s with no freight to carry.` });
   }
 
   function countActiveForTemplate(templateId) { return Object.values(logistics.shipments).filter((entry) => entry.templateId === templateId && ["assigned", "loaded"].includes(entry.status)).length; }

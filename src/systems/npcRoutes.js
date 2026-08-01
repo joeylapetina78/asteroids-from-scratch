@@ -1,4 +1,4 @@
-import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260731-2344-cae675b";
+import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260801-0014-16743da";
 
 // For now, routes are authored from existing world sites. Later this can become
 // the same data layer that powers trade lanes, missions, patrols, and piracy.
@@ -18,7 +18,7 @@ export function createNpcRouteShips(sites) {
   ];
 }
 
-function createRouteShip(id, name, route, seed, routeOffset, pilotName = `${name} Operator`, maintenanceSiteId = null) {
+export function createRouteShip(id, name, route, seed, routeOffset, pilotName = `${name} Operator`, maintenanceSiteId = null) {
   const start = route[0].position;
   const next = route[1].position;
   const lane = normalize(next.x - start.x, next.y - start.y);
