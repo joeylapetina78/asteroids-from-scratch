@@ -22,12 +22,12 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2325-7368fe3";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260731-2325-7368fe3";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260731-2325-7368fe3";
-import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260731-2325-7368fe3";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260731-2325-7368fe3";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260731-2325-7368fe3";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2336-b77e55a";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260731-2336-b77e55a";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260731-2336-b77e55a";
+import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260731-2336-b77e55a";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260731-2336-b77e55a";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260731-2336-b77e55a";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -47,6 +47,20 @@ const MAX_ORDER_UNITS = 6;
 // generate more paperwork and freight than the material is worth.
 const MIN_ORDER_UNITS = 2;
 const BUYER_PROTECTED_CASH = 300;
+// A supplier will not owe more than it can realistically dig in the near term.
+// Without this it says yes to everything, every acceptance raises its own stock
+// target, and it ends up owing a hundred units it mines six at a time.
+const MAX_OUTSTANDING_SALE_UNITS = 12;
+// A buyer will not have more than this many purchases open on one family at
+// once. The gap it is ordering against does not close until goods actually
+// arrive, so without a cap it re-posts every single tick.
+const MAX_OPEN_ORDERS_PER_FAMILY = 2;
+// After a refusal a buyer waits before asking again. Without this it re-posts
+// the same request every tick and is refused every tick.
+const RETRY_AFTER_REFUSAL_MS = 60 * 1000;
+// Refused orders are kept long enough to read, then cleared so the board stays
+// legible instead of accumulating thousands of dead rows.
+const DECLINED_RETENTION_MS = 5 * 60 * 1000;
 // Repricing, mirroring how Sal reprices an unfilled purchase order: bounded so
 // a hub cannot bid itself into ruin, throttled so it does not thrash, and
 // logged with the reason it moved.
@@ -269,6 +283,18 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
         const outstanding = Math.max(0, position.gap - onOrder);
         if (outstanding <= 0) return;
 
+        // An open order is a request already in flight. Piling more on does not
+        // make the material arrive sooner, it just fills the board.
+        const openForFamily = listOrders(state, { buyerInstitutionId, status: OPEN_STATUSES })
+          .filter((entry) => entry.family === position.family).length;
+        if (openForFamily >= MAX_OPEN_ORDERS_PER_FAMILY) return;
+
+        // Asking again immediately after being turned down just produces the
+        // same refusal, so wait before trying this family again.
+        const refusedRecently = listOrders(state, { buyerInstitutionId, status: PROCUREMENT_STATUS.DECLINED })
+          .some((entry) => entry.family === position.family && now() - (entry.declinedAt ?? 0) < RETRY_AFTER_REFUSAL_MS);
+        if (refusedRecently) return;
+
         const supplier = findSupplier(position.family);
         if (!supplier || supplier.institutionId === buyerInstitutionId) return;
 
@@ -338,6 +364,27 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     listOrders(state, { status: PROCUREMENT_STATUS.OFFERED }).forEach((order) => {
       const supplier = institution(order.supplierInstitutionId);
       if (!supplier) return;
+
+      // Can it actually deliver this on top of what it already owes? Price is
+      // not the only reason to say no, and a promise it cannot keep is worse
+      // for the buyer than a refusal it can act on.
+      const alreadyOwed = getCommittedSupply(state, order.supplierInstitutionId, order.family);
+      if (alreadyOwed + order.units > MAX_OUTSTANDING_SALE_UNITS) {
+        order.status = PROCUREMENT_STATUS.DECLINED;
+        order.declinedReason = "supplier-at-capacity";
+        order.declinedAt = now();
+        order.reasons = [
+          `${hubName(order.supplierInstitutionId)} already owes ${alreadyOwed} ${order2Label(order.resourceId)} it has not delivered.`,
+          `Taking another ${order.units} would put it past the ${MAX_OUTSTANDING_SALE_UNITS} it can dig in reasonable time.`,
+        ];
+        releaseCommitment(order);
+        emit("procurement.orderDeclined", `${hubName(order.supplierInstitutionId)} turned down ${order.units} ${order2Label(order.resourceId)}: it already owes ${alreadyOwed} and will not promise what it cannot mine.`, {
+          procurementOrderId: order.id, sellerId: order.supplierInstitutionId, buyerId: order.buyerInstitutionId,
+          reason: "supplier-at-capacity", alreadyOwed, requested: order.units, capacity: MAX_OUTSTANDING_SALE_UNITS,
+        });
+        return;
+      }
+
       const unitCost = Math.max(getUnitCost(state, order.supplierInstitutionId, order.resourceId) || 0, getResourceTradeValue(order.resourceId));
       const ask = evaluateSupplierAsk({
         workId: order.id,
@@ -349,6 +396,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
       if (!ask.acceptable) {
         order.status = PROCUREMENT_STATUS.DECLINED;
         order.declinedReason = "below-supplier-cost";
+        order.declinedAt = now();
         order.reasons = ask.reasons;
         // What the seller said it needs. This is the number the buyer moves
         // toward when it reprices, which is what lets the two sides converge
@@ -427,6 +475,9 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   // out of the treasury.
   function repriceUnfilledOrders() {
     listOrders(state, { status: [PROCUREMENT_STATUS.OFFERED, PROCUREMENT_STATUS.DECLINED] }).forEach((order) => {
+      // Paying more does not conjure ore. A capacity refusal is answered by
+      // waiting, not by bidding.
+      if (order.declinedReason === "supplier-at-capacity") return;
       const lastPricedAt = order.lastRepricedAt ?? order.createdAt ?? 0;
       if (now() - lastPricedAt < REPRICE_INTERVAL_MS) return;
 
@@ -495,7 +546,16 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     });
   }
 
+  // Refused orders are readable history for a while, then they are noise.
+  function pruneDeclinedOrders() {
+    listOrders(state, { status: PROCUREMENT_STATUS.DECLINED }).forEach((order) => {
+      if (now() - (order.declinedAt ?? order.createdAt ?? 0) < DECLINED_RETENTION_MS) return;
+      delete procurement.orders[order.id];
+    });
+  }
+
   function update() {
+    pruneDeclinedOrders();
     postNeeds();
     repriceUnfilledOrders();
     considerOffers();

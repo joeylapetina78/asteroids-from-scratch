@@ -116,13 +116,37 @@ test("an accepted sale raises the supplier's own stock target", () => {
 });
 
 test("the raised target is what makes the supplier commission more mining", () => {
+  const { state } = createWorld();
+  // A sale widens the gap the supplier mines against — but only up to what it
+  // has agreed to, since it now refuses to owe more than it can dig.
+  const position = getInventoryPosition(state, "scrap-forge", "volatile");
+  assert.ok(position.committedSales > 0, "Scrap Porch owes volatile to somebody");
+  assert.equal(position.target, position.ownTarget + position.committedSales,
+    "and mines against its own need plus what it sold");
+  assert.ok(position.target > position.ownTarget);
+});
+
+test("a supplier refuses to owe more than it can realistically dig", () => {
   const { state, procurement } = createWorld();
-  const before = getPostedMiningOrders(state)["mine-porch-water"];
-  procurement.update();
-  const after = getPostedMiningOrders(state)["mine-porch-water"];
-  assert.ok(after, "Scrap Porch is still mining volatile");
-  assert.ok(after.inventory.gap > before.inventory.gap,
-    `owing a sale widens the gap it mines against (${before.inventory.gap} -> ${after.inventory.gap})`);
+  for (let tick = 0; tick < 40; tick += 1) procurement.update();
+  // Nothing is ever delivered here, so without a capacity limit the commitment
+  // would grow without bound and the target with it.
+  ["structural", "industrial", "volatile"].forEach((family) => {
+    ["yard-exchange", "scrap-forge", "the-ledge"].forEach((hubId) => {
+      const position = getInventoryPosition(state, hubId, family);
+      assert.ok(position.committedSales <= 12,
+        `${hubId} owes ${position.committedSales} ${family}, past what it can supply`);
+    });
+  });
+  const refusals = state.ledger.getEventsAfterId(0).filter((entry) => entry.payload?.reason === "supplier-at-capacity");
+  assert.ok(refusals.length > 0, "and it says so rather than silently over-promising");
+});
+
+test("a refused buyer waits before asking again instead of re-posting every tick", () => {
+  const { state, procurement } = createWorld();
+  for (let tick = 0; tick < 300; tick += 1) procurement.update();
+  assert.ok(listOrders(state).length < 40,
+    `the board stays legible, got ${listOrders(state).length} orders`);
 });
 
 test("a supplier refuses a sale below what the goods cost it", () => {
