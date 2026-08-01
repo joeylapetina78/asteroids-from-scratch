@@ -4,11 +4,18 @@
 // has tied up doing it, whether it may change its mind, and how it ended.
 //
 // IMPORTANT — this layer is NOT authoritative yet. Miner assignments
-// (`miningOperation.allocations` + `worker.assignment`) and SPRC procurement
-// allocations remain the source of truth and keep running exactly as they do.
-// This module only ADAPTS them into a common shape so the broader framework can
-// ask uniform questions across domains. A later slice may migrate ownership;
-// nothing here writes to those systems.
+// (`miningOperation.allocations` + `worker.assignment`), SPRC procurement
+// allocations, hub purchase orders and carrier shipments remain the source of
+// truth and keep running exactly as they do. This module only ADAPTS them into
+// a common shape so the broader framework can ask uniform questions across
+// domains. A later slice may migrate ownership; nothing here writes to those
+// systems.
+//
+// COVERAGE IS THE POINT. Every system that commits an actor to something must
+// be adapted here, or "what is this actor doing?" quietly has holes — hubs and
+// carriers were both missing while the whole hub economy was built on top of
+// them, and `logistics` grew a second, inline intention shape of its own inside
+// diagnostics because this one did not know about it.
 //
 // Answers the five questions the shared layer needs:
 //   isActorCommitted()      — is this actor busy?
@@ -30,6 +37,10 @@ export const INTENTION_KIND = Object.freeze({
   SUPPLY: "supply",
   SERVICE: "service",
   TRANSPORT: "transport",
+  // The buying half of a trade. A purchase is a commitment in its own right —
+  // the buyer has money set aside and is waiting on somebody — and it is held
+  // by a different actor than the SUPPLY intention facing it.
+  PROCUREMENT: "procurement",
 });
 
 // Canonical record shape. Adapters below produce these; a future migration can
@@ -76,9 +87,10 @@ export function adaptMiningAllocation(allocation, { worker = null, shipRecord = 
     id: `intention:${allocation.id}`,
     actorId: allocation.workerShipId ?? worker?.id ?? null,
     kind: INTENTION_KIND.EXTRACTION,
-    goal: `deliver ${allocation.amount ?? 0} ${worker?.assignment?.resourceId ?? "material"}`,
+    goal: `deliver ${allocation.amount ?? 0} ${allocation.resourceId ?? worker?.assignment?.resourceId ?? "material"}`
+      + (allocation.destinationSiteName ? ` to ${allocation.destinationSiteName}` : ""),
     objectId: allocation.orderId ?? null,
-    contractId: worker?.assignment?.contractId ?? null,
+    contractId: allocation.contractId ?? worker?.assignment?.contractId ?? null,
     reservedResources: {
       workerShipId: allocation.workerShipId ?? null,
       equivalentUnits: allocation.equivalentAmount ?? allocation.amount ?? 0,
@@ -157,6 +169,106 @@ export function adaptRepairOrder(repairOrder, { institutionId = "sprc" } = {}) {
   });
 }
 
+// ── Hub-to-hub trade: two actors, two intentions, one order ────────────────
+//
+// A purchase order binds both parties, but not to the same thing and not from
+// the same moment. The buyer is committed as soon as it sets the money aside;
+// the supplier only once it has agreed to dig. Adapting them separately is what
+// lets "what is this hub committed to?" be asked of either side.
+
+const HUB_ORDER_OUTCOME = Object.freeze({
+  delivered: INTENTION_STATUS.COMPLETED,
+  declined: INTENTION_STATUS.FAILED,
+  withheld: INTENTION_STATUS.ABANDONED,
+});
+
+// The BUYER's side: money committed, waiting on somebody else.
+export function adaptHubPurchase(order) {
+  if (!order) return null;
+  const status = HUB_ORDER_OUTCOME[order.status] ?? INTENTION_STATUS.ACTIVE;
+  // Before a supplier has agreed, a buyer genuinely does revisit this — it
+  // reprices unfilled orders and reopens declined ones. Once title and money
+  // are moving, it does not.
+  const stillNegotiating = ["offered", "declined"].includes(order.status);
+
+  return createIntentionRecord({
+    id: `intention:${order.id}:buyer`,
+    actorId: order.buyerInstitutionId,
+    kind: INTENTION_KIND.PROCUREMENT,
+    goal: `buy ${order.units} ${order.resourceId} from ${order.supplierInstitutionId}`,
+    objectId: order.id,
+    reservedResources: {
+      committedPayment: order.status === "delivered" ? 0 : (order.committedPayment ?? 0),
+      freightBudget: order.freightBudget ?? 0,
+    },
+    status,
+    reconsiderPolicy: stillNegotiating ? "on-material-change" : "until-complete",
+    reconsiderWhen: ["price-changed", "supplier-conceded", "account-balance-changed", "order-declined"],
+    committedAt: order.createdAt ?? null,
+    resolvedAt: order.deliveredAt ?? order.declinedAt ?? null,
+    outcomeReason: order.declinedReason ?? null,
+    source: { system: "hubProcurement", recordType: "purchaseOrder", recordId: order.id, orderStatus: order.status, side: "buyer" },
+  });
+}
+
+// The SELLER's side: ore promised and not yet handed over. Exists only once the
+// supplier has actually agreed — an offer it has not answered binds nobody.
+export function adaptHubSale(order) {
+  if (!order || ["offered", "declined", "withheld"].includes(order.status)) return null;
+  const owed = Math.max(0, (order.units ?? 0) - (order.deliveredUnits ?? 0));
+
+  return createIntentionRecord({
+    id: `intention:${order.id}:supplier`,
+    actorId: order.supplierInstitutionId,
+    kind: INTENTION_KIND.SUPPLY,
+    goal: `supply ${order.units} ${order.resourceId} to ${order.buyerInstitutionId}`,
+    objectId: order.id,
+    reservedResources: {
+      units: owed,
+      // Once title has passed the goods are the buyer's, held under a manifest.
+      manifestId: order.manifestId ?? null,
+    },
+    status: order.status === "delivered" ? INTENTION_STATUS.COMPLETED : INTENTION_STATUS.ACTIVE,
+    // A supplier that has agreed a price is bound to it. It may shade what it
+    // asks on the NEXT order, never on this one.
+    reconsiderPolicy: "until-complete",
+    reconsiderWhen: ["order-canceled", "buyer-cannot-pay"],
+    committedAt: order.acceptedAt ?? null,
+    resolvedAt: order.deliveredAt ?? null,
+    source: { system: "hubProcurement", recordType: "purchaseOrder", recordId: order.id, orderStatus: order.status, side: "supplier" },
+  });
+}
+
+// A carrier's run. Held by the SHIP, which is the actor that cannot be
+// redirected — the same reason a mining assignment is non-preemptive.
+export function adaptShipment(shipment) {
+  if (!shipment) return null;
+  const status = shipment.status === "delivered" ? INTENTION_STATUS.COMPLETED : INTENTION_STATUS.ACTIVE;
+
+  return createIntentionRecord({
+    id: `intention:${shipment.id}`,
+    actorId: shipment.assigneeId ?? null,
+    kind: INTENTION_KIND.TRANSPORT,
+    goal: `deliver ${shipment.quantity} ${shipment.commodity} to ${shipment.destinationSiteId}`,
+    objectId: shipment.id,
+    contractId: shipment.contractId ?? null,
+    reservedResources: {
+      containerId: shipment.containerId ?? null,
+      quantity: shipment.quantity ?? 0,
+      payment: shipment.payment ?? 0,
+      // Prepaid freight is carrying somebody else's property, not buying it.
+      manifestId: shipment.manifestId ?? null,
+    },
+    status,
+    // A loaded hauler is never released mid-run; that guard is load-bearing.
+    reconsiderPolicy: "until-complete",
+    reconsiderWhen: ["shipment-canceled", "ship-disabled"],
+    committedAt: shipment.createdAt ?? null,
+    resolvedAt: shipment.deliveredAt ?? null,
+    source: { system: "logistics", recordType: "shipment", recordId: shipment.id, shipmentStatus: shipment.status },
+  });
+}
+
 // ── Query seam ─────────────────────────────────────────────────────────────
 
 // Every intention currently visible across the authoritative domain systems.
@@ -190,6 +302,18 @@ export function collectIntentions(state, { game = null } = {}) {
       if (record) intentions.push(record);
     });
   }
+
+  Object.values(state.hubProcurement?.orders ?? {}).forEach((order) => {
+    const buyerSide = adaptHubPurchase(order);
+    if (buyerSide) intentions.push(buyerSide);
+    const supplierSide = adaptHubSale(order);
+    if (supplierSide) intentions.push(supplierSide);
+  });
+
+  Object.values(state.logistics?.shipments ?? {}).forEach((shipment) => {
+    const record = adaptShipment(shipment);
+    if (record) intentions.push(record);
+  });
 
   return intentions;
 }

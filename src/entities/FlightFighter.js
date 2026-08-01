@@ -1,4 +1,4 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260801-1044-5bdbcc3";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260801-1048-f1a2625";
 
 const FIGHTER_FLIGHT = {
   rotationSpeed: 2.55,

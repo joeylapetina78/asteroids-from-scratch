@@ -1,14 +1,15 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-1044-5bdbcc3";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-1044-5bdbcc3";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1044-5bdbcc3";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-1044-5bdbcc3";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-1044-5bdbcc3";
-import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260801-1044-5bdbcc3";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-1044-5bdbcc3";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1044-5bdbcc3";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1044-5bdbcc3";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1044-5bdbcc3";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1044-5bdbcc3";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-1048-f1a2625";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-1048-f1a2625";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1048-f1a2625";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-1048-f1a2625";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-1048-f1a2625";
+import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260801-1048-f1a2625";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-1048-f1a2625";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1048-f1a2625";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1048-f1a2625";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260801-1048-f1a2625";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1048-f1a2625";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1048-f1a2625";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -317,6 +318,12 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         workerShipId: worker.id,
         amount: order.amount,
         equivalentAmount: order.equivalentAmount ?? order.amount,
+        // What was promised and where it goes. A commitment that cannot say
+        // this is not readable on its own, and the intention adapter had to
+        // reach back into the offer to describe it.
+        resourceId: order.resourceId,
+        destinationSiteName: order.siteName,
+        contractId: order.contractId ?? null,
         status: "active",
         acceptedAt: now(),
       };
@@ -360,7 +367,8 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         summary: `Mining ${order.amount} ${order.resourceName} for ${order.siteName}`,
         locationSiteId: null,
         position: { x: Math.round(worker.position.x), y: Math.round(worker.position.y) },
-        intention: { id: allocation.id, kind: "extraction", goal: `deliver ${order.amount} ${order.resourceId} to ${order.siteName}`, objectId: order.id, contractId: order.contractId ?? order.id, reserved: { equivalentUnits: allocation.equivalentAmount } },
+        // The shared record, not a second shape describing the same thing.
+        intention: adaptMiningAllocation(allocation, { worker, shipRecord }),
         blocker: null,
         waitingFor: null,
         wakeOn: ["delivery.completed", "ship-disabled"],

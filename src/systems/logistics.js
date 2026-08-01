@@ -1,12 +1,13 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1044-5bdbcc3";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-1044-5bdbcc3";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1044-5bdbcc3";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260801-1044-5bdbcc3";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1044-5bdbcc3";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1044-5bdbcc3";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-1044-5bdbcc3";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-1044-5bdbcc3";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1044-5bdbcc3";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1048-f1a2625";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-1048-f1a2625";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1048-f1a2625";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260801-1048-f1a2625";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1048-f1a2625";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1048-f1a2625";
+import { adaptShipment } from "./intentions.js?v=fresh-20260801-1048-f1a2625";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-1048-f1a2625";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-1048-f1a2625";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1048-f1a2625";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -450,7 +451,8 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
         state: DIAGNOSTIC_STATE.COMMITTED,
         summary: `Hauling ${template.commodityName} ${template.originName} → ${template.destinationName} for ${shipment.payment} cr`,
         locationSiteId: hauler.currentSiteId,
-        intention: { id: shipment.id, kind: "transport", goal: `deliver ${template.commodityName} to ${template.destinationName}`, objectId: template.id, contractId: shipment.contractId ?? null, reserved: { containerId: shipment.containerId } },
+        // The shared record, not a second shape describing the same thing.
+        intention: adaptShipment(shipment),
         blocker: null,
         waitingFor: null,
         wakeOn: ["shipment-delivered", "breakdown"],
