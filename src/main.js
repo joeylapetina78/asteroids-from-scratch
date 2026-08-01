@@ -1,45 +1,45 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260731-2336-b77e55a";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260731-2336-b77e55a";
-import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260731-2336-b77e55a";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260731-2336-b77e55a";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260731-2336-b77e55a";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260731-2336-b77e55a";
-import { Game } from "./game.js?v=fresh-20260731-2336-b77e55a";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260731-2336-b77e55a";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260731-2336-b77e55a";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260731-2336-b77e55a";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260731-2336-b77e55a";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260731-2344-cae675b";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260731-2344-cae675b";
+import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260731-2344-cae675b";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260731-2344-cae675b";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260731-2344-cae675b";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260731-2344-cae675b";
+import { Game } from "./game.js?v=fresh-20260731-2344-cae675b";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260731-2344-cae675b";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260731-2344-cae675b";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260731-2344-cae675b";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260731-2344-cae675b";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260731-2336-b77e55a";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260731-2336-b77e55a";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260731-2336-b77e55a";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260731-2336-b77e55a";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260731-2336-b77e55a";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260731-2336-b77e55a";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260731-2336-b77e55a";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260731-2336-b77e55a";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260731-2336-b77e55a";
-import { Processor } from "./systems/processor.js?v=fresh-20260731-2336-b77e55a";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260731-2336-b77e55a";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260731-2336-b77e55a";
-import { createGameState } from "./state/gameState.js?v=fresh-20260731-2336-b77e55a";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260731-2336-b77e55a";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260731-2336-b77e55a";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260731-2336-b77e55a";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260731-2336-b77e55a";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260731-2336-b77e55a";
-import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260731-2336-b77e55a";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260731-2336-b77e55a";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260731-2336-b77e55a";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260731-2336-b77e55a";
-import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260731-2336-b77e55a";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260731-2336-b77e55a";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260731-2336-b77e55a";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260731-2336-b77e55a";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260731-2344-cae675b";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260731-2344-cae675b";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260731-2344-cae675b";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260731-2344-cae675b";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260731-2344-cae675b";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260731-2344-cae675b";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260731-2344-cae675b";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260731-2344-cae675b";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260731-2344-cae675b";
+import { Processor } from "./systems/processor.js?v=fresh-20260731-2344-cae675b";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260731-2344-cae675b";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260731-2344-cae675b";
+import { createGameState } from "./state/gameState.js?v=fresh-20260731-2344-cae675b";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260731-2344-cae675b";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260731-2344-cae675b";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260731-2344-cae675b";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260731-2344-cae675b";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260731-2344-cae675b";
+import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260731-2344-cae675b";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260731-2344-cae675b";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260731-2344-cae675b";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260731-2344-cae675b";
+import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260731-2344-cae675b";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260731-2344-cae675b";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260731-2344-cae675b";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260731-2344-cae675b";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.

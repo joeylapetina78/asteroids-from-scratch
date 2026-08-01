@@ -159,3 +159,105 @@ test("restoring the right lets the order be posted again", () => {
   assert.ok(mayMine(state, "yard-exchange", "hub:yard-exchange", "iron-nickel"),
     "the hub can post again without a restart");
 });
+
+// ── Cinder hires and stands down ───────────────────────────────────────────
+
+function createFleetWorld() {
+  let clock = 1_000_000;
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(clock);
+  const game = {
+    worldSites: [
+      { id: "yard-exchange", name: "Yard Exchange", position: { x: 380, y: -180 } },
+      { id: "scrap-porch", name: "Scrap Porch", position: { x: -1180, y: 860 } },
+      { id: "the-ledge", name: "The Ledge", position: { x: 7000, y: -4500 } },
+    ],
+    addWorkerShip: () => {},
+  };
+  const mining = createMiningOperation({ state, game, now: () => clock });
+  return { state, mining, advance: (seconds) => { clock += seconds * 1000; }, now: () => clock };
+}
+
+test("Cinder hires when the whole fleet has been committed for a minute", () => {
+  const world = createFleetWorld();
+  const before = world.mining.workers.length;
+  world.state.miningOperation.institution.accounts.operating.balance = 5_000;
+  // Pin every ship to work so the fleet reads as fully committed.
+  world.mining.workers.forEach((worker) => {
+    worker.assignment ??= { allocationId: "x", contractId: "x", resourceId: "iron-nickel", quantity: 1, harvestTargetQuantity: 1, destination: { x: 0, y: 0 }, depositCandidates: [] };
+  });
+  world.mining.update();
+  world.advance(61);
+  world.mining.workers.forEach((worker) => {
+    worker.assignment ??= { allocationId: "x", contractId: "x", resourceId: "iron-nickel", quantity: 1, harvestTargetQuantity: 1, destination: { x: 0, y: 0 }, depositCandidates: [] };
+  });
+  world.mining.update();
+
+  assert.equal(world.mining.workers.length, before + 1, "one more ship on the books");
+  const hired = world.state.ledger.getEventsAfterId(0).filter((entry) => entry.type === "mining.workerHired");
+  assert.equal(hired.length, 1, "and it is on the record, once");
+  assert.ok(hired[0].payload.cost > 0, "with what it cost");
+});
+
+test("a minute of everyone being busy does not buy a ship on its own", () => {
+  const world = createFleetWorld();
+  const before = world.mining.workers.length;
+  world.state.miningOperation.institution.accounts.operating.balance = 5_000;
+  // Busy, then not, then busy again: the run is broken, so nothing is hired.
+  world.mining.workers.forEach((worker) => { worker.assignment ??= { allocationId: "x", contractId: "x", resourceId: "iron-nickel", quantity: 1, destination: { x: 0, y: 0 } }; });
+  world.mining.update();
+  world.advance(40);
+  world.mining.workers[0].assignment = null;
+  world.mining.update();
+  world.advance(40);
+  world.mining.update();
+  assert.equal(world.mining.workers.length, before, "the clock restarted when a ship freed up");
+});
+
+test("Cinder cannot hire what it cannot pay for, and says so", () => {
+  const world = createFleetWorld();
+  const before = world.mining.workers.length;
+  world.state.miningOperation.institution.accounts.operating.balance = 10;
+  world.mining.workers.forEach((worker) => { worker.assignment ??= { allocationId: "x", contractId: "x", resourceId: "iron-nickel", quantity: 1, destination: { x: 0, y: 0 } }; });
+  world.mining.update();
+  world.advance(61);
+  world.mining.update();
+  assert.equal(world.mining.workers.length, before, "no ship appeared");
+  assert.equal(world.state.miningOperation.institution.accounts.operating.balance, 10, "and the money is untouched");
+});
+
+test("Cinder stands a ship down after two minutes with nothing to do", () => {
+  const world = createFleetWorld();
+  const before = world.mining.workers.length;
+  world.mining.workers.forEach((worker) => { worker.assignment = null; worker.cargo = {}; });
+  world.mining.update();
+  world.advance(121);
+  world.mining.workers.forEach((worker) => { worker.assignment = null; worker.cargo = {}; });
+  world.mining.update();
+  assert.ok(world.mining.workers.length < before, "the fleet shrank");
+  const released = world.state.ledger.getEventsAfterId(0).filter((entry) => entry.type === "mining.workerReleased");
+  assert.ok(released.length > 0, "and it says who and for how long");
+  assert.ok(released[0].payload.idleSeconds >= 120);
+});
+
+test("a ship carrying cargo is never stood down", () => {
+  const world = createFleetWorld();
+  world.mining.workers.forEach((worker) => { worker.assignment = null; worker.cargo = { "iron-nickel": 4 }; });
+  world.mining.update();
+  world.advance(300);
+  world.mining.workers.forEach((worker) => { worker.assignment = null; });
+  world.mining.update();
+  assert.ok(world.mining.workers.every((worker) => worker.isAlive !== false),
+    "cargo would vanish with the ship, so it stays");
+});
+
+test("the fleet never empties itself", () => {
+  const world = createFleetWorld();
+  for (let round = 0; round < 12; round += 1) {
+    world.mining.workers.forEach((worker) => { worker.assignment = null; worker.cargo = {}; });
+    world.mining.update();
+    world.advance(121);
+    world.mining.update();
+  }
+  assert.ok(world.mining.workers.length >= 1, "somebody is always left to work");
+});

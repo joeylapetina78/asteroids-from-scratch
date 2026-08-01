@@ -1,12 +1,12 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260731-2336-b77e55a";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260731-2336-b77e55a";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2336-b77e55a";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260731-2336-b77e55a";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260731-2336-b77e55a";
-import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260731-2336-b77e55a";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260731-2336-b77e55a";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260731-2336-b77e55a";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260731-2336-b77e55a";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260731-2344-cae675b";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260731-2344-cae675b";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260731-2344-cae675b";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260731-2344-cae675b";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260731-2344-cae675b";
+import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260731-2344-cae675b";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260731-2344-cae675b";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260731-2344-cae675b";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260731-2344-cae675b";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -31,6 +31,16 @@ const EXPANSION_WORKER_DEFAULTS = Object.freeze({ id: "worker:cinder-four", name
 const MINING_ALLOCATION_SIZE = 6;
 const EXPANSION_COST = 350;
 const EXPANSION_DEMAND_SECONDS = 12;
+// Rolling fleet policy. Cinder hires when the whole fleet has been busy long
+// enough that work is plainly being turned away, and lets a ship go when it has
+// sat idle long enough that it is plainly not needed.
+const HIRE_AFTER_BUSY_SECONDS = 60;
+const RELEASE_AFTER_IDLE_SECONDS = 120;
+const HIRE_COST = 350;
+// Never go to nothing, and never grow without limit.
+const MIN_FLEET = 1;
+const MAX_FLEET = 8;
+const CREW_NAMES = ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
 const DEPOSIT_SURVEY_RADIUS = 12000;
 
 const MINING_ISSUES = Object.freeze([
@@ -220,6 +230,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     refreshPostedOrders();
     consumeMaintenanceEvents();
     assessExpansion();
+    assessHiring();
     publishFleetDiagnostic();
     workers.forEach((worker) => {
       const shipRecord = operation.ships[worker.id];
@@ -601,6 +612,96 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       })
       .slice(0, 12)
       .map((deposit) => ({ id: deposit.id, x: deposit.x, y: deposit.y }));
+  }
+
+  // Hire when work is being turned away, let a ship go when it plainly is not
+  // needed. Both decisions are made on SUSTAINED conditions rather than a
+  // single tick, so a moment of everyone being busy does not buy a ship.
+  function assessHiring() {
+    operation.fleetPolicy ??= { allBusySince: null };
+    const policy = operation.fleetPolicy;
+    const serviceable = workers.filter((worker) => operation.ships[worker.id]?.maintenanceStatus === "available");
+    if (serviceable.length === 0) { policy.allBusySince = null; return; }
+
+    // ── hiring ────────────────────────────────────────────────────────────
+    const allBusy = serviceable.every((worker) => worker.assignment);
+    if (!allBusy) policy.allBusySince = null;
+    else policy.allBusySince ??= now();
+
+    const account = operation.institution.accounts.operating;
+    const busyLongEnough = policy.allBusySince != null
+      && now() - policy.allBusySince >= HIRE_AFTER_BUSY_SECONDS * 1000;
+    const canAfford = account.balance - MINING_PROTECTED_CASH >= HIRE_COST;
+
+    if (busyLongEnough && workers.length < MAX_FLEET) {
+      if (!canAfford) {
+        recordBlocker(state, operation.institution.id, createBlocker({
+          kind: BLOCKER_KIND.PAYER_CANNOT_AFFORD,
+          summary: `${operation.controller.name} has had every ship committed for a minute but cannot fund a ${HIRE_COST} cr hire`,
+          subjectId: operation.institution.id,
+          waitingFor: "delivery income",
+          wakeOn: ["mining.contractFulfilled"],
+          detail: { balance: Math.round(account.balance), hireCost: HIRE_COST, fleetSize: workers.length },
+          at: now(),
+        }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+      } else {
+        hireWorker(account);
+        policy.allBusySince = null;   // earn the next hire from scratch
+        return;
+      }
+    }
+
+    // ── letting one go ────────────────────────────────────────────────────
+    if (workers.length <= MIN_FLEET) return;
+    serviceable.forEach((worker) => {
+      const shipRecord = operation.ships[worker.id];
+      if (!shipRecord) return;
+      if (worker.assignment) { shipRecord.idleSince = null; return; }
+      shipRecord.idleSince ??= now();
+      if (now() - shipRecord.idleSince < RELEASE_AFTER_IDLE_SECONDS * 1000) return;
+      // Never let a ship go while it is still carrying something: the cargo
+      // would vanish with it.
+      const carrying = Object.values(worker.cargo ?? {}).reduce((sum, units) => sum + units, 0);
+      if (carrying > 0) return;
+      if (workers.length <= MIN_FLEET) return;
+      releaseWorker(worker, shipRecord);
+    });
+  }
+
+  function hireWorker(account) {
+    const index = (operation.hiredCount ?? 0) + 1;
+    operation.hiredCount = index;
+    const seat = workers.length + 1;
+    const defaults = {
+      id: `worker:cinder-hire-${index}`,
+      name: `Cinder ${CREW_NAMES[seat - 1] ?? seat}`,
+      referenceId: `MW-1${String(index).padStart(2, "0")}-CINDER`,
+      currentSiteId: "scrap-porch",
+      initialWear: 0,
+      offset: { x: -120 + (index % 4) * 80, y: 60 + (index % 3) * 40 },
+    };
+    account.balance -= HIRE_COST;
+    account.transactions.push({ id: `MIN-HIRE-${now()}-${index}`, at: now(), type: "capital-expense", amount: -HIRE_COST, balance: account.balance, referenceId: defaults.id });
+    const shipRecord = createWorkerRecord(defaults);
+    operation.ships[shipRecord.id] = shipRecord;
+    addPhysicalWorker(shipRecord);
+    record("mining.workerHired", `${operation.controller.name} hired ${defaults.name} for ${HIRE_COST} cr — the whole fleet had been committed for a minute with work still waiting.`, {
+      shipInstitutionId: shipRecord.id, shipName: shipRecord.name, cost: HIRE_COST,
+      fleetSize: workers.length, accountBalance: Math.round(account.balance),
+    });
+  }
+
+  function releaseWorker(worker, shipRecord) {
+    const idleSeconds = Math.round((now() - (shipRecord.idleSince ?? now())) / 1000);
+    worker.isAlive = false;              // the game drops it on the next frame
+    const index = workers.indexOf(worker);
+    if (index >= 0) workers.splice(index, 1);
+    delete operation.ships[shipRecord.id];
+    clearBlocker(state, shipRecord.id, { state: DIAGNOSTIC_STATE.FREE, summary: `${shipRecord.name} was stood down`, at: now() });
+    record("mining.workerReleased", `${operation.controller.name} stood ${shipRecord.name} down after ${idleSeconds}s with nothing to do.`, {
+      shipInstitutionId: shipRecord.id, shipName: shipRecord.name, idleSeconds,
+      fleetSize: workers.length,
+    });
   }
 
   function assessExpansion() {
