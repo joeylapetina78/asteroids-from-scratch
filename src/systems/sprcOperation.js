@@ -1,14 +1,14 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260801-0121-b752bfb";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260801-0121-b752bfb";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-0121-b752bfb";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-0121-b752bfb";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260801-0121-b752bfb";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260801-0121-b752bfb";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260801-0121-b752bfb";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260801-0121-b752bfb";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-0121-b752bfb";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0121-b752bfb";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0121-b752bfb";
+import { depositCredits } from "./accounts.js?v=fresh-20260801-0147-eb0a500";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260801-0147-eb0a500";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-0147-eb0a500";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-0147-eb0a500";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260801-0147-eb0a500";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260801-0147-eb0a500";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260801-0147-eb0a500";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260801-0147-eb0a500";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-0147-eb0a500";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0147-eb0a500";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0147-eb0a500";
 
 export const SPRC = Object.freeze({
   actorId: "organization:sprc",

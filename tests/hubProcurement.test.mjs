@@ -463,7 +463,12 @@ test("a buyer stuck at its ceiling says so once instead of retrying silently", (
 
 // A hub that has overpaid for water ice in the past holds out to recover it,
 // which is what makes the volatile lane jam at all.
-function overpayForWaterIce(state, unitCost = 450) {
+//
+// 600 is chosen to sit above what ANY hub will bid, not above what one
+// particular hub bids: the most eager quartermaster tops out around 450 on an
+// empty shelf. Tuning this to a single buyer made the fixture break the moment
+// the hubs stopped sharing one temperament.
+function overpayForWaterIce(state, unitCost = 600) {
   recordAcquisition(state, {
     institutionId: "scrap-forge", itemId: "water-ice", units: 200, totalCost: 200 * unitCost,
   });
@@ -549,18 +554,26 @@ test("a seller with business again firms its price back up", () => {
 test("a seller that has come down takes an offer it already refused, without the buyer moving", () => {
   const world = jammedVolatileWorld();
   const { state } = world;
-  world.tick(1);
-  const order = listOrders(state, { supplierInstitutionId: "scrap-forge", status: PROCUREMENT_STATUS.DECLINED })[0];
-  assert.ok(order, "the lane is jammed: Scrap Porch wants more than anyone will pay");
+  // Pin EVERY buyer on this lane at its ceiling: each is already offering twice
+  // what it first judged the ore to be worth, so none has anything left to
+  // give. Pinning only one is not enough — its unpinned neighbour simply bids
+  // up, wins the ore, and fills the seller's book, which correctly ends the
+  // discount and proves nothing about who moved.
+  const pinEveryBuyer = () => listOrders(state, { supplierInstitutionId: "scrap-forge", status: PROCUREMENT_STATUS.DECLINED })
+    .forEach((entry) => { entry.originalPricePerUnit = Math.floor(entry.pricePerUnit / 2); });
 
-  // Pin the buyer at its ceiling. It is already offering twice what it first
-  // judged the ore to be worth, so it has nothing left to give — the only thing
-  // that can close this now is the seller coming to it.
-  order.originalPricePerUnit = Math.floor(order.pricePerUnit / 2);
+  world.tick(1);
+  pinEveryBuyer();
+  // The best offer standing, so the test does not depend on which hub happens
+  // to be first in the list — they no longer bid alike.
+  const order = listOrders(state, { supplierInstitutionId: "scrap-forge", status: PROCUREMENT_STATUS.DECLINED })
+    .sort((first, second) => second.pricePerUnit - first.pricePerUnit)[0];
+  assert.ok(order, "the lane is jammed: Scrap Porch wants more than anyone will pay");
   const pinned = order.pricePerUnit;
 
   for (let step = 0; step < 6; step += 1) {
     world.tick(60);
+    pinEveryBuyer();
     if (state.hubProcurement.orders[order.id]?.status !== PROCUREMENT_STATUS.DECLINED) break;
   }
 

@@ -24,12 +24,13 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0121-b752bfb";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-0121-b752bfb";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-0121-b752bfb";
-import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-0121-b752bfb";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260801-0121-b752bfb";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-0121-b752bfb";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0147-eb0a500";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-0147-eb0a500";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-0147-eb0a500";
+import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-0147-eb0a500";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260801-0147-eb0a500";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-0147-eb0a500";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-0147-eb0a500";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -68,8 +69,11 @@ const DECLINED_RETENTION_MS = 5 * 60 * 1000;
 // logged with the reason it moved.
 const REPRICE_INTERVAL_MS = 60 * 1000;
 const REPRICE_MAX_MULTIPLE = 2;
-const BUYER_TRAITS = Object.freeze({ urgencyBias: 0.5, caution: 0.5, growthBias: 0.3 });
-const SUPPLIER_TRAITS = Object.freeze({ growthBias: 0.3, caution: 0.5 });
+// Fallback only. A hub decides through whoever runs it, so both its buying and
+// its selling read that person's traits — the same hub, two roles, one
+// temperament. These constants apply only to a settlement with nobody in
+// charge, which no seeded hub is.
+const UNRUN_HUB_TRAITS = Object.freeze({ urgencyBias: 0.5, caution: 0.5, growthBias: 0.3 });
 // The other half of the negotiation, and the only downward force on price.
 // Every repricing path above is a BUYER bidding up, so without this a price that
 // has risen can never come back. A supplier with capacity it is not selling
@@ -332,7 +336,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
           requestedUnits: units,
           account: buyer.accounts?.operating ?? {},
           policy: { protectedCash: BUYER_PROTECTED_CASH },
-          traits: BUYER_TRAITS,
+          traits: getActorTraits(state, buyerInstitutionId, UNRUN_HUB_TRAITS),
         });
 
         if (!valuation.affordable) {
@@ -422,7 +426,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
       workId: order.id,
       costComponents: { other: unitCost * order.units },
       offeredPrice: order.pricePerUnit * order.units,
-      traits: SUPPLIER_TRAITS,
+      traits: getActorTraits(state, order.supplierInstitutionId, UNRUN_HUB_TRAITS),
       concession,
     });
     order.supplierFloor = ask.minAcceptablePrice ?? null;

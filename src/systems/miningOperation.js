@@ -1,12 +1,13 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-0121-b752bfb";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-0121-b752bfb";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0121-b752bfb";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-0121-b752bfb";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-0121-b752bfb";
-import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260801-0121-b752bfb";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-0121-b752bfb";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-0121-b752bfb";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0121-b752bfb";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-0147-eb0a500";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-0147-eb0a500";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0147-eb0a500";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-0147-eb0a500";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-0147-eb0a500";
+import { evaluateMiningJob, evaluateProcurement } from "./valuation.js?v=fresh-20260801-0147-eb0a500";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-0147-eb0a500";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-0147-eb0a500";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-0147-eb0a500";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-0147-eb0a500";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -58,7 +59,9 @@ const MAX_ORDER_UNITS = 6;
 // A hub keeps a working float back so buying ore never leaves it unable to pay
 // for the production the ore is for.
 const HUB_PROTECTED_CASH = 4000;
-const HUB_TRAITS = Object.freeze({ urgencyBias: 0.5, caution: 0.5, growthBias: 0.3 });
+// Fallback for a settlement with nobody running it; seeded hubs all have a
+// quartermaster whose traits decide how hard they chase ore.
+const UNRUN_HUB_TRAITS = Object.freeze({ urgencyBias: 0.5, caution: 0.5, growthBias: 0.3 });
 
 // The orders a hub is actually offering right now.
 //
@@ -84,7 +87,7 @@ export function getPostedMiningOrders(state, at = Date.now()) {
       requestedUnits: Math.min(position.gap, MAX_ORDER_UNITS),
       account: buyer.accounts?.operating ?? {},
       policy: { protectedCash: HUB_PROTECTED_CASH },
-      traits: HUB_TRAITS,
+      traits: getActorTraits(state, definition.buyerInstitutionId, UNRUN_HUB_TRAITS),
     });
     // An unaffordable order is withheld rather than posted and left to drain
     // the treasury. The hub's own diagnostic explains the shortfall.
@@ -991,11 +994,18 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   return { update, getState: () => operation, worker: workers[0], workers };
 }
 
+// Exported under the same name every other system uses for its seed, so an
+// actor's starting configuration can be read without standing up the whole
+// operation.
+export function createInitialMiningState(now = Date.now()) {
+  return createInitialState(now);
+}
+
 function createInitialState(now) {
   return {
     version: 1,
     institution: { id: "miner:cinder-contracting", name: "Cinder Contracting", archetypeId: "mining-contractor", controllerInstitutionId: "person:ivo-cinder", referenceId: "FR-MIN-031", accounts: { operating: { id: "FR-ACCT-031", balance: 260, committed: 0, transactions: [] } } },
-    controller: { id: "person:ivo-cinder", name: "Ivo Cinder", archetypeId: "person", controls: ["miner:cinder-contracting"], license: { id: "MEX-031-CINDER", class: "commercial-extraction", status: "active" } },
+    controller: { id: "person:ivo-cinder", name: "Ivo Cinder", archetypeId: "person", controls: ["miner:cinder-contracting"], traits: { caution: 0.4, growthBias: 0.55, urgencyBias: 0.5 }, license: { id: "MEX-031-CINDER", class: "commercial-extraction", status: "active" } },
     ships: Object.fromEntries(MINING_WORKER_DEFAULTS.map((defaults) => [defaults.id, createWorkerRecord(defaults)])),
     allocations: {}, history: [{ id: "mining-history-1", type: "institution.instantiated", at: now }], nextOrderIndex: 1, counter: 0, completedContracts: 0, wear: 0, lastMaintenanceEventId: 0,
   };

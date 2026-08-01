@@ -1,6 +1,6 @@
-import { createRandom, hashNumbers } from "./random.js?v=fresh-20260801-0121-b752bfb";
-import { createValueNoise } from "./valueNoise.js?v=fresh-20260801-0121-b752bfb";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260801-0121-b752bfb";
+import { createRandom, hashNumbers } from "./random.js?v=fresh-20260801-0147-eb0a500";
+import { createValueNoise } from "./valueNoise.js?v=fresh-20260801-0147-eb0a500";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260801-0147-eb0a500";
 
 // A coherent procedural terrain-character field. Low-frequency noise carves
 // broad belts of navigation mood across ALL of space — thick mazes, cluster

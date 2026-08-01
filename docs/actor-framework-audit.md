@@ -1,5 +1,9 @@
 # Actor Framework — Convergence Audit
 
+> **Status:** §5 and part of step 0 have since been implemented — see the
+> "Implemented" notes inline. The audit body describes the state *before* that
+> work, and is kept as written so the diagnosis stays readable.
+
 Architectural check only (2026-08-01, at `b752bfb` plus the uncommitted seller-concession
 work). No implementation. Follow-up to `actor-framework-inventory.md` (2026-07-28), which
 mapped the framework *before* the valuation slice and the hub economy were built.
@@ -26,7 +30,7 @@ for traits, relationships, policy and rights — and are handed module-level con
 
 | Seam | Wired into call sites | Actually fed real per-actor data |
 |---|---|---|
-| `traits` | 7 evaluator call sites | **2 actors** (Sal, Cinder's controller). 4 sites use module constants; carriers fall back because no carrier person has a `traits` field. |
+| `traits` | 7 evaluator call sites | **1 actor** (Sal). 4 sites use module constants; carriers *and* Ivo Cinder read a controller that has no `traits` field, so all fall back. Tavi has traits but does no valuation. |
 | `relationship` | 3 evaluator params | **1 call site** (`sprcOperation.js:888`), fed by **1 write** (`sprcOperation.js:1140`) |
 | `archetypeId` | 14 distinct values in world data | **4 defined**, **3 ever looked up**. Hubs, carriers, populations, ships and every person carry ids that resolve to nothing. |
 | `canActorDoAction` | rights vocabulary covers `haul`,`repair`,`sell`,`tow`,`dock`,`buy` | **1 caller** (`miningOperation.mayPostMiningOrder`) |
@@ -263,6 +267,20 @@ carrier persons and the three hubs real `traits`. The carrier seam already reads
 `institutions[controllerInstitutionId].traits`; the field is simply absent. Three hubs plus
 two carriers stop behaving identically for the cost of five object literals — the cheapest
 possible demonstration that differences can emerge from configuration.
+
+> **Implemented.** `actorConfig.js` resolves an actor id across all six state shapes and
+> answers `getActorTraits` / `getControllerId` / `getActorAccount`. The three hubs gained
+> quartermasters (Bex Ordell, Hale Sunder, Ivry Nakash), the two carrier operators and Ivo
+> Cinder gained traits, and all five trait constants (`BUYER_TRAITS`, `SUPPLIER_TRAITS`,
+> `HUB_TRAITS`, `CARRIER_DEFAULT_TRAITS`, one inline literal) became fallbacks behind the
+> lookup. The Ledge now outbids Yard Exchange on the same shortage, and Dara Quill quotes
+> a run differently from Mara Venn, with no per-actor code on either path.
+>
+> One test had to be rewritten rather than retuned, and the reason is worth keeping: the
+> concession fixture assumed a single hub bid, so when the hubs stopped bidding alike, one
+> buyer bid up, won the ore, filled the seller's book, and correctly ended the discount.
+> Isolating "the seller closed this" now requires pinning *every* buyer at its ceiling.
+> The fixture was wrong, not the behaviour — but it only became wrong once actors differed.
 
 ---
 
