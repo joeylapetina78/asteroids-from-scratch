@@ -24,13 +24,13 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1117-855d6c2";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-1117-855d6c2";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-1117-855d6c2";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-1117-855d6c2";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260801-1117-855d6c2";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1117-855d6c2";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-1117-855d6c2";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1152-2b2fe1f";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-1152-2b2fe1f";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-1152-2b2fe1f";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-1152-2b2fe1f";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260801-1152-2b2fe1f";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-1152-2b2fe1f";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-1152-2b2fe1f";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -49,7 +49,6 @@ const MAX_ORDER_UNITS = 6;
 // Below this a hub waits rather than opening an order: single-unit top-ups
 // generate more paperwork and freight than the material is worth.
 const MIN_ORDER_UNITS = 2;
-const BUYER_PROTECTED_CASH = 3000;
 // A supplier will not owe more than it can realistically dig in the near term.
 // Without this it says yes to everything, every acceptance raises its own stock
 // target, and it ends up owing a hundred units it mines six at a time.
@@ -88,17 +87,28 @@ const CONCESSION_FIRM_STEP = 0.5;
 // could serve more business than it has.
 const SLACK_CAPACITY_FRACTION = 0.5;
 
-const SITE_BY_INSTITUTION = Object.freeze({
-  "yard-exchange": "yard-exchange",
-  "scrap-forge": "scrap-porch",
-  "the-ledge": "the-ledge",
-});
+// The settlements in this world are whichever institutions their archetype says
+// can buy and sell material. Nothing here enumerates them.
+//
+// This replaced a three-entry table whose KEYS were iterated to decide who
+// posts purchase orders — so the hub roster was defined by a constant in a
+// system module, and a fourth settlement could not exist without editing this
+// file. A settlement is now a seed entry.
+export function listSettlementIds(state) {
+  return Object.values(state.logistics?.institutions ?? {})
+    .filter((institution) => getActorOfferTypes(state, institution.id).includes("purchase"))
+    .map((institution) => institution.id);
+}
 
-const HUB_NAMES = Object.freeze({
-  "yard-exchange": "Yard Exchange",
-  "scrap-forge": "Scrap Porch",
-  "the-ledge": "The Ledge",
-});
+// Where an institution physically sits, and what to call it — both read off the
+// record, so a settlement whose site is not its own id says so itself.
+export function hubSiteId(state, institutionId) {
+  return state.logistics?.institutions?.[institutionId]?.siteId ?? institutionId;
+}
+
+export function hubNameOf(state, institutionId) {
+  return state.logistics?.institutions?.[institutionId]?.name ?? institutionId;
+}
 
 export function createInitialProcurementState() {
   return { orders: {}, counter: 0, asks: {} };
@@ -110,13 +120,7 @@ export function getAskConcession(state, supplierInstitutionId, resourceId) {
   return state.hubProcurement?.asks?.[`${supplierInstitutionId}|${resourceId}`]?.concession ?? 0;
 }
 
-export function hubName(institutionId) {
-  return HUB_NAMES[institutionId] ?? institutionId;
-}
 
-function siteOf(institutionId) {
-  return SITE_BY_INSTITUTION[institutionId] ?? institutionId;
-}
 
 // Which institution may legally mine this family, and what it digs.
 function findSupplier(family) {
@@ -176,10 +180,10 @@ export function getProcurementFreightOffers(state) {
     id: `procurement-${order.id}`,
     procurementOrderId: order.id,
     dynamic: true,
-    originSiteId: siteOf(order.supplierInstitutionId),
-    originName: hubName(order.supplierInstitutionId),
-    destinationSiteId: siteOf(order.buyerInstitutionId),
-    destinationName: hubName(order.buyerInstitutionId),
+    originSiteId: hubSiteId(state, order.supplierInstitutionId),
+    originName: hubNameOf(state, order.supplierInstitutionId),
+    destinationSiteId: hubSiteId(state, order.buyerInstitutionId),
+    destinationName: hubNameOf(state, order.buyerInstitutionId),
     commodity: order.resourceId,
     commodityName: order.resourceId.replaceAll("-", " ").replace(/\b\w/g, (c) => c.toUpperCase()),
     amount: order.units,
@@ -203,6 +207,8 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   procurement.asks ??= {};
 
   const institution = (id) => state.logistics?.institutions?.[id] ?? null;
+  const hubName = (id) => hubNameOf(state, id);
+  const siteOf = (id) => hubSiteId(state, id);
 
   // Four distinct places material can be, and it is only ever in one:
   //
@@ -301,7 +307,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
 
   // ── 1 & 2: a gap in a family this hub may not mine becomes an order ──────
   function postNeeds() {
-    Object.keys(SITE_BY_INSTITUTION).forEach((buyerInstitutionId) => {
+    listSettlementIds(state).forEach((buyerInstitutionId) => {
       const buyer = institution(buyerInstitutionId);
       if (!buyer) return;
 
@@ -335,7 +341,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
           inventory: { onHand: position.onHand, incoming: position.incoming + onOrder, target: position.target },
           requestedUnits: units,
           account: buyer.accounts?.operating ?? {},
-          policy: { protectedCash: BUYER_PROTECTED_CASH },
+          policy: { protectedCash: getActorProtectedCash(state, buyerInstitutionId) },
           traits: getActorTraits(state, buyerInstitutionId, UNRUN_HUB_TRAITS),
         });
 
@@ -357,7 +363,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
         // Freight is budgeted separately from the goods, so a carrier is paid
         // for hauling and the supplier is paid for the material.
         const freightBudget = Math.max(40, Math.round(committedPayment * 0.45));
-        if ((buyer.accounts.operating.balance ?? 0) < committedPayment + freightBudget + BUYER_PROTECTED_CASH) return;
+        if ((buyer.accounts.operating.balance ?? 0) < committedPayment + freightBudget + getActorProtectedCash(state, buyerInstitutionId)) return;
 
         const id = `HPO-${String(++procurement.counter).padStart(4, "0")}`;
         procurement.orders[id] = {
@@ -505,7 +511,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
 
       // The buyer released this money when it was turned down, so it has to be
       // able to set it aside again before the order can go back on the table.
-      const spendable = (buyer.accounts?.operating?.balance ?? 0) - (buyer.accounts?.operating?.committed ?? 0) - BUYER_PROTECTED_CASH;
+      const spendable = (buyer.accounts?.operating?.balance ?? 0) - (buyer.accounts?.operating?.committed ?? 0) - getActorProtectedCash(state, order.buyerInstitutionId);
       if ((order.committedPayment ?? 0) > spendable) return;
 
       order.status = PROCUREMENT_STATUS.OFFERED;
@@ -675,7 +681,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
       }
 
       const additional = (nextPrice - order.pricePerUnit) * order.units;
-      const spendable = (buyer.accounts?.operating?.balance ?? 0) - (buyer.accounts?.operating?.committed ?? 0) - BUYER_PROTECTED_CASH;
+      const spendable = (buyer.accounts?.operating?.balance ?? 0) - (buyer.accounts?.operating?.committed ?? 0) - getActorProtectedCash(state, order.buyerInstitutionId);
       if (additional > spendable) {
         emit("procurement.repriceDeferred", `${hubName(order.buyerInstitutionId)} would pay ${nextPrice} cr per unit for ${order2Label(order.resourceId)} but cannot commit the extra ${Math.round(additional)} cr.`, {
           procurementOrderId: order.id, buyerId: order.buyerInstitutionId, wanted: nextPrice,

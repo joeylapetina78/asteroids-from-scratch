@@ -15,9 +15,10 @@
 //   WHO IS DOING IT   supplier — null while it is still up for grabs
 //   WHERE IS IT       one of available / taken / done / blocked
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-1117-855d6c2";
-import { PROCUREMENT_STATUS, hubName, listOrders } from "./hubProcurement.js?v=fresh-20260801-1117-855d6c2";
-import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260801-1117-855d6c2";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-1152-2b2fe1f";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260801-1152-2b2fe1f";
+import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260801-1152-2b2fe1f";
+import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260801-1152-2b2fe1f";
 
 export const CONTRACT_STATE = Object.freeze({
   AVAILABLE: "available",   // posted, nobody has taken it
@@ -34,30 +35,17 @@ export const CONTRACT_KIND = Object.freeze({
   REPAIR: "repair",             // Sal selling a repair
 });
 
-const HUB_LABELS = Object.freeze({
-  "yard-exchange": "Yard Exchange",
-  "scrap-forge": "Scrap Porch",
-  "the-ledge": "The Ledge",
-  sprc: "Scrap Porch Recovery Co-op",
-  "miner:cinder-contracting": "Cinder Contracting",
-});
-
-export function actorLabel(id) {
+// What to call a party, and where it sits — both read off the record it
+// already has. These were two hardcoded tables listing the same three
+// settlements that `hubProcurement` also listed, so a fourth would have been
+// unnamed here and placed nowhere.
+export function actorLabel(state, id) {
   if (!id) return null;
-  return HUB_LABELS[id] ?? hubName(id) ?? id;
+  return findActorRecord(state, id)?.name ?? id;
 }
 
-// Where an institution physically sits. A purchase order names the two parties
-// but not their sites, so the lane it implies is resolved here.
-const SITE_BY_INSTITUTION = Object.freeze({
-  "yard-exchange": "yard-exchange",
-  "scrap-forge": "scrap-porch",
-  "the-ledge": "the-ledge",
-  sprc: "scrap-porch",
-});
-
-function siteOf(institutionId) {
-  return SITE_BY_INSTITUTION[institutionId] ?? null;
+function siteOf(state, institutionId) {
+  return findActorRecord(state, institutionId)?.siteId ?? null;
 }
 
 // Ships and haulers carry their own names in their operation records, so the
@@ -83,10 +71,10 @@ function entry(state, fields) {
     createdAt: null, closedAt: null,
     detail: null, note: null, at: null,
     ...fields,
-    issuerName: nameFromState(state, fields.issuerId) ?? actorLabel(fields.issuerId),
-    buyerName: nameFromState(state, fields.buyerId) ?? actorLabel(fields.buyerId),
-    sellerName: nameFromState(state, fields.sellerId) ?? actorLabel(fields.sellerId),
-    supplierName: nameFromState(state, fields.supplierId) ?? actorLabel(fields.supplierId),
+    issuerName: nameFromState(state, fields.issuerId) ?? actorLabel(state, fields.issuerId),
+    buyerName: nameFromState(state, fields.buyerId) ?? actorLabel(state, fields.buyerId),
+    sellerName: nameFromState(state, fields.sellerId) ?? actorLabel(state, fields.sellerId),
+    supplierName: nameFromState(state, fields.supplierId) ?? actorLabel(state, fields.supplierId),
   };
 }
 
@@ -105,7 +93,7 @@ function collectExtraction(state) {
       id: order.id,
       kind: CONTRACT_KIND.EXTRACTION,
       state: blocked ? CONTRACT_STATE.BLOCKED : (active.length > 0 ? CONTRACT_STATE.TAKEN : CONTRACT_STATE.AVAILABLE),
-      title: `${order.resourceName ?? order.resourceId} for ${actorLabel(order.buyerInstitutionId)}`,
+      title: `${order.resourceName ?? order.resourceId} for ${actorLabel(state, order.buyerInstitutionId)}`,
       issuerId: order.buyerInstitutionId,
       buyerId: order.buyerInstitutionId,
       sellerId: active[0]?.supplierInstitutionId ?? null,
@@ -169,13 +157,13 @@ function collectPurchases(state) {
     id: order.id,
     kind: CONTRACT_KIND.PURCHASE,
     state: PURCHASE_STATE[order.status] ?? CONTRACT_STATE.AVAILABLE,
-    title: `${actorLabel(order.buyerInstitutionId)} buys ${order.units} ${order.resourceId.replaceAll("-", " ")}`,
+    title: `${actorLabel(state, order.buyerInstitutionId)} buys ${order.units} ${order.resourceId.replaceAll("-", " ")}`,
     issuerId: order.buyerInstitutionId,
     buyerId: order.buyerInstitutionId,
     sellerId: order.supplierInstitutionId,
     supplierId: order.status === PROCUREMENT_STATUS.OFFERED ? null : order.supplierInstitutionId,
-    originSiteId: siteOf(order.supplierInstitutionId),
-    siteId: siteOf(order.buyerInstitutionId),
+    originSiteId: siteOf(state, order.supplierInstitutionId),
+    siteId: siteOf(state, order.buyerInstitutionId),
     resourceId: order.resourceId,
     family: order.family,
     units: order.units,
@@ -201,7 +189,7 @@ function collectFreight(state) {
     id: shipment.id,
     kind: CONTRACT_KIND.FREIGHT,
     state: shipment.status === "delivered" ? CONTRACT_STATE.DONE : CONTRACT_STATE.TAKEN,
-    title: `${shipment.quantity} ${String(shipment.commodity).replaceAll("-", " ")} → ${actorLabel(shipment.destinationInstitutionId)}`,
+    title: `${shipment.quantity} ${String(shipment.commodity).replaceAll("-", " ")} → ${actorLabel(state, shipment.destinationInstitutionId)}`,
     issuerId: shipment.issuerInstitutionId,
     buyerId: shipment.destinationInstitutionId,
     sellerId: shipment.sourceInstitutionId,
@@ -229,13 +217,13 @@ function collectFreight(state) {
         id: `freight:${order.id}`,
         kind: CONTRACT_KIND.FREIGHT,
         state: CONTRACT_STATE.AVAILABLE,
-        title: `${order.units} ${order.resourceId.replaceAll("-", " ")} → ${actorLabel(order.buyerInstitutionId)}`,
+        title: `${order.units} ${order.resourceId.replaceAll("-", " ")} → ${actorLabel(state, order.buyerInstitutionId)}`,
         issuerId: order.buyerInstitutionId,
         buyerId: order.buyerInstitutionId,
         sellerId: order.supplierInstitutionId,
         supplierId: null,
-        originSiteId: siteOf(order.supplierInstitutionId),
-        siteId: siteOf(order.buyerInstitutionId),
+        originSiteId: siteOf(state, order.supplierInstitutionId),
+        siteId: siteOf(state, order.buyerInstitutionId),
         resourceId: order.resourceId,
         family: order.family,
         units: order.units,
@@ -285,7 +273,7 @@ function collectSprc(state) {
       kind: CONTRACT_KIND.REPAIR,
       state: done ? CONTRACT_STATE.DONE
         : (order.status === "waiting-stock" ? CONTRACT_STATE.BLOCKED : CONTRACT_STATE.TAKEN),
-      title: `Repair ${actorLabel(order.subjectId) ?? order.subjectId} (${String(order.condition ?? "fault").replaceAll("-", " ")})`,
+      title: `Repair ${actorLabel(state, order.subjectId) ?? order.subjectId} (${String(order.condition ?? "fault").replaceAll("-", " ")})`,
       issuerId: order.payerInstitutionId,
       buyerId: order.payerInstitutionId,
       sellerId: "sprc",

@@ -1,11 +1,11 @@
-import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-1117-855d6c2";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-1117-855d6c2";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-1117-855d6c2";
-import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1117-855d6c2";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-1117-855d6c2";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-1117-855d6c2";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1117-855d6c2";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-1117-855d6c2";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-1152-2b2fe1f";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-1152-2b2fe1f";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-1152-2b2fe1f";
+import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1152-2b2fe1f";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-1152-2b2fe1f";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-1152-2b2fe1f";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1152-2b2fe1f";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-1152-2b2fe1f";
 
 const REPAIR_SITE_ID = "scrap-porch";
 

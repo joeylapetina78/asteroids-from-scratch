@@ -18,6 +18,7 @@ import {
 import { createMiningOperation } from "../src/systems/miningOperation.js";
 import { createSprcOperation } from "../src/systems/sprcOperation.js";
 import { inspectActor } from "../src/systems/actorInspector.js";
+import { collectIntentions } from "../src/systems/intentions.js";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
 
@@ -187,6 +188,75 @@ test("an issuer that withdraws at the last moment is not dispatched against", ()
   const mining = createMining(state);
   assert.ok(!Object.values(mining.getState().allocations).some((entry) => entry.orderId === "withdrawn-offer"),
     "no allocation is created against an offer the issuer pulled");
+});
+
+// ── chooseOrder is a question, not an action ───────────────────────────────
+//
+// It may evaluate and select. It must not reserve, create an intention, spend
+// money, or begin work — those belong to explicit commitment steps. Locking
+// this down is what makes it safe for deliberation, diagnostics and
+// comparative-choice displays to ask an actor what it would do.
+
+test("asking a miner what it would take does not commit it to anything", () => {
+  const state = seededState();
+  const mining = createMining(state);
+  mining.update();
+
+  let reserveCalls = 0;
+  registerExtractionOfferSource(state, "test-reserving-issuer", () => [createExtractionOffer({
+    id: "tempting-offer",
+    issuerInstitutionId: "somebody-new",
+    siteId: "scrap-porch", siteName: "Scrap Porch",
+    resourceId: "water-ice",
+    amount: 6, paymentPerUnit: 9_000,
+    reserve: () => { reserveCalls += 1; return true; },
+  })]);
+
+  const before = {
+    allocations: JSON.stringify(state.miningOperation.allocations),
+    intentions: collectIntentions(state).length,
+    balances: JSON.stringify(Object.fromEntries(
+      Object.entries(state.logistics.institutions).map(([id, institution]) => [id, institution.accounts?.operating ?? null]),
+    )),
+    minerAccount: JSON.stringify(state.miningOperation.institution.accounts.operating),
+    ledgerLength: state.ledger.getEventsAfterId(0).length,
+  };
+
+  const chosen = mining.chooseOrder();
+  assert.equal(chosen.id, "tempting-offer", "it did select something");
+
+  assert.equal(reserveCalls, 0, "but it reserved nothing");
+  assert.equal(JSON.stringify(state.miningOperation.allocations), before.allocations, "no allocation was created");
+  assert.equal(collectIntentions(state).length, before.intentions, "no intention was created");
+  assert.equal(JSON.stringify(Object.fromEntries(
+    Object.entries(state.logistics.institutions).map(([id, institution]) => [id, institution.accounts?.operating ?? null]),
+  )), before.balances, "nobody's money moved");
+  assert.equal(JSON.stringify(state.miningOperation.institution.accounts.operating), before.minerAccount, "including the miner's own");
+});
+
+test("asking twice gives the same answer and still commits nothing", () => {
+  const state = seededState();
+  const mining = createMining(state);
+  mining.update();
+
+  const first = mining.chooseOrder();
+  const allocationsAfterFirst = JSON.stringify(state.miningOperation.allocations);
+  const second = mining.chooseOrder();
+
+  assert.equal(second?.id, first?.id, "a question with no side effects has a stable answer");
+  assert.equal(JSON.stringify(state.miningOperation.allocations), allocationsAfterFirst,
+    "and asking it repeatedly cannot accumulate commitments");
+});
+
+test("listing what an actor can see commits nothing either", () => {
+  const state = seededState();
+  const mining = createMining(state);
+  mining.update();
+
+  const before = JSON.stringify(state.miningOperation.allocations);
+  const offers = mining.listOffers();
+  assert.ok(Array.isArray(offers));
+  assert.equal(JSON.stringify(state.miningOperation.allocations), before);
 });
 
 test("the actor panel shows the same board the miner chooses from, with real prices", () => {

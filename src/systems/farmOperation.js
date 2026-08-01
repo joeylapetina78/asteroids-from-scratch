@@ -1,16 +1,22 @@
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-1117-855d6c2";
-import { createFarmInstitutionInstance, createTaviInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260801-1117-855d6c2";
-import { createResponseRecord, deriveInventoryNeeds, evaluateAffordability, generateCapabilityResponses, reconcileNeeds, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1117-855d6c2";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-1152-2b2fe1f";
+import { createFarmInstitutionInstance, createTaviInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260801-1152-2b2fe1f";
+import { createResponseRecord, deriveInventoryNeeds, evaluateAffordability, generateCapabilityResponses, reconcileNeeds, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1152-2b2fe1f";
 
 const INPUT_PRICES = Object.freeze({ water: 20, seed: 35 });
 export const FARM_INSPECTION_SERVICE_ID = "sunward-acre-inspection";
 
 export function createFarmOperation(options = Date.now()) {
   const now = typeof options === "number" ? options : options.now ?? Date.now();
+  const state = typeof options === "object" ? options.state ?? null : null;
   const ledger = typeof options === "object" ? options.state?.ledger ?? options.ledger ?? null : null;
   const institution = createFarmInstitutionInstance(now);
   const archetype = INSTITUTION_ARCHETYPES[institution.archetypeId];
   const controller = createTaviInstitutionInstance();
+  // Published on `state` so the farm is reachable by the shared actor lookup.
+  // Until now it existed only inside this closure, so Tavi's traits could not
+  // be found and Sunward Acre silently decided with the framework default —
+  // the same failure that hid Nell, and equally invisible.
+  if (state) state.farm = { institution, controller };
   const policy = resolveInstitutionPolicy({ archetypePolicy: archetype.defaultPolicy, institutionPolicy: institution.policies });
   let counter = 0;
   institution.history = [{ id: "sunward-history-1", type: "institution.instantiated", at: now, detail: "Tavi opened the current operating plan." }];

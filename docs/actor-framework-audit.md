@@ -416,6 +416,58 @@ was written on every mining assignment and never read, and its
 `STANDING_MINING_ORDERS.indexOf(order)` could only ever return `-1`, since `order`
 had been a spread copy since orders became derived.
 
+## 6c. Ready for doubling — checklist and findings
+
+The distinction throughout: **does adding an actor require editing logic, or only
+adding data?**
+
+| Statement | State |
+|---|---|
+| A new hub can be seeded without editing procurement logic | **Yes** — `listSettlementIds` derives the roster from archetype `offerTypes`. Verified: a fourth settlement is recognised, priced and floated from data alone |
+| A new controller's traits automatically affect its bids | **Yes** — verified end to end |
+| A new mining operation can publish and consume extraction offers unnamed | **Yes** — registered sources, verified with a third issuer |
+| A new recovery actor can quote through the archetype using only configuration | **Yes** — the cost model is on `recovery-service` |
+| Protected cash can differ by actor without adding constants | **Yes** — four layers, one resolver, three constants retired |
+| `inspectActor` reveals when a fallback is used | **Yes** — `resolution` reports source and reason per field |
+| Public choice functions can be called without mutating the world | **Yes** — `chooseOrder` / `listOffers` locked by test |
+| No mutable registry lives at module scope | **Yes** for the offer registry; see the standing rule in `extractionOffers.js` |
+| All active actors resolve to configured controllers and defined archetypes | **Yes** — asserted by coverage tests over all nine deciding actors |
+
+### Classified findings
+
+**Must fix before doubling — DONE this session**
+- `hubProcurement.SITE_BY_INSTITUTION` — its *keys were iterated* to decide who posts
+  purchase orders, so the hub roster was literally a constant in a system module.
+  Now `listSettlementIds(state)`.
+- Three copies of `HUB_NAMES` and two of `SITE_BY_INSTITUTION` (hubProcurement,
+  contractBoard, populationDemand). All now read `name` / `siteId` off the record.
+- `contractBoard.actorLabel` / `siteOf` took an id and consulted a hardcoded table;
+  they now take `state` and read the record.
+
+**Will naturally break during doubling — leave, and let it fail loudly**
+- `STANDING_MINING_ORDERS` is one row per settlement that mines. A fourth mining
+  settlement needs a row; it is identity data, and its absence is obvious.
+- `INSTITUTION_MINING_RIGHTS` in `authoritySeeds.js` — same shape, same reasoning.
+- `FIRST_REACH_TRANSPORT_CONNECTIONS` — a new site needs lanes, and a missing lane
+  already surfaces as `no-known-recovery-route` / `no-route-to-destination`.
+
+**Intentional world configuration — not a defect**
+- `POPULATION_PROFILES` and `POPULATION_NEEDS`. A population IS its profile; this
+  table is the configuration, not a hardcoding of it.
+- **But note the seam:** a settlement's *demand* comes from `POPULATION_PROFILES`,
+  which is compile-time. The fourth settlement above was fully recognised and posted
+  **nothing**, correctly, because it has no population. Seeding a working settlement
+  therefore touches four places: the logistics institution, its controller, a
+  population profile, and mining rights. **The one thing worth building before the
+  doubling proper is a single settlement seed record that emits all four.**
+
+**Safe to leave**
+- `state.towing` / `state.sprc` as singleton keys. A second recovery firm or repair
+  co-op needs the state shape to become a map, which is a real refactor — but nothing
+  today pretends otherwise, and both resolve through `actorConfig` already.
+- `REPAIR_SITE_ID` in `towService` — one repair destination is a world fact today,
+  and `repairOptions` on the carrier is the existing generalisation point.
+
 ## 7. Answering the framing question directly
 
 > Is the economy serving the procedural NPC framework, or replacing it?

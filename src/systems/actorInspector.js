@@ -4,14 +4,14 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260801-1117-855d6c2";
-import { collectIntentions } from "./intentions.js?v=fresh-20260801-1117-855d6c2";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260801-1117-855d6c2";
-import { getActorFinances } from "./actorConfig.js?v=fresh-20260801-1117-855d6c2";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260801-1117-855d6c2";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260801-1117-855d6c2";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260801-1117-855d6c2";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260801-1117-855d6c2";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260801-1152-2b2fe1f";
+import { collectIntentions } from "./intentions.js?v=fresh-20260801-1152-2b2fe1f";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260801-1152-2b2fe1f";
+import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260801-1152-2b2fe1f";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260801-1152-2b2fe1f";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260801-1152-2b2fe1f";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260801-1152-2b2fe1f";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260801-1152-2b2fe1f";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
@@ -94,6 +94,15 @@ export function inspectActor(state, actorId, { game = null } = {}) {
       pendingIssue: npc?.pendingWearIssue ?? null,
       issueCount: shipInstitution.issueCount ?? 0,
     };
+  }
+
+  // Where this actor's configuration actually came from. Read it when an actor
+  // is behaving like somebody else: a source of `unresolved` or
+  // `framework-default` on anything that decides is the tell, and both of the
+  // worst bugs in this system would have been one glance away.
+  view.resolution = describeActorResolution(state, actorId);
+  if (controllerId && controllerId !== actorId) {
+    view.controllerResolution = describeActorResolution(state, controllerId);
   }
 
   // Beacon access — currently only the player carries beacon memory, so this

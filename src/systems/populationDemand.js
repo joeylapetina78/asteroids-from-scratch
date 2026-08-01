@@ -23,10 +23,10 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-1117-855d6c2";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260801-1117-855d6c2";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260801-1117-855d6c2";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1117-855d6c2";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-1152-2b2fe1f";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260801-1152-2b2fe1f";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260801-1152-2b2fe1f";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1152-2b2fe1f";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -631,16 +631,12 @@ function describeDraw(draw) {
   return Object.entries(draw).map(([resourceId, units]) => `${units} ${resourceId.replaceAll("-", " ")}`).join(" + ");
 }
 
-// Display name for a hub institution. The logistics records carry ids only.
-const HUB_NAMES = Object.freeze({
-  "yard-exchange": "Yard Exchange",
-  "scrap-forge": "Scrap Porch",
-  "the-ledge": "The Ledge",
-});
-
+// Display name for a hub institution, off the record it already carries. This
+// was the third copy of the same three-settlement table; a fourth settlement
+// would simply have been unnamed.
 function hubName(hub) {
   if (!hub) return "the hub";
-  return hub.name ?? HUB_NAMES[hub.id] ?? hub.id;
+  return hub.name ?? hub.id;
 }
 
 // Families this institution may commission extraction for.

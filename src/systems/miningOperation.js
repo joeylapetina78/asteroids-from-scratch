@@ -1,15 +1,15 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-1117-855d6c2";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-1117-855d6c2";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1117-855d6c2";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-1117-855d6c2";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-1117-855d6c2";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-1117-855d6c2";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-1117-855d6c2";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1117-855d6c2";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1117-855d6c2";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260801-1117-855d6c2";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1117-855d6c2";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1117-855d6c2";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-1152-2b2fe1f";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-1152-2b2fe1f";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1152-2b2fe1f";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-1152-2b2fe1f";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-1152-2b2fe1f";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-1152-2b2fe1f";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-1152-2b2fe1f";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1152-2b2fe1f";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-1152-2b2fe1f";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260801-1152-2b2fe1f";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1152-2b2fe1f";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1152-2b2fe1f";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -56,14 +56,10 @@ const MINING_ISSUES = Object.freeze([
   { issueType: "preventive-calibration", requiredCapabilities: ["field-control"] },
 ]);
 const MINING_SERVICE_PRICE = 2200;
-const MINING_PROTECTED_CASH = 1200;
 
 // Largest single order a hub will place, so a big gap becomes several runs
 // rather than one impossible haul.
 const MAX_ORDER_UNITS = 6;
-// A hub keeps a working float back so buying ore never leaves it unable to pay
-// for the production the ore is for.
-const HUB_PROTECTED_CASH = 4000;
 // Fallback for a settlement with nobody running it; seeded hubs all have a
 // quartermaster whose traits decide how hard they chase ore.
 const UNRUN_HUB_TRAITS = Object.freeze({ urgencyBias: 0.5, caution: 0.5, growthBias: 0.3 });
@@ -91,7 +87,7 @@ export function getPostedMiningOrders(state, at = Date.now()) {
       inventory: position,
       requestedUnits: Math.min(position.gap, MAX_ORDER_UNITS),
       account: buyer.accounts?.operating ?? {},
-      policy: { protectedCash: HUB_PROTECTED_CASH },
+      policy: { protectedCash: getActorProtectedCash(state, definition.buyerInstitutionId) },
       traits: getActorTraits(state, definition.buyerInstitutionId, UNRUN_HUB_TRAITS),
     });
     // An unaffordable order is withheld rather than posted and left to drain
@@ -466,8 +462,8 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       refs: { targetIds: ships.map((ship) => ship.id), contractIds: [], dependencyIds: [] },
       detail: {
         cash: Math.round(account.balance ?? 0),
-        availableCash: Math.round(Math.max(0, (account.balance ?? 0) - MINING_PROTECTED_CASH)),
-        protectedCash: MINING_PROTECTED_CASH,
+        availableCash: Math.round(Math.max(0, (account.balance ?? 0) - getActorProtectedCash(state, operation.institution.id))),
+        protectedCash: getActorProtectedCash(state, operation.institution.id),
         fleetSize: ships.length,
         committed,
         idle,
@@ -665,7 +661,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     const account = operation.institution.accounts.operating;
     const busyLongEnough = policy.allBusySince != null
       && now() - policy.allBusySince >= HIRE_AFTER_BUSY_SECONDS * 1000;
-    const canAfford = account.balance - MINING_PROTECTED_CASH >= HIRE_COST;
+    const canAfford = account.balance - getActorProtectedCash(state, operation.institution.id) >= HIRE_COST;
 
     if (busyLongEnough && workers.length < MAX_FLEET) {
       if (!canAfford) {
@@ -756,7 +752,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     }
     if (project.status !== "approved") return;
     const account = operation.institution.accounts.operating;
-    if (account.balance - MINING_PROTECTED_CASH < project.requiredCredits) return;
+    if (account.balance - getActorProtectedCash(state, operation.institution.id) < project.requiredCredits) return;
     account.balance -= project.requiredCredits;
     account.transactions.push({ id: `MIN-EXP-${now()}`, at: now(), type: "capital-expense", amount: -project.requiredCredits, balance: account.balance, referenceId: project.id });
     const shipRecord = createWorkerRecord(EXPANSION_WORKER_DEFAULTS);
@@ -1010,7 +1006,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         subjectId: shipRecord.id, subjectName: shipRecord.name, referenceId: shipRecord.referenceId,
         craftClass: "mining-craft", issueType: payload.issueType, requiredCapabilities: issue?.requiredCapabilities ?? [],
         locationSiteId: payload.destinationSiteId, mobility: "self-return", payerInstitutionId: operation.institution.id,
-        payer: { balance: operation.institution.accounts.operating.balance, committed: operation.institution.accounts.operating.committed ?? 0, protectedCash: MINING_PROTECTED_CASH },
+        payer: { balance: operation.institution.accounts.operating.balance, committed: operation.institution.accounts.operating.committed ?? 0, protectedCash: getActorProtectedCash(state, operation.institution.id) },
         servicePrice: MINING_SERVICE_PRICE, wear: shipRecord.wear, issueCount: shipRecord.issueCount,
       }, { visible: false });
     }

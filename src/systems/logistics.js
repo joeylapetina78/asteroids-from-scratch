@@ -1,13 +1,13 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1117-855d6c2";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-1117-855d6c2";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1117-855d6c2";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260801-1117-855d6c2";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1117-855d6c2";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1117-855d6c2";
-import { adaptShipment } from "./intentions.js?v=fresh-20260801-1117-855d6c2";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-1117-855d6c2";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-1117-855d6c2";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1117-855d6c2";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1152-2b2fe1f";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-1152-2b2fe1f";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1152-2b2fe1f";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260801-1152-2b2fe1f";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1152-2b2fe1f";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1152-2b2fe1f";
+import { adaptShipment } from "./intentions.js?v=fresh-20260801-1152-2b2fe1f";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-1152-2b2fe1f";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-1152-2b2fe1f";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1152-2b2fe1f";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -51,9 +51,9 @@ export function createInitialLogisticsState(now = Date.now()) {
   return {
     version: 1,
     institutions: {
-      "yard-exchange": { id: "yard-exchange", name: "Yard Exchange", archetypeId: "trade-hub", controllerInstitutionId: "person:yard-quartermaster", accounts: { operating: { balance: 50000, committed: 0 } }, inventories: { "iron-nickel": 4, silicate: 0, "water-ice": 0 }, renewableResources: ["iron-nickel"] },
-      "scrap-forge": { id: "scrap-forge", name: "Scrap Porch", archetypeId: "resource-outpost", controllerInstitutionId: "person:porch-quartermaster", accounts: { operating: { balance: 30000, committed: 0 } }, inventories: { "water-ice": 6, "iron-nickel": 0, silicate: 0 }, renewableResources: ["water-ice"] },
-      "the-ledge": { id: "the-ledge", name: "The Ledge", archetypeId: "frontier-outpost", controllerInstitutionId: "person:ledge-quartermaster", accounts: { operating: { balance: 42000, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 4, "water-ice": 0 }, renewableResources: ["silicate"] },
+      "yard-exchange": { id: "yard-exchange", name: "Yard Exchange", siteId: "yard-exchange", archetypeId: "settlement", controllerInstitutionId: "person:yard-quartermaster", accounts: { operating: { balance: 50000, committed: 0 } }, inventories: { "iron-nickel": 4, silicate: 0, "water-ice": 0 }, renewableResources: ["iron-nickel"] },
+      "scrap-forge": { id: "scrap-forge", name: "Scrap Porch", siteId: "scrap-porch", archetypeId: "settlement", controllerInstitutionId: "person:porch-quartermaster", accounts: { operating: { balance: 30000, committed: 0 } }, inventories: { "water-ice": 6, "iron-nickel": 0, silicate: 0 }, renewableResources: ["water-ice"] },
+      "the-ledge": { id: "the-ledge", name: "The Ledge", siteId: "the-ledge", archetypeId: "settlement", controllerInstitutionId: "person:ledge-quartermaster", accounts: { operating: { balance: 42000, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 4, "water-ice": 0 }, renewableResources: ["silicate"] },
       // The people who actually run the three settlements. Their traits are the
       // ONLY thing that makes the hubs price differently from one another —
       // there is no per-hub code anywhere.
@@ -89,7 +89,7 @@ export function createInitialLogisticsState(now = Date.now()) {
 export function ensureLogisticsState(state, now = Date.now()) {
   state.logistics ??= createInitialLogisticsState(now);
   state.logistics.institutions ??= {};
-  state.logistics.institutions["the-ledge"] ??= { id: "the-ledge", archetypeId: "frontier-outpost", accounts: { operating: { balance: 42000, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 0 }, renewableResources: ["silicate"] };
+  state.logistics.institutions["the-ledge"] ??= { id: "the-ledge", archetypeId: "settlement", accounts: { operating: { balance: 42000, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 0 }, renewableResources: ["silicate"] };
   ["carrier:yard-hauler", "carrier:porch-runner"].forEach((institutionId) => {
     const institution = state.logistics.institutions?.[institutionId];
     if (!institution) return;
@@ -121,13 +121,20 @@ export function ensureLogisticsState(state, now = Date.now()) {
   // them. Without these the three hubs fall back to one shared trait constant
   // and price identically, which is the thing this replaces.
   const hubControllers = {
-    "yard-exchange": { id: "person:yard-quartermaster", name: "Bex Ordell", traits: { caution: 0.35, growthBias: 0.2, urgencyBias: 0.3 } },
-    "scrap-forge": { id: "person:porch-quartermaster", name: "Hale Sunder", traits: { caution: 0.5, growthBias: 0.45, urgencyBias: 0.6 } },
-    "the-ledge": { id: "person:ledge-quartermaster", name: "Ivry Nakash", traits: { caution: 0.75, growthBias: 0.6, urgencyBias: 0.8 } },
+    "yard-exchange": { id: "person:yard-quartermaster", name: "Bex Ordell", siteId: "yard-exchange", hubName: "Yard Exchange", traits: { caution: 0.35, growthBias: 0.2, urgencyBias: 0.3 } },
+    "scrap-forge": { id: "person:porch-quartermaster", name: "Hale Sunder", siteId: "scrap-porch", hubName: "Scrap Porch", traits: { caution: 0.5, growthBias: 0.45, urgencyBias: 0.6 } },
+    "the-ledge": { id: "person:ledge-quartermaster", name: "Ivry Nakash", siteId: "the-ledge", hubName: "The Ledge", traits: { caution: 0.75, growthBias: 0.6, urgencyBias: 0.8 } },
   };
+  // Saves written when each settlement had its own decorative archetype id.
+  // One `settlement` archetype now owns what all three actually share; what
+  // makes them differ is their quartermaster, their rights and their shelf.
+  const RETIRED_HUB_ARCHETYPES = ["trade-hub", "resource-outpost", "frontier-outpost"];
   Object.entries(hubControllers).forEach(([hubId, controller]) => {
     const hub = state.logistics.institutions[hubId];
     if (!hub) return;
+    if (!hub.archetypeId || RETIRED_HUB_ARCHETYPES.includes(hub.archetypeId)) hub.archetypeId = "settlement";
+    hub.siteId ??= controller.siteId;
+    hub.name ??= controller.hubName;
     hub.controllerInstitutionId ??= controller.id;
     state.logistics.institutions[controller.id] ??= {
       id: controller.id, name: controller.name, archetypeId: "person",

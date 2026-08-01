@@ -7,17 +7,27 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_TRAITS, findActorRecord, getActorAccount, getActorFinances, getActorProtectedCash, getActorTraits, getControllerId } from "../src/systems/actorConfig.js";
+import { DEFAULT_TRAITS, RESOLUTION_SOURCE, describeActorResolution, findActorRecord, getActorAccount, getActorFinances, getActorOfferTypes, getActorProtectedCash, getActorTraits, getArchetypeId, getControllerId, resolveActorProtectedCash } from "../src/systems/actorConfig.js";
 import { evaluateProcurement, evaluateSupplierAsk } from "../src/systems/valuation.js";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { createInitialMiningState } from "../src/systems/miningOperation.js";
 import { createTowServiceManager } from "../src/systems/towService.js";
+import { createFarmOperation } from "../src/systems/farmOperation.js";
 
 function createWorld() {
   const state = createGameState();
   state.logistics = createInitialLogisticsState(1_000);
   state.miningOperation = createInitialMiningState(1_000);
+  return state;
+}
+
+// Every seeded actor in the world, including the ones that only exist once
+// their operation has been stood up.
+function createFullWorld() {
+  const state = createWorld();
+  createTowServiceManager({ state, ships: [], destinations: [], now: () => 1_000 });
+  createFarmOperation({ state, now: 1_000 });
   return state;
 }
 
@@ -30,8 +40,7 @@ function createWorld() {
 // with no traits are indistinguishable at the call site, so the only place the
 // difference can be caught is here.
 test("every seeded actor resolves — a silent default is how misconfiguration hides", () => {
-  const state = createWorld();
-  createTowServiceManager({ state, ships: [], destinations: [], now: () => 1_000 });
+  const state = createFullWorld();
 
   const mustResolve = [
     "yard-exchange", "scrap-forge", "the-ledge",
@@ -41,23 +50,133 @@ test("every seeded actor resolves — a silent default is how misconfiguration h
     "miner:cinder-contracting", "person:ivo-cinder",
     "sprc", "sal",
     "first-reach-recovery", "nell-winch",
+    "sunward-acre", "tavi",
   ];
   const missing = mustResolve.filter((actorId) => findActorRecord(state, actorId) === null);
   assert.deepEqual(missing, [], `these actors are configured but unreachable: ${missing.join(", ")}`);
 });
 
 test("every actor that decides has a temperament of its own", () => {
-  const state = createWorld();
-  createTowServiceManager({ state, ships: [], destinations: [], now: () => 1_000 });
+  const state = createFullWorld();
 
   // Anything that prices, bids or quotes must not be silently taking the
   // framework default — that is the shape of the bug, not of a design choice.
-  const decidingActors = ["yard-exchange", "scrap-forge", "the-ledge", "carrier:yard-hauler", "carrier:porch-runner", "miner:cinder-contracting", "first-reach-recovery"];
+  const decidingActors = ["yard-exchange", "scrap-forge", "the-ledge", "carrier:yard-hauler", "carrier:porch-runner", "miner:cinder-contracting", "first-reach-recovery", "sunward-acre"];
   const defaulted = decidingActors.filter((actorId) => {
     const traits = getActorTraits(state, actorId);
     return traits === DEFAULT_TRAITS;
   });
   assert.deepEqual(defaulted, [], `these actors decide with nobody's temperament: ${defaulted.join(", ")}`);
+});
+
+// ── Archetypes must own something, not merely exist ────────────────────────
+
+// Everything seeded that posts work, accepts work, quotes prices, holds
+// inventory, moves goods, repairs, tows or mines. Assets and persons are
+// deliberately absent: a worker IS its capabilities and a person IS their
+// traits, so archetype rows for them would be labels.
+const DECIDING_ACTORS = [
+  "yard-exchange", "scrap-forge", "the-ledge",
+  "carrier:yard-hauler", "carrier:porch-runner",
+  "miner:cinder-contracting", "sprc", "first-reach-recovery", "sunward-acre",
+];
+
+test("every actor that decides resolves to a DEFINED archetype", () => {
+  const state = createFullWorld();
+  const undefinedArchetypes = DECIDING_ACTORS.filter((actorId) => !describeActorResolution(state, actorId).archetype.defined);
+  assert.deepEqual(undefinedArchetypes, [], `these decide with an archetype that does not exist: ${undefinedArchetypes.join(", ")}`);
+});
+
+test("every archetype an active actor names owns something operational", () => {
+  const state = createFullWorld();
+  // A row that only restates its own name reads as configured while deciding
+  // nothing, which is worse than having no row at all.
+  const empty = DECIDING_ACTORS.filter((actorId) => describeActorResolution(state, actorId).archetype.owns.length === 0);
+  assert.deepEqual(empty, [], `these archetypes are labels: ${empty.join(", ")}`);
+});
+
+test("the three settlements share one archetype and differ only by configuration", () => {
+  const state = createFullWorld();
+  const hubs = ["yard-exchange", "scrap-forge", "the-ledge"];
+  const archetypes = new Set(hubs.map((id) => getArchetypeId(state, id)));
+  assert.equal(archetypes.size, 1, "a fourth settlement should be a seed entry, not a fourth archetype");
+
+  const traits = hubs.map((id) => JSON.stringify(getActorTraits(state, id)));
+  assert.equal(new Set(traits).size, 3, "yet all three behave differently, through their quartermasters");
+});
+
+test("an archetype says what kinds of work its actors may post", () => {
+  const state = createFullWorld();
+  assert.ok(getActorOfferTypes(state, "yard-exchange").includes("extraction"), "a settlement commissions digging");
+  assert.ok(getActorOfferTypes(state, "carrier:yard-hauler").includes("freight"));
+  assert.ok(!getActorOfferTypes(state, "carrier:yard-hauler").includes("extraction"),
+    "a haulage business does not commission extraction");
+});
+
+// ── Protected cash: four layers, one resolver, no constants ────────────────
+
+test("protected cash falls through instance policy, then archetype, then framework", () => {
+  const state = createFullWorld();
+
+  // Archetype default, because a settlement states no float of its own.
+  const hub = resolveActorProtectedCash(state, "yard-exchange");
+  assert.equal(hub.source, RESOLUTION_SOURCE.ARCHETYPE);
+  assert.ok(hub.value > 0);
+
+  // Instance policy wins over its archetype.
+  findActorRecord(state, "yard-exchange").policies = { protectedCash: 12_345 };
+  const overridden = resolveActorProtectedCash(state, "yard-exchange");
+  assert.equal(overridden.value, 12_345);
+  assert.equal(overridden.source, RESOLUTION_SOURCE.ACTOR_POLICY);
+
+  // And a live operating plan wins over both.
+  getActorAccount(state, "yard-exchange").protectedReserve = 999;
+  assert.equal(resolveActorProtectedCash(state, "yard-exchange").source, RESOLUTION_SOURCE.LIVE);
+});
+
+test("two settlements can hold different floats with no new constant", () => {
+  const state = createFullWorld();
+  findActorRecord(state, "the-ledge").policies = { protectedCash: 9_000 };
+  assert.notEqual(getActorProtectedCash(state, "the-ledge"), getActorProtectedCash(state, "yard-exchange"),
+    "financial temperament is configuration, which is what the doubling project needs");
+});
+
+// ── Provenance: the tell that both major bugs lacked ───────────────────────
+
+test("resolution says which layer answered, for everything that decides", () => {
+  const state = createFullWorld();
+  const resolution = describeActorResolution(state, "first-reach-recovery");
+  assert.equal(resolution.found, true);
+  assert.equal(resolution.archetype.id, "recovery-service");
+  assert.equal(resolution.traits.source, RESOLUTION_SOURCE.CONTROLLER);
+  assert.match(resolution.traits.reason, /Nell/);
+  assert.equal(resolution.protectedCash.source, RESOLUTION_SOURCE.ACTOR_POLICY);
+  assert.equal(resolution.controller.resolved, true);
+});
+
+test("a controller that cannot be found is reported, not silently replaced", () => {
+  const state = createFullWorld();
+  findActorRecord(state, "the-ledge").controllerInstitutionId = "person:who";
+
+  const resolution = describeActorResolution(state, "the-ledge");
+  assert.equal(resolution.traits.source, RESOLUTION_SOURCE.UNRESOLVED);
+  assert.match(resolution.traits.reason, /named but could not be found/);
+  assert.equal(resolution.controller.resolved, false);
+});
+
+test("an archetype that is named but undefined is reported as such", () => {
+  const state = createFullWorld();
+  findActorRecord(state, "scrap-forge").archetypeId = "imaginary-outpost";
+  const resolution = describeActorResolution(state, "scrap-forge");
+  assert.equal(resolution.archetype.defined, false);
+  assert.match(resolution.archetype.reason, /named but not defined/);
+});
+
+test("an actor that does not exist at all says so rather than answering", () => {
+  const state = createFullWorld();
+  const resolution = describeActorResolution(state, "nobody-at-all");
+  assert.equal(resolution.found, false);
+  assert.equal(resolution.traits.source, RESOLUTION_SOURCE.UNRESOLVED);
 });
 
 test("an actor is found wherever its record happens to live", () => {
