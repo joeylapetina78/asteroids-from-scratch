@@ -12,7 +12,9 @@
 //   3. The supplier accepts only if the offer clears what the material costs it.
 //      Accepting raises the supplier's own stock target, which is what makes it
 //      commission more mining — it digs for a sale it has agreed to, not because
-//      an authored order told it to.
+//      an authored order told it to. A supplier nobody is buying from walks that
+//      price down toward what the next unit would cost it to dig, and comes back
+//      to a buyer it has already refused. Both sides move, in both directions.
 //   4. Freight is offered only once the supplier actually holds the goods and
 //      the buyer has committed to pay. No speculative hauling.
 //   5. Delivery pays the supplier for the goods, pays the carrier separately,
@@ -22,12 +24,12 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0101-86f0d11";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-0101-86f0d11";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-0101-86f0d11";
-import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-0101-86f0d11";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260801-0101-86f0d11";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-0101-86f0d11";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-0121-b752bfb";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-0121-b752bfb";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-0121-b752bfb";
+import { evaluateProcurement, evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-0121-b752bfb";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260801-0121-b752bfb";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-0121-b752bfb";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -67,6 +69,20 @@ const DECLINED_RETENTION_MS = 5 * 60 * 1000;
 const REPRICE_INTERVAL_MS = 60 * 1000;
 const REPRICE_MAX_MULTIPLE = 2;
 const BUYER_TRAITS = Object.freeze({ urgencyBias: 0.5, caution: 0.5, growthBias: 0.3 });
+const SUPPLIER_TRAITS = Object.freeze({ growthBias: 0.3, caution: 0.5 });
+// The other half of the negotiation, and the only downward force on price.
+// Every repricing path above is a BUYER bidding up, so without this a price that
+// has risen can never come back. A supplier with capacity it is not selling
+// comes down toward what the next unit actually costs it to dig.
+const CONCESSION_INTERVAL_MS = 60 * 1000;
+const CONCESSION_STEP = 0.2;
+// Firmed back up faster than it was given away: the moment there is business
+// again, there is no reason to keep working at cost.
+const CONCESSION_FIRM_STEP = 0.5;
+// How empty the order book has to be before a supplier counts as slack. Under
+// half the sales it says it can carry, with nothing left to dig, is a hub that
+// could serve more business than it has.
+const SLACK_CAPACITY_FRACTION = 0.5;
 
 const SITE_BY_INSTITUTION = Object.freeze({
   "yard-exchange": "yard-exchange",
@@ -81,7 +97,13 @@ const HUB_NAMES = Object.freeze({
 });
 
 export function createInitialProcurementState() {
-  return { orders: {}, counter: 0 };
+  return { orders: {}, counter: 0, asks: {} };
+}
+
+// How far a supplier has come down off its list price on one material, 0..1.
+// Exported so the state can be inspected without reaching into the shape.
+export function getAskConcession(state, supplierInstitutionId, resourceId) {
+  return state.hubProcurement?.asks?.[`${supplierInstitutionId}|${resourceId}`]?.concession ?? 0;
 }
 
 export function hubName(institutionId) {
@@ -174,6 +196,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   const procurement = state.hubProcurement;
   procurement.orders ??= {};
   procurement.counter ??= 0;
+  procurement.asks ??= {};
 
   const institution = (id) => state.logistics?.institutions?.[id] ?? null;
 
@@ -359,6 +382,151 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     });
   }
 
+  // ── 2b: the seller's half of the negotiation ─────────────────────────────
+  //
+  // A hub sells at two different prices depending on how busy it is. With a
+  // full book it holds out for what the material has actually cost it to put on
+  // the shelf. With a slack one that history is sunk, and the only number that
+  // matters is what digging one more unit would cost — which is what it walks
+  // its ask down toward, one step a minute, and no further.
+  function askRecord(supplierInstitutionId, resourceId) {
+    const key = `${supplierInstitutionId}|${resourceId}`;
+    procurement.asks[key] ??= { supplierInstitutionId, resourceId, concession: 0, lastMovedAt: 0 };
+    return procurement.asks[key];
+  }
+
+  function unitCostBand(supplierInstitutionId, resourceId) {
+    // What one more unit would really cost: the rate a miner takes at routine
+    // urgency against a full shelf, which is the plain trade value. Scarcity
+    // premiums this hub paid while it was short are history, not the cost of
+    // the next unit — but they are what it holds out to recover while it can.
+    const marginalCost = getResourceTradeValue(resourceId);
+    const bookCost = getUnitCost(state, supplierInstitutionId, resourceId) || 0;
+    return { marginalCost, firmCost: Math.max(bookCost, marginalCost) };
+  }
+
+  function shadedUnitCost(supplierInstitutionId, resourceId) {
+    const { marginalCost, firmCost } = unitCostBand(supplierInstitutionId, resourceId);
+    const concession = askRecord(supplierInstitutionId, resourceId).concession ?? 0;
+    return firmCost - (firmCost - marginalCost) * concession;
+  }
+
+  // The supplier's terms on one order, at whatever it is currently asking.
+  // Writing the result back onto the order keeps the numbers the buyer reprices
+  // against live: a seller that has since come down pulls the buyer down with
+  // it rather than leaving a stale demand standing.
+  function evaluateAsk(order) {
+    const concession = askRecord(order.supplierInstitutionId, order.resourceId).concession ?? 0;
+    const unitCost = shadedUnitCost(order.supplierInstitutionId, order.resourceId);
+    const ask = evaluateSupplierAsk({
+      workId: order.id,
+      costComponents: { other: unitCost * order.units },
+      offeredPrice: order.pricePerUnit * order.units,
+      traits: SUPPLIER_TRAITS,
+      concession,
+    });
+    order.supplierFloor = ask.minAcceptablePrice ?? null;
+    order.supplierAsk = ask.recommendedPrice ?? null;
+    return ask;
+  }
+
+  // Idle means two things at once: room on the order book it is not filling,
+  // and nothing left to dig — its shelf already covers its own population and
+  // everything it has promised. Ore it cannot move and capacity to spare.
+  //
+  // Deliberately NOT "owes nobody anything". A supplier with a trickle of
+  // business is still mostly unsold, and requiring an empty book would mean a
+  // price that has risen only ever comes back down in a dead economy.
+  function isSupplierIdle(supplierInstitutionId, resourceId) {
+    const position = getInventoryPosition(state, supplierInstitutionId, getResourceFamily(resourceId));
+    return position.committedSales < MAX_OUTSTANDING_SALE_UNITS * SLACK_CAPACITY_FRACTION
+      && position.gap <= 0;
+  }
+
+  function updateSupplierAsks() {
+    STANDING_MINING_ORDERS.forEach((definition) => {
+      const supplierInstitutionId = definition.buyerInstitutionId;
+      if (!institution(supplierInstitutionId)) return;
+      const record = askRecord(supplierInstitutionId, definition.resourceId);
+      if (now() - (record.lastMovedAt ?? 0) < CONCESSION_INTERVAL_MS) return;
+      record.lastMovedAt = now();
+
+      const idle = isSupplierIdle(supplierInstitutionId, definition.resourceId);
+      const previous = record.concession ?? 0;
+      // Rounded so repeated steps stay readable numbers rather than float dust.
+      const concession = Math.round(100 * (idle
+        ? Math.min(1, previous + CONCESSION_STEP)
+        : Math.max(0, previous - CONCESSION_FIRM_STEP))) / 100;
+      if (concession === previous) return;
+      record.concession = concession;
+
+      const { marginalCost, firmCost } = unitCostBand(supplierInstitutionId, definition.resourceId);
+      const unitCost = shadedUnitCost(supplierInstitutionId, definition.resourceId);
+      emit("institution.askShaded", idle
+        ? `${hubName(supplierInstitutionId)} has ${order2Label(definition.resourceId)} it cannot move and room on its books, so it comes down to ${Math.round(unitCost)} cr per unit.`
+        : `${hubName(supplierInstitutionId)} has its books full of ${order2Label(definition.resourceId)} again and firms back up toward ${Math.round(firmCost)} cr per unit.`, {
+        sellerId: supplierInstitutionId, itemId: definition.resourceId,
+        previousConcession: previous, concession, idle,
+        unitCost: Math.round(unitCost), firmCost: Math.round(firmCost), marginalCost: Math.round(marginalCost),
+        reasons: [
+          idle
+            ? `${hubName(supplierInstitutionId)} has dug everything it owes and everything its own population needs, and could sell more than it has.`
+            : `${hubName(supplierInstitutionId)} has ${order2Label(definition.resourceId)} sold again, so it stops working thin.`,
+          `It has paid ${Math.round(firmCost)} cr per unit on average and the next unit would cost it ${Math.round(marginalCost)}.`,
+          `Now asking from ${Math.round(unitCost)} cr per unit, ${Math.round(concession * 100)}% of the way down.`,
+        ],
+      });
+    });
+  }
+
+  // A seller that has come down far enough to live with an offer it already
+  // refused goes back to the buyer rather than waiting to be asked again. This
+  // is the counter-offer: the deal closes without the buyer moving at all.
+  function reopenOnConcession() {
+    listOrders(state, { status: PROCUREMENT_STATUS.DECLINED }).forEach((order) => {
+      if (order.declinedReason !== "below-supplier-cost") return;
+      const supplier = institution(order.supplierInstitutionId);
+      const buyer = institution(order.buyerInstitutionId);
+      if (!supplier || !buyer) return;
+
+      // Restate the terms first even when nothing comes of it, so the number
+      // the buyer reprices against is always the seller's current one.
+      const previousFloor = order.supplierFloor;
+      const ask = evaluateAsk(order);
+      if (!ask.acceptable) return;
+
+      // Price was the objection. Capacity is a different one, and asking less
+      // no more answers it than paying more does.
+      if (getCommittedSupply(state, order.supplierInstitutionId, order.family) + order.units > MAX_OUTSTANDING_SALE_UNITS) return;
+
+      // The buyer released this money when it was turned down, so it has to be
+      // able to set it aside again before the order can go back on the table.
+      const spendable = (buyer.accounts?.operating?.balance ?? 0) - (buyer.accounts?.operating?.committed ?? 0) - BUYER_PROTECTED_CASH;
+      if ((order.committedPayment ?? 0) > spendable) return;
+
+      order.status = PROCUREMENT_STATUS.OFFERED;
+      order.declinedReason = null;
+      order.declinedAt = null;
+      order.reopenedAt = now();
+      // A buyer does not bid against a seller that just came to it.
+      order.lastRepricedAt = now();
+      order.repriceExhausted = false;
+      buyer.accounts.operating.committed = (buyer.accounts.operating.committed ?? 0) + order.committedPayment;
+
+      emit("procurement.counterOffered", `${hubName(order.supplierInstitutionId)} comes back to ${hubName(order.buyerInstitutionId)}: it will take the ${order.committedPayment} cr it turned down for ${order.units} ${order2Label(order.resourceId)} after all.`, {
+        procurementOrderId: order.id, sellerId: order.supplierInstitutionId, buyerId: order.buyerInstitutionId,
+        units: order.units, offered: order.committedPayment,
+        previousFloor: previousFloor ?? null, floor: ask.minAcceptablePrice,
+        concession: askRecord(order.supplierInstitutionId, order.resourceId).concession,
+        reasons: [
+          `${hubName(order.supplierInstitutionId)} wanted ${previousFloor ?? "more"} cr for this lot and was offered ${order.committedPayment}.`,
+          `Sitting on ore it cannot move, it will now take ${ask.minAcceptablePrice}.`,
+          ...ask.reasons,
+        ],
+      });
+    });
+  }
+
   // ── 3: a supplier accepts only if the price clears what the goods cost it ──
   function considerOffers() {
     listOrders(state, { status: PROCUREMENT_STATUS.OFFERED }).forEach((order) => {
@@ -385,24 +553,17 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
         return;
       }
 
-      const unitCost = Math.max(getUnitCost(state, order.supplierInstitutionId, order.resourceId) || 0, getResourceTradeValue(order.resourceId));
-      const ask = evaluateSupplierAsk({
-        workId: order.id,
-        costComponents: { other: unitCost * order.units },
-        offeredPrice: order.pricePerUnit * order.units,
-        traits: { growthBias: 0.3, caution: 0.5 },
-      });
+      // The terms carry whatever this seller is currently asking, and are
+      // written back onto the order: that floor is the number the buyer moves
+      // toward when it reprices, which is what lets the two sides converge
+      // instead of restating the same offer at each other.
+      const ask = evaluateAsk(order);
 
       if (!ask.acceptable) {
         order.status = PROCUREMENT_STATUS.DECLINED;
         order.declinedReason = "below-supplier-cost";
         order.declinedAt = now();
         order.reasons = ask.reasons;
-        // What the seller said it needs. This is the number the buyer moves
-        // toward when it reprices, which is what lets the two sides converge
-        // instead of restating the same offer at each other.
-        order.supplierFloor = ask.minAcceptablePrice ?? null;
-        order.supplierAsk = ask.recommendedPrice ?? null;
         releaseCommitment(order);
         emit("procurement.orderDeclined", `${hubName(order.supplierInstitutionId)} will not sell ${order.units} ${order2Label(order.resourceId)} for ${order.committedPayment} cr; it needs at least ${ask.minAcceptablePrice}.`, {
           procurementOrderId: order.id, sellerId: order.supplierInstitutionId, buyerId: order.buyerInstitutionId,
@@ -557,6 +718,10 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   function update() {
     pruneDeclinedOrders();
     postNeeds();
+    // Sellers move first, so a buyer never bids up against an ask that has
+    // already come down to meet it.
+    updateSupplierAsks();
+    reopenOnConcession();
     repriceUnfilledOrders();
     considerOffers();
     // Mined ore lands in the seller's own stock; move what is owed into the

@@ -238,6 +238,11 @@ export function evaluateServicePrice({
 // `minAcceptablePrice` is the hard floor (bare cost): below it the work loses
 // money and is declined. This is the third link of cost pass-through: when a
 // repair shop raises its prices, its customers' asks rise with them.
+//
+// `concession` is the seller's side of a negotiation. Buyers bid UP when they
+// are refused; without something that bids down, a price that has risen can
+// never come back. A supplier sitting on capacity nobody is buying gives up
+// margin — and only margin — to win the business.
 export function evaluateSupplierAsk({
   workId = null,
   costComponents = {},      // { travel, maintenance, time, other } — all credits
@@ -245,17 +250,25 @@ export function evaluateSupplierAsk({
   traits = {},
   policy = {},
   relationship = null,
+  concession = 0,           // 0..1 — how much of the margin idle capacity gives back
 } = {}) {
   const reasons = [];
   const entries = Object.entries(costComponents).filter(([, value]) => (value ?? 0) > 0);
   const costToServe = entries.reduce((sum, [, value]) => sum + value, 0);
-  const marginRate = Math.max(0.05, 0.15 + (traits.growthBias ?? 0.3) * 0.3 - (traits.caution ?? 0.5) * 0.05);
+  // Margin is the seller's own share, so it is the first thing to go when it has
+  // capacity it cannot sell — a supplier with nothing to do would rather work
+  // thin than not at all. What never moves is the floor: below bare cost the
+  // work loses money however badly the seller wants the business.
+  const shading = clamp01(concession);
+  const listMarginRate = Math.max(0.05, 0.15 + (traits.growthBias ?? 0.3) * 0.3 - (traits.caution ?? 0.5) * 0.05);
+  const marginRate = listMarginRate * (1 - shading);
   const relationshipDiscount = 2 - relationshipFactor(relationship);
   const ask = Math.max(1, Math.round(costToServe * (1 + marginRate) * relationshipDiscount));
   const floor = Math.max(1, Math.round(costToServe));
 
   reasons.push(`${workId ?? "work"} costs ${round(costToServe)} to serve (${entries.map(([key, value]) => `${key} ${round(value)}`).join(", ") || "no cost"}).`);
   reasons.push(`Asking ${ask} at a ${Math.round(marginRate * 100)}% margin; will not work below ${floor}.`);
+  if (shading > 0) reasons.push(`Idle capacity: giving up ${Math.round(shading * 100)}% of the ${Math.round(listMarginRate * 100)}% list margin to win the work.`);
 
   const judged = offeredPrice != null;
   const acceptable = judged ? offeredPrice >= floor : true;
@@ -270,7 +283,7 @@ export function evaluateSupplierAsk({
     maxAcceptablePrice: ask,
     decision: acceptable ? VALUATION_DECISION.PROCEED : VALUATION_DECISION.DECLINE,
     reasons,
-    metrics: { costToServe, marginRate, ask, floor, offeredPrice, surplus: judged ? offeredPrice - costToServe : null },
+    metrics: { costToServe, marginRate, listMarginRate, concession: shading, ask, floor, offeredPrice, surplus: judged ? offeredPrice - costToServe : null },
   });
 }
 

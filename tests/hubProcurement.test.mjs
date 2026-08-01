@@ -6,12 +6,14 @@ import test from "node:test";
 import {
   PROCUREMENT_STATUS,
   createHubProcurementOperation,
+  getAskConcession,
   getCommittedSupply,
   getAwaitingPickup,
   getProcurementFreightOffers,
   getSaleReserve,
   listOrders,
 } from "../src/systems/hubProcurement.js";
+import { recordAcquisition } from "../src/systems/costBasis.js";
 import { getInventoryPosition } from "../src/systems/hubInventory.js";
 import { getPostedMiningOrders } from "../src/systems/miningOperation.js";
 import { createGameState } from "../src/state/gameState.js";
@@ -452,6 +454,127 @@ test("a buyer stuck at its ceiling says so once instead of retrying silently", (
   const exhausted = world.state.ledger.getEventsAfterId(0)
     .filter((entry) => entry.type === "procurement.repriceExhausted" && entry.payload.procurementOrderId === order.id);
   assert.equal(exhausted.length, 1, "reported once, not once per attempt");
+});
+
+// ── Conceding: the seller's half of the negotiation ────────────────────────
+//
+// Every repricing test above is a BUYER bidding up. These are the ones that
+// push the other way, which is the only thing keeping prices from ratcheting.
+
+// A hub that has overpaid for water ice in the past holds out to recover it,
+// which is what makes the volatile lane jam at all.
+function overpayForWaterIce(state, unitCost = 450) {
+  recordAcquisition(state, {
+    institutionId: "scrap-forge", itemId: "water-ice", units: 200, totalCost: 200 * unitCost,
+  });
+}
+
+function clearTheBoard(state) {
+  Object.keys(state.hubProcurement.orders).forEach((id) => { delete state.hubProcurement.orders[id]; });
+  ["yard-exchange", "scrap-forge", "the-ledge"].forEach((id) => {
+    const hub = state.logistics.institutions[id];
+    hub.saleReserve = {};
+    hub.awaitingPickup = {};
+    hub.accounts.operating.committed = 0;
+  });
+}
+
+// Nobody needs anything: every shelf is full, so no hub posts an order and no
+// hub owes one. Ore and no customers, which is what makes a seller come down.
+function idleWorld() {
+  const world = advanceWorld();
+  overpayForWaterIce(world.state);
+  clearTheBoard(world.state);
+  ["yard-exchange", "scrap-forge", "the-ledge"].forEach((id) => {
+    world.state.logistics.institutions[id].inventories = { "iron-nickel": 5_000, "water-ice": 5_000, silicate: 5_000 };
+  });
+  return world;
+}
+
+// Scrap Porch alone is stuck: it holds more water ice than its own people will
+// ever need, and wants more for it than the other hubs will pay.
+function jammedVolatileWorld() {
+  const world = advanceWorld();
+  overpayForWaterIce(world.state);
+  clearTheBoard(world.state);
+  world.state.logistics.institutions["scrap-forge"].inventories = { "water-ice": 5_000 };
+  return world;
+}
+
+test("a seller nobody is buying from comes down off its price", () => {
+  const world = idleWorld();
+  world.tick(1);
+  assert.equal(getAskConcession(world.state, "scrap-forge", "water-ice"), 0, "it opens at its list price");
+
+  for (let step = 0; step < 3; step += 1) world.tick(60);
+  assert.ok(getAskConcession(world.state, "scrap-forge", "water-ice") > 0,
+    `an idle seller should shade its ask, got ${getAskConcession(world.state, "scrap-forge", "water-ice")}`);
+
+  const shaded = world.state.ledger.getEventsAfterId(0)
+    .filter((entry) => entry.type === "institution.askShaded" && entry.payload.itemId === "water-ice");
+  assert.ok(shaded.length > 0, "and says so on the record");
+  assert.ok(shaded[0].payload.reasons.length >= 2, "with reasons, not just a number");
+  assert.ok(shaded[0].payload.unitCost < shaded[0].payload.firmCost, "the price it holds out for has moved down");
+});
+
+test("a seller never comes down below what the next unit would cost it", () => {
+  const world = idleWorld();
+  for (let step = 0; step < 10; step += 1) world.tick(60);
+  assert.equal(getAskConcession(world.state, "scrap-forge", "water-ice"), 1, "it gave away the whole margin");
+
+  const shaded = world.state.ledger.getEventsAfterId(0)
+    .filter((entry) => entry.type === "institution.askShaded" && entry.payload.itemId === "water-ice");
+  const last = shaded[shaded.length - 1].payload;
+  assert.equal(last.unitCost, last.marginalCost, "down to what digging one more would cost");
+  assert.ok(last.marginalCost > 0, "and no further — nobody digs at a loss to make a sale");
+});
+
+test("a seller with business again firms its price back up", () => {
+  const world = idleWorld();
+  for (let step = 0; step < 10; step += 1) world.tick(60);
+  assert.equal(getAskConcession(world.state, "scrap-forge", "water-ice"), 1, "fully conceded while idle");
+
+  // Yard Exchange runs dry and starts buying volatile again.
+  world.state.logistics.institutions["yard-exchange"].inventories = {};
+  world.tick(1);
+  // Enough business that its book is no longer slack, which is what ends the
+  // discount — a trickle would not, and should not.
+  assert.ok(getCommittedSupply(world.state, "scrap-forge", "volatile") >= 6,
+    `Scrap Porch has a full book, got ${getCommittedSupply(world.state, "scrap-forge", "volatile")}`);
+  world.tick(60);
+  assert.equal(getAskConcession(world.state, "scrap-forge", "water-ice"), 0.5,
+    "and takes the discount back faster than it gave it away");
+});
+
+test("a seller that has come down takes an offer it already refused, without the buyer moving", () => {
+  const world = jammedVolatileWorld();
+  const { state } = world;
+  world.tick(1);
+  const order = listOrders(state, { supplierInstitutionId: "scrap-forge", status: PROCUREMENT_STATUS.DECLINED })[0];
+  assert.ok(order, "the lane is jammed: Scrap Porch wants more than anyone will pay");
+
+  // Pin the buyer at its ceiling. It is already offering twice what it first
+  // judged the ore to be worth, so it has nothing left to give — the only thing
+  // that can close this now is the seller coming to it.
+  order.originalPricePerUnit = Math.floor(order.pricePerUnit / 2);
+  const pinned = order.pricePerUnit;
+
+  for (let step = 0; step < 6; step += 1) {
+    world.tick(60);
+    if (state.hubProcurement.orders[order.id]?.status !== PROCUREMENT_STATUS.DECLINED) break;
+  }
+
+  const settled = state.hubProcurement.orders[order.id];
+  assert.ok(settled, "the order was still on the board");
+  assert.notEqual(settled.status, PROCUREMENT_STATUS.DECLINED, "the deal closed");
+  assert.equal(settled.pricePerUnit, pinned, "and the buyer never moved — the seller came to it");
+
+  const counter = state.ledger.getEventsAfterId(0)
+    .find((entry) => entry.type === "procurement.counterOffered" && entry.payload.procurementOrderId === order.id);
+  assert.ok(counter, "the seller came back rather than waiting to be asked again");
+  assert.ok(counter.payload.floor < counter.payload.previousFloor,
+    `on better terms than it first demanded (${counter.payload.floor} vs ${counter.payload.previousFloor})`);
+  assert.ok(counter.payload.reasons.length >= 2, "and explains the change of mind");
 });
 
 // ── Contract-reserved supply: the four buckets stay separate ───────────────

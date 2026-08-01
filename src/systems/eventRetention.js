@@ -52,6 +52,8 @@ const EXPLICIT_CLASSES = Object.freeze({
   "institution.pricedOffer": RETENTION_CLASS.OPERATIONAL,
   "institution.servicePriced": RETENTION_CLASS.OPERATIONAL,
   "institution.offerRepriced": RETENTION_CLASS.OPERATIONAL,
+  "institution.askShaded": RETENTION_CLASS.OPERATIONAL,
+  "procurement.counterOffered": RETENTION_CLASS.OPERATIONAL,
   "institution.freightRepriced": RETENTION_CLASS.OPERATIONAL,
   "institution.valuationDeclined": RETENTION_CLASS.OPERATIONAL,
   "institution.costBasisUpdated": RETENTION_CLASS.OPERATIONAL,

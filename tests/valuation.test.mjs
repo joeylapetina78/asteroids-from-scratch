@@ -254,6 +254,29 @@ test("a supplier declines work below its cost and accepts work above it", () => 
   assert.equal(thin.metrics.surplus, 5);
 });
 
+test("an idle supplier gives up margin to win work, but never its floor", () => {
+  const inputs = { workId: "run-c", costComponents: { travel: 40, maintenance: 60 }, traits: SAL_TRAITS };
+  const list = evaluateSupplierAsk(inputs);
+  const conceded = evaluateSupplierAsk({ ...inputs, concession: 1 });
+  assert.ok(conceded.recommendedPrice < list.recommendedPrice, "the ask comes down");
+  assert.equal(conceded.minAcceptablePrice, list.minAcceptablePrice, "the floor does not move");
+  assert.equal(conceded.recommendedPrice, conceded.minAcceptablePrice, "a fully conceded ask is bare cost");
+  assert.ok(conceded.reasons.some((reason) => /giving up 100%/i.test(reason)), "and it says what it gave up");
+
+  const half = evaluateSupplierAsk({ ...inputs, concession: 0.5 });
+  assert.ok(half.recommendedPrice > conceded.recommendedPrice && half.recommendedPrice < list.recommendedPrice,
+    "half the discount is half the margin");
+});
+
+test("a conceded supplier still declines work below cost", () => {
+  const result = evaluateSupplierAsk({
+    workId: "run-d", costComponents: { travel: 50, maintenance: 50 }, traits: SAL_TRAITS,
+    offeredPrice: 90, concession: 1,
+  });
+  assert.equal(result.acceptable, false, "wanting the work does not make a loss worth taking");
+  assert.equal(result.decision, VALUATION_DECISION.DECLINE);
+});
+
 test("dearer upkeep raises the supplier's ask — the pass-through link", () => {
   const cheapUpkeep = evaluateSupplierAsk({ workId: "run", costComponents: { travel: 20, maintenance: 30 }, traits: SAL_TRAITS });
   const dearUpkeep = evaluateSupplierAsk({ workId: "run", costComponents: { travel: 20, maintenance: 150 }, traits: SAL_TRAITS });
