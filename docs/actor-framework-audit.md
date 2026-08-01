@@ -5,9 +5,10 @@
 > describes the state *before* that work and is kept as written, so the
 > diagnosis stays readable and the before/after stays honest.
 >
-> Four commits: `eb0a500` seller concession (pre-audit), `5bdbcc3` actor
-> configuration, `f1a2625` extraction offer surface, `2a65aef` intention
-> coverage. 292 tests, 291 pass, 1 skipped.
+> Commits: `eb0a500` seller concession (pre-audit), `5bdbcc3` actor configuration,
+> `f1a2625` extraction offer surface, `2a65aef` intention coverage, `2d580d2`
+> urgency fix, `855d6c2` read side on the shared substrate, `2c951e5` Nell as the
+> proving slice. 312 tests, 311 pass, 1 skipped.
 
 Architectural check only (2026-08-01, at `b752bfb` plus the uncommitted seller-concession
 work). No implementation. Follow-up to `actor-framework-inventory.md` (2026-07-28), which
@@ -299,13 +300,28 @@ economy was built, and hubs and carriers are in none of the adapters.
 
 | Step | State |
 |---|---|
-| 0. Actor registry + config | **Partly done** — `actorConfig.js` resolves actors and traits; archetypes still dangling, `inspectActor` not yet routed through it |
+| 0. Actor registry + config | **Done for live actors** — `actorConfig.js` resolves actors, controllers, traits, accounts and protected cash; `inspectActor` routed through it; coverage tests assert every seeded actor resolves |
 | 1. Intentions authoritative | **Adapters complete** — every committing system is covered and both duplicate shapes retired; domains still own the records |
 | 2. `canPerform` | Not started |
 | 3. Offer surface | **First slice done** for extraction (§5); freight, repair and purchase offers still bespoke |
 | 4. Motivations | Not started |
 | 5. Goals | Not started |
 | 6. Planning | Not started |
+
+**Proving slice passed.** Nell Winch was converted through configuration alone
+(`2c951e5`) — the cost model to the `recovery-service` archetype, the margin to her
+traits, the terms to a relationship projection, the upkeep to cost basis. No
+tow-specific pricing survives in `towService.js`. Recovery stopped being the cheapest
+thing in the world in the process: Yard→Scrap 163 → 492, Yard→Ledge 241 → 1360.
+
+The slice also justified itself as a *test*: `actorConfig` was reading
+`state.towService` when the state key is `state.towing`, so every tow lookup missed
+and `getActorTraits` returned the framework default. Nothing failed — Nell simply
+quoted with nobody's temperament. **A missing actor and an actor with no traits are
+indistinguishable at the call site**, which is why two coverage tests now assert that
+every seeded actor resolves and that everything which prices, bids or quotes has a
+temperament of its own. Expect this failure mode again wherever a lookup has a
+plausible default.
 
 Recommended order, each step justified by what it unblocks:
 
@@ -369,10 +385,18 @@ configuration, the framework works. If it still needs a bespoke module, it doesn
 
 ---
 
-## 6b. Latent defects found while implementing, NOT fixed
+## 6b. Latent defects found while implementing
 
-Both change economy behaviour, so they were left alone rather than slipped into a
-refactor pass.
+The first two were reported before being fixed, because both change economy
+behaviour and that was the user's call rather than a refactor's.
+
+> **1 and 2 are now fixed** — `2d580d2` and `2c951e5`. Urgency: the vocabulary is
+> exported so a call site names a level instead of spelling one, `urgencyFromCoverage`
+> grades it from the shortage so hubs and miners share one definition of "thin", and an
+> unrecognised level still prices as routine but says so in the reasons. Measured over
+> 20 simulated minutes: mean accepted price 300 → 331, first quarter 313 → **436**, last
+> quarter unchanged at 294 — hubs pay up only while genuinely empty. The tow fee was
+> fixed as part of the Nell conversion; `MILL_CONVERSION_COST` (120) remains.
 
 1. **`urgency: "critical"` does nothing.** `hubProcurement.postNeeds` and
    `miningOperation.getPostedMiningOrders` both pass `urgency: position.onHand === 0
