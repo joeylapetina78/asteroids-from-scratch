@@ -12,6 +12,7 @@ import { evaluateProcurement, evaluateSupplierAsk } from "../src/systems/valuati
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { createInitialMiningState } from "../src/systems/miningOperation.js";
+import { createTowServiceManager } from "../src/systems/towService.js";
 
 function createWorld() {
   const state = createGameState();
@@ -21,6 +22,43 @@ function createWorld() {
 }
 
 // ── Resolution across the state shapes ─────────────────────────────────────
+
+// The guard that would have caught the tow lookup reading `state.towService`
+// when the state key is `state.towing`. Nothing failed — `getActorTraits`
+// handed back the framework default, so Nell quoted with somebody else's
+// temperament and looked entirely normal doing it. A missing actor and an actor
+// with no traits are indistinguishable at the call site, so the only place the
+// difference can be caught is here.
+test("every seeded actor resolves — a silent default is how misconfiguration hides", () => {
+  const state = createWorld();
+  createTowServiceManager({ state, ships: [], destinations: [], now: () => 1_000 });
+
+  const mustResolve = [
+    "yard-exchange", "scrap-forge", "the-ledge",
+    "person:yard-quartermaster", "person:porch-quartermaster", "person:ledge-quartermaster",
+    "carrier:yard-hauler", "carrier:porch-runner",
+    "person:yard-hauler-operator", "person:hauler-scrap-yard-operator",
+    "miner:cinder-contracting", "person:ivo-cinder",
+    "sprc", "sal",
+    "first-reach-recovery", "nell-winch",
+  ];
+  const missing = mustResolve.filter((actorId) => findActorRecord(state, actorId) === null);
+  assert.deepEqual(missing, [], `these actors are configured but unreachable: ${missing.join(", ")}`);
+});
+
+test("every actor that decides has a temperament of its own", () => {
+  const state = createWorld();
+  createTowServiceManager({ state, ships: [], destinations: [], now: () => 1_000 });
+
+  // Anything that prices, bids or quotes must not be silently taking the
+  // framework default — that is the shape of the bug, not of a design choice.
+  const decidingActors = ["yard-exchange", "scrap-forge", "the-ledge", "carrier:yard-hauler", "carrier:porch-runner", "miner:cinder-contracting", "first-reach-recovery"];
+  const defaulted = decidingActors.filter((actorId) => {
+    const traits = getActorTraits(state, actorId);
+    return traits === DEFAULT_TRAITS;
+  });
+  assert.deepEqual(defaulted, [], `these actors decide with nobody's temperament: ${defaulted.join(", ")}`);
+});
 
 test("an actor is found wherever its record happens to live", () => {
   const state = createWorld();

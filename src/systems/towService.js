@@ -1,8 +1,25 @@
-import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-1111-2d580d2";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-1111-2d580d2";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-1117-855d6c2";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-1117-855d6c2";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-1117-855d6c2";
+import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1117-855d6c2";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-1117-855d6c2";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-1117-855d6c2";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1117-855d6c2";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-1117-855d6c2";
 
 const REPAIR_SITE_ID = "scrap-porch";
-const BASE_NPC_TOW_FEE = 140;
+
+// Recovery pricing is no longer written here at all.
+//
+// It used to be `140 + distance * 0.012` — an authored number at the
+// pre-redenomination tier, in an economy where hauling the same lane pays about
+// a thousand. Recovery was the cheapest thing in the world, and got cheaper
+// relative to everything else every time the economy was rescaled.
+//
+// The cost model now belongs to the `recovery-service` ARCHETYPE, this firm's
+// overrides to its instance policy, and the margin to its operator's traits.
+// Nell is a recovery-oriented actor because of what she has and values, and
+// there is no tow-specific pricing left to change.
 
 export function createInitialTowServiceState(now = Date.now()) {
   return {
@@ -12,10 +29,15 @@ export function createInitialTowServiceState(now = Date.now()) {
       archetypeId: "recovery-service",
       controllerInstitutionId: "nell-winch",
       accounts: { operating: { id: "FRR-ACCT-01", balance: 900, committed: 0, transactions: [] } },
-      policies: { protectedCash: 250, baseTowFee: BASE_NPC_TOW_FEE, servicePriorities: ["loaded-disabled-carrier", "disabled-carrier", "stranded-pilot"] },
+      // Only what makes THIS firm different from any other recovery outfit.
+      // The cost model comes from the archetype.
+      policies: { protectedCash: 250, servicePriorities: ["loaded-disabled-carrier", "disabled-carrier", "stranded-pilot"] },
       createdAt: now,
     },
-    controller: { id: "nell-winch", name: "Nell Winch", archetypeId: "person", controls: ["first-reach-recovery"], license: { id: "TOW-FRR-001", class: "commercial-recovery", status: "active" }, authority: { mayTow: true, mayClearLanes: true, mayInvoice: true } },
+    // Nell works thin and takes the jobs nobody else will: low margin appetite,
+    // low caution. Her quote comes from these and from what a recovery actually
+    // costs her — there is no tow-specific pricing code left.
+    controller: { id: "nell-winch", name: "Nell Winch", archetypeId: "person", controls: ["first-reach-recovery"], traits: { caution: 0.3, growthBias: 0.25, urgencyBias: 0.7 }, license: { id: "TOW-FRR-001", class: "commercial-recovery", status: "active" }, authority: { mayTow: true, mayClearLanes: true, mayInvoice: true } },
     vehicle: { id: "ship:first-reach-recovery-1", name: "Blue Hook", archetypeId: "recovery-ship", controllerInstitutionId: "first-reach-recovery", referenceId: "TOW-01-BLUE-HOOK", status: "available" },
     requests: {},
     counters: { request: 0, transaction: 0 },
@@ -56,6 +78,38 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
     }
   }
 
+  // What Nell must be paid to take a recovery on. Identical in shape to how a
+  // carrier prices a freight run and how Sal prices a repair: real costs, a
+  // trait-shaped margin, cost as the hard floor, and terms that soften for a
+  // customer she has served well before.
+  function quoteRecovery(route, carrier) {
+    // Archetype first, then this firm's overrides — the standard layering.
+    const policy = resolveInstitutionPolicy({
+      archetypePolicy: INSTITUTION_ARCHETYPES[towing.institution.archetypeId]?.defaultPolicy,
+      institutionPolicy: towing.institution.policies,
+    });
+    const maximumWear = policy.maximumWear ?? 6;
+    const serviceCost = getServiceCost(state, towing.institution.id, "maintenance", policy.referenceServiceCost ?? 0);
+    const wear = route.distance * (policy.expectedWearPerDistance ?? 0);
+
+    return evaluateSupplierAsk({
+      workId: `recovery to ${route.destinationId ?? "site"}`,
+      costComponents: {
+        // Mobilising the rig costs the same however close the casualty is.
+        callout: policy.calloutCost ?? 0,
+        travel: route.distance * (policy.operatingCostPerDistance ?? 0),
+        // This run consumes wear/maximumWear of a service cycle.
+        maintenance: maximumWear > 0 ? (wear / maximumWear) * serviceCost : 0,
+      },
+      traits: getActorTraits(state, towing.institution.id),
+      policy,
+      // A carrier Nell has recovered reliably before gets better terms. This is
+      // the second place in the world that reads a relationship projection, and
+      // completion below is the second place that writes one.
+      relationship: getRelationshipProjection(state, { fromId: towing.institution.id, toId: carrier?.id }),
+    });
+  }
+
   function dispatchRequest(issue, options = {}) {
     const hauler = state.logistics.haulers[issue.npcId];
     const ship = shipById.get(issue.npcId);
@@ -67,13 +121,14 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
     const destinationSiteId = options.destinationSiteId ?? shipment?.destinationSiteId ?? REPAIR_SITE_ID;
     const route = findTransportationRoute(network, hauler.currentSiteId, destinationSiteId, carrier.policies?.transportation?.knownDestinationIds);
     if (!route) return blockRequest(issue, "no-known-recovery-route");
-    const fee = Math.round(BASE_NPC_TOW_FEE + route.distance * 0.012);
+    const quote = quoteRecovery(route, carrier);
+    const fee = quote.recommendedPrice;
     const account = carrier.accounts.operating;
-    const protectedCash = carrier.policies?.transportation?.minimumOperatingCash ?? 0;
+    const protectedCash = getActorProtectedCash(state, carrier.id);
     const securedReceivable = shipment?.payment ?? 0;
     if (account.balance + securedReceivable - (account.committed ?? 0) - fee < protectedCash) return blockRequest(issue, "carrier-cannot-protect-operating-cash", { fee, balance: account.balance, protectedCash, securedReceivable });
     const id = `TOW-REQ-${String(++towing.counters.request).padStart(4, "0")}`;
-    const request = towing.requests[id] = { id, haulerId: issue.npcId, carrierInstitutionId: carrier.id, shipInstitutionId: hauler.shipInstitutionId, issue: { ...issue }, purpose: options.purpose ?? (shipment ? "preserve-loaded-delivery" : "service-return"), parentRequestId: options.parentRequestId ?? null, originSiteId: hauler.currentSiteId, destinationSiteId, shipmentId: shipment?.id ?? null, securedReceivable, fee, committedPayment: fee, status: "dispatched", createdAt: now(), completedAt: null, followupRequestId: null };
+    const request = towing.requests[id] = { id, haulerId: issue.npcId, carrierInstitutionId: carrier.id, shipInstitutionId: hauler.shipInstitutionId, issue: { ...issue }, purpose: options.purpose ?? (shipment ? "preserve-loaded-delivery" : "service-return"), parentRequestId: options.parentRequestId ?? null, originSiteId: hauler.currentSiteId, destinationSiteId, shipmentId: shipment?.id ?? null, securedReceivable, fee, committedPayment: fee, quote: { costToServe: Math.round(quote.metrics.costToServe), floor: quote.minAcceptablePrice, reasons: quote.reasons }, status: "dispatched", createdAt: now(), completedAt: null, followupRequestId: null };
     account.committed = (account.committed ?? 0) + fee;
     towing.vehicle.status = "dispatched";
     ship.assignTow({ requestId: id, destinationSiteId, route: buildPhysicalTransportationRoute(network, route) });
@@ -108,6 +163,16 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
     }
     request.carrierTransactionId = carrierTransaction.id;
     request.providerTransactionId = providerTransaction.id;
+
+    // A recovery that landed where it was meant to, for the fee that was
+    // quoted, is a deal kept — in both directions. Nell learns this carrier
+    // pays; the carrier learns Nell turns up. Nothing reads the carrier's side
+    // yet, and recording it now is what makes it available when something does.
+    recordDeliveryOutcome(state, { fromId: towing.institution.id, toId: request.carrierInstitutionId, onTime: true, complete: true, at: now() });
+    recordDeliveryOutcome(state, { fromId: request.carrierInstitutionId, toId: towing.institution.id, onTime: true, complete: true, at: now() });
+    // What this recovery actually cost the carrier, so its own freight asks
+    // carry the risk of breaking down instead of pretending recovery is free.
+    recordServiceCost(state, { institutionId: request.carrierInstitutionId, serviceType: "recovery", price: request.fee, at: now() });
     return true;
   }
 

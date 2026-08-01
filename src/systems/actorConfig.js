@@ -37,7 +37,11 @@ export function findActorRecord(state, actorId) {
   const population = state.population?.populations?.[actorId];
   if (population) return population;
 
-  const tow = state.towService;
+  // `towing`, not `towService` — the module is named one thing and its state
+  // key another. Getting this wrong did not fail; it silently handed back the
+  // framework default traits, which is exactly how a misconfigured actor hides.
+  // The coverage test below `every seeded actor resolves` is what catches it.
+  const tow = state.towing;
   if (tow?.institution?.id === actorId) return tow.institution;
   if (tow?.controller?.id === actorId) return tow.controller;
 

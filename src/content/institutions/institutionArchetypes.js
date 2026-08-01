@@ -31,6 +31,20 @@ export const INSTITUTION_ARCHETYPES = Object.freeze({
       protectedCash: 2500,
       priorityWeights: { routine: 10, urgent: 65, emergency: 100 },
       purposeWeights: { "preserve-loaded-delivery": 50, "service-return": 35, "stranded-pilot": 40 },
+      // What recovery COSTS anyone who does it, as opposed to what this
+      // particular firm charges. A second recovery outfit inherits this and
+      // differs only by its instance policy and its operator's temperament —
+      // which is the whole claim an archetype makes.
+      //
+      // A callout is real: mobilising a rig costs the same whether the casualty
+      // is close or far. The distance terms scale the rest, and maintenance is
+      // amortized against what a service cycle actually costs, so recovery
+      // reprices itself when repair prices move instead of being hand-tuned.
+      calloutCost: 200,
+      operatingCostPerDistance: 0.05,
+      expectedWearPerDistance: 0.0002,
+      maximumWear: 6,
+      referenceServiceCost: 1800,
     },
     recipes: [],
   }),
