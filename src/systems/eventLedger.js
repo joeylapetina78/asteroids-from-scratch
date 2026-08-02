@@ -600,6 +600,9 @@ function getDefaultMessage(type, payload) {
   if (type === "npc.destroyed") {
     return `Destroyed ${payload.npcName ?? payload.npcType ?? "NPC ship"}`;
   }
+  if (type === "wreck.created") {
+    return `${payload.shipName ?? "Ship"} became titled wreckage owned by ${payload.ownerInstitutionId ?? "an unestablished party"}`;
+  }
 
   if (type === "npc.enteredViewport") {
     return `${payload.npcName ?? "NPC ship"} entered view`;

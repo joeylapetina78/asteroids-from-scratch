@@ -1,6 +1,6 @@
-import { createShipPaperworkInspectionReport } from "./paperworkInspections.js?v=fresh-20260801-2226-7cf73ef";
-import { getRegistryEntityIdForSite, hasRegistryStatus } from "./entityRegistry.js?v=fresh-20260801-2226-7cf73ef";
-import { PUBLIC_IDENTITY_KIND } from "./publicIdentity.js?v=fresh-20260801-2226-7cf73ef";
+import { createShipPaperworkInspectionReport } from "./paperworkInspections.js?v=fresh-20260801-2238-a9d14a7";
+import { getRegistryEntityIdForSite, hasRegistryStatus } from "./entityRegistry.js?v=fresh-20260801-2238-a9d14a7";
+import { PUBLIC_IDENTITY_KIND } from "./publicIdentity.js?v=fresh-20260801-2238-a9d14a7";
 
 export function inspectPublicIdentity(state, { identity, inspector = null, site = null } = {}) {
   if (!identity) {
@@ -36,15 +36,21 @@ export function inspectPublicIdentity(state, { identity, inspector = null, site 
     return identityResult;
   }
 
-  if (identity.kind === PUBLIC_IDENTITY_KIND.ROUTE_HAULER) {
+  if ([PUBLIC_IDENTITY_KIND.ROUTE_HAULER, PUBLIC_IDENTITY_KIND.COMMERCIAL_CRAFT].includes(identity.kind)) {
     const isKnownToHub = !site?.id || identity.registeredHubIds.includes(site.id);
+    const reasons = [];
+    if (!identity.shipVin) reasons.push("missing-vin");
+    if (!identity.pilotLicenseId || identity.operatingLicenseStatus !== "active") reasons.push("missing-or-inactive-operating-license");
+    if (!identity.titleId || !identity.ownerInstitutionId || identity.titleStatus !== "active") reasons.push("missing-or-inactive-title");
+    if (!identity.registrationId || identity.registrationStatus !== "active") reasons.push("missing-or-inactive-registration");
+    if (!isKnownToHub) reasons.push("craft-not-registered-at-hub");
 
     return createInspectionResult({
       identity,
       inspector,
       site,
-      status: isKnownToHub ? "cleared" : "flagged",
-      reasons: isKnownToHub ? [] : ["hauler-not-registered-at-hub"],
+      status: reasons.length === 0 ? "cleared" : "flagged",
+      reasons,
       paperworkReport: null,
     });
   }
@@ -86,6 +92,10 @@ function createInspectionResult({ identity, inspector, site, status, reasons, pa
     pilotName: identity?.pilotName ?? null,
     shipVin: identity?.shipVin ?? null,
     transponderStatus: identity?.transponderStatus ?? "none",
+    ownerInstitutionId: identity?.ownerInstitutionId ?? null,
+    titleId: identity?.titleId ?? null,
+    registrationId: identity?.registrationId ?? null,
+    authorizedActivities: identity?.authorizedActivities ?? [],
     paperworkReport,
   };
 }

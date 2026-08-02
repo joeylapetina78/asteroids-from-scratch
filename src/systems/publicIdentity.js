@@ -1,9 +1,10 @@
-import { getPilotLicense, getPilotName } from "./legalRecords.js?v=fresh-20260801-2226-7cf73ef";
-import { getShipAssetId } from "./worldRecords.js?v=fresh-20260801-2226-7cf73ef";
+import { getPilotLicense, getPilotName } from "./legalRecords.js?v=fresh-20260801-2238-a9d14a7";
+import { getShipAssetId } from "./worldRecords.js?v=fresh-20260801-2238-a9d14a7";
 
 export const PUBLIC_IDENTITY_KIND = Object.freeze({
   CONTROLLED_SHIP: "controlled-ship",
   ROUTE_HAULER: "route-hauler",
+  COMMERCIAL_CRAFT: "commercial-craft",
   UNKNOWN: "unknown",
 });
 
@@ -27,7 +28,7 @@ export function createNpcShipPublicIdentity(ship) {
   const shipVin = ship.publicIdentity?.shipVin ?? `NPC-${ship.id.toUpperCase()}`;
 
   return {
-    kind: PUBLIC_IDENTITY_KIND.ROUTE_HAULER,
+    kind: ship.publicIdentity?.kind ?? PUBLIC_IDENTITY_KIND.ROUTE_HAULER,
     entityId: getShipAssetId(shipVin),
     pilotEntityId: ship.publicIdentity?.pilotEntityId ?? `person:${ship.id}-operator`,
     pilotName: ship.publicIdentity?.pilotName ?? `${ship.name} Operator`,
@@ -37,5 +38,36 @@ export function createNpcShipPublicIdentity(ship) {
     transponderStatus: ship.publicIdentity?.transponderStatus ?? "public",
     registeredHubIds: ship.publicIdentity?.registeredHubIds ?? [],
     manifestStatus: ship.publicIdentity?.manifestStatus ?? "routine-cargo",
+    ownerInstitutionId: ship.publicIdentity?.ownerInstitutionId ?? null,
+    titleId: ship.publicIdentity?.titleId ?? null,
+    titleStatus: ship.publicIdentity?.titleStatus ?? "unknown",
+    registrationId: ship.publicIdentity?.registrationId ?? null,
+    registrationStatus: ship.publicIdentity?.registrationStatus ?? "unknown",
+    operatingLicenseClass: ship.publicIdentity?.operatingLicenseClass ?? null,
+    operatingLicenseStatus: ship.publicIdentity?.operatingLicenseStatus ?? "unknown",
+    authorizedActivities: ship.publicIdentity?.authorizedActivities ?? [],
+  };
+}
+
+export function createCommercialCraftPublicIdentity({ ship, owner, operator, registeredHubIds = [], authorizedActivities = [] }) {
+  return {
+    kind: PUBLIC_IDENTITY_KIND.COMMERCIAL_CRAFT,
+    entityId: getShipAssetId(ship.referenceId),
+    pilotEntityId: operator.id,
+    pilotName: operator.name,
+    pilotLicenseId: operator.license?.id ?? null,
+    shipVin: ship.referenceId,
+    vinPlateAttached: Boolean(ship.referenceId),
+    transponderStatus: "public",
+    registeredHubIds: [...registeredHubIds],
+    manifestStatus: "routine-cargo",
+    ownerInstitutionId: owner.id,
+    titleId: `TITLE-${ship.referenceId}`,
+    titleStatus: "active",
+    registrationId: `REG-${ship.referenceId}`,
+    registrationStatus: "active",
+    operatingLicenseClass: operator.license?.class ?? null,
+    operatingLicenseStatus: operator.license?.status ?? "missing",
+    authorizedActivities: [...authorizedActivities],
   };
 }
