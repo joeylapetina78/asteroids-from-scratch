@@ -2,9 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
-import { evaluateProtectionThreat, closeProtectionRequestsForThreat, PROTECTION_REQUEST_STATUS } from "../src/systems/protectionPlanning.js";
+import { evaluateProtectionThreat, closeProtectionRequestsForThreat, reviewProtectionRequests, PROTECTION_REQUEST_STATUS } from "../src/systems/protectionPlanning.js";
 import { CONTRACT_KIND, CONTRACT_STATE, listContracts } from "../src/systems/contractBoard.js";
-import { completeProtectionContract, failProtectionContract, finishProtectionReturn, startProtectionContract } from "../src/systems/protectionProviders.js";
+import { completeProtectionContract, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "../src/systems/protectionProviders.js";
+import { completeInternalProtectionResponse, failInternalProtectionResponse, finishInternalProtectionReturn, servicePatrolCraft, startInternalProtectionResponse } from "../src/systems/patrolOperations.js";
 import { listInspectableActors } from "../src/systems/actorInspector.js";
 
 const sites = [
@@ -162,4 +163,193 @@ test("destroying the contracted craft releases the buyer without paying the prov
   assert.equal(buyer.committed, 0);
   assert.equal(provider.institution.accounts.operating.balance, providerBefore);
   assert.equal(provider.craft.status, "destroyed");
+});
+
+// ── a settlement covering a threat with its OWN craft ──────────────────────
+//
+// `covered-internally` used to be a promise with no follow-through: the request
+// named the hub's craft, nothing dispatched it, the craft never left the dock,
+// and the claim blocked the site from covering anything else for the rest of
+// the run. These lock the whole lifecycle down.
+
+test("a hub covering a threat itself actually launches, clears it, and comes home", () => {
+  const value = state();
+  const [request] = evaluateProtectionThreat(value, sites, { id: "rift:14", position: { x: 100, y: 0 }, enemyCount: 8, waveCount: 2 }, 200);
+  const craft = value.patrolOperations["yard-exchange"].craft;
+  const treasuryBefore = value.logistics.institutions["yard-exchange"].accounts.operating.balance;
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.INTERNAL);
+  assert.equal(craft.status, "available");
+
+  assert.ok(startInternalProtectionResponse(value, request, 210), "the claim can be acted on");
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.ACTIVE);
+  assert.equal(request.dispatchedAt, 210);
+  assert.equal(craft.status, "deployed", "the craft is no longer sitting at the dock");
+
+  completeInternalProtectionResponse(value, request, { hull: 128, now: 220 });
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.FULFILLED);
+  assert.equal(craft.status, "returning");
+
+  finishInternalProtectionReturn(value, request, 128, 230);
+  assert.equal(craft.status, "available");
+  assert.equal(craft.hull, 128, "it comes home carrying what the fight cost it");
+  assert.equal(value.logistics.institutions["yard-exchange"].accounts.operating.balance, treasuryBefore,
+    "using its own craft moves no money");
+});
+
+test("a hub cannot dispatch a craft it does not have available", () => {
+  const value = state();
+  const [request] = evaluateProtectionThreat(value, sites, { id: "rift:15", position: { x: 100, y: 0 }, enemyCount: 8, waveCount: 2 }, 240);
+  value.patrolOperations["yard-exchange"].craft.status = "deployed";
+  assert.equal(startInternalProtectionResponse(value, request, 250), null);
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.INTERNAL, "and the claim is not silently marked as flying");
+});
+
+test("losing the watch craft fails the response instead of leaving the hub 'covered' by a wreck", () => {
+  const value = state();
+  const [request] = evaluateProtectionThreat(value, sites, { id: "rift:16", position: { x: 100, y: 0 }, enemyCount: 8, waveCount: 2 }, 260);
+  startInternalProtectionResponse(value, request, 261);
+  failInternalProtectionResponse(value, request, { hull: 0, reason: "craft-destroyed", now: 270 });
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.FAILED);
+  assert.equal(value.patrolOperations["yard-exchange"].craft.status, "destroyed");
+
+  // The site's own-capacity lock is gone, so the next threat can go to market.
+  const next = evaluateProtectionThreat(value, sites, { id: "rift:17", position: { x: 120, y: 0 }, enemyCount: 8, waveCount: 2 }, 280)
+    .find((entry) => entry.siteId === "yard-exchange");
+  assert.notEqual(next.status, PROTECTION_REQUEST_STATUS.INTERNAL);
+});
+
+// ── open requests stay alive ───────────────────────────────────────────────
+
+test("an offer nobody could take goes back to the market instead of expiring on one try", () => {
+  const value = state();
+  // The only security firm is already committed, so the second Ledge threat
+  // finds no bidder at all.
+  evaluateProtectionThreat(value, sites, { id: "rift:18", position: { x: 20100, y: 0 }, enemyCount: 8, waveCount: 2 }, 300);
+  const stranded = evaluateProtectionThreat(value, sites, { id: "rift:19", position: { x: 20200, y: 0 }, enemyCount: 8, waveCount: 2 }, 301)
+    .find((entry) => entry.siteId === "the-ledge");
+  assert.equal(stranded.status, PROTECTION_REQUEST_STATUS.OFFERED);
+  assert.equal(stranded.providerInstitutionId, null);
+
+  // The first threat resolves and frees the craft.
+  closeProtectionRequestsForThreat(value, "rift:18", 310);
+  assert.equal(value.protectionProviders["sable-meridian-security"].craft.status, "available");
+
+  // Too soon to re-offer; then the interval elapses and it is taken.
+  reviewProtectionRequests(value, sites, ["rift:19"], 315);
+  assert.equal(stranded.status, PROTECTION_REQUEST_STATUS.OFFERED, "it is not re-auctioned every frame");
+  reviewProtectionRequests(value, sites, ["rift:19"], 301 + 21_000);
+  assert.equal(stranded.status, PROTECTION_REQUEST_STATUS.CONTRACTED);
+  assert.equal(stranded.providerInstitutionId, "sable-meridian-security");
+  assert.ok(stranded.offerAttempts >= 2);
+});
+
+test("coverage a hub claimed but never launched lapses to the market", () => {
+  const value = state();
+  const [request] = evaluateProtectionThreat(value, sites, { id: "rift:20", position: { x: 100, y: 0 }, enemyCount: 8, waveCount: 2 }, 400);
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.INTERNAL);
+
+  reviewProtectionRequests(value, sites, ["rift:20"], 400 + 10_000);
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.INTERNAL, "a hub gets a fair chance to launch first");
+
+  reviewProtectionRequests(value, sites, ["rift:20"], 400 + 46_000);
+  assert.notEqual(request.status, PROTECTION_REQUEST_STATUS.INTERNAL);
+  assert.equal(request.reason, "own-craft-could-not-launch");
+});
+
+test("a hub takes its lapsed coverage back once its own craft is free again", () => {
+  const value = state();
+  const [request] = evaluateProtectionThreat(value, sites, { id: "rift:20b", position: { x: 100, y: 0 }, enemyCount: 8, waveCount: 2 }, 420);
+  // The hub's craft is busy elsewhere and the only security firm is out on a
+  // job, so the claim lapses to a market with nobody in it.
+  value.patrolOperations["yard-exchange"].craft.status = "deployed";
+  value.protectionProviders["sable-meridian-security"].craft.status = "deployed";
+  reviewProtectionRequests(value, sites, ["rift:20b"], 420 + 46_000);
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.OFFERED);
+  assert.equal(request.reason, "own-craft-could-not-launch");
+
+  // It comes home. The lapse must not be a one-way door — otherwise the request
+  // waits on a market that may be empty while the hub's craft sits on station.
+  value.patrolOperations["yard-exchange"].craft.status = "available";
+  reviewProtectionRequests(value, sites, ["rift:20b"], 420 + 92_000);
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.INTERNAL);
+  assert.equal(request.reason, "own-craft-free-again");
+  assert.equal(request.craftId, "patrol-craft:yard-exchange");
+});
+
+test("a lapsed request is not reclaimed while the site is covering something else", () => {
+  const value = state();
+  const [lapsing] = evaluateProtectionThreat(value, sites, { id: "rift:20c", position: { x: 100, y: 0 }, enemyCount: 8, waveCount: 2 }, 440);
+  value.patrolOperations["yard-exchange"].craft.status = "deployed";
+  value.protectionProviders["sable-meridian-security"].craft.status = "deployed";
+  reviewProtectionRequests(value, sites, ["rift:20c"], 440 + 46_000);
+  assert.equal(lapsing.status, PROTECTION_REQUEST_STATUS.OFFERED);
+
+  // A newer threat is now the one the hub's own craft is covering.
+  value.patrolOperations["yard-exchange"].craft.status = "available";
+  const newer = evaluateProtectionThreat(value, sites, { id: "rift:20d", position: { x: 130, y: 0 }, enemyCount: 8, waveCount: 2 }, 440 + 47_000)
+    .find((entry) => entry.siteId === "yard-exchange");
+  assert.equal(newer.status, PROTECTION_REQUEST_STATUS.INTERNAL);
+
+  reviewProtectionRequests(value, sites, ["rift:20c", "rift:20d"], 440 + 92_000);
+  assert.equal(lapsing.status, PROTECTION_REQUEST_STATUS.OFFERED,
+    "one craft cannot be promised to two threats at once");
+});
+
+test("a request whose threat is already gone does not stay open forever", () => {
+  const value = state();
+  const [request] = evaluateProtectionThreat(value, sites, { id: "rift:21", position: { x: 100, y: 0 }, enemyCount: 8, waveCount: 2 }, 500);
+  reviewProtectionRequests(value, sites, [], 510);
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.CLOSED);
+  assert.equal(request.closeReason, "threat-no-longer-present");
+});
+
+// ── a loss is not the end of the company ───────────────────────────────────
+
+test("a destroyed security craft is replaced from the firm's own money", () => {
+  const value = state();
+  const request = evaluateProtectionThreat(value, sites, { id: "rift:22", position: { x: 20100, y: 0 }, enemyCount: 8, waveCount: 2 }, 600)
+    .find((entry) => entry.siteId === "the-ledge");
+  const provider = value.protectionProviders["sable-meridian-security"];
+  startProtectionContract(value, request.id, 601);
+  failProtectionContract(value, request.id, { hull: 0, now: 610 });
+  const cashBefore = provider.institution.accounts.operating.balance;
+
+  serviceProtectionProviders(value, 620);
+  assert.equal(provider.craft.status, "destroyed", "the yard does not turn one around instantly");
+
+  serviceProtectionProviders(value, 610 + 181_000);
+  assert.equal(provider.craft.status, "available");
+  assert.equal(provider.craft.hull, provider.craft.maxHull);
+  assert.equal(provider.craft.activeRequestId, null);
+  assert.ok(provider.institution.accounts.operating.balance < cashBefore, "and it paid for the hull");
+});
+
+test("a wreck stops holding the contract that killed it", () => {
+  const value = state();
+  const request = evaluateProtectionThreat(value, sites, { id: "rift:23", position: { x: 20100, y: 0 }, enemyCount: 8, waveCount: 2 }, 700)
+    .find((entry) => entry.siteId === "the-ledge");
+  const provider = value.protectionProviders["sable-meridian-security"];
+  startProtectionContract(value, request.id, 701);
+  provider.craft.hull = 0;
+  closeProtectionRequestsForThreat(value, "rift:23", 710);
+  assert.equal(provider.craft.status, "destroyed");
+  assert.equal(provider.craft.activeRequestId, null,
+    "otherwise finishProtectionReturn can never clear it and the firm is welded to a closed contract");
+});
+
+test("a destroyed hub watch craft is replaced from the settlement treasury", () => {
+  const value = state();
+  const [request] = evaluateProtectionThreat(value, sites, { id: "rift:24", position: { x: 100, y: 0 }, enemyCount: 8, waveCount: 2 }, 800);
+  startInternalProtectionResponse(value, request, 801);
+  failInternalProtectionResponse(value, request, { hull: 0, now: 810 });
+  const treasury = value.logistics.institutions["yard-exchange"].accounts.operating;
+  const before = treasury.balance;
+
+  servicePatrolCraft(value, 820);
+  assert.equal(value.patrolOperations["yard-exchange"].craft.status, "destroyed");
+
+  servicePatrolCraft(value, 810 + 241_000);
+  assert.equal(value.patrolOperations["yard-exchange"].craft.status, "available");
+  assert.equal(value.patrolOperations["yard-exchange"].craft.hull, 150);
+  assert.ok(treasury.balance < before, "the settlement paid for its own watch");
 });

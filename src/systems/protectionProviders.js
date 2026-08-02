@@ -1,7 +1,7 @@
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js";
-import { getRelationshipProjection } from "./relationshipProjections.js";
-import { evaluateSupplierAsk, getSpendable } from "./valuation.js";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260802-1836-3c7568a";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260802-1836-3c7568a";
+import { evaluateSupplierAsk, getSpendable } from "./valuation.js?v=fresh-20260802-1836-3c7568a";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1836-3c7568a";
 
 const PROVIDER_SEEDS = Object.freeze([
   {
@@ -163,7 +163,10 @@ export function releaseProtectionContract(state, request) {
   const buyer = state.logistics?.institutions?.[request.issuerInstitutionId];
   if (provider?.craft?.activeRequestId === request.id) {
     provider.craft.status = provider.craft.hull <= 0 ? "destroyed" : (request.dispatchedAt ? "returning" : "available");
-    if (!request.dispatchedAt) provider.craft.activeRequestId = null;
+    // Only a craft still flying home stays bound to the request. A wreck was
+    // holding its `activeRequestId` forever, which meant `finishProtectionReturn`
+    // could never clear it and the provider was welded to a closed contract.
+    if (!request.dispatchedAt || provider.craft.hull <= 0) provider.craft.activeRequestId = null;
     recordProtectionCraftDiagnostic(state, provider, Date.now(), {
       summary: request.dispatchedAt ? `Returning after ${request.siteId} resolved the threat` : `Available at ${provider.institution.siteId}`,
       locationSiteId: request.dispatchedAt ? request.siteId : provider.institution.siteId,
@@ -259,6 +262,81 @@ export function finishProtectionReturn(state, requestId, hull, now = Date.now())
     refs: { contractIds: [], targetIds: [] },
   });
   return provider.craft;
+}
+
+// What it costs a security firm to put a hull back in the sky, and how long the
+// yard takes over it. A loss has to hurt and take time; it must not be the end
+// of the company — so this sits below what the seeded firm can raise from its
+// protected-cash headroom (3200 balance less 700 protected), or the first loss
+// would still be permanent, just for a different reason. Priced in this
+// subsystem's own scale, which predates the 10x redenomination along with
+// `mobilizationCost` and `riskCostAtMaximum`.
+const CRAFT_REPLACEMENT_COST = 1800;
+const CRAFT_REPLACEMENT_SECONDS = 180;
+const CRAFT_REPAIR_COST_PER_POINT = 9;
+const CRAFT_REPAIR_SECONDS = 45;
+
+// A destroyed provider craft used to be the permanent end of the security
+// market: one loss and every future threat was offered to a wreck. A firm now
+// funds its own replacement out of operating cash, the way any other operator
+// in this world replaces a hull, and a damaged craft is patched between jobs.
+export function serviceProtectionProviders(state, now = Date.now()) {
+  const providers = ensureProtectionProviders(state, now);
+  const serviced = [];
+  Object.values(providers).forEach((provider) => {
+    const { craft, institution } = provider;
+    const account = institution.accounts?.operating;
+    if (!craft || !account) return;
+
+    if (craft.status === "destroyed") {
+      craft.replacementStartedAt ??= craft.destroyedAt ?? now;
+      const spendable = getSpendable(account, institution.policies);
+      if (spendable < CRAFT_REPLACEMENT_COST) {
+        recordProtectionCraftDiagnostic(state, provider, now, {
+          summary: `Lost its craft and cannot fund the ${CRAFT_REPLACEMENT_COST} cr replacement`,
+          waitingFor: `${Math.max(0, Math.round(CRAFT_REPLACEMENT_COST - spendable))} more credits`,
+          wakeOn: ["protection.contractPaid"],
+        });
+        return;
+      }
+      if (now - craft.replacementStartedAt < CRAFT_REPLACEMENT_SECONDS * 1000) return;
+      account.balance -= CRAFT_REPLACEMENT_COST;
+      account.transactions?.push({ id: `PSC-HULL-${now}`, at: now, type: "capital-expense", amount: -CRAFT_REPLACEMENT_COST, balance: account.balance, referenceId: craft.id });
+      craft.hull = craft.maxHull;
+      craft.status = "available";
+      craft.siteId = institution.siteId;
+      craft.activeRequestId = null;
+      craft.destroyedAt = null;
+      craft.replacementStartedAt = null;
+      craft.replacementCount = (craft.replacementCount ?? 0) + 1;
+      serviced.push({ providerInstitutionId: institution.id, kind: "replacement" });
+      recordProtectionCraftDiagnostic(state, provider, now, { summary: `Replacement hull commissioned; available at ${institution.siteId}` });
+      state.ledger?.recordEvent("protection.craftReplaced", {
+        providerInstitutionId: institution.id, craftId: craft.id, cost: CRAFT_REPLACEMENT_COST,
+        replacementCount: craft.replacementCount, accountBalance: Math.round(account.balance),
+      }, { visible: true, message: `${institution.name} commissioned a replacement for ${craft.name} for ${CRAFT_REPLACEMENT_COST} cr.` });
+      return;
+    }
+
+    // Between jobs, a battered craft gets patched up so the next quote is not
+    // permanently loaded with the last fight's damage premium.
+    if (craft.status !== "available" || craft.hull >= craft.maxHull) return;
+    craft.repairStartedAt ??= now;
+    if (now - craft.repairStartedAt < CRAFT_REPAIR_SECONDS * 1000) return;
+    const missing = craft.maxHull - craft.hull;
+    const cost = Math.ceil(missing * CRAFT_REPAIR_COST_PER_POINT);
+    if (getSpendable(account, institution.policies) < cost) return;
+    account.balance -= cost;
+    account.transactions?.push({ id: `PSC-REP-${now}`, at: now, type: "maintenance-expense", amount: -cost, balance: account.balance, referenceId: craft.id });
+    craft.hull = craft.maxHull;
+    craft.repairStartedAt = null;
+    serviced.push({ providerInstitutionId: institution.id, kind: "repair" });
+    recordProtectionCraftDiagnostic(state, provider, now, { summary: `Repaired and available at ${institution.siteId}` });
+    state.ledger?.recordEvent("protection.craftRepaired", {
+      providerInstitutionId: institution.id, craftId: craft.id, cost, hull: craft.hull,
+    }, { visible: false });
+  });
+  return serviced;
 }
 
 export function listProtectionProviders(state) {

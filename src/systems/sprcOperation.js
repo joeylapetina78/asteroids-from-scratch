@@ -1,16 +1,16 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260802-1504-d6b41cd";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260802-1504-d6b41cd";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260802-1504-d6b41cd";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260802-1504-d6b41cd";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260802-1504-d6b41cd";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260802-1504-d6b41cd";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260802-1504-d6b41cd";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260802-1504-d6b41cd";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260802-1504-d6b41cd";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1504-d6b41cd";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1504-d6b41cd";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260802-1504-d6b41cd";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260802-1504-d6b41cd";
+import { depositCredits } from "./accounts.js?v=fresh-20260802-1836-3c7568a";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260802-1836-3c7568a";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260802-1836-3c7568a";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260802-1836-3c7568a";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260802-1836-3c7568a";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260802-1836-3c7568a";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260802-1836-3c7568a";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260802-1836-3c7568a";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260802-1836-3c7568a";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1836-3c7568a";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1836-3c7568a";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260802-1836-3c7568a";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260802-1836-3c7568a";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -55,9 +55,13 @@ export function sprcProcurementOfferSource(state, context = {}) {
         // each offer is already sized against what is still unreserved, so
         // exclusivity would starve it.
         concurrent: true,
-        reserve: () => sprcOperation.reserveProcurementAllocation({
+        // The claimant identifies itself AT RESERVATION rather than being baked
+        // in when the offer was built: one shared market round values the same
+        // offer for every miner's ships, so "who is asking" is no longer a
+        // property of the listing.
+        reserve: (claim = {}) => sprcOperation.reserveProcurementAllocation({
           contractId: order.contractId,
-          supplierInstitutionId: context.minerInstitutionId,
+          supplierInstitutionId: claim.minerInstitutionId ?? context.minerInstitutionId,
           equivalentUnits: equivalentAmount,
         }),
         kind: "sprc",

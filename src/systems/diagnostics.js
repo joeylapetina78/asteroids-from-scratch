@@ -43,6 +43,7 @@ export const BLOCKER_KIND = Object.freeze({
   AWAITING_PRODUCTION: "awaiting-production",
   UNFILLED_ORDER: "unfilled-order",
   ORDER_FULLY_ALLOCATED: "order-fully-allocated",
+  OUTBID: "outbid",
   NO_ROUTE: "no-route-to-destination",
   ALL_SUPPLIERS_COMMITTED: "all-suppliers-committed",
   UNPAID_SERVICE_DEBT: "unpaid-service-debt",

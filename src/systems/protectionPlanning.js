@@ -1,6 +1,6 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js";
-import { ensurePatrolOperations } from "./patrolOperations.js";
-import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260802-1836-3c7568a";
+import { ensurePatrolOperations } from "./patrolOperations.js?v=fresh-20260802-1836-3c7568a";
+import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js?v=fresh-20260802-1836-3c7568a";
 
 export const PROTECTION_REQUEST_STATUS = Object.freeze({
   INTERNAL: "covered-internally",
@@ -14,6 +14,12 @@ export const PROTECTION_REQUEST_STATUS = Object.freeze({
 });
 
 const clamp01 = (value) => Math.max(0, Math.min(1, value));
+
+// How often an unanswered offer goes back out to the security market, and how
+// long a settlement gets to actually launch its own craft before the claim is
+// treated as one it cannot honour.
+const REOFFER_INTERVAL_MS = 20 * 1000;
+const INTERNAL_DISPATCH_GRACE_MS = 45 * 1000;
 
 export function ensureProtectionPlanning(state) {
   state.protectionPlanning ??= { requests: {}, nextRequestId: 1 };
@@ -87,6 +93,10 @@ export function evaluateProtectionThreat(state, sites, threat, now = Date.now())
       providerInstitutionId: response.status === PROTECTION_REQUEST_STATUS.INTERNAL ? patrols[site.id].institution.id : null,
       craftId: response.status === PROTECTION_REQUEST_STATUS.INTERNAL ? ownedCraft.id : null,
       createdAt: now, closedAt: null,
+      // When this last went to the market, so an unanswered offer can be put
+      // back out rather than expiring silently on the one attempt.
+      lastOfferedAt: response.status === PROTECTION_REQUEST_STATUS.OFFERED ? now : null,
+      offerAttempts: response.status === PROTECTION_REQUEST_STATUS.OFFERED ? 1 : 0,
     };
     planning.requests[id] = request;
     created.push(request);
@@ -99,6 +109,103 @@ export function evaluateProtectionThreat(state, sites, threat, now = Date.now())
   });
   allocateProtectionProviders(state, sites, created, now);
   return created;
+}
+
+// Open requests are alive, not filed.
+//
+// `evaluateProtectionThreat` ran the market EXACTLY ONCE, at the moment the
+// threat appeared, over the requests it had just created. If no provider could
+// take the job in that instant — the only security firm's craft was a wreck,
+// say — the request sat at `offered` with `providerInstitutionId: null` for the
+// rest of the run while the settlement kept credits earmarked for it. And an
+// `covered-internally` claim that never launched blocked its own site from
+// covering anything else, because one internal request per site is the rule.
+//
+// This is the periodic pass that makes both recoverable: stale offers go back
+// to the market, undeliverable internal claims are demoted to offers, and
+// requests whose threat is gone are closed.
+export function reviewProtectionRequests(state, sites, activeThreatIds, now = Date.now()) {
+  const planning = ensureProtectionPlanning(state);
+  const live = activeThreatIds instanceof Set ? activeThreatIds : new Set(activeThreatIds ?? []);
+  const open = [PROTECTION_REQUEST_STATUS.OFFERED, PROTECTION_REQUEST_STATUS.INTERNAL, PROTECTION_REQUEST_STATUS.CONTRACTED];
+  const reoffered = [];
+
+  Object.values(planning.requests).forEach((request) => {
+    if (!open.includes(request.status)) return;
+
+    // The threat is gone and nobody closed this out.
+    if (!live.has(request.threatId)) {
+      request.previousStatus = request.status;
+      releaseProtectionContract(state, request);
+      request.status = PROTECTION_REQUEST_STATUS.CLOSED;
+      request.closedAt = now;
+      request.closeReason = "threat-no-longer-present";
+      return;
+    }
+
+    // A settlement said it would handle this itself and then did not launch.
+    // Rather than hold the site's own capacity hostage indefinitely, it admits
+    // it cannot cover this one and puts it out to the market.
+    if (request.status === PROTECTION_REQUEST_STATUS.INTERNAL
+      && !request.dispatchedAt
+      && now - request.createdAt >= INTERNAL_DISPATCH_GRACE_MS
+      && request.maximumPayment > 0) {
+      request.status = PROTECTION_REQUEST_STATUS.OFFERED;
+      request.reason = "own-craft-could-not-launch";
+      request.providerInstitutionId = null;
+      request.craftId = null;
+      request.lastOfferedAt = now;
+      request.offerAttempts = (request.offerAttempts ?? 0) + 1;
+      reoffered.push(request);
+      state.ledger?.recordEvent("protection.coverageLapsed", {
+        requestId: request.id, institutionId: request.issuerInstitutionId,
+        siteId: request.siteId, threatId: request.threatId, waitedMs: now - request.createdAt,
+      }, { visible: true });
+      return;
+    }
+
+    if (request.status !== PROTECTION_REQUEST_STATUS.OFFERED) return;
+
+    // ...and it can take that coverage back once its craft is free again.
+    // Without this the lapse is a one-way door: the request would sit waiting on
+    // a market that may have nobody in it, while the settlement's own craft sat
+    // on station a short flight from the threat. Only a request that WAS
+    // internal can return to it — the policy already judged that this threat at
+    // this severity was one the hub should handle itself.
+    if (request.reason === "own-craft-could-not-launch" && !request.dispatchedAt) {
+      const craft = ensurePatrolOperations(state, now)[request.siteId]?.craft;
+      const siteAlreadyCovering = Object.values(planning.requests).some((other) => other !== request
+        && other.siteId === request.siteId
+        && other.status === PROTECTION_REQUEST_STATUS.INTERNAL);
+      if (!siteAlreadyCovering && craft?.status === "available" && craft.hull > 0) {
+        request.status = PROTECTION_REQUEST_STATUS.INTERNAL;
+        request.reason = "own-craft-free-again";
+        request.providerInstitutionId = `patrol:${request.siteId}`;
+        request.craftId = craft.id;
+        state.ledger?.recordEvent("protection.coverageReclaimed", {
+          requestId: request.id, institutionId: request.issuerInstitutionId,
+          siteId: request.siteId, threatId: request.threatId, craftId: craft.id,
+        }, { visible: true });
+        return;
+      }
+    }
+
+    if (now - (request.lastOfferedAt ?? request.createdAt) < REOFFER_INTERVAL_MS) return;
+    request.lastOfferedAt = now;
+    request.offerAttempts = (request.offerAttempts ?? 0) + 1;
+    reoffered.push(request);
+  });
+
+  if (reoffered.length === 0) return [];
+  const accepted = allocateProtectionProviders(state, sites, reoffered, now);
+  accepted.forEach((request) => {
+    state.ledger?.recordEvent("protection.reofferAccepted", {
+      requestId: request.id, institutionId: request.issuerInstitutionId,
+      providerInstitutionId: request.providerInstitutionId, siteId: request.siteId,
+      threatId: request.threatId, attempts: request.offerAttempts,
+    }, { visible: true });
+  });
+  return accepted;
 }
 
 export function closeProtectionRequestsForThreat(state, threatId, now = Date.now()) {

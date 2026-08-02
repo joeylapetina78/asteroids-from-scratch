@@ -1,5 +1,6 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260802-1836-3c7568a";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260802-1836-3c7568a";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1836-3c7568a";
 
 const PATROL_OPENING_BALANCE = 1800;
 
@@ -73,6 +74,153 @@ export function markPatrolCraftStatus(state, siteId, status) {
   const craft = ensurePatrolOperations(state)[siteId]?.craft;
   if (!craft) return null;
   craft.status = status;
+  recordPatrolCraftDiagnostic(state, siteId);
+  return craft;
+}
+
+export function recordPatrolCraftDiagnostic(state, siteId, now = Date.now(), patch = {}) {
+  const operation = ensurePatrolOperations(state)[siteId];
+  const craft = operation?.craft;
+  if (!craft) return null;
+  const diagnosticState = craft.status === "destroyed"
+    ? DIAGNOSTIC_STATE.DISABLED
+    : craft.status === "available"
+      ? DIAGNOSTIC_STATE.FREE
+      : DIAGNOSTIC_STATE.WORKING;
+  return recordDiagnostic(state, craft.id, {
+    actorName: craft.name,
+    actorKind: "ship",
+    controllerId: operation.institution.id,
+    state: diagnosticState,
+    summary: craft.status === "available" ? `On station at ${siteId}` : `Watch craft is ${craft.status}`,
+    locationSiteId: craft.siteId ?? siteId,
+    detail: { hull: craft.hull, maxHull: craft.maxHull, ownerInstitutionId: craft.ownerInstitutionId, referenceId: craft.referenceId },
+    ...patch,
+  }, now);
+}
+
+// ── A settlement answering a threat with its OWN craft ──────────────────────
+//
+// `covered-internally` used to be where a request went to die: the planning
+// layer named the hub's craft on it and nothing ever launched, so the watch
+// declared cover it never provided AND locked the site out of covering anything
+// else (one INTERNAL request per site is the rule). These four give that status
+// the same dispatch → engage → return → settle lifecycle the contracted path
+// has had all along.
+//
+// The difference from a contract is only who pays: nobody. A settlement using
+// its own craft moves no money, so there is no agreed payment to release and no
+// provider to credit — the cost is the hull it comes home with.
+
+export function startInternalProtectionResponse(state, request, now = Date.now()) {
+  const craft = ensurePatrolOperations(state)[request?.siteId]?.craft;
+  if (!request || request.status !== "covered-internally" || !craft || craft.status !== "available" || craft.hull <= 0) return null;
+  request.status = "active";
+  request.dispatchedAt = now;
+  craft.status = "deployed";
+  recordPatrolCraftDiagnostic(state, request.siteId, now, {
+    summary: `Responding to ${request.threatId} for ${request.siteId}`,
+    refs: { contractIds: [request.id], targetIds: [request.threatId] },
+  });
+  state.ledger?.recordEvent("protection.craftDispatched", {
+    requestId: request.id, institutionId: request.issuerInstitutionId,
+    providerInstitutionId: request.providerInstitutionId, craftId: craft.id,
+    siteId: request.siteId, threatId: request.threatId, internal: true,
+  }, { visible: true });
+  return request;
+}
+
+export function completeInternalProtectionResponse(state, request, { hull = null, now = Date.now() } = {}) {
+  const craft = ensurePatrolOperations(state)[request?.siteId]?.craft;
+  if (!request || request.status !== "active" || !craft) return null;
+  if (hull != null) craft.hull = Math.max(0, hull);
+  craft.status = "returning";
+  request.status = "fulfilled";
+  request.paidAmount = 0;
+  request.settledAt = now;
+  recordPatrolCraftDiagnostic(state, request.siteId, now, { summary: `Returning after clearing ${request.threatId}` });
+  state.ledger?.recordEvent("protection.threatCleared", {
+    requestId: request.id, institutionId: request.issuerInstitutionId, craftId: craft.id,
+    siteId: request.siteId, threatId: request.threatId, internal: true,
+  }, { visible: true });
+  return request;
+}
+
+export function failInternalProtectionResponse(state, request, { hull = 0, reason = "craft-destroyed", now = Date.now() } = {}) {
+  const craft = ensurePatrolOperations(state)[request?.siteId]?.craft;
+  if (!request || !["covered-internally", "active"].includes(request.status) || !craft) return null;
+  craft.hull = Math.max(0, hull);
+  craft.status = craft.hull > 0 ? "returning" : "destroyed";
+  request.status = "failed";
+  request.failureReason = reason;
+  request.failedAt = now;
+  recordPatrolCraftDiagnostic(state, request.siteId, now, {
+    summary: craft.hull > 0 ? `Returning after failing to hold ${request.siteId}` : `Destroyed defending ${request.siteId}`,
+  });
+  state.ledger?.recordEvent("protection.responseFailed", {
+    requestId: request.id, institutionId: request.issuerInstitutionId, craftId: craft.id,
+    siteId: request.siteId, threatId: request.threatId, reason, internal: true,
+  }, { visible: true });
+  return request;
+}
+
+// A settlement's watch craft is destroyed exactly as permanently as a security
+// firm's was: `patrol.craftDestroyed` even says so out loud ("has no available
+// patrol craft") and nothing ever brought one back. The settlement owns the
+// watch, so the settlement funds the replacement out of its own treasury —
+// bounded by the protected cash its protection policy already declares.
+const WATCH_REPLACEMENT_COST = 2400;
+const WATCH_REPLACEMENT_SECONDS = 240;
+
+export function servicePatrolCraft(state, now = Date.now()) {
+  const operations = ensurePatrolOperations(state, now);
+  const replaced = [];
+  FIRST_REACH_SETTLEMENTS.forEach((seed) => {
+    const siteId = seed.institution.siteId;
+    const craft = operations[siteId]?.craft;
+    if (!craft || craft.status !== "destroyed") return;
+    craft.replacementStartedAt ??= craft.destroyedAt ?? now;
+    const treasury = state.logistics?.institutions?.[seed.institution.id]?.accounts?.operating;
+    const protectedCash = seed.institution.protectionPolicy?.protectedCash ?? 0;
+    const spendable = Math.max(0, (treasury?.balance ?? 0) - (treasury?.committed ?? 0) - protectedCash);
+    if (!treasury || spendable < WATCH_REPLACEMENT_COST) {
+      recordPatrolCraftDiagnostic(state, siteId, now, {
+        summary: `${seed.institution.name} has no watch craft and cannot fund a ${WATCH_REPLACEMENT_COST} cr replacement`,
+        waitingFor: `${Math.max(0, Math.round(WATCH_REPLACEMENT_COST - spendable))} more credits`,
+        wakeOn: ["hub-income"],
+      });
+      return;
+    }
+    if (now - craft.replacementStartedAt < WATCH_REPLACEMENT_SECONDS * 1000) return;
+    treasury.balance -= WATCH_REPLACEMENT_COST;
+    treasury.transactions?.push({ id: `WATCH-HULL-${siteId}-${now}`, at: now, type: "capital-expense", amount: -WATCH_REPLACEMENT_COST, balance: treasury.balance, referenceId: craft.id });
+    craft.hull = craft.maxHull;
+    craft.status = "available";
+    craft.siteId = siteId;
+    craft.destroyedAt = null;
+    craft.replacementStartedAt = null;
+    craft.replacementCount = (craft.replacementCount ?? 0) + 1;
+    replaced.push(siteId);
+    recordPatrolCraftDiagnostic(state, siteId, now, { summary: `Replacement watch craft on station at ${siteId}` });
+    state.ledger?.recordEvent("patrol.craftReplaced", {
+      siteId, institutionId: seed.institution.id, craftId: craft.id, cost: WATCH_REPLACEMENT_COST,
+      replacementCount: craft.replacementCount, accountBalance: Math.round(treasury.balance),
+    }, { visible: true, message: `${seed.institution.name} commissioned a replacement watch craft for ${WATCH_REPLACEMENT_COST} cr.` });
+  });
+  return replaced;
+}
+
+export function finishInternalProtectionReturn(state, request, hull, now = Date.now()) {
+  const craft = ensurePatrolOperations(state)[request?.siteId]?.craft;
+  if (!craft || craft.hull <= 0) return null;
+  craft.hull = Math.max(0, hull);
+  craft.status = "available";
+  craft.siteId = request.siteId;
+  if (request) request.returnedAt = now;
+  recordPatrolCraftDiagnostic(state, request.siteId, now, {
+    summary: `On station at ${request.siteId}`,
+    refs: { contractIds: [], targetIds: [] },
+  });
   return craft;
 }
 

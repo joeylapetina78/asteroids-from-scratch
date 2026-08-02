@@ -1,18 +1,19 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260802-1504-d6b41cd";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260802-1504-d6b41cd";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1504-d6b41cd";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260802-1504-d6b41cd";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260802-1504-d6b41cd";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260802-1504-d6b41cd";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260802-1504-d6b41cd";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260802-1504-d6b41cd";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260802-1504-d6b41cd";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260802-1504-d6b41cd";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260802-1504-d6b41cd";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1504-d6b41cd";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260802-1504-d6b41cd";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260802-1836-3c7568a";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260802-1836-3c7568a";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1836-3c7568a";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260802-1836-3c7568a";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260802-1836-3c7568a";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260802-1836-3c7568a";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260802-1836-3c7568a";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260802-1836-3c7568a";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260802-1836-3c7568a";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260802-1836-3c7568a";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260802-1836-3c7568a";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260802-1836-3c7568a";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1836-3c7568a";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260802-1836-3c7568a";
 import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260802-1504-d6b41cd";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260802-1836-3c7568a";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -240,6 +241,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   // The settlements' demand becomes visible on the board because this operation
   // exists to serve it, not because the board knows what a settlement is.
   registerExtractionOfferSource(state, "hub-standing-orders", hubStandingOfferSource);
+  // And this company enters the shared clearing as a bidder. Which orders its
+  // ships get is decided against every other company's ships in one ranking,
+  // not by whichever operation's `update()` runs first.
+  registerExtractionMarketParticipant(state, operation.institution.id, () => listBidders());
   operation.projects ??= seed.expansionProject ? { [seed.expansionProject.id]: { ...seed.expansionProject, status: "planned", demandSince: null, approvedAt: null, completedAt: null } } : {};
   seed.workers.forEach((defaults) => {
     operation.ships[defaults.id] ??= createWorkerRecord(defaults, seed.institution.id);
@@ -288,6 +293,11 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     assessExpansion();
     assessHiring();
     publishFleetDiagnostic();
+    // Every idle ship in the world, ranked against every open offer, before
+    // this company dispatches anybody. What comes back for its own ships was
+    // decided against the competition's bids, so nothing below depends on the
+    // order these operations update.
+    const round = clearExtractionMarket(state, offerContext());
     workers.forEach((worker) => {
       const shipRecord = operation.ships[worker.id];
       shipRecord.position = { x: worker.position.x, y: worker.position.y };
@@ -297,8 +307,9 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       // Non-preemptive by design: a worker keeps its commitment until the
       // delivery completes. Only idle workers reconsider.
       if (worker.assignment) return;
-      const order = chooseOrder(worker);
-      if (!order) { publishIdleDecision(shipRecord); return; }
+      const won = round.assignments[worker.id] ?? null;
+      const order = won?.offer ?? null;
+      if (!order) { publishIdleDecision(shipRecord, round); return; }
       const destination = sites.get(order.siteId)?.position;
       if (!destination) {
         recordWorkerIdentity(worker, shipRecord);
@@ -334,7 +345,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       // refusal here means somebody else took them between valuing and
       // committing — not that this kind of order is special.
       if (order.reserve) {
-        const reservation = order.reserve();
+        const reservation = order.reserve({ minerInstitutionId: operation.institution.id, workerShipId: worker.id });
         if (!reservation) {
           // The best-valued order is already fully reserved by other suppliers.
           // Without this the worker would sit silently idle with no explanation.
@@ -353,6 +364,16 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         }
       }
       operation.allocations[allocation.id] = allocation;
+      // This company's record of the last choice it actually made, kept where it
+      // always was even though the ranking now happens in the shared market.
+      operation.lastSelection = {
+        workerShipId: worker.id,
+        chosenOrderId: order.id,
+        netValue: Math.round(won.netValue),
+        reasons: won.reasons ?? [],
+        rejected: won.rejected ?? [],
+        at: now(),
+      };
       shipRecord.lastDecisionKey = null;
       worker.assign({
         allocationId: allocation.id, contractId: order.contractId ?? order.id, resourceId: order.resourceId, quantity: order.amount, destination,
@@ -361,7 +382,6 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       });
       // Diagnostics: this actor is now committed, and we keep why it chose this
       // job over the alternatives it weighed.
-      const selection = operation.lastSelection;
       recordDiagnostic(state, worker.id, {
         actorName: worker.name,
         actorKind: "ship",
@@ -378,19 +398,26 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         nextReconsiderAt: null,
         refs: { contractIds: [order.contractId ?? order.id], targetIds: [order.siteId], dependencyIds: [] },
       }, now());
-      if (selection?.chosenOrderId === order.id) {
-        recordDecision(state, worker.id, {
-          chosen: { id: order.id, label: `${order.resourceName} → ${order.siteName}`, score: selection.netValue },
-          alternatives: (selection.rejected ?? []).map((entry) => ({
-            id: entry.orderId,
-            label: entry.orderId,
-            score: entry.netValue,
-            rejectedBecause: `lower net value (${entry.netValue} vs ${selection.netValue})`,
-          })),
-          reasons: selection.reasons ?? [],
-          at: now(),
-        });
-      }
+      recordDecision(state, worker.id, {
+        chosen: { id: order.id, label: `${order.resourceName} → ${order.siteName}`, score: Math.round(won.netValue) },
+        alternatives: (won.rejected ?? []).map((entry) => ({
+          id: entry.orderId,
+          label: entry.orderId,
+          score: entry.netValue,
+          rejectedBecause: `lower net value (${entry.netValue} vs ${Math.round(won.netValue)})`,
+        })),
+        reasons: won.reasons ?? [],
+        at: now(),
+      });
+      state.ledger.recordEvent("institution.jobValued", {
+        institutionId: operation.institution.id, shipInstitutionId: worker.id, shipName: worker.name,
+        chosenOrderId: order.id, netValue: Math.round(won.netValue),
+        runnerUpOrderId: won.rejected?.[0]?.orderId ?? null, runnerUpNetValue: won.rejected?.[0]?.netValue ?? null,
+        // What the ranking it won was up against, so a reader can tell a
+        // one-bidder walkover from a contested order.
+        marketBidders: round.bidderCount, marketOffers: round.offerCount,
+        reasons: won.reasons ?? [],
+      }, { visible: false });
       record("mining.contractAccepted", `${operation.controller.name} dispatched ${worker.name} for ${order.amount} ${order.resourceName} at ${order.siteName}.`, { orderId: order.id, allocationId: allocation.id, siteId: order.siteId, resourceId: order.resourceId, quantity: order.amount, shipInstitutionId: worker.id, shipName: worker.name });
     });
   }
@@ -505,6 +532,39 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     };
   }
 
+  // What this company's ships are bidding into the shared clearing: every ship
+  // that could take work right now, and how it would value any given offer.
+  //
+  // The valuation stays here because everything it needs is this company's —
+  // its controller's temperament, what its own upkeep actually costs it, where
+  // it believes the deposits are. The market only ranks what comes back.
+  function listBidders() {
+    return workers
+      .filter((worker) => {
+        const shipRecord = operation.ships[worker.id];
+        if (!shipRecord || shipRecord.maintenanceStatus !== "available") return false;
+        if (worker.assignment) { shipRecord.waitingSince = null; return false; }
+        // How long this ship has been available with nothing to do — the tie
+        // break when two bids are worth exactly the same.
+        shipRecord.waitingSince ??= now();
+        return true;
+      })
+      .map((worker) => ({
+        id: worker.id,
+        name: worker.name,
+        controllerId: operation.institution.id,
+        waitingSince: operation.ships[worker.id].waitingSince,
+        bid: (offer) => valueOrderForWorker(offer, worker.position),
+      }));
+  }
+
+  // What this miner WOULD take, asked without committing it to anything.
+  //
+  // The live dispatch path no longer goes through here — it reads the shared
+  // market round — but the question still has to be answerable on its own for
+  // deliberation, diagnostics and comparative-choice displays. It evaluates
+  // against the same offers and the same valuation; what it cannot tell you is
+  // whether a competitor would have outbid it.
   function chooseOrder(worker = null) {
     const position = worker?.position ?? sites.get("scrap-porch")?.position ?? { x: 0, y: 0 };
     // Every issuer, in one list, minus anything a worker is already on. The
@@ -520,7 +580,6 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     if (scored.length === 0) return null;
 
     const best = scored[0];
-    const runnerUp = scored[1] ?? null;
     operation.lastSelection = {
       workerShipId: worker?.id ?? null,
       chosenOrderId: best.order.id,
@@ -529,14 +588,9 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       rejected: scored.slice(1, 4).map((entry) => ({ orderId: entry.order.id, netValue: Math.round(entry.valuation.metrics.netValue) })),
       at: now(),
     };
-    if (worker) {
-      state.ledger.recordEvent("institution.jobValued", {
-        institutionId: operation.institution.id, shipInstitutionId: worker.id, shipName: worker.name,
-        chosenOrderId: best.order.id, netValue: Math.round(best.valuation.metrics.netValue),
-        runnerUpOrderId: runnerUp?.order.id ?? null, runnerUpNetValue: runnerUp ? Math.round(runnerUp.valuation.metrics.netValue) : null,
-        reasons: best.valuation.reasons,
-      }, { visible: false });
-    }
+    // No ledger line: the dispatch path records `institution.jobValued` when it
+    // actually commits a ship. Writing one here too would make asking a
+    // hypothetical indistinguishable from taking the job.
     return best.order;
   }
 
@@ -593,7 +647,11 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     });
   }
 
-  function publishIdleDecision(shipRecord) {
+  function publishIdleDecision(shipRecord, round = null) {
+    // Losing an auction is not the same as finding nothing worth doing, and
+    // reporting it as "no eligible work" would hide the competition entirely —
+    // which is exactly the reading that made the wealth gap look like judgment.
+    const outbid = getMarketOutbid(round, shipRecord.id);
     // What was on the board and what was wrong with each of it. Read off the
     // offers themselves, so a new issuer appears here without being named.
     const reasons = listExtractionOffers(state, offerContext()).map((offer) => {
@@ -612,7 +670,17 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       intention: null,
       refs: { targetIds: [], contractIds: [], dependencyIds: [] },
     }, now());
-    recordBlocker(state, shipRecord.id, createBlocker({
+    recordBlocker(state, shipRecord.id, outbid ? createBlocker({
+      kind: BLOCKER_KIND.OUTBID,
+      summary: `${shipRecord.name} bid ${outbid.ownNetValue} on ${outbid.orderId}; ${outbid.winnerName ?? outbid.winnerId} took it at ${outbid.winningNetValue}`,
+      subjectId: shipRecord.id,
+      objectId: outbid.orderId,
+      waitingFor: "an order it values more highly than the competition does",
+      wakeOn: ["order-posted", "order-repriced", "allocation-released", "delivery.completed"],
+      causedBy: outbid.winnerId ? [{ actorId: outbid.winnerId, note: "took the order on a higher bid" }] : [],
+      detail: { ...outbid, candidates: reasons },
+      at: now(),
+    }) : createBlocker({
       kind: BLOCKER_KIND.NO_ELIGIBLE_WORK,
       summary: `${shipRecord.name} is idle: no mining order is both open and worth its cost`,
       subjectId: shipRecord.id,
@@ -622,9 +690,13 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       at: now(),
     }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
 
-    const key = reasons.join("|");
+    const key = outbid ? `outbid:${outbid.orderId}:${outbid.winnerId}` : reasons.join("|");
     if (shipRecord.lastDecisionKey === key) return;
     shipRecord.lastDecisionKey = key;
+    if (outbid) {
+      record("mining.outbid", `${shipRecord.name} wanted ${outbid.orderId} but ${outbid.winnerName ?? outbid.winnerId} valued it higher (${outbid.winningNetValue} vs ${outbid.ownNetValue}).`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, ...outbid });
+      return;
+    }
     record("mining.waitingForFundedWork", `${shipRecord.name} is idle: available mining orders are already allocated or their buyers cannot fund the posted price.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, reasons });
   }
 

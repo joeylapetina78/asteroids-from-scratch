@@ -26,6 +26,8 @@ The game is split into four rough layers:
 
 Mining businesses are configured in `src/content/economy/miningInstitutions.js`. Multiple institution instances run through the shared `createMiningOperation` engine and compete for one extraction-offer and allocation market.
 
+Who gets which order is decided in `src/systems/extractionMarket.js`, not inside any one company. Each company registers as a participant, offers its idle ships' own valuations as bids, and reads back only its own ships' winners. Every idle ship in the world is ranked against every open offer in one list, so update order in `main.js` confers no advantage — before this, whichever operation updated first took first refusal on everything. A ship that loses records an `outbid` blocker naming the ship that beat it and both bids.
+
 The ship position is world-space. The viewport camera follows the ship and converts world-space entities into screen-space drawing.
 
 ## Main Files
