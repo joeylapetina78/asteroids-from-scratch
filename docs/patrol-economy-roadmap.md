@@ -47,19 +47,29 @@ One craft cannot accept two incidents. If the threat disappears before physical
 execution begins, the reservation is released and the craft returns to
 availability; no unearned payment changes hands.
 
-The next implementation slice is physical contract execution and settlement.
-Contracted craft do not yet travel to or fight at the incident.
+## Current checkpoint: physical execution and settlement
+
+An accepted contract now dispatches the exact titled craft from its recorded
+home hub. Sable One travels through world space to the contracted portal, can
+be targeted and damaged by the incursion, fights through the existing patrol
+combat system, and physically returns to Blue Lantern afterward. Paid emergency
+work preempts an ambient inspection loop, but the local patrol departs before
+the contractor is streamed into the world.
+
+Acceptance and dispatch still earn nothing. Sable is paid only when its craft
+destroys the contracted threat; the hub's reserved funds become a real debit
+and Sable's account receives the same amount. If the player or another defender
+removes the threat first, the reservation is released without payment and the
+craft returns home. If Sable One is destroyed, the hub is released, Sable is
+not paid, and its titled wreck enters the existing salvage lifecycle.
 
 ## Next patrol/incursion steps
 
-1. Execute accepted patrol, escort, and incursion-clearance contracts with a
-   physical craft. Leave the player eligibility seam open for the same jobs.
-2. Charge deployment and damage costs to the patrol office and pay successful
-   work from the hiring institution's account.
-3. Route damaged patrol craft through public repair matching. A destroyed craft
+1. Let the player qualify for and accept the same public protection work.
+2. Route damaged patrol craft through public repair matching. A destroyed craft
    should create a replacement need that must be funded, built, titled, and
    registered before local capacity returns.
-4. Expand encounter streaming so multiple distant patrol outcomes can resolve
+3. Expand encounter streaming so multiple distant patrol outcomes can resolve
    without inventing phantom scans or combat.
 
 ## Invariants

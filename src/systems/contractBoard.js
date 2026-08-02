@@ -15,10 +15,10 @@
 //   WHO IS DOING IT   supplier — null while it is still up for grabs
 //   WHERE IS IT       one of available / taken / done / blocked
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-2339-cae4bce";
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260801-2339-cae4bce";
-import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260801-2339-cae4bce";
-import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260801-2339-cae4bce";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-2349-e938384";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260801-2349-e938384";
+import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260801-2349-e938384";
+import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260801-2349-e938384";
 import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js";
 
 export const CONTRACT_STATE = Object.freeze({
@@ -305,7 +305,8 @@ function collectProtection(state) {
     kind: CONTRACT_KIND.PROTECTION,
     state: request.status === PROTECTION_REQUEST_STATUS.CLOSED ? CONTRACT_STATE.DONE
       : request.status === PROTECTION_REQUEST_STATUS.WITHHELD ? CONTRACT_STATE.BLOCKED
-        : [PROTECTION_REQUEST_STATUS.INTERNAL, PROTECTION_REQUEST_STATUS.CONTRACTED].includes(request.status) ? CONTRACT_STATE.TAKEN
+        : request.status === PROTECTION_REQUEST_STATUS.FAILED ? CONTRACT_STATE.BLOCKED
+          : [PROTECTION_REQUEST_STATUS.INTERNAL, PROTECTION_REQUEST_STATUS.CONTRACTED, PROTECTION_REQUEST_STATUS.ACTIVE].includes(request.status) ? CONTRACT_STATE.TAKEN
           : CONTRACT_STATE.AVAILABLE,
     title: `Protect ${actorLabel(state, request.issuerInstitutionId)} from ${request.threatType}`,
     issuerId: request.issuerInstitutionId,

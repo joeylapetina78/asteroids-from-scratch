@@ -4,6 +4,7 @@ import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { evaluateProtectionThreat, closeProtectionRequestsForThreat, PROTECTION_REQUEST_STATUS } from "../src/systems/protectionPlanning.js";
 import { CONTRACT_KIND, CONTRACT_STATE, listContracts } from "../src/systems/contractBoard.js";
+import { completeProtectionContract, failProtectionContract, finishProtectionReturn, startProtectionContract } from "../src/systems/protectionProviders.js";
 
 const sites = [
   { id: "yard-exchange", position: { x: 0, y: 0 } },
@@ -104,4 +105,57 @@ test("acceptance reserves hub funds and threat closure releases both cash and cr
   assert.equal(value.logistics.institutions["the-ledge"].accounts.operating.committed, before);
   assert.equal(value.protectionProviders["sable-meridian-security"].craft.status, "available");
   assert.equal(request.paymentReleased, true);
+});
+
+test("a dispatched contractor is paid only after successful physical work", () => {
+  const value = state();
+  const request = evaluateProtectionThreat(value, sites, { id: "rift:12", position: { x: 20100, y: 0 }, enemyCount: 8, waveCount: 2 }, 120)
+    .find((entry) => entry.siteId === "the-ledge");
+  const buyer = value.logistics.institutions["the-ledge"].accounts.operating;
+  const provider = value.protectionProviders["sable-meridian-security"];
+  const buyerBefore = buyer.balance;
+  const providerBefore = provider.institution.accounts.operating.balance;
+  startProtectionContract(value, request.id, 121);
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.ACTIVE);
+  assert.equal(provider.craft.status, "deployed");
+  assert.equal(buyer.balance, buyerBefore, "dispatch alone earns nothing");
+  completeProtectionContract(value, request.id, { hull: 117, now: 130 });
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.FULFILLED);
+  assert.equal(buyer.balance, buyerBefore - request.agreedPayment);
+  assert.equal(provider.institution.accounts.operating.balance, providerBefore + request.agreedPayment);
+  assert.equal(provider.craft.status, "returning");
+  finishProtectionReturn(value, request.id, 117, 140);
+  assert.equal(provider.craft.status, "available");
+  assert.equal(provider.craft.hull, 117);
+});
+
+test("another actor resolving the threat recalls a dispatched contractor and releases payment", () => {
+  const value = state();
+  const request = evaluateProtectionThreat(value, sites, { id: "rift:12b", position: { x: 20100, y: 0 }, enemyCount: 8, waveCount: 2 }, 145)
+    .find((entry) => entry.siteId === "the-ledge");
+  const buyer = value.logistics.institutions["the-ledge"].accounts.operating;
+  const provider = value.protectionProviders["sable-meridian-security"];
+  const providerBefore = provider.institution.accounts.operating.balance;
+  startProtectionContract(value, request.id, 146);
+  closeProtectionRequestsForThreat(value, "rift:12b", 147);
+  assert.equal(buyer.committed, 0);
+  assert.equal(provider.institution.accounts.operating.balance, providerBefore);
+  assert.equal(provider.craft.status, "returning");
+  assert.equal(provider.craft.activeRequestId, request.id, "craft retains its assignment until it reaches home");
+  assert.equal(request.paymentReleased, true);
+});
+
+test("destroying the contracted craft releases the buyer without paying the provider", () => {
+  const value = state();
+  const request = evaluateProtectionThreat(value, sites, { id: "rift:13", position: { x: 20100, y: 0 }, enemyCount: 8, waveCount: 2 }, 150)
+    .find((entry) => entry.siteId === "the-ledge");
+  const buyer = value.logistics.institutions["the-ledge"].accounts.operating;
+  const provider = value.protectionProviders["sable-meridian-security"];
+  const providerBefore = provider.institution.accounts.operating.balance;
+  startProtectionContract(value, request.id, 151);
+  failProtectionContract(value, request.id, { hull: 0, now: 160 });
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.FAILED);
+  assert.equal(buyer.committed, 0);
+  assert.equal(provider.institution.accounts.operating.balance, providerBefore);
+  assert.equal(provider.craft.status, "destroyed");
 });

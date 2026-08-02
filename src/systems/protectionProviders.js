@@ -129,18 +129,86 @@ export function allocateProtectionProviders(state, sites, requests, now = Date.n
 }
 
 export function releaseProtectionContract(state, request) {
-  if (request.previousStatus !== "contracted" && request.status !== "contracted") return false;
+  const releasableStatuses = new Set(["contracted", "active"]);
+  if (!releasableStatuses.has(request.previousStatus) && !releasableStatuses.has(request.status)) return false;
   const provider = state.protectionProviders?.[request.providerInstitutionId];
   const buyer = state.logistics?.institutions?.[request.issuerInstitutionId];
   if (provider?.craft?.activeRequestId === request.id) {
-    provider.craft.status = provider.craft.hull > 0 ? "available" : "destroyed";
-    provider.craft.activeRequestId = null;
+    provider.craft.status = provider.craft.hull <= 0 ? "destroyed" : (request.dispatchedAt ? "returning" : "available");
+    if (!request.dispatchedAt) provider.craft.activeRequestId = null;
   }
   if (buyer?.accounts?.operating && request.agreedPayment) {
     buyer.accounts.operating.committed = Math.max(0, (buyer.accounts.operating.committed ?? 0) - request.agreedPayment);
   }
   request.paymentReleased = true;
   return true;
+}
+
+export function startProtectionContract(state, requestId, now = Date.now()) {
+  const request = state.protectionPlanning?.requests?.[requestId];
+  const provider = request && state.protectionProviders?.[request.providerInstitutionId];
+  if (!request || request.status !== "contracted" || !provider || provider.craft.activeRequestId !== request.id) return null;
+  request.status = "active";
+  request.dispatchedAt = now;
+  provider.craft.status = "deployed";
+  state.ledger?.recordEvent("protection.craftDispatched", {
+    requestId, institutionId: request.issuerInstitutionId, providerInstitutionId: request.providerInstitutionId,
+    craftId: request.craftId, siteId: request.siteId, threatId: request.threatId,
+  }, { visible: true });
+  return request;
+}
+
+export function completeProtectionContract(state, requestId, { hull = null, now = Date.now() } = {}) {
+  const request = state.protectionPlanning?.requests?.[requestId];
+  const provider = request && state.protectionProviders?.[request.providerInstitutionId];
+  const buyer = request && state.logistics?.institutions?.[request.issuerInstitutionId];
+  if (!request || request.status !== "active" || !provider || !buyer?.accounts?.operating) return null;
+  const payment = request.agreedPayment ?? 0;
+  buyer.accounts.operating.committed = Math.max(0, (buyer.accounts.operating.committed ?? 0) - payment);
+  buyer.accounts.operating.balance = Math.max(0, (buyer.accounts.operating.balance ?? 0) - payment);
+  provider.institution.accounts.operating.balance += payment;
+  if (hull != null) provider.craft.hull = Math.max(0, hull);
+  provider.craft.status = "returning";
+  request.status = "fulfilled";
+  request.paidAmount = payment;
+  request.settledAt = now;
+  state.ledger?.recordEvent("protection.contractPaid", {
+    requestId, institutionId: request.issuerInstitutionId, providerInstitutionId: request.providerInstitutionId,
+    craftId: request.craftId, siteId: request.siteId, threatId: request.threatId, payment,
+  }, { visible: true });
+  return request;
+}
+
+export function failProtectionContract(state, requestId, { hull = 0, reason = "craft-destroyed", now = Date.now() } = {}) {
+  const request = state.protectionPlanning?.requests?.[requestId];
+  const provider = request && state.protectionProviders?.[request.providerInstitutionId];
+  const buyer = request && state.logistics?.institutions?.[request.issuerInstitutionId];
+  if (!request || !["contracted", "active"].includes(request.status) || !provider) return null;
+  if (buyer?.accounts?.operating) buyer.accounts.operating.committed = Math.max(0, (buyer.accounts.operating.committed ?? 0) - (request.agreedPayment ?? 0));
+  provider.craft.hull = Math.max(0, hull);
+  provider.craft.status = provider.craft.hull > 0 ? "returning" : "destroyed";
+  provider.craft.activeRequestId = provider.craft.hull > 0 ? request.id : null;
+  request.status = "failed";
+  request.failureReason = reason;
+  request.failedAt = now;
+  request.paymentReleased = true;
+  state.ledger?.recordEvent("protection.contractFailed", {
+    requestId, institutionId: request.issuerInstitutionId, providerInstitutionId: request.providerInstitutionId,
+    craftId: request.craftId, siteId: request.siteId, threatId: request.threatId, reason,
+  }, { visible: true });
+  return request;
+}
+
+export function finishProtectionReturn(state, requestId, hull, now = Date.now()) {
+  const request = state.protectionPlanning?.requests?.[requestId];
+  const provider = request && state.protectionProviders?.[request.providerInstitutionId];
+  if (!provider || provider.craft.activeRequestId !== requestId || provider.craft.hull <= 0) return null;
+  provider.craft.hull = Math.max(0, hull);
+  provider.craft.status = "available";
+  provider.craft.siteId = provider.institution.siteId;
+  provider.craft.activeRequestId = null;
+  request.returnedAt = now;
+  return provider.craft;
 }
 
 export function listProtectionProviders(state) {

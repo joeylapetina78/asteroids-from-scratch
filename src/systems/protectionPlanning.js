@@ -7,6 +7,9 @@ export const PROTECTION_REQUEST_STATUS = Object.freeze({
   OFFERED: "offered",
   WITHHELD: "withheld",
   CONTRACTED: "contracted",
+  ACTIVE: "active",
+  FULFILLED: "fulfilled",
+  FAILED: "failed",
   CLOSED: "closed",
 });
 

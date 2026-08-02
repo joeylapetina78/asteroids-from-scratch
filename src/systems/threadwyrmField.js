@@ -1,6 +1,6 @@
-import { Threadwyrm } from "../entities/Threadwyrm.js?v=fresh-20260801-2339-cae4bce";
-import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260801-2339-cae4bce";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260801-2339-cae4bce";
+import { Threadwyrm } from "../entities/Threadwyrm.js?v=fresh-20260801-2349-e938384";
+import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260801-2349-e938384";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260801-2349-e938384";
 
 const THREADWYRM_ATTEMPTS = 14;
 const MAX_THREADWYRMS = 3;
