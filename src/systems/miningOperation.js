@@ -1,18 +1,18 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260802-1248-85b6ff4";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260802-1248-85b6ff4";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1248-85b6ff4";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260802-1248-85b6ff4";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260802-1248-85b6ff4";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260802-1248-85b6ff4";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260802-1248-85b6ff4";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260802-1248-85b6ff4";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260802-1248-85b6ff4";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260802-1248-85b6ff4";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260802-1248-85b6ff4";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1248-85b6ff4";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260802-1248-85b6ff4";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260802-1504-d6b41cd";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260802-1504-d6b41cd";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1504-d6b41cd";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260802-1504-d6b41cd";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260802-1504-d6b41cd";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260802-1504-d6b41cd";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260802-1504-d6b41cd";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260802-1504-d6b41cd";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260802-1504-d6b41cd";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260802-1504-d6b41cd";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260802-1504-d6b41cd";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1504-d6b41cd";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260802-1504-d6b41cd";
 import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260802-1248-85b6ff4";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260802-1504-d6b41cd";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -718,6 +718,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       offset: { x: -120 + (index % 4) * 80, y: 60 + (index % 3) * 40 },
     };
     account.balance -= HIRE_COST;
+    operation.institution.capitalSpend = (operation.institution.capitalSpend ?? 0) + HIRE_COST;
     account.transactions.push({ id: `MIN-HIRE-${now()}-${index}`, at: now(), type: "capital-expense", amount: -HIRE_COST, balance: account.balance, referenceId: defaults.id });
     const shipRecord = createWorkerRecord(defaults, operation.institution.id);
     operation.ships[shipRecord.id] = shipRecord;
@@ -761,6 +762,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     const account = operation.institution.accounts.operating;
     if (account.balance - getActorProtectedCash(state, operation.institution.id) < project.requiredCredits) return;
     account.balance -= project.requiredCredits;
+    operation.institution.capitalSpend = (operation.institution.capitalSpend ?? 0) + project.requiredCredits;
     account.transactions.push({ id: `MIN-EXP-${now()}`, at: now(), type: "capital-expense", amount: -project.requiredCredits, balance: account.balance, referenceId: project.id });
     const shipRecord = createWorkerRecord(seed.expansionWorker, operation.institution.id);
     operation.ships[shipRecord.id] = shipRecord;

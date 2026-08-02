@@ -23,12 +23,12 @@
 //      system, it does not appear here. Where a total cannot be reconciled the
 //      residual is reported as a residual rather than smoothed away.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260802-1248-85b6ff4";
-import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260802-1248-85b6ff4";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260802-1248-85b6ff4";
-import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260802-1248-85b6ff4";
-import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260802-1248-85b6ff4";
-import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260802-1248-85b6ff4";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260802-1504-d6b41cd";
+import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260802-1504-d6b41cd";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260802-1504-d6b41cd";
+import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260802-1504-d6b41cd";
+import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260802-1504-d6b41cd";
+import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260802-1504-d6b41cd";
 
 // 5 s is fast enough to see a repricing (throttled to 60 s) as a step rather
 // than a jump, and slow enough that two hours of history is a few thousand
@@ -104,6 +104,7 @@ export function readEconomySnapshot(state, { now = Date.now() } = {}) {
   let hubMaterialUnits = 0;
   let finishedGoodsUnits = 0;
   let productionSpendCumulative = 0;
+  let capitalSpendCumulative = 0;
   let revenueCumulative = 0;
   let cogsCumulative = 0;
   let unitsSoldCumulative = 0;
@@ -152,12 +153,14 @@ export function readEconomySnapshot(state, { now = Date.now() } = {}) {
       margin: round(trade?.margin ?? 0),
       unitsSold: trade?.unitsSold ?? 0,
       productionSpend: round(trade?.productionSpend ?? 0),
+      capitalSpend: round(institution.capitalSpend ?? 0),
     };
 
     institutionCash += finances.balance;
     hubMaterialUnits += inventoryUnits;
     finishedGoodsUnits += finished;
     productionSpendCumulative += trade?.productionSpend ?? 0;
+    capitalSpendCumulative += institution.capitalSpend ?? 0;
     revenueCumulative += trade?.revenue ?? 0;
     cogsCumulative += trade?.costOfGoodsSold ?? 0;
     unitsSoldCumulative += trade?.unitsSold ?? 0;
@@ -286,6 +289,7 @@ export function readEconomySnapshot(state, { now = Date.now() } = {}) {
     discardedCumulative: round(discardedCumulative),
     spentCumulative: round(spentCumulative),
     productionSpendCumulative: round(productionSpendCumulative),
+    capitalSpendCumulative: round(capitalSpendCumulative),
   };
 
   return {
@@ -415,13 +419,17 @@ export function reconcileMoney(samples) {
   const first = samples[0];
   const last = samples[samples.length - 1];
   const created = last.money.incomeCumulative - first.money.incomeCumulative;
-  const burned = last.money.productionSpendCumulative - first.money.productionSpendCumulative;
+  const productionBurned = (last.money.productionSpendCumulative ?? 0) - (first.money.productionSpendCumulative ?? 0);
+  const capitalBurned = (last.money.capitalSpendCumulative ?? 0) - (first.money.capitalSpendCumulative ?? 0);
+  const burned = productionBurned + capitalBurned;
   const observed = last.money.total - first.money.total;
   return {
     fromMs: first.t,
     toMs: last.t,
     created: round(created),
     burned: round(burned),
+    productionBurned: round(productionBurned),
+    capitalBurned: round(capitalBurned),
     notCreatedAtCap: round(last.money.discardedCumulative - first.money.discardedCumulative),
     expected: round(created - burned),
     observed: round(observed),

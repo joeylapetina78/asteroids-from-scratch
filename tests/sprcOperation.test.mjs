@@ -963,6 +963,39 @@ test("a normal hauler can negotiate the complete natural corridor without wearin
   assert.ok(ship.wear < 6);
 });
 
+test("a hauler trusts a maintained corridor instead of entering careful mode for shoulder rocks", () => {
+  const route = [
+    { id: "start", type: "hub", position: { x: 0, y: 0 } },
+    { id: "lane:1", type: "corridor-waypoint", corridorId: "test-road", position: { x: 500, y: 0 } },
+    { id: "lane:2", type: "corridor-waypoint", corridorId: "test-road", position: { x: 1000, y: 0 } },
+    { id: "finish", type: "hub", position: { x: 1500, y: 0 } },
+  ];
+  const ship = new NpcShip({ id: "corridor-cruise", name: "Corridor Cruise", route, x: 500, y: 0 });
+  ship.routeIndex = 2;
+  ship.activeCorridorId = "test-road";
+  ship.velocity = { x: 8, y: 0 };
+  ship.lastWaypointDistance = 500;
+  const shoulderRock = { position: { x: 500, y: 150 }, radius: 35 };
+  for (let tick = 0; tick < 20; tick += 1) ship.updateCarefulMode(0.1, [shoulderRock], 500);
+  assert.equal(ship.isCarefulMode, false);
+  assert.equal(ship.getMaxSpeed(), 96 * 1.65);
+});
+
+test("a genuine corridor intrusion can still trigger careful mode", () => {
+  const route = [
+    { id: "start", type: "hub", position: { x: 0, y: 0 } },
+    { id: "lane:1", type: "corridor-waypoint", corridorId: "test-road", position: { x: 500, y: 0 } },
+    { id: "finish", type: "hub", position: { x: 1000, y: 0 } },
+  ];
+  const ship = new NpcShip({ id: "corridor-obstruction", name: "Corridor Obstruction", route, x: 500, y: 0 });
+  ship.activeCorridorId = "test-road";
+  ship.velocity = { x: 8, y: 0 };
+  ship.lastWaypointDistance = 500;
+  const intrudingRock = { position: { x: 535, y: 0 }, radius: 25 };
+  for (let tick = 0; tick < 12; tick += 1) ship.updateCarefulMode(0.1, [intrudingRock], 500);
+  assert.equal(ship.isCarefulMode, true);
+});
+
 test("transport work becomes ineligible when it violates the carrier maintenance policy", () => {
   const network = createTransportationNetwork({ destinations: ["yard-exchange", "scrap-porch", "the-ledge"].map((id) => ({ id })), connections: FIRST_REACH_TRANSPORT_CONNECTIONS });
   const plan = evaluateTransportPlan({ network, originId: "yard-exchange", destinationId: "the-ledge", payment: 500, currentWear: 4, policy: FIRST_REACH_CARRIER_POLICY, repairOptions: FIRST_REACH_REPAIR_OPTIONS });
@@ -1099,6 +1132,8 @@ test("a route hauler crossing its wear limit stops and requests institutional as
     { id: "the-ledge", name: "The Ledge", type: "hub", interactionRadius: 100, position: { x: 10_000, y: 0 } },
   ];
   const ship = new NpcShip({ id: "test-hauler", name: "Test Hauler", route, x: 0, y: 0, maintenanceSiteId: "scrap-porch" });
+  assert.equal(ship.maxHull, 680);
+  assert.equal(ship.hull, ship.maxHull);
   ship.assignShipment({ shipmentId: "SHIP-TEST", destinationSiteId: "the-ledge", route });
   ship.departureTimer = 0;
   ship.operationalStatus = "available";
@@ -1223,6 +1258,30 @@ test("a ready hauler repair bypasses an earlier miner repair blocked on material
   const active = harness.state.sprc.repairOrders[harness.state.sprc.facilities.berthTwo.activeRepairOrderId];
   assert.equal(active.subjectId, SPRC.firstHaulerId);
   assert.equal(harness.state.sprc.repairOrders["SPRC-RPR-0001"].status, "waiting-production");
+});
+
+test("a repeated service request reuses the live repair and clears stale deferral state", () => {
+  const harness = createHarness();
+  harness.state.ledger.recordEvent("maintenance.requested", {
+    subjectId: "worker:test-miner", subjectName: "Test Miner", referenceId: "MW-TEST", craftClass: "mining-craft",
+    issueType: "preventive-calibration", requiredCapabilities: ["field-control"], locationSiteId: "scrap-porch", mobility: "self-return",
+    payerInstitutionId: "miner:test", payer: { balance: 100000, committed: 0, protectedCash: 10000 }, servicePrice: 2200,
+  }, { visible: false });
+  harness.operation.update();
+  const original = Object.values(harness.state.sprc.repairOrders).find((repair) => repair.subjectId === "worker:test-miner");
+  assert.ok(original);
+
+  harness.state.sprc.deferredServiceRequests["worker:test-miner"] = { reason: "payer-cannot-afford" };
+  harness.state.ledger.recordEvent("maintenance.requested", {
+    subjectId: "worker:test-miner", subjectName: "Test Miner", referenceId: "MW-TEST", craftClass: "mining-craft",
+    issueType: "preventive-calibration", requiredCapabilities: ["field-control"], locationSiteId: "scrap-porch", mobility: "self-return",
+    payerInstitutionId: "miner:test", payer: { balance: 100000, committed: 0, protectedCash: 10000 }, servicePrice: 2200,
+  }, { visible: false });
+  harness.operation.update();
+
+  assert.equal(Object.values(harness.state.sprc.repairOrders).filter((repair) => repair.subjectId === "worker:test-miner").length, 1);
+  assert.equal(harness.state.sprc.repairOrders[original.id], original);
+  assert.equal(harness.state.sprc.deferredServiceRequests["worker:test-miner"], undefined);
 });
 
 test("Sal procures ordinary silicate and copper when machine-part production is blocked", () => {

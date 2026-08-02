@@ -1,16 +1,16 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260802-1248-85b6ff4";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260802-1248-85b6ff4";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260802-1248-85b6ff4";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260802-1248-85b6ff4";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260802-1248-85b6ff4";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260802-1248-85b6ff4";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260802-1248-85b6ff4";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260802-1248-85b6ff4";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260802-1248-85b6ff4";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1248-85b6ff4";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1248-85b6ff4";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260802-1248-85b6ff4";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260802-1248-85b6ff4";
+import { depositCredits } from "./accounts.js?v=fresh-20260802-1504-d6b41cd";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260802-1504-d6b41cd";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260802-1504-d6b41cd";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260802-1504-d6b41cd";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260802-1504-d6b41cd";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260802-1504-d6b41cd";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260802-1504-d6b41cd";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260802-1504-d6b41cd";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260802-1504-d6b41cd";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1504-d6b41cd";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1504-d6b41cd";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260802-1504-d6b41cd";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260802-1504-d6b41cd";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -283,6 +283,19 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     if (!subject) {
       subject = sprc.serviceSubjects[subjectId] = { id: subjectId, shipVin: payload.referenceId ?? payload.shipVin ?? subjectId, shipName: payload.subjectName ?? payload.npcName ?? subjectId, homeOrganizationId: payload.payerInstitutionId, craftClass: payload.craftClass, condition: "serviceable", maintenanceStatus: "available", repairHistory: [], currentLocationSiteId: payload.locationSiteId, availableForWork: true };
     }
+    const existing = Object.values(sprc.repairOrders).find((repair) => (repair.subjectId ?? repair.subjectHaulerId) === subjectId && !["completed", "canceled"].includes(repair.status));
+    // Repeated maintenance events are allowed, but they must not leave a stale
+    // deferred request beside a live order for the same craft. The live order
+    // is authoritative and will publish its own waiting/working diagnostic.
+    if (existing) {
+      clearDeferredServiceRequest(subjectId);
+      clearBlocker(state, subjectId, {
+        state: existing.status === "servicing" ? DIAGNOSTIC_STATE.WORKING : DIAGNOSTIC_STATE.WAITING,
+        summary: `Repair ${existing.id} is already ${existing.status}`,
+        at: now(),
+      });
+      return existing;
+    }
     const requirements = SERVICE_REPAIR_RECIPES[payload.issueType];
     // Quote-then-gate: price the job as soon as the capability is known, and let
     // the affordability check judge the customer against THAT price. The
@@ -307,8 +320,6 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       deferServiceRequest(payload, subjectId, match);
       return null;
     }
-    const existing = Object.values(sprc.repairOrders).some((repair) => (repair.subjectId ?? repair.subjectHaulerId) === subjectId && !["completed", "canceled"].includes(repair.status));
-    if (existing) return null;
     clearDeferredServiceRequest(subjectId);
     const id = nextId("repair", "SPRC-RPR");
     const acceptedPrice = match.quotedPrice;

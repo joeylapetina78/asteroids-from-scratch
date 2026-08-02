@@ -285,6 +285,17 @@ test("money that appears from nowhere shows up as a residual", () => {
   assert.equal(reconciliation.residual, 350, "350 credits came from a path this layer does not know about");
 });
 
+test("commissioned craft are a visible capital burn rather than an unexplained leak", () => {
+  const samples = [
+    { t: 0, money: { total: 10_000, incomeCumulative: 0, productionSpendCumulative: 0, capitalSpendCumulative: 0, discardedCumulative: 0, spentCumulative: 0 } },
+    { t: 60_000, money: { total: 4_000, incomeCumulative: 0, productionSpendCumulative: 0, capitalSpendCumulative: 6_000, discardedCumulative: 0, spentCumulative: 0 } },
+  ];
+  const reconciliation = reconcileMoney(samples);
+  assert.equal(reconciliation.capitalBurned, 6_000);
+  assert.equal(reconciliation.burned, 6_000);
+  assert.equal(reconciliation.residual, 0);
+});
+
 test("reconciling needs two samples", () => {
   assert.equal(reconcileMoney([]), null);
   assert.equal(reconcileMoney([{ t: 0, money: {} }]), null);

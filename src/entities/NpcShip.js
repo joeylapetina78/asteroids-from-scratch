@@ -1,6 +1,6 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260802-1248-85b6ff4";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260802-1248-85b6ff4";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260802-1248-85b6ff4";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260802-1504-d6b41cd";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260802-1504-d6b41cd";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260802-1504-d6b41cd";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -16,6 +16,7 @@ const STUCK_SECONDS = 0.55;
 const CAREFUL_TRIGGER_SECONDS = 1.05;
 const CAREFUL_MODE_SECONDS = 4.2;
 const CAREFUL_SPEED_MULTIPLIER = 0.48;
+const CORRIDOR_CRUISE_SPEED_MULTIPLIER = 1.65;
 const CARGO_CAR_SPACING = 34;
 const CARGO_CAR_SPRING_FREQUENCY = 12;
 const CARGO_CAR_MAX_LINK_LENGTH = CARGO_CAR_SPACING * 1.6;
@@ -23,6 +24,7 @@ const CARGO_CAR_MAX_SPEED = 220;
 const CARGO_PHYSICS_STEP = 1 / 120;
 const CARGO_PHYSICS_MAX_CATCHUP = 0.25;
 const HUB_TETHER_PADDING = 42;
+export const NPC_HAULER_MAX_HULL = 680;
 
 export class NpcShip {
   constructor({ id, name, route, x, y, seed = 1, laneOffset = 0, publicIdentity = null, maintenanceSiteId = null, palette = null }) {
@@ -42,7 +44,12 @@ export class NpcShip {
     this.acceleration = { x: 0, y: 0 };
     this.seed = seed;
     this.radius = BODY_RADIUS;
-    this.hull = 180;
+    // Freight haulers are heavy commercial craft exposed for long periods on
+    // predictable routes. Their hull is deliberately one of the toughest in
+    // the local fleet: twenty direct player hits at the current 34 damage, or
+    // roughly seventy-five ordinary 9-damage incursion hits.
+    this.maxHull = NPC_HAULER_MAX_HULL;
+    this.hull = this.maxHull;
     this.isAlive = true;
     this.pulse = seed * 0.37;
     this.cargoCars = 2 + (seed % 3);
@@ -163,8 +170,9 @@ export class NpcShip {
     }
 
     this.updateCarefulMode(deltaSeconds, world.asteroids, waypointDistance);
-    this.applySteer(arrive(this, this.getWaypoint()));
-    this.applySteer(steerTowardOpenGap(this, this.getWaypoint(), world.asteroids), this.isCarefulMode ? 1.15 : 0.62);
+    const corridorCruise = Boolean(this.activeCorridorId);
+    this.applySteer(arrive(this, this.getWaypoint()), corridorCruise ? 1.4 : 1);
+    this.applySteer(steerTowardOpenGap(this, this.getWaypoint(), world.asteroids), corridorCruise ? 0.18 : this.isCarefulMode ? 1.15 : 0.62);
     this.applySteer(avoidAsteroids(this, world.asteroids), this.getAvoidanceWeight());
     this.applySteer(separateShips(this, world.npcShips), this.turnSettleTimer > 0 ? 1.05 : 1.3);
     this.updateStuckEscape(deltaSeconds, world.npcShips, world.asteroids);
@@ -271,7 +279,8 @@ export class NpcShip {
 
   getMaxSpeed() {
     const carefulMultiplier = this.isCarefulMode ? CAREFUL_SPEED_MULTIPLIER : 1;
-    return MAX_SPEED * carefulMultiplier * this.getTurnSpeedMultiplier();
+    const corridorMultiplier = this.activeCorridorId ? CORRIDOR_CRUISE_SPEED_MULTIPLIER : 1;
+    return MAX_SPEED * corridorMultiplier * carefulMultiplier * this.getTurnSpeedMultiplier();
   }
 
   getTurnSpeedMultiplier() {
@@ -305,6 +314,21 @@ export class NpcShip {
   }
 
   updateCarefulMode(deltaSeconds, asteroids, waypointDistance) {
+    if (this.activeCorridorId) {
+      // Maintained corridors deliberately keep their center clear. Shoulder
+      // rocks may sit inside the broad navigation lookahead, but they should
+      // not make a hauler distrust the road. Only an object intruding into the
+      // craft's immediate physical envelope can trigger careful mode here.
+      const immediateObstruction = asteroids.some((asteroid) => {
+        const emergencyRadius = asteroid.radius + BODY_RADIUS + 30;
+        return distanceSquared(this.position, asteroid.position) <= emergencyRadius * emergencyRadius;
+      });
+      if (!immediateObstruction) {
+        this.blockedTimer = 0;
+        this.carefulModeTimer = 0;
+        return;
+      }
+    }
     const progress = this.lastWaypointDistance - waypointDistance;
     const nearRock = asteroids.some((asteroid) => {
       const carefulTriggerRadius = asteroid.radius + 150;

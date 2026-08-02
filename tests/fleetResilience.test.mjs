@@ -55,11 +55,22 @@ test("an installed fleet shield spends finite charge before hull and can recharg
   const ship = new NpcShip({ id: "shield-test", name: "Shield Test", route, x: 0, y: 0 });
   ship.installShield({ maxCharge: 30 });
   ship.damage(20);
-  assert.equal(ship.hull, 180);
+  assert.equal(ship.hull, 680);
   assert.equal(ship.shield.charge, 10);
   ship.damage(15);
-  assert.equal(ship.hull, 175);
+  assert.equal(ship.hull, 675);
   assert.equal(ship.shield.charge, 0);
   assert.equal(ship.rechargeShield(12), 12);
   assert.equal(ship.shield.charge, 12);
+});
+
+test("a heavy hauler survives nineteen direct player weapon hits", () => {
+  const route = [{ id: "a", position: { x: 0, y: 0 } }, { id: "b", position: { x: 100, y: 0 } }];
+  const ship = new NpcShip({ id: "hull-test", name: "Hull Test", route, x: 0, y: 0 });
+  for (let hit = 0; hit < 19; hit += 1) ship.damage(34);
+  assert.equal(ship.hull, 34);
+  assert.equal(ship.isAlive, true);
+  ship.damage(34);
+  assert.equal(ship.hull, 0);
+  assert.equal(ship.isAlive, false);
 });

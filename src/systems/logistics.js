@@ -1,17 +1,17 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260802-1248-85b6ff4";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260802-1248-85b6ff4";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1248-85b6ff4";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260802-1248-85b6ff4";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260802-1248-85b6ff4";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260802-1248-85b6ff4";
-import { adaptShipment } from "./intentions.js?v=fresh-20260802-1248-85b6ff4";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260802-1248-85b6ff4";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260802-1248-85b6ff4";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260802-1248-85b6ff4";
-import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260802-1248-85b6ff4";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260802-1504-d6b41cd";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260802-1504-d6b41cd";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1504-d6b41cd";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260802-1504-d6b41cd";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260802-1504-d6b41cd";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260802-1504-d6b41cd";
+import { adaptShipment } from "./intentions.js?v=fresh-20260802-1504-d6b41cd";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260802-1504-d6b41cd";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260802-1504-d6b41cd";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260802-1504-d6b41cd";
+import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260802-1504-d6b41cd";
 import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js";
 import { rankCarrierBids } from "./carrierSelection.js";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260802-1248-85b6ff4";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260802-1504-d6b41cd";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -373,15 +373,22 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       locationSiteId: site,
       intention: null,
     }, now());
+    const rejectionCounts = candidates.reduce((counts, candidate) => {
+      if (!candidate.plan.eligible) counts[candidate.plan.reason] = (counts[candidate.plan.reason] ?? 0) + 1;
+      return counts;
+    }, {});
+    const rejectionSummary = Object.entries(rejectionCounts)
+      .map(([reason, count]) => `${count} ${formatReason(reason)}`)
+      .join(", ");
     recordBlocker(state, shipId, createBlocker({
       kind: BLOCKER_KIND.NO_ELIGIBLE_CARGO,
-      summary: `${context.pilotName ?? shipId} is docked at ${siteName(site)} with no eligible freight${declined ? ` (${formatReason(declined.plan.reason)})` : ""}`,
+      summary: `${context.pilotName ?? shipId} is docked at ${siteName(site)} with no eligible freight${rejectionSummary ? ` (${rejectionSummary})` : ""}`,
       subjectId: shipId,
       objectId: site,
       waitingFor: outOfStock.length ? "cargo to appear in local supply" : "an offer that clears its cost",
       wakeOn: ["inventory-delivered", "freight-repriced", "offer-posted"],
       causedBy: causes,
-      detail: { evaluated: candidates.length, declinedReason: declined?.plan.reason ?? "none-offered" },
+      detail: { evaluated: candidates.length, declinedReason: declined?.plan.reason ?? "none-offered", rejectionCounts },
       at: now(),
     }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
   }
@@ -720,9 +727,9 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     if (!hauler) return;
     const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
     shipInstitution.wear = 0; shipInstitution.issueCount = 0;
-    hauler.maintenanceRequested = false; hauler.status = "seeking-work";
+    hauler.maintenanceRequested = false; hauler.status = "seeking-work"; hauler.lastDecisionKey = null;
     const ship = shipById.get(shipId);
-    if (ship) { ship.wear = 0; ship.wearIssueCount = 0; ship.pendingWearIssue = null; ship.hull = 180; ship.operationalStatus = "seeking-work"; }
+    if (ship) { ship.wear = 0; ship.wearIssueCount = 0; ship.pendingWearIssue = null; ship.hull = ship.maxHull ?? 680; ship.operationalStatus = "seeking-work"; }
     hauler.combatMaintenanceIssue = null;
     appendHistory("maintenance.restored", { shipId });
     publishCarrierEvent("carrier.maintenanceCompleted", shipId, { wear: 0 }, `${getCarrierContext(shipId).shipName} cleared maintenance and returned to freight service.`);
@@ -733,7 +740,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     if (!shipment || shipment.status !== "loaded" || shipment.destinationSiteId !== siteId) return false;
     completeShipment(shipment);
     const hauler = logistics.haulers[shipId];
-    hauler.currentSiteId = siteId; hauler.activeShipmentId = null; hauler.status = "seeking-work";
+    hauler.currentSiteId = siteId; hauler.activeShipmentId = null; hauler.status = "seeking-work"; hauler.lastDecisionKey = null;
     shipById.get(shipId)?.clearShipment();
     return true;
   }
@@ -948,8 +955,18 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       }
       policy.fleetLostSince = null;
 
-      const allBusy = operational.every(([, hauler]) => hauler.activeShipmentId || hauler.activeMovementId);
-      if (!allBusy) policy.allBusySince = null;
+      // Maintenance is real lost capacity. Previously a carrier with one ship
+      // immobilized in Sal's queue looked "not busy", so a growing freight
+      // backlog could never justify investment in a replacement/relief craft.
+      const allCapacityCommitted = operational.every(([shipId, hauler]) => {
+        const ship = shipById.get(shipId);
+        return Boolean(hauler.activeShipmentId || hauler.activeMovementId
+          || hauler.maintenanceRequested
+          || hauler.status === "maintenance-required"
+          || ship?.operationalStatus === "maintenance");
+      });
+      const capacityPressure = allCapacityCommitted;
+      if (!capacityPressure) policy.allBusySince = null;
       else policy.allBusySince ??= now();
 
       const busyLongEnough = policy.allBusySince != null
@@ -1049,6 +1066,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     if (!created) return false;
 
     carrier.accounts.operating.balance -= HAULER_COST;
+    carrier.capitalSpend = (carrier.capitalSpend ?? 0) + HAULER_COST;
     recordAccountTransaction(carrierId, 0, "capital-expense", id, `Commissioned ${created.name}`);
     const shipInstitutionId = `ship:${id}`;
     logistics.institutions[shipInstitutionId] = {
