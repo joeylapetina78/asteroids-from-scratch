@@ -19,12 +19,31 @@ streams one active patrol encounter at a time; the other five craft persist as
 institutional capacity rather than six simultaneously simulated off-screen
 fighters.
 
+## Current checkpoint: protection demand becomes institutional work
+
+Hubs now carry different authored protection policies: direct, contracted, or
+hybrid. A shared evaluator reacts to a real nearby incursion using distance,
+hostile force, population and inventory exposure, available owned capacity,
+cash, and protected reserve. It records the expected loss and the reason for
+the response.
+
+Direct hubs assign their own available patrol. Contracting hubs publish open
+threat-response work on the common contract board. Hybrid hubs use owned
+capacity below their configured severity threshold and seek outside help for a
+larger incident. A hub unable to fund a response without crossing its reserve
+publishes a visible blocked request rather than receiving free protection.
+Requests close when their originating threat is destroyed.
+
+The next implementation slice is provider-side bidding and execution. Open
+requests do not yet choose or pay an independent mercenary company.
+
 ## Next patrol/incursion steps
 
-1. Make hubs and institutions evaluate local threat, expected loss, cash, and
-   existing coverage before requesting protection.
-2. Publish patrol, escort, and incursion-clearance contracts rather than creating
-   free responders. Allow qualified patrol providers and the player to compete.
+1. Instantiate the first independent patrol company and let qualified providers
+   bid on open threat-response work by price, distance, risk, relationships,
+   current damage, and commitments.
+2. Execute accepted patrol, escort, and incursion-clearance contracts with a
+   physical craft. Leave the player eligibility seam open for the same jobs.
 3. Charge deployment and damage costs to the patrol office and pay successful
    work from the hiring institution's account.
 4. Route damaged patrol craft through public repair matching. A destroyed craft

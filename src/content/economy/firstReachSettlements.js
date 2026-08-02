@@ -20,6 +20,7 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
       accounts: { operating: { balance: 50000, committed: 0 } },
       inventories: { "iron-nickel": 4, silicate: 0, "water-ice": 0 },
       renewableResources: ["iron-nickel"],
+      protectionPolicy: { mode: "direct", protectedCash: 12000, jurisdictionRadius: 1900, responseThreshold: 0.22 },
     },
     controller: {
       id: "person:yard-quartermaster", name: "Bex Ordell", archetypeId: "person",
@@ -42,6 +43,7 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
       accounts: { operating: { balance: 30000, committed: 0 } },
       inventories: { "water-ice": 6, "iron-nickel": 0, silicate: 0 },
       renewableResources: ["water-ice"],
+      protectionPolicy: { mode: "direct", protectedCash: 8000, jurisdictionRadius: 1700, responseThreshold: 0.28 },
     },
     controller: {
       id: "person:porch-quartermaster", name: "Hale Sunder", archetypeId: "person",
@@ -64,6 +66,7 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
       accounts: { operating: { balance: 42000, committed: 0 } },
       inventories: { "iron-nickel": 0, silicate: 4, "water-ice": 0 },
       renewableResources: ["silicate"],
+      protectionPolicy: { mode: "contract", protectedCash: 14000, jurisdictionRadius: 2200, responseThreshold: 0.18 },
     },
     controller: {
       id: "person:ledge-quartermaster", name: "Ivry Nakash", archetypeId: "person",
@@ -90,6 +93,7 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
       accounts: { operating: { balance: 22000, committed: 0 } },
       inventories: { "water-ice": 18, "iron-nickel": 0, silicate: 0 },
       renewableResources: ["water-ice"],
+      protectionPolicy: { mode: "hybrid", protectedCash: 7000, jurisdictionRadius: 1800, responseThreshold: 0.3, contractSeverity: 0.62 },
     },
     controller: {
       id: "person:blue-lantern-factor", name: "Nia Pell", archetypeId: "person",
@@ -116,6 +120,7 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
       accounts: { operating: { balance: 9000, committed: 0 } },
       inventories: { "iron-nickel": 14, silicate: 0, "water-ice": 0 },
       renewableResources: ["iron-nickel"],
+      protectionPolicy: { mode: "contract", protectedCash: 3500, jurisdictionRadius: 1600, responseThreshold: 0.4 },
     },
     controller: {
       id: "person:morrow-shoal-factor", name: "Edda Morrow", archetypeId: "person",
@@ -144,6 +149,7 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
       accounts: { operating: { balance: 16000, committed: 0 } },
       inventories: { "iron-nickel": 0, silicate: 10, "water-ice": 0 },
       renewableResources: ["silicate"],
+      protectionPolicy: { mode: "hybrid", protectedCash: 6000, jurisdictionRadius: 1900, responseThreshold: 0.32, contractSeverity: 0.7 },
     },
     controller: {
       id: "person:kiln-crossing-factor", name: "Ansa Vale", archetypeId: "person",

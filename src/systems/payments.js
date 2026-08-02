@@ -1,4 +1,4 @@
-import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260801-2313-adfc7a9";
+import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260801-2328-b73c5fd";
 
 export function createPaymentRequest({
   payableType,
