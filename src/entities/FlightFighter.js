@@ -1,5 +1,5 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260801-2238-a9d14a7";
-import { selectIncursionTarget } from "../systems/incursionTargeting.js?v=fresh-20260801-2238-a9d14a7";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260801-2256-dba117c";
+import { selectIncursionTarget } from "../systems/incursionTargeting.js?v=fresh-20260801-2256-dba117c";
 
 const FIGHTER_FLIGHT = {
   rotationSpeed: 2.55,

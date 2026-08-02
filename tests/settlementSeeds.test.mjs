@@ -13,6 +13,7 @@ import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { STANDING_MINING_ORDERS } from "../src/systems/miningOperation.js";
 import { POPULATION_PROFILES } from "../src/systems/populationDemand.js";
 import { INSTITUTION_MINING_RIGHTS } from "../src/systems/authoritySeeds.js";
+import { getHubServices } from "../src/systems/hubServices.js";
 
 test("one settlement seed emits every cross-system record needed by the economy", () => {
   const logistics = createInitialLogisticsState(1_000);
@@ -48,6 +49,20 @@ test("settlement identities are unique before runtime state is created", () => {
     assert.equal(seed.institution.controllerInstitutionId, seed.controller.id);
     assert.deepEqual(seed.controller.controls, [seed.institution.id]);
     assert.deepEqual(seed.institution.renewableResources, [seed.extraction.resourceId]);
+  });
+});
+
+test("every settlement exposes a supply counter and local job board", () => {
+  FIRST_REACH_SETTLEMENTS.forEach((seed) => {
+    const services = getHubServices(seed.institution.siteId);
+    assert.ok(
+      services.some((service) => service.serviceType === "supply"),
+      `${seed.institution.name} has a supply counter`,
+    );
+    assert.ok(
+      services.some((service) => service.serviceType === "contracts"),
+      `${seed.institution.name} has a job board`,
+    );
   });
 });
 

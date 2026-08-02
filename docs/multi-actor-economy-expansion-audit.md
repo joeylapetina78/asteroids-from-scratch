@@ -357,6 +357,10 @@ The shared layer should own discovery, eligibility, evaluation, commitment, prov
 
 That is the smallest useful seam. It allows a second actor to prove transfer without turning the terrarium into an enormous universal AI framework.
 
+## Salvage-to-fabrication follow-on
+
+All six settlements now expose a local job board and supply counter. The next production-chain expansion should treat wreck scraping as ordinary published work, not a player-only interaction: a title holder authorizes recovery, a qualified salvor returns the wreck, a compatible facility separates it into conserved material inputs, and fabricators transform those inputs into the settlement goods populations currently consume abstractly. This is intentionally recorded as a follow-on rather than implied by today's generic supply counters; fabrication needs real recipes, facilities, ownership transfer, labor/capacity, and inventory conservation before it should replace the existing population-goods abstraction.
+
 ## Final recommendation
 
 Proceed toward the six-hub world, but treat it as a sequence of adversarial proofs rather than a content expansion. First make one buyer choose between two suppliers. Then make one customer choose between two service providers. Then instantiate one competing operation from data. Only after those choices are real should hubs five and six be added.

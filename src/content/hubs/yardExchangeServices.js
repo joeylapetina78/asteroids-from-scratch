@@ -1,5 +1,62 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260801-2238-a9d14a7";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260801-2238-a9d14a7";
+import { getNpcName } from "../npcs.js?v=fresh-20260801-2256-dba117c";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260801-2256-dba117c";
+
+const COMMON_FRONTIER_ORE_VALUES = Object.freeze({
+  "water-ice": 30,
+  "methane-ice": 48,
+  hydrogen: 78,
+  "iron-nickel": 22,
+  aluminum: 36,
+  titanium: 60,
+  silicate: 16,
+  carbonaceous: 25,
+  copper: 50,
+  cobalt: 78,
+  silver: 115,
+  uranium: 90,
+  thorium: 160,
+  lithium: 130,
+  "rare-earth": 220,
+  platinum: 290,
+  "crystal-matrix": 200,
+  "anomaly-shard": 450,
+});
+
+function createSettlementFrontCounter({ siteId, operatorId, operatorName, boardLabel = "Job Board", supplyNote, prices = {} }) {
+  return [
+    {
+      id: `${siteId}-work-board`,
+      npcId: operatorId,
+      npcName: operatorName,
+      organization: `${operatorName}'s ${boardLabel}`,
+      serviceType: "contracts",
+      label: boardLabel,
+      description: "Local extraction, delivery, and settlement work orders.",
+      defaultUnlocked: true,
+      singleActiveContract: true,
+      proceduralSurveyContracts: true,
+      greeting: `${operatorName}. The local board is current. Take a posted job and settle it here.`,
+      busyMessage: "You already have one of our jobs open. Finish it before taking another.",
+    },
+    {
+      id: `${siteId}-supply`,
+      npcId: operatorId,
+      npcName: operatorName,
+      organization: `${operatorName}'s Supply Counter`,
+      serviceType: "supply",
+      label: "Supply",
+      description: supplyNote,
+      defaultUnlocked: true,
+      greeting: `${operatorName} at supply. Fuel, field consumables, and ordinary material buying are available.`,
+      supplyPrices: {
+        fuelPerUnit: prices.fuelPerUnit ?? 3,
+        chargePerUnit: prices.chargePerUnit ?? 4,
+        scanergyPerUnit: prices.scanergyPerUnit ?? 2,
+      },
+      oreValues: { ...COMMON_FRONTIER_ORE_VALUES, ...(prices.oreValues ?? {}) },
+    },
+  ];
+}
 
 export const hubServiceDefinitions = {
   [storySites.starterHub.id]: [
@@ -513,6 +570,27 @@ export const hubServiceDefinitions = {
       },
     },
   ],
+  "blue-lantern": createSettlementFrontCounter({
+    siteId: "blue-lantern",
+    operatorId: "blue-lantern-factor",
+    operatorName: "Nia Pell",
+    supplyNote: "Volatile-field supply and local purchasing for Blue Lantern traffic.",
+    prices: { fuelPerUnit: 2, chargePerUnit: 4, scanergyPerUnit: 2, oreValues: { "water-ice": 24 } },
+  }),
+  "morrow-shoal": createSettlementFrontCounter({
+    siteId: "morrow-shoal",
+    operatorId: "morrow-shoal-factor",
+    operatorName: "Edda Morrow",
+    supplyNote: "A lean structural settlement counter with fuel and mining consumables.",
+    prices: { fuelPerUnit: 3, chargePerUnit: 4, scanergyPerUnit: 2, oreValues: { "iron-nickel": 25 } },
+  }),
+  "kiln-crossing": createSettlementFrontCounter({
+    siteId: "kiln-crossing",
+    operatorId: "kiln-crossing-factor",
+    operatorName: "Ansa Vale",
+    supplyNote: "Industrial-route supply and material purchasing at the far crossing.",
+    prices: { fuelPerUnit: 4, chargePerUnit: 5, scanergyPerUnit: 2, oreValues: { silicate: 20 } },
+  }),
   [storySites.originHub.id]: [
     {
       id: "scrap-porch-recovery",
