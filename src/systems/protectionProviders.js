@@ -1,6 +1,7 @@
 import { createCommercialCraftPublicIdentity } from "./publicIdentity.js";
 import { getRelationshipProjection } from "./relationshipProjections.js";
 import { evaluateSupplierAsk, getSpendable } from "./valuation.js";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js";
 
 const PROVIDER_SEEDS = Object.freeze([
   {
@@ -48,8 +49,31 @@ export function ensureProtectionProviders(state, now = Date.now()) {
     if (!state.logistics?.institutions) return;
     state.logistics.institutions[provider.institution.id] ??= provider.institution;
     state.logistics.institutions[provider.controller.id] ??= provider.controller;
+    recordProtectionCraftDiagnostic(state, provider, now);
   });
   return state.protectionProviders;
+}
+
+function recordProtectionCraftDiagnostic(state, provider, now = Date.now(), patch = {}) {
+  const craft = provider?.craft;
+  if (!craft) return null;
+  const diagnosticState = craft.status === "destroyed"
+    ? DIAGNOSTIC_STATE.DISABLED
+    : craft.status === "available"
+      ? DIAGNOSTIC_STATE.FREE
+      : craft.status === "committed"
+        ? DIAGNOSTIC_STATE.COMMITTED
+        : DIAGNOSTIC_STATE.WORKING;
+  return recordDiagnostic(state, craft.id, {
+    actorName: craft.name,
+    actorKind: "ship",
+    controllerId: provider.institution.id,
+    state: diagnosticState,
+    summary: craft.status === "available" ? `Available at ${provider.institution.siteId}` : `Protection craft is ${craft.status}`,
+    locationSiteId: craft.siteId ?? provider.institution.siteId,
+    detail: { hull: craft.hull, maxHull: craft.maxHull, ownerInstitutionId: craft.ownerInstitutionId, referenceId: craft.referenceId },
+    ...patch,
+  }, now);
 }
 
 export function quoteProtectionRequest(state, sites, provider, request) {
@@ -117,6 +141,10 @@ export function allocateProtectionProviders(state, sites, requests, now = Date.n
     request.acceptedAt = now;
     provider.craft.status = "committed";
     provider.craft.activeRequestId = request.id;
+    recordProtectionCraftDiagnostic(state, provider, now, {
+      summary: `Committed to protect ${request.siteId}`,
+      refs: { contractIds: [request.id], targetIds: [request.threatId] },
+    });
     buyer.accounts.operating.committed = (buyer.accounts.operating.committed ?? 0) + winner.acceptedPrice;
     accepted.push(request);
     state.ledger?.recordEvent("protection.contractAccepted", {
@@ -136,6 +164,11 @@ export function releaseProtectionContract(state, request) {
   if (provider?.craft?.activeRequestId === request.id) {
     provider.craft.status = provider.craft.hull <= 0 ? "destroyed" : (request.dispatchedAt ? "returning" : "available");
     if (!request.dispatchedAt) provider.craft.activeRequestId = null;
+    recordProtectionCraftDiagnostic(state, provider, Date.now(), {
+      summary: request.dispatchedAt ? `Returning after ${request.siteId} resolved the threat` : `Available at ${provider.institution.siteId}`,
+      locationSiteId: request.dispatchedAt ? request.siteId : provider.institution.siteId,
+      refs: request.dispatchedAt ? { contractIds: [request.id], targetIds: [request.threatId] } : { contractIds: [], targetIds: [] },
+    });
   }
   if (buyer?.accounts?.operating && request.agreedPayment) {
     buyer.accounts.operating.committed = Math.max(0, (buyer.accounts.operating.committed ?? 0) - request.agreedPayment);
@@ -151,6 +184,11 @@ export function startProtectionContract(state, requestId, now = Date.now()) {
   request.status = "active";
   request.dispatchedAt = now;
   provider.craft.status = "deployed";
+  recordProtectionCraftDiagnostic(state, provider, now, {
+    summary: `Responding to threat at ${request.siteId}`,
+    locationSiteId: request.siteId,
+    refs: { contractIds: [request.id], targetIds: [request.threatId] },
+  });
   state.ledger?.recordEvent("protection.craftDispatched", {
     requestId, institutionId: request.issuerInstitutionId, providerInstitutionId: request.providerInstitutionId,
     craftId: request.craftId, siteId: request.siteId, threatId: request.threatId,
@@ -169,6 +207,10 @@ export function completeProtectionContract(state, requestId, { hull = null, now 
   provider.institution.accounts.operating.balance += payment;
   if (hull != null) provider.craft.hull = Math.max(0, hull);
   provider.craft.status = "returning";
+  recordProtectionCraftDiagnostic(state, provider, now, {
+    summary: `Returning after protecting ${request.siteId}`,
+    locationSiteId: request.siteId,
+  });
   request.status = "fulfilled";
   request.paidAmount = payment;
   request.settledAt = now;
@@ -192,6 +234,10 @@ export function failProtectionContract(state, requestId, { hull = 0, reason = "c
   request.failureReason = reason;
   request.failedAt = now;
   request.paymentReleased = true;
+  recordProtectionCraftDiagnostic(state, provider, now, {
+    summary: provider.craft.hull > 0 ? `Returning after failed protection at ${request.siteId}` : `Destroyed while protecting ${request.siteId}`,
+    locationSiteId: request.siteId,
+  });
   state.ledger?.recordEvent("protection.contractFailed", {
     requestId, institutionId: request.issuerInstitutionId, providerInstitutionId: request.providerInstitutionId,
     craftId: request.craftId, siteId: request.siteId, threatId: request.threatId, reason,
@@ -208,6 +254,10 @@ export function finishProtectionReturn(state, requestId, hull, now = Date.now())
   provider.craft.siteId = provider.institution.siteId;
   provider.craft.activeRequestId = null;
   request.returnedAt = now;
+  recordProtectionCraftDiagnostic(state, provider, now, {
+    summary: `Available at ${provider.institution.siteId}`,
+    refs: { contractIds: [], targetIds: [] },
+  });
   return provider.craft;
 }
 

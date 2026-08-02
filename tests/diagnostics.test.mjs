@@ -94,6 +94,14 @@ test("retired actors remain historical diagnostics but leave the current actor l
   assert.equal(listBlocked(state).some((actor) => actor.actorId === "relief-1"), false);
 });
 
+test("inspectable actors are ordered alphabetically by display name", () => {
+  const state = {};
+  recordDiagnostic(state, "ship:z", { actorName: "Zulu" });
+  recordDiagnostic(state, "ship:a", { actorName: "alpha" });
+  recordDiagnostic(state, "ship:b", { actorName: "Bravo" });
+  assert.deepEqual(listInspectableActors(state).map((actor) => actor.name), ["alpha", "Bravo", "Zulu"]);
+});
+
 // ── Causal blocker chains ──────────────────────────────────────────────────
 
 test("a blocker chain follows causes across actors into a readable why-list", () => {

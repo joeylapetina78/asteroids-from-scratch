@@ -5,6 +5,7 @@ import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { evaluateProtectionThreat, closeProtectionRequestsForThreat, PROTECTION_REQUEST_STATUS } from "../src/systems/protectionPlanning.js";
 import { CONTRACT_KIND, CONTRACT_STATE, listContracts } from "../src/systems/contractBoard.js";
 import { completeProtectionContract, failProtectionContract, finishProtectionReturn, startProtectionContract } from "../src/systems/protectionProviders.js";
+import { listInspectableActors } from "../src/systems/actorInspector.js";
 
 const sites = [
   { id: "yard-exchange", position: { x: 0, y: 0 } },
@@ -38,6 +39,9 @@ test("an outsourcing hub accepts an affordable independent patrol bid", () => {
   assert.equal(request.craftId, "patrol-craft:sable-one");
   assert.ok(request.agreedPayment > 0 && request.agreedPayment <= request.maximumPayment);
   assert.ok(request.bids[0].reasons.length > 0);
+  const sable = listInspectableActors(value).find((actor) => actor.actorId === "patrol-craft:sable-one");
+  assert.equal(sable?.name, "Sable One");
+  assert.equal(sable?.locationSiteId, "blue-lantern");
 });
 
 test("protected cash can visibly withhold an otherwise necessary response", () => {

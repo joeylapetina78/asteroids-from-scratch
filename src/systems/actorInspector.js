@@ -4,14 +4,14 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260801-2349-e938384";
-import { collectIntentions } from "./intentions.js?v=fresh-20260801-2349-e938384";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260801-2349-e938384";
-import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260801-2349-e938384";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260801-2349-e938384";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260801-2349-e938384";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260801-2349-e938384";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260801-2349-e938384";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260802-0005-942466e";
+import { collectIntentions } from "./intentions.js?v=fresh-20260802-0005-942466e";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260802-0005-942466e";
+import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260802-0005-942466e";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260802-0005-942466e";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260802-0005-942466e";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260802-0005-942466e";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260802-0005-942466e";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
@@ -290,7 +290,8 @@ export function listInspectableActors(state, { game = null, includeRetired = fal
       lastAction: record.lastDecision?.chosen?.label ?? record.summary ?? null,
       updatedAt: record.updatedAt,
     };
-    });
+    })
+    .sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base", numeric: true }) || left.actorId.localeCompare(right.actorId));
 }
 
 function resolveActorSiteId(state, actorId, reportedSiteId, game) {
