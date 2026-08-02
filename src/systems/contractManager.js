@@ -1,14 +1,15 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260801-2256-dba117c";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260801-2256-dba117c";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260801-2256-dba117c";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260801-2256-dba117c";
-import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260801-2256-dba117c";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260801-2256-dba117c";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260801-2256-dba117c";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260801-2256-dba117c";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260801-2256-dba117c";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260801-2256-dba117c";
-import { canFundStandingMiningOrder, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260801-2256-dba117c";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260801-2307-1fd54b6";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260801-2307-1fd54b6";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260801-2307-1fd54b6";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260801-2307-1fd54b6";
+import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260801-2307-1fd54b6";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260801-2307-1fd54b6";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260801-2307-1fd54b6";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260801-2307-1fd54b6";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260801-2307-1fd54b6";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260801-2307-1fd54b6";
+import { canFundStandingMiningOrder, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260801-2307-1fd54b6";
+import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260801-2307-1fd54b6";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -103,6 +104,19 @@ export function createContractManager({ state, onChange = () => {} }) {
 
     contract.status = "active";
     contract.acceptedAt = Date.now();
+    if (contract.type === "wreck-salvage") {
+      const authorization = authorizeWreckSalvage(state, {
+        wreckId: contract.terms.wreckId,
+        authorizationId: `SALVAGE-AUTH:${contract.id}`,
+        salvagerId: "player",
+        destinationSiteId: contract.terms.destinationSiteId,
+      });
+      if (!authorization) {
+        contract.status = "offered";
+        contract.acceptedAt = null;
+        return false;
+      }
+    }
     if (contract.type === "loan" && !contract.disbursedAt) {
       disburseLoan(contract);
     }
@@ -220,10 +234,22 @@ export function createContractManager({ state, onChange = () => {} }) {
         closeUnacceptedHubServiceOffers(event.payload.siteId);
       } else if (event.type === "enemy.destroyed") {
         progressBountiesFromEvent(event);
+      } else if (event.type === "wreck.salvageDelivered") {
+        fulfillWreckSalvageFromEvent(event);
       }
 
       runContractConsiderationsForEvent(event);
     });
+  }
+
+  function fulfillWreckSalvageFromEvent(event) {
+    const contract = Object.values(state.contracts.records).find((candidate) =>
+      candidate.type === "wreck-salvage" && candidate.status === "active" &&
+      candidate.terms.wreckId === event.payload.wreckId &&
+      candidate.terms.destinationSiteId === event.payload.destinationSiteId,
+    );
+    if (!contract) return;
+    fulfillContract(contract, { destinationSiteId: event.payload.destinationSiteId, unitsDelivered: 1 });
   }
 
   function runContractConsiderationsForEvent(event) {

@@ -92,6 +92,8 @@ const EXPLICIT_CLASSES = Object.freeze({
   "ship.registered": RETENTION_CLASS.DURABLE,
   "wreck.created": RETENTION_CLASS.DURABLE,
   "wreck.salvageAuthorized": RETENTION_CLASS.DURABLE,
+  "wreck.salvagePosted": RETENTION_CLASS.DURABLE,
+  "wreck.salvageDelivered": RETENTION_CLASS.DURABLE,
   "title.lienAttached": RETENTION_CLASS.DURABLE,
   "contract.paid": RETENTION_CLASS.DURABLE,
   // Money changing hands and goods leaving the world are both history.
