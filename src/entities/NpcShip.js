@@ -1,6 +1,6 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260802-0005-942466e";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260802-0005-942466e";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260802-0005-942466e";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260802-0027-a7c4805";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260802-0027-a7c4805";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260802-0027-a7c4805";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -17,8 +17,11 @@ const CAREFUL_TRIGGER_SECONDS = 1.05;
 const CAREFUL_MODE_SECONDS = 4.2;
 const CAREFUL_SPEED_MULTIPLIER = 0.48;
 const CARGO_CAR_SPACING = 34;
-const CARGO_CAR_FOLLOW_STRENGTH = 13;
-const CARGO_CAR_DAMPING = 0.82;
+const CARGO_CAR_SPRING_FREQUENCY = 12;
+const CARGO_CAR_MAX_LINK_LENGTH = CARGO_CAR_SPACING * 1.6;
+const CARGO_CAR_MAX_SPEED = 220;
+const CARGO_PHYSICS_STEP = 1 / 120;
+const CARGO_PHYSICS_MAX_CATCHUP = 0.25;
 const HUB_TETHER_PADDING = 42;
 
 export class NpcShip {
@@ -417,21 +420,59 @@ export class NpcShip {
   }
 
   updateCargoSegments(deltaSeconds) {
+    // The train used to mix seconds-based acceleration with a frame-scaled
+    // position update. One slow frame could inject enough energy for every car
+    // to overcorrect forever. A fixed substep and critically damped spring keep
+    // the visual rope stable across normal frames, pauses, and tab throttling.
+    let remaining = Math.min(Math.max(0, deltaSeconds), CARGO_PHYSICS_MAX_CATCHUP);
+    while (remaining > 0) {
+      const step = Math.min(CARGO_PHYSICS_STEP, remaining);
+      let anchor = this.position;
+
+      this.cargoSegments.forEach((segment) => {
+        if (!Number.isFinite(segment.position.x + segment.position.y + segment.velocity.x + segment.velocity.y)) {
+          segment.position.x = anchor.x - Math.cos(this.heading) * CARGO_CAR_SPACING;
+          segment.position.y = anchor.y - Math.sin(this.heading) * CARGO_CAR_SPACING;
+          segment.velocity.x = 0;
+          segment.velocity.y = 0;
+        }
+
+        const offsetX = segment.position.x - anchor.x;
+        const offsetY = segment.position.y - anchor.y;
+        const currentDistance = Math.hypot(offsetX, offsetY) || 1;
+        const targetX = anchor.x + (offsetX / currentDistance) * CARGO_CAR_SPACING;
+        const targetY = anchor.y + (offsetY / currentDistance) * CARGO_CAR_SPACING;
+        const omega = CARGO_CAR_SPRING_FREQUENCY;
+        const accelerationX = (targetX - segment.position.x) * omega * omega - segment.velocity.x * 2 * omega;
+        const accelerationY = (targetY - segment.position.y) * omega * omega - segment.velocity.y * 2 * omega;
+
+        segment.velocity.x += accelerationX * step;
+        segment.velocity.y += accelerationY * step;
+        const boundedVelocity = limit(segment.velocity, CARGO_CAR_MAX_SPEED);
+        segment.velocity.x = boundedVelocity.x;
+        segment.velocity.y = boundedVelocity.y;
+        segment.position.x += segment.velocity.x * step;
+        segment.position.y += segment.velocity.y * step;
+
+        const linkX = segment.position.x - anchor.x;
+        const linkY = segment.position.y - anchor.y;
+        const linkLength = Math.hypot(linkX, linkY);
+        if (linkLength > CARGO_CAR_MAX_LINK_LENGTH) {
+          segment.position.x = anchor.x + (linkX / linkLength) * CARGO_CAR_MAX_LINK_LENGTH;
+          segment.position.y = anchor.y + (linkY / linkLength) * CARGO_CAR_MAX_LINK_LENGTH;
+          const outwardSpeed = segment.velocity.x * (linkX / linkLength) + segment.velocity.y * (linkY / linkLength);
+          if (outwardSpeed > 0) {
+            segment.velocity.x -= (linkX / linkLength) * outwardSpeed;
+            segment.velocity.y -= (linkY / linkLength) * outwardSpeed;
+          }
+        }
+        anchor = segment.position;
+      });
+      remaining -= step;
+    }
+
     let anchor = this.position;
-
     this.cargoSegments.forEach((segment) => {
-      const offsetX = segment.position.x - anchor.x;
-      const offsetY = segment.position.y - anchor.y;
-      const currentDistance = Math.hypot(offsetX, offsetY) || 1;
-      const targetX = anchor.x + (offsetX / currentDistance) * CARGO_CAR_SPACING;
-      const targetY = anchor.y + (offsetY / currentDistance) * CARGO_CAR_SPACING;
-
-      segment.velocity.x += (targetX - segment.position.x) * CARGO_CAR_FOLLOW_STRENGTH * deltaSeconds;
-      segment.velocity.y += (targetY - segment.position.y) * CARGO_CAR_FOLLOW_STRENGTH * deltaSeconds;
-      segment.velocity.x *= CARGO_CAR_DAMPING;
-      segment.velocity.y *= CARGO_CAR_DAMPING;
-      segment.position.x += segment.velocity.x * deltaSeconds * 60;
-      segment.position.y += segment.velocity.y * deltaSeconds * 60;
       segment.heading = lerpAngle(segment.heading, Math.atan2(anchor.y - segment.position.y, anchor.x - segment.position.x), Math.min(1, deltaSeconds * 7));
       anchor = segment.position;
     });
