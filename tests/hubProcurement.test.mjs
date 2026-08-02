@@ -30,6 +30,18 @@ function createWorld({ cash = 20_000 } = {}) {
   return { state, procurement, hub: (id) => state.logistics.institutions[id] };
 }
 
+function isolateAcceptedOrder(state, hub, order) {
+  Object.values(state.hubProcurement.orders).forEach((entry) => {
+    if (entry.id === order.id || ![PROCUREMENT_STATUS.OFFERED, PROCUREMENT_STATUS.ACCEPTED].includes(entry.status)) return;
+    const account = hub(entry.buyerInstitutionId)?.accounts?.operating;
+    if (account) account.committed = Math.max(0, account.committed - (entry.committedPayment ?? 0));
+    entry.status = PROCUREMENT_STATUS.DECLINED;
+  });
+  Object.values(state.logistics.institutions)
+    .filter((institution) => institution.archetypeId === "settlement")
+    .forEach((institution) => { institution.inventories = {}; institution.saleReserve = {}; institution.awaitingPickup = {}; });
+}
+
 function addAlternativeVolatileSupplier(state, { id = "north-well", distance = 500 } = {}) {
   state.hubProcurement.orders = {};
   Object.values(state.logistics.institutions).forEach((institution) => {
@@ -87,7 +99,8 @@ test("orders are directed at a legal producer rather than an authored supplier",
     "the nearer viable producer wins this opening comparison");
   const industrialOrder = listOrders(state, { buyerInstitutionId: "scrap-forge" })
     .find((order) => order.family === "industrial");
-  assert.equal(industrialOrder?.supplierInstitutionId, "the-ledge", "The Ledge holds the industrial right");
+  assert.ok(["the-ledge", "kiln-crossing"].includes(industrialOrder?.supplierInstitutionId),
+    "either legal industrial producer may win");
 });
 
 test("hub five creates a real structural choice for Scrap Porch", () => {
@@ -105,6 +118,32 @@ test("hub five creates a real structural choice for Scrap Porch", () => {
   assert.deepEqual(new Set(eligible.map((candidate) => candidate.institutionId)), new Set(["yard-exchange", "morrow-shoal"]));
   assert.equal(candidates[0].institutionId, "morrow-shoal", "its low ask overcomes the somewhat longer opening route");
   assert.ok(candidates.every((candidate) => candidate.reasons.length > 0));
+});
+
+test("hub six creates a real industrial choice whose winner changes with operating conditions", () => {
+  const { state } = createWorld();
+  state.hubProcurement.orders = {};
+  Object.values(state.logistics.institutions).forEach((institution) => {
+    if (institution.accounts?.operating) institution.accounts.operating.committed = 0;
+  });
+  const opening = evaluateSupplierCandidates(state, {
+    buyerInstitutionId: "yard-exchange", family: "industrial", units: 6,
+  });
+  assert.deepEqual(
+    new Set(opening.filter((candidate) => candidate.eligible).map((candidate) => candidate.institutionId)),
+    new Set(["the-ledge", "kiln-crossing"]),
+  );
+  assert.equal(opening[0].institutionId, "kiln-crossing", "stock on hand can overcome the longer route");
+
+  state.hubProcurement.orders["kiln-at-capacity"] = {
+    id: "kiln-at-capacity", buyerInstitutionId: "scrap-forge", supplierInstitutionId: "kiln-crossing",
+    family: "industrial", resourceId: "silicate", units: 12, deliveredUnits: 0, status: PROCUREMENT_STATUS.ACCEPTED,
+  };
+  const overflow = evaluateSupplierCandidates(state, {
+    buyerInstitutionId: "yard-exchange", family: "industrial", units: 6,
+  });
+  assert.equal(overflow[0].institutionId, "the-ledge", "the alternative wins when the opening supplier is committed");
+  assert.match(overflow.find((candidate) => candidate.institutionId === "kiln-crossing").reasons.join(" "), /capacity/);
 });
 
 test("supplier discovery ranks every legal producer by delivered cost, independent of definition order", () => {
@@ -172,14 +211,15 @@ test("trade lanes emerge between hubs without an authored route table", () => {
   const { state } = createWorld();
   const lanes = listOrders(state).map((order) => `${order.supplierInstitutionId}->${order.buyerInstitutionId}`);
   // The two lanes that never existed as authored routes are now real.
-  assert.ok(lanes.includes("the-ledge->scrap-forge"), "The Ledge supplies Scrap Porch industrial");
+  assert.ok(lanes.some((lane) => ["the-ledge->scrap-forge", "kiln-crossing->scrap-forge"].includes(lane)),
+    "a discovered industrial producer supplies Scrap Porch");
   assert.ok(lanes.some((lane) => lane.endsWith("->the-ledge")), "The Ledge discovers a volatile supplier");
   assert.ok(lanes.some((lane) => lane.startsWith("blue-lantern->")), "the fourth hub wins real business");
 });
 
 test("an order carries a price, a commitment, and its reasons", () => {
   const { state, hub } = createWorld();
-  const order = listOrders(state)[0];
+  const order = listOrders(state, { status: [PROCUREMENT_STATUS.OFFERED, PROCUREMENT_STATUS.ACCEPTED] })[0];
   assert.ok(order.pricePerUnit > 0 && order.units > 0);
   assert.equal(order.committedPayment, order.units * order.pricePerUnit);
   assert.ok(order.reasons.length > 0, "the price is explainable");
@@ -729,6 +769,7 @@ test("a seller that has come down takes an offer it already refused, without the
 test("ore mined against a sale leaves the seller's own stock", () => {
   const { state, procurement, hub } = createWorld();
   const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })[0];
+  isolateAcceptedOrder(state, hub, order);
   const supplier = hub(order.supplierInstitutionId);
   supplier.inventories[order.resourceId] = order.units;
   procurement.update();
@@ -739,6 +780,7 @@ test("ore mined against a sale leaves the seller's own stock", () => {
 test("a seller cannot consume what it has reserved for a sale", () => {
   const { state, procurement, hub } = createWorld();
   const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })[0];
+  isolateAcceptedOrder(state, hub, order);
   const supplier = hub(order.supplierInstitutionId);
   // Give it exactly what it owes and nothing spare.
   supplier.inventories = { [order.resourceId]: order.units };
@@ -752,15 +794,7 @@ test("the sale completes when the reserve is whole, and title passes", () => {
   const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })[0];
   const supplier = hub(order.supplierInstitutionId);
   const buyer = hub(order.buyerInstitutionId);
-  Object.values(state.hubProcurement.orders).forEach((entry) => {
-    if (entry.id === order.id || ![PROCUREMENT_STATUS.OFFERED, PROCUREMENT_STATUS.ACCEPTED].includes(entry.status)) return;
-    const account = hub(entry.buyerInstitutionId)?.accounts?.operating;
-    if (account) account.committed = Math.max(0, account.committed - (entry.committedPayment ?? 0));
-    entry.status = PROCUREMENT_STATUS.DECLINED;
-  });
-  Object.values(state.logistics.institutions)
-    .filter((institution) => institution.archetypeId === "settlement")
-    .forEach((institution) => { institution.inventories = {}; institution.saleReserve = {}; });
+  isolateAcceptedOrder(state, hub, order);
   const sellerBefore = supplier.accounts.operating.balance;
   const buyerBefore = buyer.accounts.operating.balance;
 
@@ -783,6 +817,7 @@ test("the sale completes when the reserve is whole, and title passes", () => {
 test("goods awaiting pickup belong to the buyer, not the hub holding them", () => {
   const { state, procurement, hub } = createWorld();
   const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })[0];
+  isolateAcceptedOrder(state, hub, order);
   const supplier = hub(order.supplierInstitutionId);
   supplier.inventories[order.resourceId] = order.units;
   procurement.update();

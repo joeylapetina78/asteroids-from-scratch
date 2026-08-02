@@ -1,4 +1,4 @@
-﻿import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260801-2136-f7e757a";
+﻿import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260801-2156-8671710";
 
 export const WORLD_SITES = [
   // "" STORY HUBS """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -66,6 +66,17 @@ export const WORLD_SITES = [
     position: { x: -3820, y: 2320 },
     radius: 41,
     interactionRadius: 180,
+    capabilities: ["trade"],
+    services: [],
+  },
+  {
+    id: "kiln-crossing",
+    name: "Kiln Crossing",
+    beaconId: "beacon-kiln-crossing",
+    type: "hub",
+    position: { x: 9100, y: -2800 },
+    radius: 43,
+    interactionRadius: 185,
     capabilities: ["trade"],
     services: [],
   },

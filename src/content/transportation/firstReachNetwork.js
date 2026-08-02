@@ -1,4 +1,4 @@
-import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260801-2136-f7e757a";
+import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260801-2156-8671710";
 
 export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
   { id: "lane-yard-scrap", fromId: "yard-exchange", toId: "scrap-porch", distance: 1875, bidirectional: true },
@@ -46,6 +46,21 @@ export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
     },
   },
   {
+    id: "lane-ledge-kiln",
+    fromId: "the-ledge",
+    toId: "kiln-crossing",
+    distance: 2800,
+    bidirectional: true,
+    corridor: {
+      ...FRONTIER_FREIGHT_CORRIDOR,
+      id: "corridor-ledge-kiln",
+      name: "Kiln Crossing Trace",
+      sampleSpacing: 95,
+      waypointSpacing: 290,
+      seed: 8149,
+    },
+  },
+  {
     id: "lane-ledge-ore-station",
     fromId: "the-ledge",
     toId: "ore-station-one",
@@ -63,7 +78,7 @@ export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
 ]);
 
 export const FIRST_REACH_CARRIER_POLICY = Object.freeze({
-  knownDestinationIds: ["yard-exchange", "scrap-porch", "the-ledge", "blue-lantern", "morrow-shoal", "ore-station-one"],
+  knownDestinationIds: ["yard-exchange", "scrap-porch", "the-ledge", "blue-lantern", "morrow-shoal", "kiln-crossing", "ore-station-one"],
   expectedWearPerDistance: 0.00016,
   maximumWear: 6,
   minimumReturnMargin: 0.9,

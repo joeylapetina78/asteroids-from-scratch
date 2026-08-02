@@ -61,3 +61,14 @@ test("hub five is an asymmetric structural competitor rather than a copied settl
   assert.ok(morrow.population.incomeAmount < yard.population.incomeAmount, "its household economy is deliberately weaker");
   assert.notDeepEqual(morrow.controller.traits, yard.controller.traits, "its pricing policy comes from a different operator");
 });
+
+test("hub six is an asymmetric industrial competitor rather than a copied Ledge", () => {
+  const kiln = FIRST_REACH_SETTLEMENTS.find((seed) => seed.institution.id === "kiln-crossing");
+  const ledge = FIRST_REACH_SETTLEMENTS.find((seed) => seed.institution.id === "the-ledge");
+  assert.ok(kiln, "Kiln Crossing is seeded as hub six");
+  assert.deepEqual(kiln.extraction.miningFamilies, ["industrial"]);
+  assert.equal(kiln.extraction.resourceId, ledge.extraction.resourceId, "it competes in the same real resource market");
+  assert.ok(kiln.institution.accounts.operating.balance < ledge.institution.accounts.operating.balance, "its treasury is thinner");
+  assert.ok(kiln.population.size > ledge.population.size, "it carries more local demand");
+  assert.notDeepEqual(kiln.controller.traits, ledge.controller.traits, "its commercial policy belongs to a different operator");
+});

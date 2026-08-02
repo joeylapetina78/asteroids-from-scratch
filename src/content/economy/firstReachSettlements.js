@@ -131,6 +131,34 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
       miningFamilies: ["structural"],
     },
   },
+  {
+    // Hub six completes the first competitive commodity triangle. Kiln
+    // Crossing can produce the same ordinary industrial feedstock as The
+    // Ledge, but sits beyond it on the network, carries a larger local
+    // population, and protects a thinner treasury. Its larger opening shelf
+    // can win early work, while distance and finite capacity leave room for
+    // The Ledge to win the next comparison.
+    institution: {
+      id: "kiln-crossing", name: "Kiln Crossing", siteId: "kiln-crossing",
+      archetypeId: "settlement", controllerInstitutionId: "person:kiln-crossing-factor",
+      accounts: { operating: { balance: 16000, committed: 0 } },
+      inventories: { "iron-nickel": 0, silicate: 10, "water-ice": 0 },
+      renewableResources: ["silicate"],
+    },
+    controller: {
+      id: "person:kiln-crossing-factor", name: "Ansa Vale", archetypeId: "person",
+      controls: ["kiln-crossing"], traits: { caution: 0.68, growthBias: 0.15, urgencyBias: 0.25 },
+    },
+    population: {
+      id: "population:kiln-crossing", name: "Kiln Crossing Population", size: 125,
+      householdCash: 24000, householdCashCap: 28000,
+      incomeAmount: 7200, incomeIntervalSeconds: 120, needIds: STANDARD_NEEDS,
+    },
+    extraction: {
+      id: "mine-kiln-silicate", resourceId: "silicate", resourceName: "Silicate",
+      miningFamilies: ["industrial"],
+    },
+  },
 ]);
 
 export function settlementInstitutionRecords() {
