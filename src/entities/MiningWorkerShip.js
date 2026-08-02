@@ -1,5 +1,5 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260802-0035-693f473";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260802-0035-693f473";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260802-1248-85b6ff4";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260802-1248-85b6ff4";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
@@ -54,12 +54,23 @@ export class MiningWorkerShip {
     this.pulse = 0;
     this.onEvent = onEvent;
     this.onDelivery = onDelivery;
+    this.shield = { installed: false, charge: 0, maxCharge: 0, absorbedDamage: 0 };
   }
 
   damage(amount) {
-    this.hull = Math.max(0, this.hull - Math.max(0, amount));
+    let remaining = Math.max(0, amount);
+    if (this.shield.installed && this.shield.charge > 0) {
+      const absorbed = Math.min(remaining, this.shield.charge);
+      this.shield.charge -= absorbed;
+      this.shield.absorbedDamage += absorbed;
+      remaining -= absorbed;
+    }
+    this.hull = Math.max(0, this.hull - remaining);
     if (this.hull === 0) this.isAlive = false;
   }
+
+  installShield({ maxCharge = 72 } = {}) { this.shield = { installed: true, charge: maxCharge, maxCharge, absorbedDamage: this.shield?.absorbedDamage ?? 0 }; }
+  rechargeShield(units) { if (!this.shield.installed) return 0; const before = this.shield.charge; this.shield.charge = Math.min(this.shield.maxCharge, this.shield.charge + Math.max(0, units)); return this.shield.charge - before; }
 
   assign({ allocationId, contractId, resourceId, quantity, harvestTargetQuantity = quantity, destination, depositCandidates = [] }) {
     if (this.assignment || quantity <= 0) return false;

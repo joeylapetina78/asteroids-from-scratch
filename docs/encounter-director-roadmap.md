@@ -88,6 +88,43 @@ B is probably more interesting narratively (a hub actually defending its own ter
 
 ## Stage 3: the Encounter Director — pressure tracking
 
+### Economy-pressure extension (implemented August 2026)
+
+The director remains a read-only observer, but now receives a separate bounded
+economic concern signal: critically damaged productive craft, open repairs,
+titled wrecks awaiting recovery, unfilled protection work, and new
+incursion-caused destruction. Economic concern can only ease incursion pacing;
+it cannot intensify attacks or directly mutate an institution.
+
+Combat damage enters the ordinary public maintenance lifecycle rather than a
+parallel combat-repair system. Mining craft withdraw at or below 50% hull with
+structural fatigue. Freight craft at the same threshold finish cargo already in
+their custody, then choose maintenance ahead of new freight. Successful service
+restores both operating condition and physical hull, making damage generate
+downtime, material demand, invoices, and repair revenue before destruction
+creates salvage work.
+
+This is intentionally a safety feedback, not a six-hub difficulty model. Before
+increasing opposition further, validate that institutions repeatedly recover,
+pay for service, replace lost capacity, and clear protection/salvage backlogs.
+
+### Freight-collapse recovery (implemented August 2026)
+
+A carrier no longer disappears from planning when its final physical craft is
+destroyed. Total fleet loss is distinct from ordinary “all craft busy” growth:
+after a short confirmation interval the carrier attempts an emergency
+replacement. If its own account cannot preserve operating cash and purchase the
+hull, its configured home settlement may issue a conserved fleet-recovery loan.
+The carrier repays 25% of later freight income until the principal is cleared.
+Unaffordable or unauthorized finance remains a visible blocked decision.
+
+Maximum economic pressure also has a bounded final safety action. Sixty seconds
+of saturated concern may collapse one persistent portal (at least five minutes
+old or six waves deep), withdraw its remaining guards, and enforce a two-minute
+ambient recovery gap. It grants no trophy or credits and cannot repeatedly fire
+for the same unresolved emergency. This is a circuit breaker for regional
+simulation survival, not a substitute for patrols defeating ordinary attacks.
+
 Status: built, in validation. `src/systems/encounterDirector.js` exists as a read-only ledger consumer: EWMA pressure score (2s sample tick), signals = collision damage + sentry hits + strandings/tows + hull-integrity concern + nearby hostiles, relief from player-attributed kills. Pacing multipliers (wave size, wave delay, portal gap) are slew-limited at 0.06/tick, include a 45s relax phase after each portal clear, and only lean in gently below pressure 25 / ease off between 45 and 80. Wired into incursion pacing only, per scope. The score ships in the `onDebugChange` payload as `encounter` — the debug-panel UI hookup in `main.js` is deliberately deferred (panel work was in flight in a parallel session) and is the next small step. Watch it across a few playtest sessions before trusting it further.
 
 A new module, something like `src/systems/encounterDirector.js`. Scope: read-only consumer of the event ledger, produces one thing — a rolling `pressure` score — and nothing else touches game state directly here. Keep it side-effect-free and easy to unit-test in isolation.

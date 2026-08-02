@@ -1,4 +1,4 @@
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260802-0035-693f473";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260802-1248-85b6ff4";
 // One place to ask what an actor is and what it has.
 //
 // Actor records are spread across seven state shapes that grew separately —
@@ -49,6 +49,9 @@ export function findActorRecord(state, actorId) {
   if (tow?.institution?.id === actorId) return tow.institution;
   if (tow?.controller?.id === actorId) return tow.controller;
   if (tow?.vehicle?.id === actorId) return tow.vehicle;
+
+  const insurance = state.fleetInsurance;
+  if (insurance?.institution?.id === actorId) return insurance.institution;
 
   const farm = state.farm;
   if (farm?.institution?.id === actorId) return farm.institution;

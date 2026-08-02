@@ -109,6 +109,12 @@ export const INSTITUTION_ARCHETYPES = Object.freeze({
     },
     recipes: [],
   }),
+  "fleet-insurer": Object.freeze({
+    id: "fleet-insurer",
+    capabilities: ["underwrite-fleet-risk", "collect-premium", "settle-hull-claim"],
+    defaultPolicy: { protectedCash: 5000, priorityWeights: { routine: 10, urgent: 55, emergency: 100 } },
+    recipes: [],
+  }),
   "patrol-service": Object.freeze({
     id: "patrol-service",
     capabilities: ["inspect-traffic", "patrol-jurisdiction", "defend-shipping", "interdict-threat"],

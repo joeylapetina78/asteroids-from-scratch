@@ -1,18 +1,18 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260802-0035-693f473";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260802-0035-693f473";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-0035-693f473";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260802-0035-693f473";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260802-0035-693f473";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260802-0035-693f473";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260802-0035-693f473";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260802-0035-693f473";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260802-0035-693f473";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260802-0035-693f473";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260802-0035-693f473";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-0035-693f473";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260802-0035-693f473";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260802-1248-85b6ff4";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260802-1248-85b6ff4";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1248-85b6ff4";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260802-1248-85b6ff4";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260802-1248-85b6ff4";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260802-1248-85b6ff4";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260802-1248-85b6ff4";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260802-1248-85b6ff4";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260802-1248-85b6ff4";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260802-1248-85b6ff4";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260802-1248-85b6ff4";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1248-85b6ff4";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260802-1248-85b6ff4";
 import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260802-0035-693f473";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260802-1248-85b6ff4";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -892,8 +892,8 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     return sites.get(siteId)?.name ?? siteId.replaceAll("-", " ");
   }
 
-  function beginMaintenance(shipRecord, ship) {
-    const issue = MINING_ISSUES[shipRecord.issueCount % MINING_ISSUES.length];
+  function beginMaintenance(shipRecord, ship, forcedIssue = null, cause = "work-wear") {
+    const issue = forcedIssue ?? MINING_ISSUES[shipRecord.issueCount % MINING_ISSUES.length];
     const serviceSite = sites.get("scrap-porch");
     if (!serviceSite) return;
     shipRecord.issueCount += 1;
@@ -913,12 +913,23 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       detail: { issueType: issue.issueType, requiredCapabilities: issue.requiredCapabilities, wear: shipRecord.wear },
       at: now(),
     }), { state: DIAGNOSTIC_STATE.DISABLED, at: now() });
-    record("mining.maintenanceRequired", `${shipRecord.name} developed ${issue.issueType.replaceAll("-", " ")} after mining work and is returning to Scrap Porch.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, issueType: issue.issueType, wear: shipRecord.wear, requiredCapabilities: issue.requiredCapabilities });
+    record("mining.maintenanceRequired", `${shipRecord.name} developed ${issue.issueType.replaceAll("-", " ")} ${cause === "combat-damage" ? "after combat damage" : "after mining work"} and is returning to Scrap Porch.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, issueType: issue.issueType, wear: shipRecord.wear, requiredCapabilities: issue.requiredCapabilities, cause });
   }
 
   function consumeMaintenanceEvents() {
     for (const event of state.ledger.getEventsAfterId(operation.lastMaintenanceEventId, { includeHidden: true })) {
       operation.lastMaintenanceEventId = Math.max(operation.lastMaintenanceEventId, event.id);
+      if (event.type === "incursion.npcHit") {
+        const shipRecord = operation.ships[event.payload.npcId];
+        const ship = workers.find((candidate) => candidate.id === event.payload.npcId);
+        if (shipRecord && ship && shipRecord.maintenanceStatus === "available"
+          && event.payload.hullAfter > 0 && event.payload.hullAfter / ship.maxHull <= 0.5) {
+          shipRecord.wear = Math.max(1, shipRecord.wear ?? 0);
+          const issue = MINING_ISSUES.find((candidate) => candidate.issueType === "structural-fatigue");
+          beginMaintenance(shipRecord, ship, issue, "combat-damage");
+        }
+        continue;
+      }
       if (event.type !== "sprc.repairCompleted") continue;
       const shipRecord = operation.ships[event.payload.subjectId];
       if (!shipRecord || shipRecord.maintenanceStatus === "available") continue;
@@ -979,7 +990,9 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     shipRecord.pendingIssue = null;
     shipRecord.maintenanceStatus = "available";
     shipRecord.currentSiteId = "scrap-porch";
-    workers.find((worker) => worker.id === shipRecord.id)?.completeService();
+    const servicedWorker = workers.find((worker) => worker.id === shipRecord.id);
+    servicedWorker?.completeService();
+    if (servicedWorker) servicedWorker.hull = servicedWorker.maxHull;
     // Diagnostics: serviced, paid, and free again.
     clearBlocker(state, shipRecord.id, {
       state: DIAGNOSTIC_STATE.FREE,

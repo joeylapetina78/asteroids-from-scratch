@@ -52,3 +52,22 @@ test("the competing fleets start with distinct, meaningful maintenance histories
   assert.ok(new Set(wear).size >= 4, "the fleets do not begin on a synchronized maintenance clock");
   assert.ok(wear.every((value) => value < 1), "none begins already failed");
 });
+
+test("an unknown mining craft withdraws for public repair after critical incursion damage", () => {
+  const { state, game } = createWorld();
+  const mining = createMiningOperation({ state, game, now: () => 1_000, seed: CINDER_MINING_SEED });
+  const worker = mining.worker;
+  const record = mining.getState().ships[worker.id];
+  worker.hull = 50;
+
+  state.ledger.recordEvent("incursion.npcHit", {
+    npcId: worker.id, npcName: worker.name, npcType: "mining-worker", damage: 10, hullAfter: 50,
+  }, { visible: false });
+  mining.update();
+
+  assert.equal(record.pendingIssue, "structural-fatigue");
+  assert.equal(record.maintenanceStatus, "returning-for-service");
+  assert.equal(worker.miningDisabled, true);
+  assert.ok(state.ledger.getRecentEvents(20).some((event) =>
+    event.type === "mining.maintenanceRequired" && event.payload.cause === "combat-damage"));
+});

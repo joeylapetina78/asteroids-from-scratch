@@ -1,4 +1,4 @@
-import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260802-0035-693f473";
+import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260802-1248-85b6ff4";
 
 export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
   { id: "lane-yard-scrap", fromId: "yard-exchange", toId: "scrap-porch", distance: 1875, bidirectional: true },
@@ -84,6 +84,11 @@ export const FIRST_REACH_CARRIER_POLICY = Object.freeze({
   minimumReturnMargin: 0.9,
   operatingCostPerDistance: 0.004,
   wearPenalty: 8,
+  emergencyFleetFinance: {
+    enabled: true,
+    maximumPrincipal: 8000,
+    repaymentShare: 0.25,
+  },
 });
 
 export const FIRST_REACH_REPAIR_OPTIONS = Object.freeze([

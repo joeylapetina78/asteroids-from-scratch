@@ -34,6 +34,8 @@ const WAVE_SIZE_MULTIPLIER_MIN = 0.45;
 const WAVE_SIZE_MULTIPLIER_MAX = 1.15;
 const WAVE_DELAY_MULTIPLIER_MAX = 1.6;
 const PORTAL_GAP_MULTIPLIER_MAX = 2.0;
+const ECONOMIC_SUPPRESSION_CONCERN = 35;
+const ECONOMIC_SUPPRESSION_SECONDS = 60;
 
 const TRACKED_STATS = [
   "ship.collision.damage.total",
@@ -42,6 +44,7 @@ const TRACKED_STATS = [
   "ship.towed.total",
   "enemy.destroyed.byPlayer",
   "incursion.portalDestroyed.total",
+  "npc.destroyed.cause.incursion",
 ];
 
 export function createEncounterDirector({ getStat }) {
@@ -49,6 +52,9 @@ export function createEncounterDirector({ getStat }) {
   let sampleTimer = 0;
   let relaxTimer = 0;
   let lastSample = null;
+  let economicEmergencySeconds = 0;
+  let suppressionIssued = false;
+  let portalSuppressionPending = false;
   const lastStats = {};
   const applied = {
     waveSizeMultiplier: 1,
@@ -90,9 +96,27 @@ export function createEncounterDirector({ getStat }) {
       deltas["ship.collision.damage.total"] * 1.4 +
       deltas["events.incursion.sentryHit"] * SENTRY_HIT_ESTIMATED_DAMAGE * 1.4;
     const crisisSpike = deltas["ship.stranded.total"] * 30 + deltas["ship.towed.total"] * 20;
+    const economy = context.economy ?? {};
+    const economicConcern = Math.min(35,
+      (economy.criticalCraftCount ?? 0) * 18
+      + (economy.openRepairCount ?? 0) * 6
+      + (economy.openSalvageCount ?? 0) * 6
+      + (economy.unfilledProtectionCount ?? 0) * 4);
+    const economicCrisisSpike = deltas["npc.destroyed.cause.incursion"] * 25;
+    if (economicConcern >= ECONOMIC_SUPPRESSION_CONCERN) {
+      economicEmergencySeconds += SAMPLE_SECONDS;
+      if (economicEmergencySeconds >= ECONOMIC_SUPPRESSION_SECONDS && !suppressionIssued) {
+        portalSuppressionPending = true;
+        suppressionIssued = true;
+      }
+    } else {
+      economicEmergencySeconds = Math.max(0, economicEmergencySeconds - SAMPLE_SECONDS * 2);
+      if (economicConcern < 10) suppressionIssued = false;
+    }
     const relief = deltas["enemy.destroyed.byPlayer"] * 3;
 
-    const rawSample = clamp(hullConcern + exposure + damageStress + crisisSpike - relief, 0, 100);
+    const rawSample = clamp(hullConcern + exposure + damageStress + crisisSpike
+      + economicConcern + economicCrisisSpike - relief, 0, 100);
     pressure = clamp(pressure + (rawSample - pressure) * SAMPLE_BLEND, 0, 100);
     lastSample = {
       rawSample: round1(rawSample),
@@ -100,6 +124,8 @@ export function createEncounterDirector({ getStat }) {
       exposure: round1(exposure),
       damageStress: round1(damageStress),
       crisisSpike: round1(crisisSpike),
+      economicConcern: round1(economicConcern),
+      economicCrisisSpike: round1(economicCrisisSpike),
       relief: round1(relief),
     };
 
@@ -118,7 +144,9 @@ export function createEncounterDirector({ getStat }) {
 
   function getTargetMultipliers() {
     // 0 at the edge of the comfortable band, 1 at full effect.
-    const strain = clamp((pressure - PRESSURE_HIGH) / (PRESSURE_MAX_EFFECT - PRESSURE_HIGH), 0, 1);
+    const sessionStrain = clamp((pressure - PRESSURE_HIGH) / (PRESSURE_MAX_EFFECT - PRESSURE_HIGH), 0, 1);
+    const economicStrain = clamp(((lastSample?.economicConcern ?? 0) - 10) / 25, 0, 1);
+    const strain = Math.max(sessionStrain, economicStrain);
     const ease = clamp((PRESSURE_LOW - pressure) / PRESSURE_LOW, 0, 1);
 
     return {
@@ -147,6 +175,8 @@ export function createEncounterDirector({ getStat }) {
     return {
       pressure: round1(pressure),
       relaxSecondsLeft: round1(relaxTimer),
+      economicEmergencySeconds: round1(economicEmergencySeconds),
+      portalSuppressionPending,
       pacing: {
         waveSizeMultiplier: round2(applied.waveSizeMultiplier),
         waveDelayMultiplier: round2(applied.waveDelayMultiplier),
@@ -156,11 +186,18 @@ export function createEncounterDirector({ getStat }) {
     };
   }
 
+  function consumePortalSuppressionRequest() {
+    const requested = portalSuppressionPending;
+    portalSuppressionPending = false;
+    return requested;
+  }
+
   return {
     update,
     getPressure,
     getIncursionPacing,
     getDebugSnapshot,
+    consumePortalSuppressionRequest,
   };
 }
 

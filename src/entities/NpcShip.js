@@ -1,6 +1,6 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260802-0035-693f473";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260802-0035-693f473";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260802-0035-693f473";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260802-1248-85b6ff4";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260802-1248-85b6ff4";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260802-1248-85b6ff4";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -79,6 +79,7 @@ export class NpcShip {
     this.towDestinationSiteId = null;
     this.activeCorridorId = null;
     this.navigationMetrics = { distanceTraveled: 0, carefulDistance: 0, replanCount: 0, corridorEntries: 0 };
+    this.shield = { installed: false, charge: 0, maxCharge: 0, absorbedDamage: 0 };
   }
 
   update(deltaSeconds, world) {
@@ -176,7 +177,14 @@ export class NpcShip {
   }
 
   damage(amount) {
-    this.hull -= amount;
+    let remaining = Math.max(0, amount);
+    if (this.shield.installed && this.shield.charge > 0) {
+      const absorbed = Math.min(remaining, this.shield.charge);
+      this.shield.charge -= absorbed;
+      this.shield.absorbedDamage += absorbed;
+      remaining -= absorbed;
+    }
+    this.hull -= remaining;
 
     if (this.hull <= 0) {
       this.isAlive = false;
@@ -476,6 +484,17 @@ export class NpcShip {
       segment.heading = lerpAngle(segment.heading, Math.atan2(anchor.y - segment.position.y, anchor.x - segment.position.x), Math.min(1, deltaSeconds * 7));
       anchor = segment.position;
     });
+  }
+
+  installShield({ maxCharge = 72 } = {}) {
+    this.shield = { installed: true, charge: maxCharge, maxCharge, absorbedDamage: this.shield?.absorbedDamage ?? 0 };
+  }
+
+  rechargeShield(units) {
+    if (!this.shield.installed) return 0;
+    const before = this.shield.charge;
+    this.shield.charge = Math.min(this.shield.maxCharge, this.shield.charge + Math.max(0, units));
+    return this.shield.charge - before;
   }
 
   updateHubService(sites = []) {

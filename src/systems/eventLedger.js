@@ -603,6 +603,12 @@ function getDefaultMessage(type, payload) {
   if (type === "wreck.created") {
     return `${payload.shipName ?? "Ship"} became titled wreckage owned by ${payload.ownerInstitutionId ?? "an unestablished party"}`;
   }
+  if (type === "towService.salvageAccepted") return `First Reach Recovery accepted salvage ${payload.contractId ?? payload.wreckId}`;
+  if (type === "towService.salvageCompleted") return `Recovered wreck ${payload.wreckId} for ${payload.fee ?? 0} credits`;
+  if (type === "insurance.policyBound") return `Fleet insurance policy ${payload.policyId} bound`;
+  if (type === "insurance.claimSettled") return `Fleet insurance paid ${payload.paid ?? 0} credits on ${payload.wreckId}`;
+  if (type === "sprc.shieldInstalled") return `SPRC installed a rechargeable shield on ${payload.shipId}`;
+  if (type === "fleet.shieldRecharged") return `${payload.shipId} recharged its shield at ${payload.siteId}`;
 
   if (type === "npc.enteredViewport") {
     return `${payload.npcName ?? "NPC ship"} entered view`;
