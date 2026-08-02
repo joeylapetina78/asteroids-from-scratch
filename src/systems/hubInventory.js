@@ -10,9 +10,9 @@
 // draws from a family and substitutes freely within it. A hub does not need
 // iron-nickel specifically; it needs structural material.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-1154-52a7508";
-import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260801-1154-52a7508";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260801-1154-52a7508";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-2136-f7e757a";
+import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260801-2136-f7e757a";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260801-2136-f7e757a";
 
 // How many seconds of consumption a hub tries to keep on the shelf. Higher
 // means fatter buffers and less frequent, larger orders.
@@ -64,10 +64,11 @@ export function getFamilyOnHand(hub, family) {
 // against an open allocation, plus freight in flight toward it. Counting this
 // is what stops a hub from re-ordering the same shortfall every tick.
 export function getFamilyIncoming(state, hubInstitutionId, family) {
-  const allocations = Object.values(state.miningOperation?.allocations ?? {})
+  const miningOperations = Object.values(state.miningOperations ?? (state.miningOperation ? { legacy: state.miningOperation } : {}));
+  const allocations = miningOperations.flatMap((operation) => Object.values(operation?.allocations ?? {}))
     .filter((allocation) => allocation.status === "active");
   const fromMining = allocations.reduce((sum, allocation) => {
-    const order = (state.miningOperation?.postedOrders ?? {})[allocation.orderId];
+    const order = miningOperations.map((operation) => operation?.postedOrders?.[allocation.orderId]).find(Boolean);
     if (!order || order.buyerInstitutionId !== hubInstitutionId) return sum;
     return getResourceFamily(order.resourceId) === family ? sum + (allocation.amount ?? 0) : sum;
   }, 0);

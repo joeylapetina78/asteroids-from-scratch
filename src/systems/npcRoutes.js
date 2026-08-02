@@ -1,4 +1,8 @@
-import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260801-1154-52a7508";
+import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260801-2136-f7e757a";
+import { FIRST_REACH_CARRIERS } from "../content/transportation/firstReachCarriers.js";
+
+export const HAULER_PALETTES = Object.freeze(Object.fromEntries(FIRST_REACH_CARRIERS.map((seed) => [seed.institution.id, seed.palette])));
+export const RELIEF_HAULER_PALETTE = Object.freeze({ hullStroke: "#a9a0ff", hullFill: "rgba(137, 125, 255, 0.14)", trainStroke: "#d1ccff", trainFill: "rgba(137, 125, 255, 0.18)", linkStroke: "rgba(190, 183, 255, 0.44)" });
 
 // For now, routes are authored from existing world sites. Later this can become
 // the same data layer that powers trade lanes, missions, patrols, and piracy.
@@ -9,16 +13,17 @@ export function createNpcRouteShips(sites) {
     return [];
   }
 
-  const firstRoute = [hubs[0], hubs[1]];
-  const secondRoute = [hubs[1], hubs[0]];
-
-  return [
-    createRouteShip("hauler-yard-scrap", "Yard Hauler", firstRoute, 1, -140, "Yard Hauler Operator", hubs[1].id),
-    createRouteShip("hauler-scrap-yard", "Porch Runner Two", secondRoute, 2, -140, "Mara Venn", hubs[1].id),
-  ];
+  const byId = new Map(hubs.map((hub) => [hub.id, hub]));
+  return FIRST_REACH_CARRIERS.map((seed) => {
+    const home = byId.get(seed.ship.homeSiteId);
+    const destination = byId.get(seed.ship.initialDestinationSiteId);
+    if (!home || !destination) return null;
+    return createRouteShip(seed.ship.physicalId, seed.ship.name, [home, destination], seed.ship.seed, -140,
+      seed.controller.name, "scrap-porch", seed.palette);
+  }).filter(Boolean);
 }
 
-export function createRouteShip(id, name, route, seed, routeOffset, pilotName = `${name} Operator`, maintenanceSiteId = null) {
+export function createRouteShip(id, name, route, seed, routeOffset, pilotName = `${name} Operator`, maintenanceSiteId = null, palette = null) {
   const start = route[0].position;
   const next = route[1].position;
   const lane = normalize(next.x - start.x, next.y - start.y);
@@ -33,6 +38,7 @@ export function createRouteShip(id, name, route, seed, routeOffset, pilotName = 
     seed,
     laneOffset: routeOffset,
     maintenanceSiteId,
+    palette,
     publicIdentity: {
       pilotEntityId: `person:${id}-operator`,
       pilotName,

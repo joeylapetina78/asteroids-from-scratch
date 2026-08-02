@@ -7,7 +7,7 @@ import { getResourceFamily } from "../src/systems/resourceDefinitions.js";
 import { getRetentionClass, RETENTION_CLASS } from "../src/systems/eventRetention.js";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
-import { listInspectableActors } from "../src/systems/actorInspector.js";
+import { inspectActor, listInspectableActors } from "../src/systems/actorInspector.js";
 import { recordAcquisition } from "../src/systems/costBasis.js";
 import { formatBlockerChain, resolveBlockerChain } from "../src/systems/diagnostics.js";
 
@@ -27,8 +27,8 @@ function createWorld({ stock = {}, hubCash = 5_000 } = {}) {
     advance: (seconds) => { clock += seconds * 1000; },
     now: () => clock,
     record: () => population.getState().populations["population:yard-exchange"],
-    // All three settlements run. These cases are about the Yard Exchange pair,
-    // so ignore what Scrap Porch and The Ledge get up to.
+    // All settlements run. These cases are about the Yard Exchange pair, so
+    // ignore what the other populations get up to.
     events: (type) => state.ledger.getEventsAfterId(0).filter((entry) => {
       if (entry.type !== type) return false;
       const p = entry.payload ?? {};
@@ -260,6 +260,29 @@ test("the population is an inspectable actor in the observatory", () => {
   assert.ok(entry.summary.length > 0);
 });
 
+test("hub administrations and populations resolve to their site's viewport position and data card", () => {
+  const world = createWorld({ stock: FULL_STOCK, hubCash: 12_000 });
+  world.advance(200);
+  world.population.update();
+  const game = { worldSites: [{ id: "yard-exchange", position: { x: 380, y: -180 } }] };
+
+  const hub = inspectActor(world.state, "yard-exchange", { game });
+  const population = inspectActor(world.state, "population:yard-exchange", { game });
+  assert.deepEqual(hub.position, { x: 380, y: -180 });
+  assert.deepEqual(population.position, { x: 380, y: -180 });
+  assert.equal(hub.kind, "institution");
+  assert.equal(hub.institution.account.balance, Math.round(world.hub.accounts.operating.balance));
+  assert.ok(hub.institution.inventories);
+  assert.equal(population.kind, "population");
+  assert.equal(population.detail.size, 140);
+  assert.ok(Array.isArray(population.detail.needs));
+
+  const porchGame = { worldSites: [{ id: "scrap-porch", position: { x: -1180, y: 860 } }] };
+  const porch = inspectActor(world.state, "scrap-forge", { game: porchGame });
+  assert.equal(porch.locationSiteId, "scrap-porch", "institution identity does not have to equal its geographic site id");
+  assert.deepEqual(porch.position, { x: -1180, y: 860 });
+});
+
 test("purchases and consumption are durable history, demand is operational", () => {
   assert.equal(getRetentionClass("population.goodsPurchased"), RETENTION_CLASS.DURABLE);
   assert.equal(getRetentionClass("population.goodsConsumed"), RETENTION_CLASS.DURABLE);
@@ -422,9 +445,9 @@ test("every hub has its own population, and each is its own actor", () => {
   world.population.update();
   const actors = listInspectableActors(world.state);
   const populations = actors.filter((entry) => entry.kind === "population");
-  assert.equal(populations.length, 3, "Yard Exchange, Scrap Porch and The Ledge each have one");
+  assert.equal(populations.length, POPULATION_PROFILES.length, "every configured settlement has one");
   const controllers = populations.map((entry) => entry.controllerId).sort();
-  assert.deepEqual(controllers, ["scrap-forge", "the-ledge", "yard-exchange"]);
+  assert.deepEqual(controllers, POPULATION_PROFILES.map((profile) => profile.hubInstitutionId).sort());
   // And each population is a different actor from the hub that supplies it.
   assert.ok(populations.every((entry) => entry.actorId !== entry.controllerId));
 });

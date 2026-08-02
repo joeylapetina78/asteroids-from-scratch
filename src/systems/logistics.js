@@ -1,13 +1,17 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1154-52a7508";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-1154-52a7508";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1154-52a7508";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260801-1154-52a7508";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1154-52a7508";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-1154-52a7508";
-import { adaptShipment } from "./intentions.js?v=fresh-20260801-1154-52a7508";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-1154-52a7508";
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-1154-52a7508";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1154-52a7508";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-2136-f7e757a";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260801-2136-f7e757a";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-2136-f7e757a";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260801-2136-f7e757a";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-2136-f7e757a";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260801-2136-f7e757a";
+import { adaptShipment } from "./intentions.js?v=fresh-20260801-2136-f7e757a";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-2136-f7e757a";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-2136-f7e757a";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260801-2136-f7e757a";
+import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260801-2136-f7e757a";
+import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js";
+import { rankCarrierBids } from "./carrierSelection.js";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260801-2136-f7e757a";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -28,6 +32,7 @@ const SITE_NAMES = Object.freeze({
   "yard-exchange": "Yard Exchange",
   "scrap-porch": "Scrap Porch",
   "the-ledge": "The Ledge",
+  "blue-lantern": "Blue Lantern",
 });
 
 // The four authored freight routes that used to live here are gone.
@@ -48,12 +53,26 @@ export function createInitialLogisticsState(now = Date.now()) {
   // at zero made all three post critical-urgency mining orders at once and
   // outbid Sal's repair work. Import families stay at zero on purpose: that
   // shortfall is the interdependence, and it is what procurement has to solve.
+  const settlementRecords = Object.fromEntries(settlementInstitutionRecords().map((record) => [
+    record.id,
+    JSON.parse(JSON.stringify(record)),
+  ]));
+  const carrierRecords = Object.fromEntries(carrierInstitutionRecords().map((record) => [record.id, record]));
+  const haulers = Object.fromEntries(FIRST_REACH_CARRIERS.map((seed) => [seed.ship.physicalId, {
+    shipInstitutionId: seed.ship.id,
+    carrierInstitutionId: seed.institution.id,
+    currentSiteId: seed.ship.homeSiteId,
+    activeShipmentId: null,
+    activeMovementId: null,
+    maintenanceRequested: false,
+    lastDecisionKey: null,
+    status: "seeking-work",
+  }]));
   return {
     version: 1,
     institutions: {
-      "yard-exchange": { id: "yard-exchange", name: "Yard Exchange", siteId: "yard-exchange", archetypeId: "settlement", controllerInstitutionId: "person:yard-quartermaster", accounts: { operating: { balance: 50000, committed: 0 } }, inventories: { "iron-nickel": 4, silicate: 0, "water-ice": 0 }, renewableResources: ["iron-nickel"] },
-      "scrap-forge": { id: "scrap-forge", name: "Scrap Porch", siteId: "scrap-porch", archetypeId: "settlement", controllerInstitutionId: "person:porch-quartermaster", accounts: { operating: { balance: 30000, committed: 0 } }, inventories: { "water-ice": 6, "iron-nickel": 0, silicate: 0 }, renewableResources: ["water-ice"] },
-      "the-ledge": { id: "the-ledge", name: "The Ledge", siteId: "the-ledge", archetypeId: "settlement", controllerInstitutionId: "person:ledge-quartermaster", accounts: { operating: { balance: 42000, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 4, "water-ice": 0 }, renewableResources: ["silicate"] },
+      ...settlementRecords,
+      ...carrierRecords,
       // The people who actually run the three settlements. Their traits are the
       // ONLY thing that makes the hubs price differently from one another —
       // there is no per-hub code anywhere.
@@ -64,23 +83,11 @@ export function createInitialLogisticsState(now = Date.now()) {
       // they dig. Bex runs a supplied depot and does neither. Ivry runs the
       // furthest outpost, closest to going without, so she pays rather than run
       // dry and charges hard for the silicate only she has.
-      "person:yard-quartermaster": { id: "person:yard-quartermaster", name: "Bex Ordell", archetypeId: "person", controls: ["yard-exchange"], traits: { caution: 0.35, growthBias: 0.2, urgencyBias: 0.3 } },
-      "person:porch-quartermaster": { id: "person:porch-quartermaster", name: "Hale Sunder", archetypeId: "person", controls: ["scrap-forge"], traits: { caution: 0.5, growthBias: 0.45, urgencyBias: 0.6 } },
-      "person:ledge-quartermaster": { id: "person:ledge-quartermaster", name: "Ivry Nakash", archetypeId: "person", controls: ["the-ledge"], traits: { caution: 0.75, growthBias: 0.6, urgencyBias: 0.8 } },
-      "carrier:yard-hauler": { id: "carrier:yard-hauler", name: "Quill Independent Freight", referenceId: "FR-CARR-014", archetypeId: "hauling-business", controllerInstitutionId: "person:yard-hauler-operator", accounts: { operating: { id: "FR-ACCT-014", balance: 4000, committed: 0, transactions: [] } }, policies: { transportation: { ...FIRST_REACH_CARRIER_POLICY, minimumOperatingCash: 1800 } }, repairOptions: FIRST_REACH_REPAIR_OPTIONS.map((entry) => ({ ...entry })) },
       // Dara runs thin and hungry; Mara is the careful one. `evaluateCarrierAsk`
       // has always read the controller's traits — until now neither person had
       // any, so both carriers quoted identically off a module constant.
-      "person:yard-hauler-operator": { id: "person:yard-hauler-operator", name: "Dara Quill", referenceId: "HLC-001-HAULER-YARD-SCRAP", archetypeId: "person", controls: ["carrier:yard-hauler"], traits: { caution: 0.35, growthBias: 0.5, urgencyBias: 0.6 }, license: { id: "HLC-001-HAULER-YARD-SCRAP", class: "commercial-hauler", status: "active" } },
-      "ship:hauler-yard-scrap": { id: "ship:hauler-yard-scrap", name: "Yard Hauler", referenceId: "HAUL-01-HAULER-YARD-SCRAP", archetypeId: "cargo-ship", controllerInstitutionId: "carrier:yard-hauler", wear: 0.4, issueCount: 0 },
-      "carrier:porch-runner": { id: "carrier:porch-runner", name: "Mara Venn Freight", referenceId: "FR-CARR-022", archetypeId: "hauling-business", controllerInstitutionId: "person:hauler-scrap-yard-operator", accounts: { operating: { id: "FR-ACCT-022", balance: 3500, committed: 0, transactions: [] } }, policies: { transportation: { ...FIRST_REACH_CARRIER_POLICY, minimumOperatingCash: 1800 } }, repairOptions: FIRST_REACH_REPAIR_OPTIONS.map((entry) => ({ ...entry })) },
-      "person:hauler-scrap-yard-operator": { id: "person:hauler-scrap-yard-operator", archetypeId: "person", name: "Mara Venn", referenceId: "HLC-002-HAULER-SCRAP-YARD", controls: ["carrier:porch-runner"], traits: { caution: 0.65, growthBias: 0.25, urgencyBias: 0.45 }, license: { id: "HLC-002-HAULER-SCRAP-YARD", class: "commercial-hauler", status: "active" } },
-      "ship:hauler-scrap-yard": { id: "ship:hauler-scrap-yard", name: "Porch Runner Two", referenceId: "HAUL-02-HAULER-SCRAP-YARD", archetypeId: "cargo-ship", controllerInstitutionId: "carrier:porch-runner", wear: 1.8, issueCount: 0 },
     },
-    haulers: {
-      "hauler-yard-scrap": { shipInstitutionId: "ship:hauler-yard-scrap", carrierInstitutionId: "carrier:yard-hauler", currentSiteId: "yard-exchange", activeShipmentId: null, activeMovementId: null, maintenanceRequested: false, lastDecisionKey: null, status: "seeking-work" },
-      "hauler-scrap-yard": { shipInstitutionId: "ship:hauler-scrap-yard", carrierInstitutionId: "carrier:porch-runner", currentSiteId: "scrap-porch", activeShipmentId: null, activeMovementId: null, maintenanceRequested: false, lastDecisionKey: null, status: "seeking-work" },
-    },
+    haulers,
     shipments: {}, movements: {}, containers: {}, responses: {}, history: [{ id: "log-history-1", type: "logistics.instantiated", at: now }],
     counters: { shipment: 0, movement: 0, container: 0, response: 0, transaction: 0 }, lastLedgerEventId: 0,
   };
@@ -89,42 +96,39 @@ export function createInitialLogisticsState(now = Date.now()) {
 export function ensureLogisticsState(state, now = Date.now()) {
   state.logistics ??= createInitialLogisticsState(now);
   state.logistics.institutions ??= {};
-  state.logistics.institutions["the-ledge"] ??= { id: "the-ledge", archetypeId: "settlement", accounts: { operating: { balance: 42000, committed: 0 } }, inventories: { "iron-nickel": 0, silicate: 0 }, renewableResources: ["silicate"] };
-  ["carrier:yard-hauler", "carrier:porch-runner"].forEach((institutionId) => {
-    const institution = state.logistics.institutions?.[institutionId];
-    if (!institution) return;
-    institution.policies ??= {};
-    institution.policies.transportation ??= { ...FIRST_REACH_CARRIER_POLICY };
-    institution.repairOptions ??= FIRST_REACH_REPAIR_OPTIONS.map((entry) => ({ ...entry }));
-    const identityDefaults = institutionId === "carrier:yard-hauler"
-      ? { name: "Quill Independent Freight", referenceId: "FR-CARR-014", accountId: "FR-ACCT-014" }
-      : { name: "Mara Venn Freight", referenceId: "FR-CARR-022", accountId: "FR-ACCT-022" };
-    institution.name ??= identityDefaults.name;
-    institution.referenceId ??= identityDefaults.referenceId;
-    institution.accounts.operating.id ??= identityDefaults.accountId;
-    institution.accounts.operating.transactions ??= [];
-    institution.policies.transportation.minimumOperatingCash ??= 180;
+  FIRST_REACH_SETTLEMENTS.forEach((seed) => {
+    state.logistics.institutions[seed.institution.id] ??= JSON.parse(JSON.stringify(seed.institution));
   });
-  const personDefaults = {
-    "person:yard-hauler-operator": { name: "Dara Quill", referenceId: "HLC-001-HAULER-YARD-SCRAP", traits: { caution: 0.35, growthBias: 0.5, urgencyBias: 0.6 } },
-    "person:hauler-scrap-yard-operator": { name: "Mara Venn", referenceId: "HLC-002-HAULER-SCRAP-YARD", traits: { caution: 0.65, growthBias: 0.25, urgencyBias: 0.45 } },
-  };
-  Object.entries(personDefaults).forEach(([institutionId, defaults]) => {
-    const institution = state.logistics.institutions[institutionId];
-    if (!institution) return;
-    institution.name ??= defaults.name; institution.referenceId ??= defaults.referenceId;
-    institution.traits ??= defaults.traits;
-    institution.license ??= { id: defaults.referenceId, class: "commercial-hauler", status: "active" };
+  FIRST_REACH_CARRIERS.forEach((seed) => {
+    const institutionId = seed.institution.id;
+    const institution = state.logistics.institutions[institutionId] ??= structuredClone(seed.institution);
+    institution.policies ??= {};
+    institution.policies.transportation ??= structuredClone(seed.policy);
+    institution.repairOptions ??= structuredClone(seed.repairOptions);
+    institution.name ??= seed.institution.name;
+    institution.referenceId ??= seed.institution.referenceId;
+    institution.accounts ??= structuredClone(seed.institution.accounts);
+    institution.accounts.operating.id ??= seed.institution.accounts.operating.id;
+    institution.accounts.operating.transactions ??= [];
+    institution.policies.transportation.minimumOperatingCash ??= seed.policy.minimumOperatingCash;
+    state.logistics.institutions[seed.controller.id] ??= structuredClone(seed.controller);
+    state.logistics.institutions[seed.ship.id] ??= structuredClone(seed.ship);
+    state.logistics.haulers ??= {};
+    state.logistics.haulers[seed.ship.physicalId] ??= {
+      shipInstitutionId: seed.ship.id, carrierInstitutionId: institutionId,
+      currentSiteId: seed.ship.homeSiteId, activeShipmentId: null, activeMovementId: null,
+      maintenanceRequested: false, lastDecisionKey: null, status: "seeking-work",
+    };
   });
 
   // Hub controllers, for saves written before settlements had anyone running
   // them. Without these the three hubs fall back to one shared trait constant
   // and price identically, which is the thing this replaces.
-  const hubControllers = {
-    "yard-exchange": { id: "person:yard-quartermaster", name: "Bex Ordell", siteId: "yard-exchange", hubName: "Yard Exchange", traits: { caution: 0.35, growthBias: 0.2, urgencyBias: 0.3 } },
-    "scrap-forge": { id: "person:porch-quartermaster", name: "Hale Sunder", siteId: "scrap-porch", hubName: "Scrap Porch", traits: { caution: 0.5, growthBias: 0.45, urgencyBias: 0.6 } },
-    "the-ledge": { id: "person:ledge-quartermaster", name: "Ivry Nakash", siteId: "the-ledge", hubName: "The Ledge", traits: { caution: 0.75, growthBias: 0.6, urgencyBias: 0.8 } },
-  };
+  const hubControllers = Object.fromEntries(FIRST_REACH_SETTLEMENTS.map((seed) => [seed.institution.id, {
+    ...seed.controller,
+    siteId: seed.institution.siteId,
+    hubName: seed.institution.name,
+  }]));
   // Saves written when each settlement had its own decorative archetype id.
   // One `settlement` archetype now owns what all three actually share; what
   // makes them differ is their quartermaster, their rights and their shelf.
@@ -165,6 +169,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     consumeEvents();
     repriceUnclaimedFreight();
     assessCarrierFleet();
+    const freightWinners = selectFreightWinners();
     Object.entries(logistics.haulers).forEach(([shipId, hauler]) => {
       const ship = shipById.get(shipId);
       if (!ship) return;
@@ -175,7 +180,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
         if (shipment?.status === "loaded") ship.assignShipment({ shipmentId: shipment.id, destinationSiteId: shipment.destinationSiteId });
       }
       if (!hauler.activeShipmentId && !hauler.activeMovementId && hauler.status === "seeking-work" && ship.operationalStatus !== "maintenance") {
-        if (!assignNpcShipment(shipId)) assignMaintenanceAction(shipId);
+        if (!assignNpcShipment(shipId, freightWinners)) assignMaintenanceAction(shipId);
       }
     });
   }
@@ -242,6 +247,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       offeredPrice,
       traits: getActorTraits(state, carrier.id, CARRIER_DEFAULT_TRAITS),
       policy,
+      relationship: getRelationshipProjection(state, { fromId: carrier.id, toId: template.issuerInstitutionId }),
     });
   }
 
@@ -375,20 +381,13 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
   }
 
-  function assignNpcShipment(shipId) {
+  function buildCarrierCandidates(shipId, { recordAsks = false } = {}) {
     const hauler = logistics.haulers[shipId];
     const ship = shipById.get(shipId);
-    if (!ship) return null;
-    if (ship.dockedSiteId !== hauler.currentSiteId) {
-      publishDecisionOnce(shipId, `waiting-dock:${hauler.currentSiteId}:${ship.dockedSiteId ?? "none"}`, `${getCarrierContext(shipId).pilotName} is holding outside ${siteName(hauler.currentSiteId)}; a freight contract cannot be accepted until the hauler docks.`, { reason: "not-docked", currentSiteId: hauler.currentSiteId, dockedSiteId: ship.dockedSiteId ?? null });
-      return null;
-    }
+    if (!ship || ship.dockedSiteId !== hauler.currentSiteId || hauler.activeShipmentId || hauler.activeMovementId || hauler.status !== "seeking-work" || ship.operationalStatus === "maintenance") return [];
     const carrier = logistics.institutions[hauler.carrierInstitutionId];
     const account = carrier.accounts.operating;
-    if (account.balance < 0) {
-      publishDecisionOnce(shipId, `insolvent:${account.balance}`, `${getCarrierContext(shipId).carrierName} cannot accept freight: account ${account.id} is overdrawn at ${account.balance} cr.`, { reason: "insolvent", balance: account.balance });
-      return null;
-    }
+    if (account.balance < 0) return [];
     const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
     // Every run on the board is backed by a purchase order whose goods exist.
     const offered = getProcurementFreightOffers(state);
@@ -421,14 +420,70 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
         // including the maintenance it will owe at CURRENT repair prices — and
         // refuses work that does not clear that cost.
         const ask = evaluateCarrierAsk({ template, plan, carrier, currentWear: shipInstitution.wear ?? 0, offeredPrice: rate, repositionFrom });
-        recordFreightAsk(template, ask);
+        if (recordAsks) recordFreightAsk(template, ask);
         let resolved = plan;
         if (plan.eligible && !funding.affordable) resolved = { ...plan, eligible: false, reason: "payer-cannot-fund", funding };
         else if (plan.eligible && !ask.acceptable) resolved = { ...plan, eligible: false, reason: "below-carrier-cost", ask };
         return { template, plan: resolved, ask, rate, repositionFrom };
       });
+    return candidates;
+  }
+
+  function selectFreightWinners() {
+    const bidsByTemplate = new Map();
+    Object.keys(logistics.haulers).sort().forEach((shipId) => {
+      const hauler = logistics.haulers[shipId];
+      const carrier = logistics.institutions[hauler.carrierInstitutionId];
+      const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
+      buildCarrierCandidates(shipId).forEach((candidate) => {
+        const bid = {
+          offerId: candidate.template.id,
+          carrierId: carrier.id,
+          shipId,
+          eligible: candidate.plan.eligible,
+          committed: Boolean(hauler.activeShipmentId || hauler.activeMovementId),
+          offeredPrice: candidate.rate,
+          askingPrice: candidate.ask.recommendedPrice,
+          costToServe: candidate.ask.metrics.costToServe,
+          currentWear: shipInstitution.wear ?? 0,
+          repositionDistance: repositionDistance(candidate.repositionFrom, candidate.template.originSiteId),
+          relationship: getRelationshipProjection(state, { fromId: candidate.template.issuerInstitutionId, toId: carrier.id }),
+        };
+        const list = bidsByTemplate.get(candidate.template.id) ?? [];
+        list.push(bid);
+        bidsByTemplate.set(candidate.template.id, list);
+      });
+    });
+    const winners = new Map();
+    logistics.carrierBidDiagnostics ??= {};
+    bidsByTemplate.forEach((bids, templateId) => {
+      const ranked = rankCarrierBids(bids);
+      const winner = ranked.find((bid) => Number.isFinite(bid.selectionScore)) ?? null;
+      logistics.carrierBidDiagnostics[templateId] = { templateId, bids: ranked.map((bid) => ({ ...bid, relationship: bid.relationship ? { id: bid.relationship.id } : null })), winnerShipId: winner?.shipId ?? null, at: now() };
+      if (winner) winners.set(templateId, winner.shipId);
+    });
+    return winners;
+  }
+
+  function assignNpcShipment(shipId, freightWinners = null) {
+    const hauler = logistics.haulers[shipId];
+    const ship = shipById.get(shipId);
+    if (!ship) return null;
+    if (ship.dockedSiteId !== hauler.currentSiteId) {
+      publishDecisionOnce(shipId, `waiting-dock:${hauler.currentSiteId}:${ship.dockedSiteId ?? "none"}`, `${getCarrierContext(shipId).pilotName} is holding outside ${siteName(hauler.currentSiteId)}; a freight contract cannot be accepted until the hauler docks.`, { reason: "not-docked", currentSiteId: hauler.currentSiteId, dockedSiteId: ship.dockedSiteId ?? null });
+      return null;
+    }
+    const carrier = logistics.institutions[hauler.carrierInstitutionId];
+    const account = carrier.accounts.operating;
+    if (account.balance < 0) {
+      publishDecisionOnce(shipId, `insolvent:${account.balance}`, `${getCarrierContext(shipId).carrierName} cannot accept freight: account ${account.id} is overdrawn at ${account.balance} cr.`, { reason: "insolvent", balance: account.balance });
+      return null;
+    }
+    const candidates = buildCarrierCandidates(shipId, { recordAsks: true });
     candidates.filter((candidate) => !candidate.plan.eligible).forEach((candidate) => appendHistory("freight.declined", { shipId, templateId: candidate.template.id, reason: candidate.plan.reason }));
-    const selected = candidates.filter((candidate) => candidate.plan.eligible).sort((a, b) => b.plan.score - a.plan.score)[0];
+    const selected = candidates.filter((candidate) => candidate.plan.eligible)
+      .filter((candidate) => !freightWinners || freightWinners.get(candidate.template.id) === shipId)
+      .sort((a, b) => b.plan.score - a.plan.score || a.template.id.localeCompare(b.template.id))[0];
     if (!selected) {
       const declined = candidates.find((candidate) => !candidate.plan.eligible);
       publishCarrierDiagnosticBlocker(shipId, hauler, candidates, declined);
@@ -889,7 +944,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const index = (logistics.counters.hauler = (logistics.counters.hauler ?? 0) + 1);
     const id = `hauler-hired-${index}`;
     const homeSiteId = logistics.haulers[owned[0][0]]?.currentSiteId ?? "yard-exchange";
-    const created = commissionHauler({ id, name: `Relief Hauler ${index}`, homeSiteId, seed: 10 + index });
+    const created = commissionHauler({ id, name: `Relief Hauler ${index}`, homeSiteId, seed: 10 + index, carrierInstitutionId: carrier.id });
     if (!created) return false;
 
     carrier.accounts.operating.balance -= HAULER_COST;
@@ -920,6 +975,15 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     if (ship) ship.isAlive = false;
     shipById.delete(haulerId);
     delete logistics.haulers[haulerId];
+    const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
+    if (shipInstitution) {
+      shipInstitution.status = "retired";
+      shipInstitution.retiredAt = now();
+    }
+    retireDiagnostic(state, haulerId, {
+      summary: `Laid up by ${carrier.name ?? carrierId} after ${idleSeconds}s without freight`,
+      at: now(),
+    });
     decommissionHauler?.(haulerId);
     appendHistory("carrier.haulerLaidUp", { carrierInstitutionId: carrierId, haulerId, idleSeconds });
     state.ledger.recordEvent("carrier.haulerLaidUp", {

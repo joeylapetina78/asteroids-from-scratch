@@ -1,5 +1,5 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260801-1154-52a7508";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260801-1154-52a7508";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260801-2136-f7e757a";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260801-2136-f7e757a";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
@@ -17,13 +17,19 @@ const TRACTOR_RANGE = 440;
 const TRACTOR_FORCE = 760;
 
 export class MiningWorkerShip {
-  constructor({ id, name, institutionId, controllerInstitutionId, x, y, angle = 0, onEvent = () => {}, onDelivery = () => {} }) {
+  constructor({ id, name, institutionId, controllerInstitutionId, x, y, angle = 0, palette = {}, onEvent = () => {}, onDelivery = () => {} }) {
     this.id = id;
     this.name = name;
     this.type = "mining-worker";
     this.role = "worker";
     this.institutionId = institutionId;
     this.controllerInstitutionId = controllerInstitutionId;
+    this.palette = {
+      hullStroke: palette.hullStroke ?? "#ff9a72",
+      hullFill: palette.hullFill ?? "rgba(255, 116, 82, 0.16)",
+      cabStroke: palette.cabStroke ?? "#ffe0a3",
+      tractorStroke: palette.tractorStroke ?? "rgba(126, 231, 255, 0.42)",
+    };
     this.position = { x, y };
     this.velocity = { x: 0, y: 0 };
     this.angle = angle;
@@ -279,18 +285,18 @@ export class MiningWorkerShip {
     context.save();
     context.translate(this.position.x - camera.x, this.position.y - camera.y);
     context.rotate(this.angle);
-    context.fillStyle = "rgba(255, 116, 82, 0.16)";
-    context.strokeStyle = "#ff9a72";
+    context.fillStyle = this.palette.hullFill;
+    context.strokeStyle = this.palette.hullStroke;
     context.lineWidth = 2;
     context.beginPath();
     context.moveTo(22, 0); context.lineTo(1, -12); context.lineTo(-15, -8); context.lineTo(-10, 0); context.lineTo(-15, 8); context.lineTo(1, 12); context.closePath();
     context.fill(); context.stroke();
-    context.strokeStyle = "#ffe0a3";
+    context.strokeStyle = this.palette.cabStroke;
     context.strokeRect(-3, -5, 9, 10);
     if (this.tractorActive) {
       context.save();
       context.rotate(-this.angle);
-      context.strokeStyle = "rgba(126, 231, 255, 0.42)";
+      context.strokeStyle = this.palette.tractorStroke;
       context.lineWidth = 1.2;
       this.tractorTargets.forEach((target) => {
         context.beginPath();

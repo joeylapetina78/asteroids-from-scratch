@@ -159,6 +159,23 @@ export function clearBlocker(state, actorId, { state: actorState = DIAGNOSTIC_ST
   }, at);
 }
 
+// Retiring an actor removes it from the current simulation without erasing its
+// ledger history. Keep a small tombstone so saved games and historical links can
+// still explain what the actor was, while current-actor projections can omit it.
+export function retireDiagnostic(state, actorId, { summary = "Retired", at = Date.now() } = {}) {
+  if (!actorId) return null;
+  return recordDiagnostic(state, actorId, {
+    state: DIAGNOSTIC_STATE.RETIRED,
+    summary,
+    blocker: null,
+    intention: null,
+    waitingFor: null,
+    wakeOn: [],
+    nextReconsiderAt: null,
+    retiredAt: at,
+  }, at);
+}
+
 export function getDiagnostic(state, actorId) {
   return state.diagnostics?.actors?.[actorId] ?? null;
 }

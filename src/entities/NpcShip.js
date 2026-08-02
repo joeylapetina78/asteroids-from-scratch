@@ -1,6 +1,6 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260801-1154-52a7508";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260801-1154-52a7508";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260801-1154-52a7508";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260801-2136-f7e757a";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260801-2136-f7e757a";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260801-2136-f7e757a";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -22,7 +22,7 @@ const CARGO_CAR_DAMPING = 0.82;
 const HUB_TETHER_PADDING = 42;
 
 export class NpcShip {
-  constructor({ id, name, route, x, y, seed = 1, laneOffset = 0, publicIdentity = null, maintenanceSiteId = null }) {
+  constructor({ id, name, route, x, y, seed = 1, laneOffset = 0, publicIdentity = null, maintenanceSiteId = null, palette = null }) {
     this.id = id;
     this.name = name;
     this.route = route;
@@ -56,6 +56,13 @@ export class NpcShip {
     this.dockedSiteId = route[0]?.id ?? null;
     this.publicIdentity = publicIdentity;
     this.maintenanceSiteId = maintenanceSiteId;
+    this.palette = {
+      hullStroke: palette?.hullStroke ?? "#ffe6a6",
+      hullFill: palette?.hullFill ?? "rgba(255, 230, 166, 0.11)",
+      trainStroke: palette?.trainStroke ?? "#ffd36b",
+      trainFill: palette?.trainFill ?? "rgba(255, 211, 107, 0.18)",
+      linkStroke: palette?.linkStroke ?? "rgba(255, 230, 166, 0.42)",
+    };
     this.completedRouteLegs = 0;
     this.operationalStatus = "seeking-work";
     this.activeShipmentId = null;
@@ -453,8 +460,8 @@ export class NpcShip {
     context.translate(screenX, screenY);
     context.rotate(this.heading);
 
-    context.strokeStyle = "#ffe6a6";
-    context.fillStyle = "rgba(255, 230, 166, 0.11)";
+    context.strokeStyle = this.palette.hullStroke;
+    context.fillStyle = this.palette.hullFill;
     context.lineWidth = 2;
 
     context.beginPath();
@@ -508,7 +515,7 @@ export class NpcShip {
       const sway = Math.sin(this.pulse * 2.3 + index + this.seed) * 1.5;
 
       context.save();
-      context.strokeStyle = "rgba(255, 230, 166, 0.42)";
+      context.strokeStyle = this.palette.linkStroke;
       context.lineWidth = 1.5;
       context.beginPath();
       context.moveTo(anchorX, anchorY);
@@ -517,8 +524,8 @@ export class NpcShip {
 
       context.translate(screenX, screenY);
       context.rotate(segment.heading);
-      context.strokeStyle = "#ffd36b";
-      context.fillStyle = segment.loaded ? "rgba(255, 211, 107, 0.18)" : "rgba(255, 230, 166, 0.08)";
+      context.strokeStyle = this.palette.trainStroke;
+      context.fillStyle = segment.loaded ? this.palette.trainFill : this.palette.hullFill;
       context.strokeRect(-11, -10 + sway, 22, 20);
       context.fillRect(-11, -10 + sway, 22, 20);
       context.restore();

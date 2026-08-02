@@ -4,21 +4,25 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260801-1154-52a7508";
-import { collectIntentions } from "./intentions.js?v=fresh-20260801-1154-52a7508";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260801-1154-52a7508";
-import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260801-1154-52a7508";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260801-1154-52a7508";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260801-1154-52a7508";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260801-1154-52a7508";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260801-1154-52a7508";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260801-2136-f7e757a";
+import { collectIntentions } from "./intentions.js?v=fresh-20260801-2136-f7e757a";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260801-2136-f7e757a";
+import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260801-2136-f7e757a";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260801-2136-f7e757a";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260801-2136-f7e757a";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260801-2136-f7e757a";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260801-2136-f7e757a";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
   const diagnostic = getDiagnostic(state, actorId);
-  const miningShip = state.miningOperation?.ships?.[actorId] ?? null;
+  const miningOperations = Object.values(state.miningOperations ?? (state.miningOperation ? { legacy: state.miningOperation } : {}));
+  const miningOperation = miningOperations.find((operation) => operation?.ships?.[actorId]) ?? null;
+  const miningShip = miningOperation?.ships?.[actorId] ?? null;
   const logisticsHauler = state.logistics?.haulers?.[actorId] ?? null;
   const isInstitution = diagnostic?.actorKind === "institution";
+  const locationSiteId = resolveActorSiteId(state, actorId, diagnostic?.locationSiteId, game);
+  const worldSite = (game?.worldSites ?? []).find((site) => site.id === locationSiteId) ?? null;
 
   const view = {
     actorId,
@@ -27,8 +31,8 @@ export function inspectActor(state, actorId, { game = null } = {}) {
     controllerId: diagnostic?.controllerId ?? null,
     state: diagnostic?.state ?? "unknown",
     summary: diagnostic?.summary ?? null,
-    locationSiteId: diagnostic?.locationSiteId ?? miningShip?.currentSiteId ?? logisticsHauler?.currentSiteId ?? null,
-    position: diagnostic?.position ?? miningShip?.position ?? null,
+    locationSiteId: locationSiteId ?? miningShip?.currentSiteId ?? logisticsHauler?.currentSiteId ?? null,
+    position: diagnostic?.position ?? miningShip?.position ?? worldSite?.position ?? null,
     intention: diagnostic?.intention ?? null,
     lastDecision: diagnostic?.lastDecision ?? null,
     blockerChain: diagnostic?.blocker ? formatBlockerChain(resolveBlockerChain(state, diagnostic.blocker)) : [],
@@ -112,6 +116,21 @@ export function inspectActor(state, actorId, { game = null } = {}) {
   // Public offers this actor could act on from where it stands.
   view.visibleOffers = getVisibleOffers(state, { actorId, siteId: view.locationSiteId, kind: view.kind, isMiner: Boolean(miningShip) });
 
+  // The market-wide freight comparison that actually allocates work. Keep the
+  // losing bids visible: otherwise a deterministic auction merely replaces
+  // silent iteration order with an equally opaque score.
+  if (logisticsHauler) {
+    view.freightBids = Object.values(state.logistics?.carrierBidDiagnostics ?? {})
+      .map((market) => ({
+        templateId: market.templateId,
+        winnerShipId: market.winnerShipId,
+        at: market.at,
+        bid: market.bids?.find((entry) => entry.shipId === actorId) ?? null,
+      }))
+      .filter((entry) => entry.bid)
+      .slice(0, 8);
+  }
+
   // Intentions the shared seam can see for this actor (authoritative records
   // stay where they are).
   view.intentions = collectIntentions(state, { game }).filter((intention) => intention.actorId === actorId);
@@ -150,6 +169,7 @@ function getVisibleOffers(state, { siteId, isMiner }) {
   if (!siteId) return offers;
 
   if (isMiner) {
+    const miningOperations = Object.values(state.miningOperations ?? (state.miningOperation ? { legacy: state.miningOperation } : {}));
     // Every issuer, from the same board the miner actually chooses from.
     //
     // This used to read `amount * paymentPerUnit` off STANDING_MINING_ORDERS,
@@ -157,7 +177,7 @@ function getVisibleOffers(state, { siteId, isMiner }) {
     // inventory gap — so the price shown here was NaN — and it separately
     // enumerated SPRC's purchase orders by name, missing every other issuer.
     listExtractionOffers(state, {
-      allocations: state.miningOperation?.allocations ?? {},
+      allocations: Object.assign({}, ...miningOperations.map((operation) => operation?.allocations ?? {})),
       harvestCapacity: MINING_ALLOCATION_SIZE,
     })
       .filter((offer) => offer.siteId === siteId)
@@ -215,13 +235,43 @@ function describeInstitution(state, institutionId) {
       costBasis: state.costBasis?.institutions?.sprc?.items ?? null,
     };
   }
-  return null;
+  const institution = state.logistics?.institutions?.[institutionId];
+  if (!institution) return null;
+  const account = institution.accounts?.operating ?? institution.account ?? null;
+  const purchaseOrders = Object.values(state.hubProcurement?.orders ?? state.hubProcurementOrders ?? {})
+    .filter((order) => order.buyerInstitutionId === institutionId);
+  return {
+    inventories: institution.inventories ?? {},
+    account: account ? {
+      balance: Math.round(account.balance ?? 0),
+      committed: Math.round(account.committed ?? 0),
+      available: Math.round((account.balance ?? 0) - (account.committed ?? 0)),
+    } : null,
+    renewableResources: institution.renewableResources ?? [],
+    openOrders: purchaseOrders.filter((order) => !["completed", "canceled", "expired"].includes(order.status)).map((order) => ({
+      id: order.id,
+      item: order.resourceId ?? order.family ?? order.resourceFamily ?? order.commodity ?? order.itemId,
+      required: order.units ?? order.quantity ?? order.requiredAmount ?? order.requiredEquivalentUnits,
+      delivered: order.deliveredUnits ?? order.deliveredAmount ?? order.deliveredEquivalentUnits ?? 0,
+      unitPrice: order.unitPrice ?? order.pricePerUnit ?? order.pricePerEquivalent,
+      status: order.status,
+      repriceCount: order.repriceCount ?? 0,
+    })),
+    repairs: [],
+    deferred: [],
+    needs: [],
+    facilities: null,
+    costBasis: state.costBasis?.institutions?.[institutionId]?.items ?? null,
+  };
 }
 
 // Every actor that has a diagnostic, for the observatory's table.
-export function listInspectableActors(state, { game = null } = {}) {
-  return Object.values(state.diagnostics?.actors ?? {}).map((record) => {
+export function listInspectableActors(state, { game = null, includeRetired = false } = {}) {
+  return Object.values(state.diagnostics?.actors ?? {})
+    .filter((record) => includeRetired || record.state !== "retired")
+    .map((record) => {
     const blocker = record.blocker;
+    const locationSiteId = resolveActorSiteId(state, record.actorId, record.locationSiteId, game);
     return {
       actorId: record.actorId,
       name: record.actorName,
@@ -229,7 +279,7 @@ export function listInspectableActors(state, { game = null } = {}) {
       controllerId: record.controllerId,
       state: record.state,
       summary: record.summary,
-      locationSiteId: record.locationSiteId,
+      locationSiteId,
       intention: record.intention?.goal ?? null,
       blockerKind: blocker?.kind ?? null,
       blockerSummary: blocker?.summary ?? null,
@@ -240,7 +290,15 @@ export function listInspectableActors(state, { game = null } = {}) {
       lastAction: record.lastDecision?.chosen?.label ?? record.summary ?? null,
       updatedAt: record.updatedAt,
     };
-  });
+    });
+}
+
+function resolveActorSiteId(state, actorId, reportedSiteId, game) {
+  const knownSites = game?.worldSites ?? [];
+  if (reportedSiteId && (knownSites.length === 0 || knownSites.some((site) => site.id === reportedSiteId))) return reportedSiteId;
+  const institutionSiteId = state.logistics?.institutions?.[actorId]?.siteId;
+  if (institutionSiteId) return institutionSiteId;
+  return reportedSiteId ?? null;
 }
 
 function round2(value) {

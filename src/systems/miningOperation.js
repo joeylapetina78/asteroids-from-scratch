@@ -1,15 +1,17 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-1154-52a7508";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-1154-52a7508";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1154-52a7508";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-1154-52a7508";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-1154-52a7508";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-1154-52a7508";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-1154-52a7508";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-1154-52a7508";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-1154-52a7508";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260801-1154-52a7508";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1154-52a7508";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1154-52a7508";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260801-2136-f7e757a";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260801-2136-f7e757a";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-2136-f7e757a";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260801-2136-f7e757a";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260801-2136-f7e757a";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-2136-f7e757a";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260801-2136-f7e757a";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260801-2136-f7e757a";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-2136-f7e757a";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260801-2136-f7e757a";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-2136-f7e757a";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-2136-f7e757a";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260801-2136-f7e757a";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -19,23 +21,12 @@ import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBloc
 // so what remains here is not an order, it is the fact that this hub is the one
 // that digs this material. The material itself is the representative member of
 // the family the hub holds mining rights to.
-export const STANDING_MINING_ORDERS = Object.freeze([
-  { id: "mine-yard-iron", siteId: "yard-exchange", siteName: "Yard Exchange", buyerInstitutionId: "yard-exchange", resourceId: "iron-nickel", resourceName: "Iron Nickel" },
-  { id: "mine-porch-water", siteId: "scrap-porch", siteName: "Scrap Porch", buyerInstitutionId: "scrap-forge", resourceId: "water-ice", resourceName: "Water Ice" },
-  { id: "mine-ledge-silicate", siteId: "the-ledge", siteName: "The Ledge", buyerInstitutionId: "the-ledge", resourceId: "silicate", resourceName: "Silicate" },
-]);
+export const STANDING_MINING_ORDERS = Object.freeze(settlementExtractionDefinitions());
 
-const MINING_WORKER_DEFAULTS = Object.freeze([
-  { id: "worker:cinder-one", name: "Cinder One", referenceId: "MW-031-CINDER", currentSiteId: "scrap-porch", initialWear: 0.65, offset: { x: -100, y: 80 } },
-  { id: "worker:cinder-two", name: "Cinder Two", referenceId: "MW-032-CINDER", currentSiteId: "yard-exchange", initialWear: 0.25, offset: { x: -90, y: -90 } },
-  { id: "worker:cinder-three", name: "Cinder Three", referenceId: "MW-033-CINDER", currentSiteId: "the-ledge", initialWear: 0, offset: { x: 100, y: 80 } },
-]);
-const EXPANSION_WORKER_DEFAULTS = Object.freeze({ id: "worker:cinder-four", name: "Cinder Four", referenceId: "MW-034-CINDER", currentSiteId: "scrap-porch", initialWear: 0.15, offset: { x: 110, y: -80 } });
 // What a worker lifts in one trip. Exported because an issuer sizes its offer
 // to the carrier's capacity, and a reader showing the board has to ask the same
 // question the miner asks.
 export const MINING_ALLOCATION_SIZE = 6;
-const EXPANSION_COST = 3500;
 const EXPANSION_DEMAND_SECONDS = 12;
 // Rolling fleet policy. Cinder hires when the whole fleet has been busy long
 // enough that work is plainly being turned away, and lets a ship go when it has
@@ -232,8 +223,11 @@ export function canFundStandingMiningOrder({ state, orderId, amount = null }) {
   return (buyer.accounts.operating.balance ?? 0) >= units * posted.paymentPerUnit;
 }
 
-export function createMiningOperation({ state, game, sprcOperation = null, now = () => Date.now() }) {
-  const operation = state.miningOperation ??= createInitialState(now());
+export function createMiningOperation({ state, game, sprcOperation = null, now = () => Date.now(), seed = CINDER_MINING_SEED }) {
+  state.miningOperations ??= {};
+  const legacy = seed === CINDER_MINING_SEED ? state.miningOperation : null;
+  const operation = state.miningOperations[seed.stateKey] ??= legacy ?? createInitialState(now(), seed);
+  if (seed === CINDER_MINING_SEED) state.miningOperation = operation;
   operation.ships ??= {};
   operation.allocations ??= {};
   operation.completedContracts ??= 0;
@@ -245,9 +239,9 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   // The settlements' demand becomes visible on the board because this operation
   // exists to serve it, not because the board knows what a settlement is.
   registerExtractionOfferSource(state, "hub-standing-orders", hubStandingOfferSource);
-  operation.projects ??= { "cinder-four": { id: "cinder-four", name: "Commission Cinder Four", status: "planned", requiredCredits: EXPANSION_COST, demandSince: null, approvedAt: null, completedAt: null } };
-  MINING_WORKER_DEFAULTS.forEach((defaults) => {
-    operation.ships[defaults.id] ??= createWorkerRecord(defaults);
+  operation.projects ??= seed.expansionProject ? { [seed.expansionProject.id]: { ...seed.expansionProject, status: "planned", demandSince: null, approvedAt: null, completedAt: null } } : {};
+  seed.workers.forEach((defaults) => {
+    operation.ships[defaults.id] ??= createWorkerRecord(defaults, seed.institution.id);
     operation.ships[defaults.id].capabilities ??= { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } };
     operation.ships[defaults.id].maintenanceStatus ??= "available";
     operation.ships[defaults.id].issueCount ??= 0;
@@ -259,13 +253,15 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   Object.values(operation.ships).forEach((shipRecord) => addPhysicalWorker(shipRecord));
 
   function addPhysicalWorker(shipRecord) {
-    const defaults = [...MINING_WORKER_DEFAULTS, EXPANSION_WORKER_DEFAULTS].find((entry) => entry.id === shipRecord.id) ?? EXPANSION_WORKER_DEFAULTS;
-    const home = sites.get(shipRecord.currentSiteId) ?? sites.get("scrap-porch");
+    const defaults = [...seed.workers, ...(seed.expansionWorker ? [seed.expansionWorker] : [])].find((entry) => entry.id === shipRecord.id)
+      ?? { offset: { x: 0, y: 0 } };
+    const home = sites.get(shipRecord.currentSiteId) ?? sites.get(seed.homeSiteId) ?? sites.get("scrap-porch");
     const worker = new MiningWorkerShip({
       id: shipRecord.id,
       name: shipRecord.name,
       institutionId: shipRecord.ownerInstitutionId,
       controllerInstitutionId: operation.institution.controllerInstitutionId,
+      palette: seed.shipPalette,
       x: shipRecord.position?.x ?? home.position.x + defaults.offset.x,
       y: shipRecord.position?.y ?? home.position.y + defaults.offset.y,
       onEvent: (type, payload) => recordWorkerEvent(shipRecord, type, payload),
@@ -424,7 +420,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       summary = `All ${ships.length} ships are committed elsewhere`;
       blocker = createBlocker({
         kind: BLOCKER_KIND.ALL_SUPPLIERS_COMMITTED,
-        summary: `Every Cinder ship is committed; those jobs currently have higher net value`,
+        summary: `Every ${seed.fleetName} ship is committed; those jobs currently have higher net value`,
         subjectId: operation.institution.id,
         waitingFor: "a ship to finish its run",
         wakeOn: ["delivery.completed", "order-repriced"],
@@ -439,7 +435,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       const idleWorker = workers.find((worker) => !worker.assignment && operation.ships[worker.id]?.maintenanceStatus === "available");
       blocker = createBlocker({
         kind: BLOCKER_KIND.NO_ELIGIBLE_WORK,
-        summary: `${idle} Cinder ship(s) have no order worth their cost`,
+        summary: `${idle} ${seed.fleetName} ship(s) have no order worth their cost`,
         subjectId: operation.institution.id,
         waitingFor: "an order that clears cost",
         wakeOn: ["order-posted", "order-repriced"],
@@ -450,7 +446,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     }
 
     recordDiagnostic(state, operation.institution.id, {
-      actorName: operation.institution.name ?? "Cinder Contracting",
+      actorName: operation.institution.name,
       actorKind: "institution",
       controllerId: operation.controller?.id ?? operation.institution.controllerInstitutionId,
       state: actorState,
@@ -487,9 +483,11 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   // What this operation needs to hand an offer source so it can decide what is
   // still genuinely available: who is asking, and what is already committed.
   function offerContext() {
+    const sharedAllocations = Object.assign({}, ...Object.values(state.miningOperations ?? {})
+      .map((candidate) => candidate.allocations ?? {}));
     return {
       sprcOperation,
-      allocations: operation.allocations,
+      allocations: sharedAllocations,
       minerInstitutionId: operation.institution.id,
       // What this operation can lift in one trip, so an issuer sizes its offer
       // to the carrier rather than guessing.
@@ -503,7 +501,8 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     const position = worker?.position ?? sites.get("scrap-porch")?.position ?? { x: 0, y: 0 };
     // Every issuer, in one list, minus anything a worker is already on. The
     // miner does not know who posted any of it.
-    const candidates = filterUncommittedOffers(listExtractionOffers(state, offerContext()), operation.allocations);
+    const context = offerContext();
+    const candidates = filterUncommittedOffers(listExtractionOffers(state, context), context.allocations);
     if (candidates.length === 0) return null;
 
     const scored = candidates
@@ -703,16 +702,16 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     operation.hiredCount = index;
     const seat = workers.length + 1;
     const defaults = {
-      id: `worker:cinder-hire-${index}`,
-      name: `Cinder ${CREW_NAMES[seat - 1] ?? seat}`,
-      referenceId: `MW-1${String(index).padStart(2, "0")}-CINDER`,
-      currentSiteId: "scrap-porch",
-      initialWear: 0,
+      id: `worker:${seed.fleetPrefix}-hire-${index}`,
+      name: `${seed.fleetName} ${CREW_NAMES[seat - 1] ?? seat}`,
+      referenceId: `MW-${seed.fleetPrefix.toUpperCase()}-${String(index).padStart(2, "0")}`,
+      currentSiteId: seed.homeSiteId,
+      initialWear: 0.08,
       offset: { x: -120 + (index % 4) * 80, y: 60 + (index % 3) * 40 },
     };
     account.balance -= HIRE_COST;
     account.transactions.push({ id: `MIN-HIRE-${now()}-${index}`, at: now(), type: "capital-expense", amount: -HIRE_COST, balance: account.balance, referenceId: defaults.id });
-    const shipRecord = createWorkerRecord(defaults);
+    const shipRecord = createWorkerRecord(defaults, operation.institution.id);
     operation.ships[shipRecord.id] = shipRecord;
     addPhysicalWorker(shipRecord);
     record("mining.workerHired", `${operation.controller.name} hired ${defaults.name} for ${HIRE_COST} cr — the whole fleet had been committed for a minute with work still waiting.`, {
@@ -735,7 +734,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   }
 
   function assessExpansion() {
-    const project = operation.projects["cinder-four"];
+    const project = seed.expansionProject ? operation.projects[seed.expansionProject.id] : null;
     if (!project || project.status === "completed") return;
     const serviceable = workers.filter((worker) => operation.ships[worker.id]?.maintenanceStatus === "available");
     const criticalAllocations = Object.values(operation.allocations).filter((allocation) => allocation.orderKind === "sprc" && allocation.status === "active");
@@ -747,7 +746,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       if (project.demandSince != null && now() - project.demandSince >= requiredSeconds * 1000) {
         project.status = "approved";
         project.approvedAt = now();
-        record("mining.expansionApproved", `${operation.controller.name} approved Cinder Four after sustained repair-supply demand occupied the available fleet.`, { projectId: project.id, requiredCredits: project.requiredCredits });
+        record("mining.expansionApproved", `${operation.controller.name} approved ${project.name} after sustained repair-supply demand occupied the available fleet.`, { projectId: project.id, requiredCredits: project.requiredCredits });
       }
     }
     if (project.status !== "approved") return;
@@ -755,12 +754,12 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     if (account.balance - getActorProtectedCash(state, operation.institution.id) < project.requiredCredits) return;
     account.balance -= project.requiredCredits;
     account.transactions.push({ id: `MIN-EXP-${now()}`, at: now(), type: "capital-expense", amount: -project.requiredCredits, balance: account.balance, referenceId: project.id });
-    const shipRecord = createWorkerRecord(EXPANSION_WORKER_DEFAULTS);
+    const shipRecord = createWorkerRecord(seed.expansionWorker, operation.institution.id);
     operation.ships[shipRecord.id] = shipRecord;
     addPhysicalWorker(shipRecord);
     project.status = "completed";
     project.completedAt = now();
-    record("mining.expansionCompleted", `${operation.controller.name} commissioned Cinder Four for ${project.requiredCredits} cr; the new worker entered service at Scrap Porch.`, { projectId: project.id, shipInstitutionId: shipRecord.id, shipName: shipRecord.name, cost: project.requiredCredits, accountBalance: account.balance });
+    record("mining.expansionCompleted", `${operation.controller.name} commissioned ${shipRecord.name} for ${project.requiredCredits} cr; the new worker entered service at ${seed.homeSiteId}.`, { projectId: project.id, shipInstitutionId: shipRecord.id, shipName: shipRecord.name, cost: project.requiredCredits, accountBalance: account.balance });
   }
 
   // A refusal the worker can do nothing about: hand the allocation back so its
@@ -1027,20 +1026,20 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
 // Exported under the same name every other system uses for its seed, so an
 // actor's starting configuration can be read without standing up the whole
 // operation.
-export function createInitialMiningState(now = Date.now()) {
-  return createInitialState(now);
+export function createInitialMiningState(now = Date.now(), seed = CINDER_MINING_SEED) {
+  return createInitialState(now, seed);
 }
 
-function createInitialState(now) {
+function createInitialState(now, seed = CINDER_MINING_SEED) {
   return {
     version: 1,
-    institution: { id: "miner:cinder-contracting", name: "Cinder Contracting", archetypeId: "mining-contractor", controllerInstitutionId: "person:ivo-cinder", referenceId: "FR-MIN-031", accounts: { operating: { id: "FR-ACCT-031", balance: 260, committed: 0, transactions: [] } } },
-    controller: { id: "person:ivo-cinder", name: "Ivo Cinder", archetypeId: "person", controls: ["miner:cinder-contracting"], traits: { caution: 0.4, growthBias: 0.55, urgencyBias: 0.5 }, license: { id: "MEX-031-CINDER", class: "commercial-extraction", status: "active" } },
-    ships: Object.fromEntries(MINING_WORKER_DEFAULTS.map((defaults) => [defaults.id, createWorkerRecord(defaults)])),
+    institution: structuredClone(seed.institution),
+    controller: structuredClone(seed.controller),
+    ships: Object.fromEntries(seed.workers.map((defaults) => [defaults.id, createWorkerRecord(defaults, seed.institution.id)])),
     allocations: {}, history: [{ id: "mining-history-1", type: "institution.instantiated", at: now }], counter: 0, completedContracts: 0, wear: 0, lastMaintenanceEventId: 0,
   };
 }
 
-function createWorkerRecord(defaults) {
-  return { id: defaults.id, name: defaults.name, archetypeId: "mining-worker", ownerInstitutionId: "miner:cinder-contracting", referenceId: defaults.referenceId, currentSiteId: defaults.currentSiteId, status: "idle", cargo: {}, wear: defaults.initialWear ?? 0, issueCount: 0, pendingIssue: null, maintenanceStatus: "available", lastDecisionKey: null, capabilities: { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } } };
+function createWorkerRecord(defaults, ownerInstitutionId = CINDER_MINING_SEED.institution.id) {
+  return { id: defaults.id, name: defaults.name, archetypeId: "mining-worker", ownerInstitutionId, referenceId: defaults.referenceId, currentSiteId: defaults.currentSiteId, status: "idle", cargo: {}, wear: defaults.initialWear ?? 0, issueCount: 0, pendingIssue: null, maintenanceStatus: "available", lastDecisionKey: null, capabilities: { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } } };
 }

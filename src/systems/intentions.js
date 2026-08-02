@@ -275,17 +275,16 @@ export function adaptShipment(shipment) {
 export function collectIntentions(state, { game = null } = {}) {
   const intentions = [];
 
-  const mining = state.miningOperation;
-  if (mining?.allocations) {
-    const workersById = new Map((game?.workerShips ?? []).map((worker) => [worker.id, worker]));
-    Object.values(mining.allocations).forEach((allocation) => {
+  const workersById = new Map((game?.workerShips ?? []).map((worker) => [worker.id, worker]));
+  Object.values(state.miningOperations ?? (state.miningOperation ? { legacy: state.miningOperation } : {})).forEach((mining) => {
+    Object.values(mining?.allocations ?? {}).forEach((allocation) => {
       const record = adaptMiningAllocation(allocation, {
         worker: workersById.get(allocation.workerShipId) ?? null,
         shipRecord: mining.ships?.[allocation.workerShipId] ?? null,
       });
       if (record) intentions.push(record);
     });
-  }
+  });
 
   const sprc = state.sprc;
   if (sprc?.procurementOrders) {

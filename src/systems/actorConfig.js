@@ -1,4 +1,4 @@
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-1154-52a7508";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-2136-f7e757a";
 // One place to ask what an actor is and what it has.
 //
 // Actor records are spread across seven state shapes that grew separately —
@@ -27,10 +27,12 @@ export function findActorRecord(state, actorId) {
   const logistics = state.logistics?.institutions?.[actorId];
   if (logistics) return logistics;
 
-  const mining = state.miningOperation;
-  if (mining?.institution?.id === actorId) return mining.institution;
-  if (mining?.controller?.id === actorId) return mining.controller;
-  if (mining?.ships?.[actorId]) return mining.ships[actorId];
+  const miningOperations = Object.values(state.miningOperations ?? (state.miningOperation ? { legacy: state.miningOperation } : {}));
+  for (const mining of miningOperations) {
+    if (mining?.institution?.id === actorId) return mining.institution;
+    if (mining?.controller?.id === actorId) return mining.controller;
+    if (mining?.ships?.[actorId]) return mining.ships[actorId];
+  }
 
   const sprc = state.sprc;
   if (sprc?.institution?.id === actorId) return sprc.institution;

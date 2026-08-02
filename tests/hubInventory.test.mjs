@@ -18,6 +18,7 @@ import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState, createLogisticsManager } from "../src/systems/logistics.js";
 import { createHubProcurementOperation } from "../src/systems/hubProcurement.js";
 import { getResourceFamily } from "../src/systems/resourceDefinitions.js";
+import { DIAGNOSTIC_STATE, getDiagnostic } from "../src/systems/diagnostics.js";
 
 function createWorld() {
   const state = createGameState();
@@ -286,6 +287,7 @@ test("a carrier lays up a ship with nothing to carry", () => {
   const laidUp = world.state.ledger.getEventsAfterId(0).filter((entry) => entry.type === "carrier.haulerLaidUp");
   assert.ok(laidUp.length > 0);
   assert.ok(laidUp[0].payload.idleSeconds >= 120, "and says how long it sat");
+  assert.equal(getDiagnostic(world.state, laidUp[0].payload.haulerId)?.state, DIAGNOSTIC_STATE.RETIRED, "its current diagnostic is retired");
 });
 
 test("the region never runs out of haulers", () => {

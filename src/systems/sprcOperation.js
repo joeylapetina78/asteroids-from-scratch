@@ -1,15 +1,16 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260801-1154-52a7508";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260801-1154-52a7508";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-1154-52a7508";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-1154-52a7508";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260801-1154-52a7508";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260801-1154-52a7508";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260801-1154-52a7508";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260801-1154-52a7508";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-1154-52a7508";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1154-52a7508";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1154-52a7508";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-1154-52a7508";
+import { depositCredits } from "./accounts.js?v=fresh-20260801-2136-f7e757a";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260801-2136-f7e757a";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260801-2136-f7e757a";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260801-2136-f7e757a";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260801-2136-f7e757a";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260801-2136-f7e757a";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260801-2136-f7e757a";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260801-2136-f7e757a";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260801-2136-f7e757a";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-2136-f7e757a";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-2136-f7e757a";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260801-2136-f7e757a";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260801-2136-f7e757a";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -395,9 +396,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   // the requester sent when it first asked.
   function getCurrentPayerSnapshot(request) {
     const payerId = request.payerInstitutionId;
-    const account =
-      state.miningOperation?.institution?.id === payerId ? state.miningOperation.institution.accounts.operating :
-      state.logistics?.institutions?.[payerId]?.accounts?.operating ?? null;
+    const account = getActorAccount(state, payerId);
     if (!account) return request.payer;
     return { balance: account.balance ?? 0, committed: account.committed ?? 0, protectedCash: request.payer?.protectedCash ?? 0 };
   }
@@ -997,7 +996,13 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   // chains point into, so it must name the real bottleneck.
   function publishInstitutionDiagnostic() {
     const institutionId = sprc.institution.id;
-    const repairs = sprc.repairQueue.map((id) => sprc.repairOrders[id]).filter(Boolean);
+    const allRepairs = sprc.repairQueue.map((id) => sprc.repairOrders[id]).filter(Boolean);
+    const repairs = allRepairs.filter((repair) => !["completed", "canceled"].includes(repair.status));
+    const repairCounts = allRepairs.reduce((counts, repair) => {
+      const status = repair.status ?? "unknown";
+      counts[status] = (counts[status] ?? 0) + 1;
+      return counts;
+    }, {});
     const active = repairs.find((repair) => repair.status === "repairing") ?? null;
     const blockedRepair = repairs.find((repair) => ["waiting-stock", "waiting-production"].includes(repair.status)) ?? null;
     const unfilled = Object.values(sprc.procurementOrders).filter((order) => ["offered", "active"].includes(order.status));
@@ -1073,6 +1078,8 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
         openOrders: unfilled.length,
         deferredRequests: deferredCount,
         queuedRepairs: repairs.length,
+        repairCounts,
+        completedRepairs: repairCounts.completed ?? 0,
         berth: sprc.facilities.berthTwo.status,
         mill: sprc.facilities.maw.activeProductionOrderId ? "busy" : "idle",
       },

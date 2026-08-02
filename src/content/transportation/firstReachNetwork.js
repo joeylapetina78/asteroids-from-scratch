@@ -1,4 +1,4 @@
-import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260801-1154-52a7508";
+import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260801-2136-f7e757a";
 
 export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
   { id: "lane-yard-scrap", fromId: "yard-exchange", toId: "scrap-porch", distance: 1875, bidirectional: true },
@@ -13,6 +13,36 @@ export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
       id: "corridor-yard-ledge",
       name: "First Reach Freight Corridor",
       seed: 4187,
+    },
+  },
+  {
+    id: "lane-yard-blue-lantern",
+    fromId: "yard-exchange",
+    toId: "blue-lantern",
+    distance: 3400,
+    bidirectional: true,
+    corridor: {
+      ...FRONTIER_FREIGHT_CORRIDOR,
+      id: "corridor-yard-blue-lantern",
+      name: "Blue Lantern Spur",
+      sampleSpacing: 100,
+      waypointSpacing: 300,
+      seed: 5521,
+    },
+  },
+  {
+    id: "lane-scrap-morrow",
+    fromId: "scrap-porch",
+    toId: "morrow-shoal",
+    distance: 3000,
+    bidirectional: true,
+    corridor: {
+      ...FRONTIER_FREIGHT_CORRIDOR,
+      id: "corridor-scrap-morrow",
+      name: "Morrow Shoal Cut",
+      sampleSpacing: 95,
+      waypointSpacing: 280,
+      seed: 6813,
     },
   },
   {
@@ -33,7 +63,7 @@ export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
 ]);
 
 export const FIRST_REACH_CARRIER_POLICY = Object.freeze({
-  knownDestinationIds: ["yard-exchange", "scrap-porch", "the-ledge", "ore-station-one"],
+  knownDestinationIds: ["yard-exchange", "scrap-porch", "the-ledge", "blue-lantern", "morrow-shoal", "ore-station-one"],
   expectedWearPerDistance: 0.00016,
   maximumWear: 6,
   minimumReturnMargin: 0.9,

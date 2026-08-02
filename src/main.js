@@ -1,45 +1,46 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260801-1154-52a7508";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260801-1154-52a7508";
-import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260801-1154-52a7508";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260801-1154-52a7508";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260801-1154-52a7508";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260801-1154-52a7508";
-import { Game } from "./game.js?v=fresh-20260801-1154-52a7508";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260801-1154-52a7508";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260801-1154-52a7508";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260801-1154-52a7508";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260801-1154-52a7508";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260801-2136-f7e757a";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260801-2136-f7e757a";
+import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260801-2136-f7e757a";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260801-2136-f7e757a";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260801-2136-f7e757a";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260801-2136-f7e757a";
+import { Game } from "./game.js?v=fresh-20260801-2136-f7e757a";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260801-2136-f7e757a";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260801-2136-f7e757a";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260801-2136-f7e757a";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260801-2136-f7e757a";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260801-1154-52a7508";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260801-1154-52a7508";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260801-1154-52a7508";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260801-1154-52a7508";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260801-1154-52a7508";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260801-1154-52a7508";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260801-1154-52a7508";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260801-1154-52a7508";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260801-1154-52a7508";
-import { Processor } from "./systems/processor.js?v=fresh-20260801-1154-52a7508";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260801-1154-52a7508";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260801-1154-52a7508";
-import { createGameState } from "./state/gameState.js?v=fresh-20260801-1154-52a7508";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260801-1154-52a7508";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260801-1154-52a7508";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260801-1154-52a7508";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260801-1154-52a7508";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260801-1154-52a7508";
-import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260801-1154-52a7508";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260801-1154-52a7508";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260801-1154-52a7508";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260801-1154-52a7508";
-import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260801-1154-52a7508";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260801-1154-52a7508";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260801-1154-52a7508";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260801-1154-52a7508";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260801-2136-f7e757a";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260801-2136-f7e757a";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260801-2136-f7e757a";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260801-2136-f7e757a";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260801-2136-f7e757a";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260801-2136-f7e757a";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260801-2136-f7e757a";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260801-2136-f7e757a";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260801-2136-f7e757a";
+import { Processor } from "./systems/processor.js?v=fresh-20260801-2136-f7e757a";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260801-2136-f7e757a";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260801-2136-f7e757a";
+import { createGameState } from "./state/gameState.js?v=fresh-20260801-2136-f7e757a";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260801-2136-f7e757a";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260801-2136-f7e757a";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260801-2136-f7e757a";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260801-2136-f7e757a";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260801-2136-f7e757a";
+import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260801-2136-f7e757a";
+import { FLINT_MINING_SEED } from "./content/economy/miningInstitutions.js";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260801-2136-f7e757a";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260801-2136-f7e757a";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260801-2136-f7e757a";
+import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260801-2136-f7e757a";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260801-2136-f7e757a";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260801-2136-f7e757a";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260801-2136-f7e757a";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -387,7 +388,9 @@ const sprcManager = createSprcOperation({
 window.__asteroids.sprc = sprcManager;
 sprcManager.update();
 const miningManager = createMiningOperation({ state, game, sprcOperation: sprcManager });
+const flintMiningManager = createMiningOperation({ state, game, sprcOperation: sprcManager, seed: FLINT_MINING_SEED });
 window.__asteroids.mining = miningManager;
+window.__asteroids.miningCompetitor = flintMiningManager;
 window.__asteroids.procurement = procurementManager;
 const populationManager = createPopulationOperation({ state });
 window.__asteroids.population = populationManager;
@@ -796,7 +799,10 @@ window.setInterval(() => sprcManager.update(), 1000);
 window.setInterval(() => populationManager.update(), 1000);
 window.setInterval(() => procurementManager.update(), 1000);
 window.setInterval(() => logisticsManager.update(), 1000);
-window.setInterval(() => miningManager.update(), 1000);
+window.setInterval(() => {
+  miningManager.update();
+  flintMiningManager.update();
+}, 1000);
 window.setInterval(() => towServiceManager.update(), 1000);
 registerStarterDeliveryShipRecords(state);
 clearOldPanelLayouts();
@@ -6144,7 +6150,24 @@ let selectedActorId = null;
 let observatoryTab = "actors";
 
 function getInspectableWorldActors() {
-  return [...(game.npcShips ?? []), ...(game.workerShips ?? [])].filter((actor) => actor?.position && actor.id);
+  const physicalActors = [...(game.npcShips ?? []), ...(game.workerShips ?? [])].filter((actor) => actor?.position && actor.id);
+  const physicalIds = new Set(physicalActors.map((actor) => actor.id));
+  const locatedActors = listInspectableActors(state, { game })
+    .filter((actor) => !physicalIds.has(actor.actorId) && actor.locationSiteId)
+    .map((actor) => {
+      const site = game.worldSites?.find((candidate) => candidate.id === actor.locationSiteId);
+      if (!site?.position) return null;
+      return {
+        id: actor.actorId,
+        name: actor.name,
+        position: site.position,
+        locationSiteId: site.id,
+        inspectionKind: actor.kind,
+        pickRadius: Math.max(ACTOR_PICK_RADIUS, site.radius ?? 0),
+      };
+    })
+    .filter(Boolean);
+  return [...physicalActors, ...locatedActors];
 }
 
 // Click an actor in the viewport to select it. Uses the camera to map the click
@@ -6158,12 +6181,18 @@ canvas?.addEventListener("click", (event) => {
   const worldX = screenX + (game.camera?.x ?? 0);
   const worldY = screenY + (game.camera?.y ?? 0);
 
-  const nearest = getInspectableWorldActors()
+  const candidates = getInspectableWorldActors()
     .map((actor) => ({ actor, distance: Math.hypot(actor.position.x - worldX, actor.position.y - worldY) }))
-    .sort((first, second) => first.distance - second.distance)[0];
+    .filter(({ actor, distance }) => distance <= (actor.pickRadius ?? ACTOR_PICK_RADIUS))
+    .sort((first, second) => first.distance - second.distance);
 
-  if (nearest && nearest.distance <= ACTOR_PICK_RADIUS) {
-    selectActorForDiagnostics(nearest.actor.id);
+  if (candidates.length > 0) {
+    // A hub administration and its population occupy the same site. Repeated
+    // clicks cycle through every actor under the cursor instead of making the
+    // first one in registration order permanently hide the others.
+    const currentIndex = candidates.findIndex(({ actor }) => actor.id === selectedActorId);
+    const next = candidates[(currentIndex + 1) % candidates.length];
+    selectActorForDiagnostics(next.actor.id);
   }
 });
 
@@ -6431,6 +6460,16 @@ function formatCargoMap(cargoMap) {
   return entries.length ? entries.map(([type, quantity]) => `${quantity} ${type}`).join(", ") : "";
 }
 
+function formatInventorySnapshot(inventories) {
+  const entries = Object.entries(inventories ?? {}).flatMap(([key, value]) => {
+    if (value && typeof value === "object") {
+      return Object.entries(value).filter(([, quantity]) => quantity > 0).map(([item, quantity]) => `${quantity} ${item}`);
+    }
+    return value > 0 ? [`${value} ${key}`] : [];
+  });
+  return entries.length ? entries.join(", ") : "empty";
+}
+
 function renderActorDiagnostic() {
   if (!actorDiagnosticPanel || actorDiagnosticPanel.hidden || !selectedActorId || !actorDiagnosticBody) return;
   const view = inspectActor(state, selectedActorId, { game });
@@ -6541,9 +6580,24 @@ function renderActorDiagnostic() {
   ]));
   fragments.push(diagSection("Visible markets", marketWrap));
 
+  if (view.freightBids?.length) {
+    const bids = diagElement("ul", "diag-list");
+    view.freightBids.forEach((market) => {
+      const bid = market.bid;
+      const outcome = market.winnerShipId === selectedActorId ? "won" : `lost to ${market.winnerShipId ?? "no eligible carrier"}`;
+      bids.append(diagElement("li", null, `${market.templateId}: ${outcome}; score ${Math.round(bid.selectionScore * 10) / 10}, ask ${bid.askingPrice} / offer ${bid.offeredPrice}, cost ${Math.round(bid.costToServe)}`));
+    });
+    fragments.push(diagSection("Freight bids", bids));
+  }
+
   if (view.institution) {
     const institution = diagElement("div");
     institution.append(diagRows([
+      ["Balance", view.institution.account?.balance],
+      ["Committed", view.institution.account?.committed],
+      ["Available", view.institution.account?.available],
+      ["Inventory", formatInventorySnapshot(view.institution.inventories)],
+      ["Local resources", view.institution.renewableResources?.join(", ")],
       ["Berth", view.institution.facilities?.berth],
       ["Mill", view.institution.facilities?.mill],
       ["Open orders", view.institution.openOrders.length],
@@ -6639,18 +6693,19 @@ function renderObservatory() {
 // Point the camera at an actor so you can actually see where it is. Only offered
 // for actors that exist physically in the world (institutions have no position).
 function createCenterCameraButton(actorId) {
-  const exists = getInspectableWorldActors().some((actor) => actor.id === actorId);
+  const target = getInspectableWorldActors().find((actor) => actor.id === actorId);
+  const exists = Boolean(target);
   const button = diagElement("button", "quick-link-button", exists ? "Center" : "—");
   button.type = "button";
   button.disabled = !exists;
   if (!exists) {
-    button.title = "No physical position (institution)";
+    button.title = "No known world position";
     return button;
   }
   button.title = "Center the camera on this actor (releases when you thrust)";
   button.addEventListener("click", (event) => {
     event.stopPropagation();
-    game.focusCameraOnActorId(actorId);
+    game.setCameraFocus(target);
     selectActorForDiagnostics(actorId);
     if (observatoryPanel) observatoryPanel.hidden = true;
   });
@@ -6836,7 +6891,8 @@ function renderLedgerBrowser({ force = false } = {}) {
 // the entity actually has a live physical position.
 function ledgerEntityActions(kind, reference) {
   const wrap = diagElement("span", "ledger-entity-actions");
-  const hasBody = getInspectableWorldActors().some((actor) => actor.id === reference.id);
+  const worldTarget = getInspectableWorldActors().find((actor) => actor.id === reference.id);
+  const hasBody = Boolean(worldTarget);
   const hasDiagnostic = Boolean(listInspectableActors(state, { game }).find((entry) => entry.actorId === reference.id));
 
   const filterButton = diagElement("button", "quick-link-button", "Filter");
@@ -6866,7 +6922,7 @@ function ledgerEntityActions(kind, reference) {
     centerButton.type = "button";
     centerButton.title = "Center the camera on this entity";
     centerButton.addEventListener("click", () => {
-      game.focusCameraOnActorId(reference.id);
+      game.setCameraFocus(worldTarget);
       if (observatoryPanel) observatoryPanel.hidden = true;
     });
     wrap.append(centerButton);

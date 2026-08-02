@@ -1,4 +1,4 @@
-﻿import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260801-1154-52a7508";
+﻿import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260801-2136-f7e757a";
 
 export const WORLD_SITES = [
   // "" STORY HUBS """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -45,6 +45,28 @@ export const WORLD_SITES = [
     radius: 42,
     interactionRadius: 180,
     capabilities: ["repair"],
+    services: [],
+  },
+  {
+    id: "blue-lantern",
+    name: "Blue Lantern",
+    beaconId: "beacon-blue-lantern",
+    type: "hub",
+    position: { x: 2950, y: 2180 },
+    radius: 40,
+    interactionRadius: 180,
+    capabilities: ["repair"],
+    services: [],
+  },
+  {
+    id: "morrow-shoal",
+    name: "Morrow Shoal",
+    beaconId: "beacon-morrow-shoal",
+    type: "hub",
+    position: { x: -3820, y: 2320 },
+    radius: 41,
+    interactionRadius: 180,
+    capabilities: ["trade"],
     services: [],
   },
 

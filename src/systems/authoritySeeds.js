@@ -1,7 +1,8 @@
-import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260801-1154-52a7508";
-import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260801-1154-52a7508";
-import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260801-1154-52a7508";
-import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260801-1154-52a7508";
+import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260801-2136-f7e757a";
+import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260801-2136-f7e757a";
+import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260801-2136-f7e757a";
+import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260801-2136-f7e757a";
+import { settlementMiningRights, settlementPlaces } from "../content/economy/firstReachSettlements.js?v=fresh-20260801-2136-f7e757a";
 
 const RIGHT_TO_POWER = Object.freeze({
   [RIGHT_TYPES.TRANSIT]: POWER_TYPES.AUTHORIZE_WORK,
@@ -31,9 +32,7 @@ const RIGHT_TO_POWER = Object.freeze({
 // cooperative that buys copper, silicate, iron-nickel and aluminum to one
 // family would stop the repair economy dead.
 export const INSTITUTION_MINING_RIGHTS = Object.freeze([
-  { institutionId: "scrap-forge", placeId: "hub:scrap-porch", families: ["volatile"] },
-  { institutionId: "the-ledge", placeId: "hub:the-ledge", families: ["industrial"] },
-  { institutionId: "yard-exchange", placeId: "hub:yard-exchange", families: ["structural"] },
+  ...settlementMiningRights(),
   { institutionId: "sprc", placeId: "hub:scrap-porch", families: ["structural", "industrial", "conductor"] },
 ]);
 
@@ -43,17 +42,11 @@ export const INSTITUTION_MINING_RIGHTS = Object.freeze([
 // "what I may dig up" and "what I may deal in" is visible in the records rather
 // than implied by an absence of checks.
 const BROAD_TRADE_RIGHT_HOLDERS = Object.freeze([
-  { institutionId: "scrap-forge", placeId: "hub:scrap-porch" },
-  { institutionId: "the-ledge", placeId: "hub:the-ledge" },
-  { institutionId: "yard-exchange", placeId: "hub:yard-exchange" },
+  ...settlementMiningRights().map((right) => ({ institutionId: right.institutionId, placeId: right.placeId })),
   { institutionId: "sprc", placeId: "hub:scrap-porch" },
 ]);
 
-const MINING_RIGHT_HUBS = Object.freeze([
-  { id: "hub:scrap-porch", sourceId: "scrap-porch", name: "Scrap Porch" },
-  { id: "hub:the-ledge", sourceId: "the-ledge", name: "The Ledge" },
-  { id: "hub:yard-exchange", sourceId: "yard-exchange", name: "Yard Exchange" },
-]);
+const MINING_RIGHT_HUBS = Object.freeze(settlementPlaces());
 
 export function seedAuthorityFoundation(state) {
   upsertPlace(state, {

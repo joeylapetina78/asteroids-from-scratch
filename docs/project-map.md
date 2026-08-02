@@ -1,6 +1,6 @@
 ﻿# Project Map
 
-This document is the structural map for the Asteroids RPG prototype. For the authoritative July 2026 implementation checkpoint, known risks, and recommended next milestone, read [HANDOFF.md](HANDOFF.md) first. The game is a custom browser Canvas project, not p5.js or a larger framework. Its core is an institutional world navigated through documents, contracts, ships, components, accounts, and conserved economic activity.
+This document is the structural map for the Asteroids RPG prototype. For the authoritative July 2026 implementation checkpoint, known risks, and recommended next milestone, read [HANDOFF.md](HANDOFF.md) first. For the August 2026 audit of the live three-hub economy and the prerequisites for adding competing hubs and businesses, read [multi-actor-economy-expansion-audit.md](multi-actor-economy-expansion-audit.md). The game is a custom browser Canvas project, not p5.js or a larger framework. Its core is an institutional world navigated through documents, contracts, ships, components, accounts, and conserved economic activity.
 
 See [README.md](../README.md) for the design direction and run instructions. See [docs/agent-map.md](agent-map.md) for the short future-agent re-entry map. See [docs/world-structure.md](world-structure.md) for the Region/Zone split. See [docs/authority-model.md](authority-model.md) for the Place/Actor/Power/Right/Action authority spine. See [docs/systems-direction.md](systems-direction.md) for the full systems vision with current implementation status. See [docs/resource-design.md](resource-design.md) for the resource family taxonomy and scarcity model. See [docs/lifeform-design.md](lifeform-design.md) for ambient ecology and future creature direction. See [docs/ship-workbench-roadmap.md](ship-workbench-roadmap.md) for the physical-console and responsive-layout direction. See [docs/comms-attention-roadmap.md](comms-attention-roadmap.md) for Journey, viewport comms, and attention-target direction. See [docs/tag-registry.md](tag-registry.md) before authoring a world tag.
 
@@ -23,6 +23,8 @@ The game is split into four rough layers:
 2. **App wiring**  `main.js` creates shared state, starts systems, updates UI, persists panel layout, reacts to button clicks, and handles global event listeners (tow chatter, hub authority messages, Rook follow-up offers).
 3. **Game simulation**  `Game` updates the ship, camera, asteroids, lifeforms, bullets, pickups, scanner, docking, particles, and collisions.
 4. **Small systems and entities**  focused modules for asteroids, resources, lifeforms, camera, scanner, processor physics, world zones, sites, and input.
+
+Mining businesses are configured in `src/content/economy/miningInstitutions.js`. Multiple institution instances run through the shared `createMiningOperation` engine and compete for one extraction-offer and allocation market.
 
 The ship position is world-space. The viewport camera follows the ship and converts world-space entities into screen-space drawing.
 

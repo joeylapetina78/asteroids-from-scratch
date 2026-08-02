@@ -15,10 +15,10 @@
 //   WHO IS DOING IT   supplier — null while it is still up for grabs
 //   WHERE IS IT       one of available / taken / done / blocked
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-1154-52a7508";
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260801-1154-52a7508";
-import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260801-1154-52a7508";
-import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260801-1154-52a7508";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-2136-f7e757a";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260801-2136-f7e757a";
+import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260801-2136-f7e757a";
+import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260801-2136-f7e757a";
 
 export const CONTRACT_STATE = Object.freeze({
   AVAILABLE: "available",   // posted, nobody has taken it
@@ -52,7 +52,9 @@ function siteOf(state, institutionId) {
 // board shows "Cinder Two" rather than an id.
 function nameFromState(state, id) {
   if (!id) return null;
-  return state?.miningOperation?.ships?.[id]?.name
+  const miningShip = Object.values(state?.miningOperations ?? (state?.miningOperation ? { legacy: state.miningOperation } : {}))
+    .map((operation) => operation?.ships?.[id]).find(Boolean);
+  return miningShip?.name
     ?? state?.logistics?.institutions?.[id]?.name
     ?? state?.logistics?.haulers?.[id]?.name
     ?? null;
@@ -83,7 +85,8 @@ function collectExtraction(state) {
   const posted = state.miningOperation?.postedOrders && Object.keys(state.miningOperation.postedOrders).length > 0
     ? state.miningOperation.postedOrders
     : getPostedMiningOrders(state);
-  const allocations = Object.values(state.miningOperation?.allocations ?? {});
+  const allocations = Object.values(state.miningOperations ?? (state.miningOperation ? { legacy: state.miningOperation } : {}))
+    .flatMap((operation) => Object.values(operation?.allocations ?? {}));
   const rows = [];
 
   Object.values(posted).forEach((order) => {

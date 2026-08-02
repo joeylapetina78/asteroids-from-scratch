@@ -16,8 +16,10 @@ import {
   recordBlocker,
   recordDecision,
   recordDiagnostic,
+  retireDiagnostic,
   resolveBlockerChain,
 } from "../src/systems/diagnostics.js";
+import { listInspectableActors } from "../src/systems/actorInspector.js";
 import { RETENTION_CLASS, classifyEvent, getRetentionClass, isDurable, isEphemeral } from "../src/systems/eventRetention.js";
 import { createGameState } from "../src/state/gameState.js";
 import { createSprcOperation, SPRC } from "../src/systems/sprcOperation.js";
@@ -79,6 +81,17 @@ test("diagnostics can be filtered and blocked actors listed", () => {
   const blocked = listBlocked(state);
   assert.equal(blocked.length, 1);
   assert.equal(blocked[0].actorId, "ship:2");
+});
+
+test("retired actors remain historical diagnostics but leave the current actor list", () => {
+  const state = {};
+  recordDiagnostic(state, "relief-1", { actorKind: "ship", actorName: "Relief One" });
+  retireDiagnostic(state, "relief-1", { summary: "Laid up", at: 1234 });
+
+  assert.equal(getDiagnostic(state, "relief-1").state, DIAGNOSTIC_STATE.RETIRED);
+  assert.equal(listInspectableActors(state).some((actor) => actor.actorId === "relief-1"), false);
+  assert.equal(listInspectableActors(state, { includeRetired: true }).some((actor) => actor.actorId === "relief-1"), true);
+  assert.equal(listBlocked(state).some((actor) => actor.actorId === "relief-1"), false);
 });
 
 // ── Causal blocker chains ──────────────────────────────────────────────────

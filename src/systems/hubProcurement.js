@@ -7,8 +7,9 @@
 // The chain, in order, with nothing invented at any step:
 //
 //   1. A hub has a gap in a family it may not mine.
-//   2. It posts a purchase order at the hub that MAY mine that family, priced
-//      through the shared valuation framework, and commits the money.
+//   2. It discovers every legal, reachable producer with capacity, compares
+//      estimated delivered cost, and posts a purchase order to the best one,
+//      priced through the shared valuation framework with money committed.
 //   3. The supplier accepts only if the offer clears what the material costs it.
 //      Accepting raises the supplier's own stock target, which is what makes it
 //      commission more mining — it digs for a sale it has agreed to, not because
@@ -24,13 +25,16 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-1154-52a7508";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-1154-52a7508";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-1154-52a7508";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-1154-52a7508";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260801-1154-52a7508";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-1154-52a7508";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker } from "./diagnostics.js?v=fresh-20260801-1154-52a7508";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260801-2136-f7e757a";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260801-2136-f7e757a";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260801-2136-f7e757a";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260801-2136-f7e757a";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260801-2136-f7e757a";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260801-2136-f7e757a";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260801-2136-f7e757a";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260801-2136-f7e757a";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260801-2136-f7e757a";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260801-2136-f7e757a";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -111,7 +115,7 @@ export function hubNameOf(state, institutionId) {
 }
 
 export function createInitialProcurementState() {
-  return { orders: {}, counter: 0, asks: {} };
+  return { orders: {}, counter: 0, asks: {}, unavailable: {} };
 }
 
 // How far a supplier has come down off its list price on one material, 0..1.
@@ -122,12 +126,92 @@ export function getAskConcession(state, supplierInstitutionId, resourceId) {
 
 
 
-// Which institution may legally mine this family, and what it digs.
-function findSupplier(family) {
-  const definition = STANDING_MINING_ORDERS.find((order) => getResourceFamily(order.resourceId) === family
-    && getMinedFamilies(order.buyerInstitutionId).includes(family));
-  if (!definition) return null;
-  return { institutionId: definition.buyerInstitutionId, resourceId: definition.resourceId };
+// Discover every institution that can legally produce this family, then rank
+// the alternatives without depending on authored array order. The standing
+// extraction definitions are content, not a routing table: more than one row
+// may now offer the same family.
+export function evaluateSupplierCandidates(state, {
+  buyerInstitutionId,
+  family,
+  units = 1,
+  definitions = STANDING_MINING_ORDERS,
+  connections = FIRST_REACH_TRANSPORT_CONNECTIONS,
+} = {}) {
+  const institutions = state.logistics?.institutions ?? {};
+  const destinationIds = Array.from(new Set(connections.flatMap((connection) => [connection.fromId, connection.toId])));
+  const network = createTransportationNetwork({ destinations: destinationIds.map((id) => ({ id })), connections });
+  const buyerSiteId = hubSiteId(state, buyerInstitutionId);
+  const miningFamiliesFor = (institutionId) => Array.from(new Set([
+    ...getMinedFamilies(institutionId),
+    ...Object.values(state.worldRecords?.authorityGrants ?? {})
+      .filter((grant) => grant.holderId === `institution:${institutionId}`
+        && grant.status !== "revoked" && grant.status !== "expired" && grant.status !== "void"
+        && grant.limits?.rightTypes?.includes("mining"))
+      .flatMap((grant) => grant.limits?.resourceFamilies ?? []),
+  ]));
+
+  return definitions
+    .filter((definition) => getResourceFamily(definition.resourceId) === family)
+    .map((definition) => {
+      const institutionId = definition.buyerInstitutionId;
+      const supplier = institutions[institutionId] ?? null;
+      const reasons = [];
+      const legal = miningFamiliesFor(institutionId).includes(family);
+      const route = supplier && institutionId !== buyerInstitutionId
+        ? findTransportationRoute(network, hubSiteId(state, institutionId), buyerSiteId)
+        : null;
+      const committed = supplier ? getCommittedSupply(state, institutionId, family) : 0;
+      const capacityRemaining = Math.max(0, MAX_OUTSTANDING_SALE_UNITS - committed);
+      const availableUnits = supplier?.inventories?.[definition.resourceId] ?? 0;
+      const relationship = getRelationshipProjection(state, { fromId: buyerInstitutionId, toId: institutionId });
+      const unitCost = Math.max(getUnitCost(state, institutionId, definition.resourceId) || 0, getResourceTradeValue(definition.resourceId));
+      const quote = supplier ? evaluateSupplierAsk({
+        workId: `supply ${units} ${definition.resourceId}`,
+        costComponents: { other: unitCost * units },
+        traits: getActorTraits(state, institutionId, UNRUN_HUB_TRAITS),
+        relationship,
+        concession: getAskConcession(state, institutionId, definition.resourceId),
+      }) : null;
+      const freightCost = route ? Math.max(40, Math.round(route.distance * 0.004)) : Infinity;
+      // Existing stock is preferable to promised future extraction, but the
+      // penalty is deliberately modest: distance and price remain meaningful.
+      const productionDelayCost = Math.max(0, units - availableUnits) * getResourceTradeValue(definition.resourceId) * 0.05;
+      const deliveredCost = quote ? quote.recommendedPrice + freightCost + productionDelayCost : Infinity;
+
+      if (!supplier) reasons.push("supplier institution is not present");
+      if (institutionId === buyerInstitutionId) reasons.push("buyer cannot supply itself through import procurement");
+      if (!legal) reasons.push(`supplier holds no ${family} mining right`);
+      if (!route) reasons.push("no transportation route reaches the buyer");
+      if (capacityRemaining < units) reasons.push(`only ${capacityRemaining} units of sale capacity remain`);
+      if (quote) reasons.push(...quote.reasons);
+      if (route) reasons.push(`Delivery route is ${route.distance}u; estimated freight cost ${freightCost} cr.`);
+      if (productionDelayCost > 0) reasons.push(`${Math.max(0, units - availableUnits)} units require production before pickup.`);
+
+      const eligible = Boolean(supplier)
+        && institutionId !== buyerInstitutionId
+        && legal
+        && Boolean(route)
+        && capacityRemaining >= units;
+      return {
+        institutionId,
+        resourceId: definition.resourceId,
+        eligible,
+        score: eligible ? -deliveredCost : -Infinity,
+        deliveredCost,
+        goodsAsk: quote?.recommendedPrice ?? Infinity,
+        freightCost,
+        productionDelayCost,
+        routeDistance: route?.distance ?? null,
+        availableUnits,
+        committedUnits: committed,
+        capacityRemaining,
+        reasons,
+      };
+    })
+    .sort((first, second) => Number(second.eligible) - Number(first.eligible)
+      || second.score - first.score
+      || first.institutionId.localeCompare(second.institutionId)
+      || first.resourceId.localeCompare(second.resourceId));
 }
 
 export function listOrders(state, { status = null, buyerInstitutionId = null, supplierInstitutionId = null } = {}) {
@@ -205,6 +289,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   procurement.orders ??= {};
   procurement.counter ??= 0;
   procurement.asks ??= {};
+  procurement.unavailable ??= {};
 
   const institution = (id) => state.logistics?.institutions?.[id] ?? null;
   const hubName = (id) => hubNameOf(state, id);
@@ -328,11 +413,65 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
           .some((entry) => entry.family === position.family && now() - (entry.declinedAt ?? 0) < RETRY_AFTER_REFUSAL_MS);
         if (refusedRecently) return;
 
-        const supplier = findSupplier(position.family);
-        if (!supplier || supplier.institutionId === buyerInstitutionId) return;
-
         if (outstanding < MIN_ORDER_UNITS) return;
         const units = Math.min(outstanding, MAX_ORDER_UNITS);
+        const supplierCandidates = evaluateSupplierCandidates(state, {
+          buyerInstitutionId,
+          family: position.family,
+          units,
+        });
+        const supplier = supplierCandidates.find((candidate) => candidate.eligible) ?? null;
+        const alternatives = supplierCandidates.map((candidate) => ({
+          id: candidate.institutionId,
+          label: `${hubName(candidate.institutionId)} · ${order2Label(candidate.resourceId)}`,
+          score: Number.isFinite(candidate.score) ? Math.round(candidate.score) : null,
+          accepted: candidate.eligible && candidate.institutionId === supplier?.institutionId,
+          reason: candidate.eligible
+            ? `estimated delivered cost ${Math.round(candidate.deliveredCost)} cr`
+            : candidate.reasons.filter((reason) => !/^supply .* costs /i.test(reason) && !/^asking /i.test(reason)).join("; "),
+          metrics: {
+            deliveredCost: Number.isFinite(candidate.deliveredCost) ? Math.round(candidate.deliveredCost) : null,
+            goodsAsk: Number.isFinite(candidate.goodsAsk) ? candidate.goodsAsk : null,
+            freightCost: Number.isFinite(candidate.freightCost) ? candidate.freightCost : null,
+            routeDistance: candidate.routeDistance,
+            availableUnits: candidate.availableUnits,
+            capacityRemaining: candidate.capacityRemaining,
+          },
+        }));
+
+        if (!supplier) {
+          const unavailableKey = `${buyerInstitutionId}|${position.family}`;
+          recordDecision(state, buyerInstitutionId, {
+            chosen: null,
+            alternatives,
+            reasons: [`No legal, reachable supplier has capacity for ${units} units of ${position.family}.`],
+            at: now(),
+          });
+          recordBlocker(state, buyerInstitutionId, createBlocker({
+            kind: BLOCKER_KIND.ALL_SUPPLIERS_COMMITTED,
+            summary: `${hubName(buyerInstitutionId)} found no available supplier for ${units} ${position.family} material`,
+            subjectId: buyerInstitutionId,
+            waitingFor: "supplier capacity or another supplier",
+            wakeOn: ["procurement.orderDelivered", "mining.contractFulfilled", "order-repriced"],
+            detail: { family: position.family, units, alternatives },
+            at: now(),
+          }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+          if (!procurement.unavailable[unavailableKey]) {
+            procurement.unavailable[unavailableKey] = { at: now(), alternatives };
+            emit("procurement.supplierUnavailable", `${hubName(buyerInstitutionId)} found no available supplier for ${units} ${position.family} material.`, {
+              buyerId: buyerInstitutionId,
+              family: position.family,
+              units,
+              reason: supplierCandidates.some((candidate) => candidate.capacityRemaining < units)
+                ? "supplier-at-capacity"
+                : "no-eligible-supplier",
+              supplierCandidates: alternatives,
+            });
+          }
+          return;
+        }
+        delete procurement.unavailable[`${buyerInstitutionId}|${position.family}`];
+
         const valuation = evaluateProcurement({
           itemId: supplier.resourceId,
           baseUnitPrice: getResourceTradeValue(supplier.resourceId),
@@ -343,6 +482,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
           account: buyer.accounts?.operating ?? {},
           policy: { protectedCash: getActorProtectedCash(state, buyerInstitutionId) },
           traits: getActorTraits(state, buyerInstitutionId, UNRUN_HUB_TRAITS),
+          relationship: getRelationshipProjection(state, { fromId: buyerInstitutionId, toId: supplier.institutionId }),
         });
 
         if (!valuation.affordable) {
@@ -378,8 +518,21 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
           committedPayment, freightBudget,
           deliveredUnits: 0, status: PROCUREMENT_STATUS.OFFERED,
           reasons: valuation.reasons, createdAt: now(), shipmentId: null,
+          supplierCandidates: alternatives,
         };
         buyer.accounts.operating.committed = (buyer.accounts.operating.committed ?? 0) + committedPayment;
+
+        recordDecision(state, buyerInstitutionId, {
+          chosen: {
+            id: supplier.institutionId,
+            label: `${hubName(supplier.institutionId)} · ${order2Label(supplier.resourceId)}`,
+            score: Math.round(supplier.score),
+            metrics: alternatives.find((candidate) => candidate.id === supplier.institutionId)?.metrics ?? {},
+          },
+          alternatives,
+          reasons: [`Selected the lowest estimated delivered cost among ${supplierCandidates.filter((candidate) => candidate.eligible).length} eligible supplier(s).`],
+          at: now(),
+        });
 
         emit("procurement.orderPosted", `${hubName(buyerInstitutionId)} offered ${hubName(supplier.institutionId)} ${valuation.recommendedPrice} cr per unit for ${orderUnits} ${order2Label(supplier.resourceId)}, because it cannot mine ${position.family} itself.`, {
           procurementOrderId: id, buyerId: buyerInstitutionId, sellerId: supplier.institutionId,
@@ -387,6 +540,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
           pricePerUnit: valuation.recommendedPrice, committedPayment, freightBudget,
           gap: position.gap, target: position.target, onHand: position.onHand,
           reasons: valuation.reasons,
+          supplierCandidates: alternatives,
         });
       });
     });

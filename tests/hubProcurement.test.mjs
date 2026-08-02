@@ -6,6 +6,7 @@ import test from "node:test";
 import {
   PROCUREMENT_STATUS,
   createHubProcurementOperation,
+  evaluateSupplierCandidates,
   getAskConcession,
   getCommittedSupply,
   getAwaitingPickup,
@@ -22,11 +23,44 @@ import { createInitialLogisticsState, createLogisticsManager } from "../src/syst
 function createWorld({ cash = 20_000 } = {}) {
   const state = createGameState();
   state.logistics = createInitialLogisticsState(1_000);
-  ["yard-exchange", "scrap-forge", "the-ledge"].forEach((id) => {
-    state.logistics.institutions[id].accounts.operating.balance = cash;
-  });
+  Object.values(state.logistics.institutions)
+    .filter((institution) => institution.archetypeId === "settlement")
+    .forEach((institution) => { institution.accounts.operating.balance = cash; });
   const procurement = createHubProcurementOperation({ state, now: () => 1_000 });
   return { state, procurement, hub: (id) => state.logistics.institutions[id] };
+}
+
+function addAlternativeVolatileSupplier(state, { id = "north-well", distance = 500 } = {}) {
+  state.hubProcurement.orders = {};
+  Object.values(state.logistics.institutions).forEach((institution) => {
+    if (institution.accounts?.operating) institution.accounts.operating.committed = 0;
+  });
+  state.logistics.institutions[id] = {
+    id, name: "North Well", siteId: id, archetypeId: "settlement",
+    controllerInstitutionId: `person:${id}`,
+    accounts: { operating: { balance: 20_000, committed: 0 } },
+    inventories: { "water-ice": 12 }, renewableResources: ["water-ice"],
+  };
+  state.logistics.institutions[`person:${id}`] = {
+    id: `person:${id}`, name: "North Well Factor", archetypeId: "person", controls: [id],
+    traits: { caution: 0.5, growthBias: 0.45, urgencyBias: 0.5 },
+  };
+  state.worldRecords.authorityGrants[`authority:institution:${id}:mining:hub:${id}`] = {
+    id: `authority:institution:${id}:mining:hub:${id}`,
+    holderId: `institution:${id}`,
+    status: "active",
+    limits: { rightTypes: ["mining"], resourceFamilies: ["volatile"] },
+  };
+  return {
+    definitions: [
+      { id: "mine-north-water", buyerInstitutionId: id, resourceId: "water-ice" },
+      { id: "mine-porch-water", buyerInstitutionId: "scrap-forge", resourceId: "water-ice" },
+    ],
+    connections: [
+      { id: "lane-north-yard", fromId: id, toId: "yard-exchange", distance, bidirectional: true },
+      { id: "lane-porch-yard", fromId: "scrap-porch", toId: "yard-exchange", distance: 1875, bidirectional: true },
+    ],
+  };
 }
 
 // ── A hub buys what it cannot dig up ───────────────────────────────────────
@@ -42,23 +76,105 @@ test("a hub posts a purchase order for a family it may not mine", () => {
     "and never from itself");
 });
 
-test("the order is directed at the hub that may legally mine that family", () => {
+test("orders are directed at a legal producer rather than an authored supplier", () => {
   const { state } = createWorld();
   const volatileOrder = listOrders(state, { buyerInstitutionId: "yard-exchange" })
     .find((order) => order.family === "volatile");
   assert.ok(volatileOrder, "Yard Exchange needs volatile");
-  assert.equal(volatileOrder.supplierInstitutionId, "scrap-forge", "Scrap Porch holds the volatile right");
+  assert.ok(["scrap-forge", "blue-lantern"].includes(volatileOrder.supplierInstitutionId),
+    "either legal volatile producer may win");
+  assert.equal(volatileOrder.supplierInstitutionId, "blue-lantern",
+    "the nearer viable producer wins this opening comparison");
   const industrialOrder = listOrders(state, { buyerInstitutionId: "scrap-forge" })
     .find((order) => order.family === "industrial");
   assert.equal(industrialOrder?.supplierInstitutionId, "the-ledge", "The Ledge holds the industrial right");
 });
 
-test("every hub ends up buying from both of the others", () => {
+test("hub five creates a real structural choice for Scrap Porch", () => {
+  const { state } = createWorld();
+  // Compare the opening suppliers in isolation; the normal initial update may
+  // already have sold part of one supplier's finite capacity to another hub.
+  state.hubProcurement.orders = {};
+  Object.values(state.logistics.institutions).forEach((institution) => {
+    if (institution.accounts?.operating) institution.accounts.operating.committed = 0;
+  });
+  const candidates = evaluateSupplierCandidates(state, {
+    buyerInstitutionId: "scrap-forge", family: "structural", units: 6,
+  });
+  const eligible = candidates.filter((candidate) => candidate.eligible);
+  assert.deepEqual(new Set(eligible.map((candidate) => candidate.institutionId)), new Set(["yard-exchange", "morrow-shoal"]));
+  assert.equal(candidates[0].institutionId, "morrow-shoal", "its low ask overcomes the somewhat longer opening route");
+  assert.ok(candidates.every((candidate) => candidate.reasons.length > 0));
+});
+
+test("supplier discovery ranks every legal producer by delivered cost, independent of definition order", () => {
+  const { state } = createWorld();
+  const fixture = addAlternativeVolatileSupplier(state);
+  const forward = evaluateSupplierCandidates(state, {
+    buyerInstitutionId: "yard-exchange", family: "volatile", units: 6,
+    definitions: fixture.definitions, connections: fixture.connections,
+  });
+  const reversed = evaluateSupplierCandidates(state, {
+    buyerInstitutionId: "yard-exchange", family: "volatile", units: 6,
+    definitions: [...fixture.definitions].reverse(), connections: fixture.connections,
+  });
+  assert.equal(forward.filter((entry) => entry.eligible).length, 2, "both suppliers are real candidates");
+  assert.equal(forward[0].institutionId, "north-well", "the shorter delivered route wins");
+  assert.equal(reversed[0].institutionId, forward[0].institutionId, "authored order cannot decide the winner");
+  assert.ok(forward.every((entry) => entry.reasons.length > 0), "every candidate explains its evaluation");
+});
+
+test("a higher supplier cost can outweigh a shorter route", () => {
+  const { state } = createWorld();
+  const fixture = addAlternativeVolatileSupplier(state);
+  recordAcquisition(state, { institutionId: "north-well", itemId: "water-ice", units: 12, totalCost: 12 * 900 });
+  const candidates = evaluateSupplierCandidates(state, {
+    buyerInstitutionId: "yard-exchange", family: "volatile", units: 6,
+    definitions: fixture.definitions, connections: fixture.connections,
+  });
+  assert.equal(candidates[0].institutionId, "scrap-forge", "the buyer chooses the cheaper delivered supply");
+});
+
+test("a full supplier loses to an available alternative", () => {
+  const { state } = createWorld();
+  const fixture = addAlternativeVolatileSupplier(state);
+  state.hubProcurement.orders.busy = {
+    id: "busy", buyerInstitutionId: "the-ledge", supplierInstitutionId: "north-well",
+    family: "volatile", resourceId: "water-ice", units: 12, deliveredUnits: 0, status: PROCUREMENT_STATUS.ACCEPTED,
+  };
+  const candidates = evaluateSupplierCandidates(state, {
+    buyerInstitutionId: "yard-exchange", family: "volatile", units: 6,
+    definitions: fixture.definitions, connections: fixture.connections,
+  });
+  assert.equal(candidates[0].institutionId, "scrap-forge");
+  const busy = candidates.find((entry) => entry.institutionId === "north-well");
+  assert.equal(busy.eligible, false);
+  assert.match(busy.reasons.join(" "), /capacity/);
+});
+
+test("a trusted supplier can win an otherwise equal delivered offer", () => {
+  const { state } = createWorld();
+  const fixture = addAlternativeVolatileSupplier(state, { distance: 1875 });
+  state.relationships ??= { projections: {} };
+  state.relationships.projections ??= {};
+  state.relationships.projections["yard-exchange=>north-well"] = {
+    fromId: "yard-exchange", toId: "north-well", trust: 1, reliability: 1,
+    gratitude: 1, resentment: 0, familiarity: 1,
+  };
+  const candidates = evaluateSupplierCandidates(state, {
+    buyerInstitutionId: "yard-exchange", family: "volatile", units: 6,
+    definitions: fixture.definitions, connections: fixture.connections,
+  });
+  assert.equal(candidates[0].institutionId, "north-well", "goodwill shades the supplier ask enough to win");
+});
+
+test("trade lanes emerge between hubs without an authored route table", () => {
   const { state } = createWorld();
   const lanes = listOrders(state).map((order) => `${order.supplierInstitutionId}->${order.buyerInstitutionId}`);
   // The two lanes that never existed as authored routes are now real.
   assert.ok(lanes.includes("the-ledge->scrap-forge"), "The Ledge supplies Scrap Porch industrial");
-  assert.ok(lanes.includes("scrap-forge->the-ledge"), "Scrap Porch supplies The Ledge volatile");
+  assert.ok(lanes.some((lane) => lane.endsWith("->the-ledge")), "The Ledge discovers a volatile supplier");
+  assert.ok(lanes.some((lane) => lane.startsWith("blue-lantern->")), "the fourth hub wins real business");
 });
 
 test("an order carries a price, a commitment, and its reasons", () => {
@@ -76,7 +192,9 @@ test("a hub never has more on order than it is short", () => {
   for (let tick = 0; tick < 8; tick += 1) procurement.update();
   // Ordering the REMAINDER of a gap is fine; ordering the same gap repeatedly
   // is not. Open commitments must never exceed what the hub is actually short.
-  ["yard-exchange", "scrap-forge", "the-ledge"].forEach((buyerInstitutionId) => {
+  Object.values(state.logistics.institutions)
+    .filter((institution) => institution.archetypeId === "settlement")
+    .forEach(({ id: buyerInstitutionId }) => {
     ["structural", "industrial", "volatile"].forEach((family) => {
       const open = listOrders(state, { buyerInstitutionId, status: ["offered", "accepted", "ready", "shipped"] })
         .filter((order) => order.family === family)
@@ -118,11 +236,15 @@ test("an accepted sale raises the supplier's own stock target", () => {
 });
 
 test("the raised target is what makes the supplier commission more mining", () => {
-  const { state } = createWorld();
+  const { state, procurement } = createWorld();
+  procurement.update();
   // A sale widens the gap the supplier mines against — but only up to what it
   // has agreed to, since it now refuses to owe more than it can dig.
-  const position = getInventoryPosition(state, "scrap-forge", "volatile");
-  assert.ok(position.committedSales > 0, "Scrap Porch owes volatile to somebody");
+  const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })
+    .find((entry) => entry.family === "volatile");
+  assert.ok(order, "a volatile producer accepted business");
+  const position = getInventoryPosition(state, order.supplierInstitutionId, "volatile");
+  assert.ok(position.committedSales > 0, "the selected supplier owes volatile to somebody");
   assert.equal(position.target, position.ownTarget + position.committedSales,
     "and mines against its own need plus what it sold");
   assert.ok(position.target > position.ownTarget);
@@ -141,7 +263,7 @@ test("a supplier refuses to owe more than it can realistically dig", () => {
     });
   });
   const refusals = state.ledger.getEventsAfterId(0).filter((entry) => entry.payload?.reason === "supplier-at-capacity");
-  assert.ok(refusals.length > 0, "and it says so rather than silently over-promising");
+  assert.ok(refusals.length > 0, "and it says every known supplier is committed");
 });
 
 test("a refused buyer waits before asking again instead of re-posting every tick", () => {
@@ -341,9 +463,9 @@ function advanceWorld(minutes = 2) {
   let clock = 1_000;
   const state = createGameState();
   state.logistics = createInitialLogisticsState(clock);
-  ["yard-exchange", "scrap-forge", "the-ledge"].forEach((id) => {
-    state.logistics.institutions[id].accounts.operating.balance = 60_000;
-  });
+  Object.values(state.logistics.institutions)
+    .filter((institution) => institution.archetypeId === "settlement")
+    .forEach((institution) => { institution.accounts.operating.balance = 60_000; });
   const procurement = createHubProcurementOperation({ state, now: () => clock });
   return { state, procurement, tick: (seconds) => { clock += seconds * 1000; procurement.update(); }, now: () => clock };
 }
@@ -477,8 +599,9 @@ function overpayForWaterIce(state, unitCost = 900) {
 
 function clearTheBoard(state) {
   Object.keys(state.hubProcurement.orders).forEach((id) => { delete state.hubProcurement.orders[id]; });
-  ["yard-exchange", "scrap-forge", "the-ledge"].forEach((id) => {
-    const hub = state.logistics.institutions[id];
+  Object.values(state.logistics.institutions)
+    .filter((institution) => institution.archetypeId === "settlement")
+    .forEach((hub) => {
     hub.saleReserve = {};
     hub.awaitingPickup = {};
     hub.accounts.operating.committed = 0;
@@ -491,9 +614,11 @@ function idleWorld() {
   const world = advanceWorld();
   overpayForWaterIce(world.state);
   clearTheBoard(world.state);
-  ["yard-exchange", "scrap-forge", "the-ledge"].forEach((id) => {
-    world.state.logistics.institutions[id].inventories = { "iron-nickel": 5_000, "water-ice": 5_000, silicate: 5_000 };
-  });
+  Object.values(world.state.logistics.institutions)
+    .filter((institution) => institution.archetypeId === "settlement")
+    .forEach((institution) => {
+      institution.inventories = { "iron-nickel": 5_000, "water-ice": 5_000, silicate: 5_000 };
+    });
   return world;
 }
 
@@ -501,6 +626,10 @@ function idleWorld() {
 // ever need, and wants more for it than the other hubs will pay.
 function jammedVolatileWorld() {
   const world = advanceWorld();
+  // This fixture intentionally tests bilateral concession behavior, so remove
+  // the competing volatile supplier that the broader economy now discovers.
+  delete world.state.logistics.institutions["blue-lantern"];
+  delete world.state.logistics.institutions["person:blue-lantern-factor"];
   overpayForWaterIce(world.state);
   clearTheBoard(world.state);
   world.state.logistics.institutions["scrap-forge"].inventories = { "water-ice": 5_000 };
@@ -541,6 +670,10 @@ test("a seller with business again firms its price back up", () => {
   assert.equal(getAskConcession(world.state, "scrap-forge", "water-ice"), 1, "fully conceded while idle");
 
   // Yard Exchange runs dry and starts buying volatile again.
+  // Isolate Scrap Porch so this test measures its response rather than the
+  // normal competitive choice of Blue Lantern.
+  delete world.state.logistics.institutions["blue-lantern"];
+  delete world.state.logistics.institutions["person:blue-lantern-factor"];
   world.state.logistics.institutions["yard-exchange"].inventories = {};
   world.tick(1);
   // Enough business that its book is no longer slack, which is what ends the
@@ -619,6 +752,15 @@ test("the sale completes when the reserve is whole, and title passes", () => {
   const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })[0];
   const supplier = hub(order.supplierInstitutionId);
   const buyer = hub(order.buyerInstitutionId);
+  Object.values(state.hubProcurement.orders).forEach((entry) => {
+    if (entry.id === order.id || ![PROCUREMENT_STATUS.OFFERED, PROCUREMENT_STATUS.ACCEPTED].includes(entry.status)) return;
+    const account = hub(entry.buyerInstitutionId)?.accounts?.operating;
+    if (account) account.committed = Math.max(0, account.committed - (entry.committedPayment ?? 0));
+    entry.status = PROCUREMENT_STATUS.DECLINED;
+  });
+  Object.values(state.logistics.institutions)
+    .filter((institution) => institution.archetypeId === "settlement")
+    .forEach((institution) => { institution.inventories = {}; institution.saleReserve = {}; });
   const sellerBefore = supplier.accounts.operating.balance;
   const buyerBefore = buyer.accounts.operating.balance;
 

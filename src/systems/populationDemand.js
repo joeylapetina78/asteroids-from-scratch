@@ -23,10 +23,11 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-1154-52a7508";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260801-1154-52a7508";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260801-1154-52a7508";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-1154-52a7508";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-2136-f7e757a";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260801-2136-f7e757a";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260801-2136-f7e757a";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260801-2136-f7e757a";
+import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260801-2136-f7e757a";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -102,46 +103,7 @@ export const POPULATION_NEEDS = Object.freeze({
 // is discarded and logged, so credit creation stays bounded and prices keep
 // meaning something over a long session. The cap is set above a full backlog of
 // every need (3630 cr) so a burst of demand is always payable.
-const NEED_IDS = ["settlement-supply-unit", "life-support-pack", "household-goods-unit", "general-materials"];
-
-export const POPULATION_PROFILES = Object.freeze([
-  {
-    id: "population:yard-exchange",
-    name: "Yard Exchange Population",
-    hubInstitutionId: "yard-exchange",
-    siteId: "yard-exchange",
-    size: 140,
-    householdCash: 40000,
-    householdCashCap: 40000,
-    incomeAmount: 12000,
-    incomeIntervalSeconds: 120,
-    needIds: NEED_IDS,
-  },
-  {
-    id: "population:scrap-porch",
-    name: "Scrap Porch Population",
-    hubInstitutionId: "scrap-forge",
-    siteId: "scrap-porch",
-    size: 95,
-    householdCash: 40000,
-    householdCashCap: 40000,
-    incomeAmount: 12000,
-    incomeIntervalSeconds: 120,
-    needIds: NEED_IDS,
-  },
-  {
-    id: "population:the-ledge",
-    name: "The Ledge Population",
-    hubInstitutionId: "the-ledge",
-    siteId: "the-ledge",
-    size: 60,
-    householdCash: 40000,
-    householdCashCap: 40000,
-    incomeAmount: 12000,
-    incomeIntervalSeconds: 120,
-    needIds: NEED_IDS,
-  },
-]);
+export const POPULATION_PROFILES = Object.freeze(settlementPopulationProfiles());
 
 export function createInitialPopulationState(now = Date.now()) {
   const populations = {};

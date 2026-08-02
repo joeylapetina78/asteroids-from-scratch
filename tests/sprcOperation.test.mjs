@@ -18,6 +18,7 @@ import { createHubProcurementOperation, getProcurementFreightOffers } from "../s
 import { createAsteroidChunks } from "../src/systems/asteroidField.js";
 import { createResourceField } from "../src/systems/resourceField.js";
 import { Ship } from "../src/entities/Ship.js";
+import { getDiagnostic } from "../src/systems/diagnostics.js";
 
 function createHarness() {
   let clock = 1_000;
@@ -48,6 +49,19 @@ test("Sal posts a funded reserve order before Mara needs repair", () => {
   assert.equal(harness.state.sprc.operatingPlan.projected.structuralFeedstockEquivalents, 8);
   assert.equal(harness.state.sprc.projects["sprc-second-cradle"].status, "planned");
   assert.ok(harness.state.ledger.getRecentEvents(20).some((event) => event.type === "institution.action" && event.payload.actorName === "Sal" && event.payload.actionType === "procurement.created"));
+});
+
+test("SPRC diagnostics count current repairs separately from completed history", () => {
+  const harness = createHarness();
+  harness.state.sprc.repairOrders.HISTORY = { id: "HISTORY", status: "completed" };
+  harness.state.sprc.repairQueue.push("HISTORY");
+  harness.operation.update();
+
+  const diagnostic = getDiagnostic(harness.state, harness.state.sprc.institution.id);
+  assert.equal(diagnostic.detail.queuedRepairs, 0);
+  assert.equal(diagnostic.detail.completedRepairs, 1);
+  assert.equal(diagnostic.detail.repairCounts.completed, 1);
+  assert.match(diagnostic.summary, /0 queued repair/);
 });
 
 test("Sal's unaccepted procurement offer is local, then becomes portable when accepted", () => {
@@ -280,7 +294,7 @@ test("a hub exposes an extraction order only while it is short", () => {
   for (const definition of STANDING_MINING_ORDERS) {
     state.logistics.institutions[definition.buyerInstitutionId].inventories[definition.resourceId] = 0;
   }
-  for (const siteId of ["yard-exchange", "scrap-porch", "the-ledge"]) {
+  for (const { siteId } of STANDING_MINING_ORDERS) {
     const jobs = getStandingMiningJobsForSite(siteId, null, state);
     assert.equal(jobs.length, 1, `${siteId} is short and should be asking`);
     assert.equal(jobs[0].repeatable, true);
@@ -291,11 +305,12 @@ test("a hub exposes an extraction order only while it is short", () => {
   for (const definition of STANDING_MINING_ORDERS) {
     state.logistics.institutions[definition.buyerInstitutionId].inventories[definition.resourceId] = 500;
   }
-  for (const siteId of ["yard-exchange", "scrap-porch", "the-ledge"]) {
+  for (const { siteId } of STANDING_MINING_ORDERS) {
     assert.deepEqual(getStandingMiningJobsForSite(siteId, null, state), [],
       `${siteId} wants nothing, so it advertises nothing`);
   }
-  assert.equal(STANDING_MINING_ORDERS.length, 3, "three hubs still each extract one material");
+  assert.equal(new Set(STANDING_MINING_ORDERS.map((definition) => definition.siteId)).size,
+    STANDING_MINING_ORDERS.length, "each configured hub extracts one material");
 });
 
 test("Cinder Contracting dispatches three independent workers to distinct open orders", () => {
@@ -312,7 +327,7 @@ test("Cinder Contracting dispatches three independent workers to distinct open o
   assert.equal(manager.workers.length, 3);
   assert.equal(new Set(manager.workers.map((worker) => worker.assignment.contractId)).size, 3);
   assert.ok(manager.workers.every((worker) => worker.capabilities.tractorField.powerSource === "evergreen"));
-  assert.deepEqual(manager.workers.map((worker) => manager.getState().ships[worker.id].wear), [0.65, 0.25, 0]);
+  assert.deepEqual(manager.workers.map((worker) => manager.getState().ships[worker.id].wear), [0.65, 0.25, 0.1]);
 });
 
 test("Cinder prioritizes and fulfills SPRC procurement through the public contract lifecycle", () => {
@@ -469,6 +484,7 @@ test("a mining institution delivery conserves material and payment into freight 
       { id: "yard-exchange", position: { x: 380, y: -180 } },
       { id: "scrap-porch", position: { x: -1180, y: 860 } },
       { id: "the-ledge", position: { x: 7000, y: -4500 } },
+      { id: "blue-lantern", position: { x: 2950, y: 2180 } },
     ],
     addWorkerShip: () => {},
   };
@@ -501,6 +517,7 @@ test("an unregistered Cinder craft receives paid technology service through SPRC
       { id: "yard-exchange", position: { x: 380, y: -180 } },
       { id: "scrap-porch", position: { x: -1180, y: 860 } },
       { id: "the-ledge", position: { x: 7000, y: -4500 } },
+      { id: "blue-lantern", position: { x: 2950, y: 2180 } },
     ],
     addWorkerShip: () => {},
   };
@@ -508,13 +525,16 @@ test("an unregistered Cinder craft receives paid technology service through SPRC
   const sprc = createSprcOperation({ state, now: () => clock });
   const worker = mining.worker;
   const workerRecord = mining.getState().ships[worker.id];
+  Object.values(mining.getState().ships).forEach((record) => {
+    if (record.id !== worker.id) record.maintenanceStatus = "servicing";
+  });
   workerRecord.issueCount = 1;
   // Just under the threshold so routine deliveries carry it into service.
   workerRecord.wear = 0.95;
   const minerCashBefore = mining.getState().institution.accounts.operating.balance;
   const sprcCashBefore = state.sprc.account.balance;
 
-  for (let completed = 0; completed < 2; completed += 1) {
+  for (let completed = 0; completed < 6 && !workerRecord.pendingIssue; completed += 1) {
     // Orders now exist only while a hub has a real gap. Draining the shelves
     // keeps one open, so this stays a test about wear rather than about supply.
     Object.values(state.logistics.institutions).forEach((institution) => {
@@ -643,6 +663,12 @@ test("the cargo manifest documents custody but does not fabricate source authori
 function createLogisticsHarness() {
   const state = createGameState();
   state.logistics = createInitialLogisticsState(1_000);
+  // This harness exercises the original bilateral freight lifecycle with two
+  // physical test ships. Hub-five competition has its own integration tests;
+  // omit it here so it cannot legitimately win the cargo these assertions
+  // intentionally follow through Yard Exchange.
+  delete state.logistics.institutions["morrow-shoal"];
+  delete state.logistics.institutions["person:morrow-shoal-factor"];
   // The authored freight routes are gone: every run now comes from a purchase
   // order. Give the hubs money and stock so procurement produces real work for
   // these carriers to find.
