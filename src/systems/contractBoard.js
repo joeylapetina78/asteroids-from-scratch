@@ -15,10 +15,10 @@
 //   WHO IS DOING IT   supplier — null while it is still up for grabs
 //   WHERE IS IT       one of available / taken / done / blocked
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260802-0027-a7c4805";
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260802-0027-a7c4805";
-import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260802-0027-a7c4805";
-import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260802-0027-a7c4805";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260802-0035-693f473";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260802-0035-693f473";
+import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260802-0035-693f473";
+import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260802-0035-693f473";
 import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js";
 
 export const CONTRACT_STATE = Object.freeze({
@@ -35,6 +35,7 @@ export const CONTRACT_KIND = Object.freeze({
   FEEDSTOCK: "feedstock",       // Sal buying repair material
   REPAIR: "repair",             // Sal selling a repair
   PROTECTION: "protection",     // a place hiring defense against a real threat
+  SALVAGE: "salvage",           // recovering titled wreckage for its owner
 });
 
 // What to call a party, and where it sits — both read off the record it
@@ -326,6 +327,45 @@ function collectProtection(state) {
   }));
 }
 
+function collectWreckSalvage(state) {
+  return Object.values(state.contracts?.records ?? {})
+    .filter((contract) => contract.type === "wreck-salvage")
+    .map((contract) => {
+      const wreck = state.wrecks?.records?.[contract.terms?.wreckId] ?? null;
+      const done = contract.status === "paid";
+      const blocked = ["failed", "canceled", "expired"].includes(contract.status);
+      const taken = ["active", "fulfilled"].includes(contract.status);
+      return entry(state, {
+        id: contract.id,
+        kind: CONTRACT_KIND.SALVAGE,
+        state: done ? CONTRACT_STATE.DONE : blocked ? CONTRACT_STATE.BLOCKED : taken ? CONTRACT_STATE.TAKEN : CONTRACT_STATE.AVAILABLE,
+        title: contract.title,
+        issuerId: contract.issuer,
+        buyerId: contract.issuer,
+        supplierId: taken || done ? "player" : null,
+        originSiteId: null,
+        siteId: contract.terms?.destinationSiteId ?? contract.presentation?.offerSiteId ?? null,
+        resourceId: "titled-wreck",
+        units: contract.terms?.amount ?? 1,
+        remainingUnits: done ? 0 : 1,
+        value: contract.reward?.credits ?? null,
+        servicePayment: contract.reward?.credits ?? null,
+        createdAt: contract.offeredAt ?? wreck?.createdAt ?? null,
+        closedAt: contract.paidAt ?? null,
+        note: contract.status === "offered"
+          ? `Available from Scrap Porch Odd Jobs · ${wreck?.shipName ?? "titled wreck"}`
+          : contract.status,
+        detail: [
+          contract.description,
+          wreck?.titleId ? `Title: ${wreck.titleId}` : null,
+          wreck?.position ? `Wreck position: ${wreck.position.x}, ${wreck.position.y}` : null,
+          ...(contract.notes ?? []),
+        ].filter(Boolean),
+        at: contract.offeredAt ?? wreck?.createdAt ?? null,
+      });
+    });
+}
+
 // Every agreement in the world, newest first within each state.
 export function listContracts(state) {
   return [
@@ -334,6 +374,7 @@ export function listContracts(state) {
     ...collectFreight(state),
     ...collectSprc(state),
     ...collectProtection(state),
+    ...collectWreckSalvage(state),
   ].sort((first, second) => (second.at ?? 0) - (first.at ?? 0));
 }
 

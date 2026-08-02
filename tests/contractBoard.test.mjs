@@ -241,3 +241,38 @@ test("a freight run reports its lane, its carrier, and both payments separately"
   assert.equal(run.servicePayment, 113);
   assert.equal(run.remainingUnits, 6, "still in flight");
 });
+
+test("a locally accepted wreck job is globally visible without changing where it can be accepted", () => {
+  const { state } = createWorld();
+  state.logistics.institutions["miner:flint-prospecting"] = {
+    id: "miner:flint-prospecting", name: "Flint Prospecting", siteId: "morrow-shoal",
+  };
+  state.wrecks = { records: {
+    "wreck:worker:flint-two:1": {
+      id: "wreck:worker:flint-two:1", shipName: "Flint Two", titleId: "TITLE-FLINT-TWO",
+      position: { x: 1400, y: -900 }, createdAt: 900,
+    },
+  } };
+  state.contracts.records["salvage-contract:wreck:worker:flint-two:1"] = {
+    id: "salvage-contract:wreck:worker:flint-two:1",
+    type: "wreck-salvage",
+    title: "Recover Flint Two",
+    issuer: "miner:flint-prospecting",
+    description: "Tow Flint Two to Scrap Porch.",
+    terms: { wreckId: "wreck:worker:flint-two:1", destinationSiteId: "scrap-porch", amount: 1 },
+    reward: { credits: 480 },
+    presentation: { offerSiteId: "scrap-porch" },
+    offerSource: { siteId: "scrap-porch", serviceId: "scrap-porch-work-board" },
+    status: "offered",
+    offeredAt: 1_000,
+  };
+
+  const salvage = listContracts(state).find((contract) => contract.kind === CONTRACT_KIND.SALVAGE);
+  assert.equal(salvage?.state, CONTRACT_STATE.AVAILABLE);
+  assert.equal(salvage?.issuerName, "Flint Prospecting");
+  assert.equal(salvage?.supplierId, null);
+  assert.equal(salvage?.siteId, "scrap-porch");
+  assert.equal(salvage?.servicePayment, 480);
+  assert.match(salvage?.note, /Scrap Porch Odd Jobs/);
+  assert.equal(state.contracts.records[salvage.id].status, "offered", "the read-only board does not accept it remotely");
+});
