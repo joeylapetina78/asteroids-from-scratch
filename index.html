@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260802-0035-693f473" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260802-1248-85b6ff4" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260802-0035-693f473</span>
+      <span class="build-tag">build: fresh-20260802-1248-85b6ff4</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -90,6 +90,7 @@
           <button type="button" class="observatory-tab is-active" data-observatory-tab="actors">Actors</button>
           <button type="button" class="observatory-tab" data-observatory-tab="blockers">Blockers</button>
           <button type="button" class="observatory-tab" data-observatory-tab="contracts">Contracts</button>
+          <button type="button" class="observatory-tab" data-observatory-tab="economy">Economy</button>
           <button type="button" class="observatory-tab" data-observatory-tab="ledger">Ledger</button>
           <button type="button" class="observatory-tab" data-observatory-tab="stats">Stats</button>
           <button type="button" class="observatory-tab" data-observatory-tab="population">Population</button>
@@ -128,6 +129,35 @@
           <span id="contract-board-summary" class="contract-summary"></span>
         </div>
         <div id="contract-table" class="contract-table-wrap"></div>
+      </div>
+      <!-- Economy: the only view that plots numbers over time. Everything else
+           in the observatory answers "what is true now"; this answers "which
+           way is it going". Charts are built in main.js from economySampler
+           series, so the markup is just the frame and the controls. -->
+      <div id="observatory-pane-economy" class="observatory-pane observatory-pane-economy" hidden>
+        <div class="econ-controls" role="group" aria-label="Economy chart controls">
+          <label class="econ-control">Window
+            <select id="econ-window" aria-label="Time window">
+              <option value="5m">5 min</option>
+              <option value="15m" selected>15 min</option>
+              <option value="1h">1 hour</option>
+              <option value="all">session</option>
+            </select>
+          </label>
+          <label class="econ-control">Prices
+            <select id="econ-price-basis" aria-label="Which prices to plot">
+              <option value="ask">Supplier asks (per unit)</option>
+              <option value="order">Open purchase orders (per unit)</option>
+              <option value="freight">Posted freight rates</option>
+            </select>
+          </label>
+          <label class="econ-control">Place
+            <select id="econ-place" aria-label="Filter by place"><option value="">All places</option></select>
+          </label>
+          <button id="econ-pause" type="button" class="quick-link-button">Pause</button>
+          <span id="econ-status" class="observatory-count"></span>
+        </div>
+        <div id="econ-body" class="econ-body"></div>
       </div>
       <div id="observatory-pane-ledger" class="observatory-pane observatory-pane-ledger" hidden>
         <div class="ledger-browser">
@@ -894,6 +924,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260802-0035-693f473"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260802-1248-85b6ff4"></script>
   </body>
 </html>

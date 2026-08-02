@@ -1,47 +1,51 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260802-0035-693f473";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260802-0035-693f473";
-import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260802-0035-693f473";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260802-0035-693f473";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260802-0035-693f473";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260802-0035-693f473";
-import { Game } from "./game.js?v=fresh-20260802-0035-693f473";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260802-0035-693f473";
-import { createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260802-0035-693f473";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260802-0035-693f473";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260802-0035-693f473";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260802-0035-693f473";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260802-1248-85b6ff4";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260802-1248-85b6ff4";
+import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260802-1248-85b6ff4";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260802-1248-85b6ff4";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260802-1248-85b6ff4";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260802-1248-85b6ff4";
+import { Game } from "./game.js?v=fresh-20260802-1248-85b6ff4";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260802-1248-85b6ff4";
+import { createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260802-1248-85b6ff4";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260802-1248-85b6ff4";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260802-1248-85b6ff4";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260802-1248-85b6ff4";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260802-0035-693f473";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260802-0035-693f473";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260802-0035-693f473";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260802-0035-693f473";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260802-0035-693f473";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260802-0035-693f473";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260802-0035-693f473";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260802-0035-693f473";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260802-0035-693f473";
-import { Processor } from "./systems/processor.js?v=fresh-20260802-0035-693f473";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260802-0035-693f473";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260802-0035-693f473";
-import { createGameState } from "./state/gameState.js?v=fresh-20260802-0035-693f473";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260802-0035-693f473";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260802-0035-693f473";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260802-0035-693f473";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260802-0035-693f473";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260802-0035-693f473";
-import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260802-0035-693f473";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260802-1248-85b6ff4";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260802-1248-85b6ff4";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260802-1248-85b6ff4";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260802-1248-85b6ff4";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260802-1248-85b6ff4";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260802-1248-85b6ff4";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260802-1248-85b6ff4";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260802-1248-85b6ff4";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260802-1248-85b6ff4";
+import { Processor } from "./systems/processor.js?v=fresh-20260802-1248-85b6ff4";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260802-1248-85b6ff4";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260802-1248-85b6ff4";
+import { createGameState } from "./state/gameState.js?v=fresh-20260802-1248-85b6ff4";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260802-1248-85b6ff4";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260802-1248-85b6ff4";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260802-1248-85b6ff4";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260802-1248-85b6ff4";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260802-1248-85b6ff4";
+import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260802-1248-85b6ff4";
+import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260802-1248-85b6ff4";
+import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260802-1248-85b6ff4";
 import { FLINT_MINING_SEED } from "./content/economy/miningInstitutions.js";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260802-0035-693f473";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260802-0035-693f473";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260802-0035-693f473";
-import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260802-0035-693f473";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260802-0035-693f473";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260802-0035-693f473";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260802-0035-693f473";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260802-1248-85b6ff4";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260802-1248-85b6ff4";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260802-1248-85b6ff4";
+import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260802-1248-85b6ff4";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260802-1248-85b6ff4";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260802-1248-85b6ff4";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260802-1248-85b6ff4";
+import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260802-1248-85b6ff4";
+import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260802-1248-85b6ff4";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -354,12 +358,17 @@ const logisticsManager = createLogisticsManager({
   // nothing to carry lays one up. The world builds and drops the actual hull.
   commissionHauler: (spec) => game.commissionHauler(spec),
 });
-const towServiceManager = createTowServiceManager({ state, ships: game.npcShips, destinations: game.worldSites });
+const towServiceManager = createTowServiceManager({
+  state, ships: game.npcShips, destinations: game.worldSites,
+  onWreckRecovered: (wreck) => { game.wrecks = game.wrecks.filter((entity) => entity.recordId !== wreck.id); },
+});
+const fleetInsuranceManager = createFleetInsuranceManager({ state });
+const fleetProtectionManager = createFleetProtectionManager({ state, getShips: () => [...game.npcShips, ...game.workerShips] });
 
 // Dev hook: the running game and state, reachable from the console for
 // debugging and automated playtests. window.game is shadowed by the canvas
 // element (DOM id), so this lives under a distinct name.
-window.__asteroids = { game, state, processor, cargoHold, logistics: logisticsManager, towing: towServiceManager };
+window.__asteroids = { game, state, processor, cargoHold, logistics: logisticsManager, towing: towServiceManager, insurance: fleetInsuranceManager, fleetProtection: fleetProtectionManager };
 const contractManager = createContractManager({
   state,
   onChange: (contract) => {
@@ -797,6 +806,8 @@ restoreSavedWorld({ save: savedProfile, game, cargoHold });
 sprcManager.update();
 logisticsManager.update();
 towServiceManager.update();
+fleetInsuranceManager.update();
+fleetProtectionManager.update();
 window.setInterval(() => sprcManager.update(), 1000);
 window.setInterval(() => populationManager.update(), 1000);
 window.setInterval(() => procurementManager.update(), 1000);
@@ -806,6 +817,10 @@ window.setInterval(() => {
   flintMiningManager.update();
 }, 1000);
 window.setInterval(() => towServiceManager.update(), 1000);
+window.setInterval(() => {
+  fleetInsuranceManager.update();
+  fleetProtectionManager.update();
+}, 1000);
 registerStarterDeliveryShipRecords(state);
 clearOldPanelLayouts();
 setInitialPaperworkLocations();
@@ -6282,7 +6297,7 @@ function applyObservatoryTab() {
   if (observatoryBody) observatoryBody.hidden = !isTable;
   if (observatorySearch) observatorySearch.hidden = !isTable;
   if (observatoryCount) observatoryCount.hidden = !isTable;
-  ["ledger", "stats", "population", "contracts"].forEach((pane) => {
+  ["ledger", "stats", "population", "contracts", "economy"].forEach((pane) => {
     const node = document.querySelector(`#observatory-pane-${pane}`);
     if (node) node.hidden = observatoryTab !== pane;
   });
@@ -6694,6 +6709,7 @@ function renderActorDiagnostic() {
 function renderObservatory() {
   if (!observatoryPanel || observatoryPanel.hidden || !observatoryBody) return;
   if (observatoryTab === "contracts") { renderContractBoard(); return; }
+  if (observatoryTab === "economy") { renderEconomy(); return; }
   // Ledger/stats/population panes are driven by the existing HUD render path.
   if (!OBSERVATORY_TABLE_TABS.has(observatoryTab)) return;
   const search = observatorySearch?.value?.trim() ?? "";
@@ -6781,6 +6797,427 @@ window.__asteroids.diagnostics = {
   list: () => listInspectableActors(state, { game }),
   blocked: () => listBlocked(state),
   select: selectActorForDiagnostics,
+};
+
+// ── Economy trends ──────────────────────────────────────────────────────────
+// The observatory's other tabs all answer "what is true now". This one answers
+// "which way is it going", which is a different question and needs a different
+// substrate: a bounded ring of samples rather than a projection or a stream.
+//
+// Sampling runs whether or not the tab is open — otherwise the first thing the
+// tab would show is that it has no history, which is the least useful moment to
+// start recording one.
+
+const econWindowSelect = document.querySelector("#econ-window");
+const econPriceBasisSelect = document.querySelector("#econ-price-basis");
+const econPlaceSelect = document.querySelector("#econ-place");
+const econPauseButton = document.querySelector("#econ-pause");
+const econStatus = document.querySelector("#econ-status");
+const econBody = document.querySelector("#econ-body");
+
+let econPaused = false;
+let econRenderKey = "";
+
+ensureEconomyHistory(state);
+recordEconomySample(state, { force: true });
+window.setInterval(() => recordEconomySample(state), SAMPLE_INTERVAL_MS);
+
+econPauseButton?.addEventListener("click", () => {
+  // Freezes only the DISPLAY, exactly like the ledger and contract boards: the
+  // sampler keeps recording underneath, so resuming shows the whole interval
+  // rather than a hole.
+  econPaused = !econPaused;
+  econPauseButton.textContent = econPaused ? "Resume" : "Pause";
+  econPauseButton.classList.toggle("is-active", econPaused);
+  econRenderKey = "";
+  renderEconomy();
+});
+
+[econWindowSelect, econPriceBasisSelect, econPlaceSelect].forEach((control) => {
+  control?.addEventListener("change", () => { econRenderKey = ""; renderEconomy(); });
+});
+
+function econWindowMs() {
+  const chosen = ECONOMY_WINDOWS.find((entry) => entry.id === (econWindowSelect?.value ?? "15m"));
+  return chosen?.ms ?? 15 * 60 * 1000;
+}
+
+// Settlements first, then everyone else, because the settlements are what a
+// "place" means to the rest of the economy.
+function econPlaceOptions(sample) {
+  const actors = Object.values(sample?.actors ?? {});
+  return [
+    ...actors.filter((actor) => actor.isSettlement),
+    ...actors.filter((actor) => !actor.isSettlement),
+  ];
+}
+
+function syncEconPlaceOptions(sample) {
+  if (!econPlaceSelect) return;
+  const options = econPlaceOptions(sample);
+  const key = options.map((actor) => actor.id).join("|");
+  if (econPlaceSelect.dataset.optionKey === key) return;
+  const previous = econPlaceSelect.value;
+  econPlaceSelect.dataset.optionKey = key;
+  econPlaceSelect.replaceChildren(
+    Object.assign(document.createElement("option"), { value: "", textContent: "All places" }),
+    ...options.map((actor) => Object.assign(document.createElement("option"), {
+      value: actor.id,
+      textContent: actor.isSettlement ? actor.name : `${actor.name} (${actor.archetypeId ?? "actor"})`,
+    })),
+  );
+  econPlaceSelect.value = options.some((actor) => actor.id === previous) ? previous : "";
+}
+
+function renderEconomy() {
+  if (!econBody) return;
+  const now = Date.now();
+  const samples = getEconomySamples(state, { windowMs: econWindowMs(), now });
+  const latest = samples[samples.length - 1] ?? null;
+
+  if (econStatus) {
+    const span = samples.length > 1 ? Math.round((samples[samples.length - 1].t - samples[0].t) / 1000) : 0;
+    econStatus.textContent = `${samples.length} samples · ${span}s${econPaused ? " · frozen" : ""}`;
+  }
+
+  if (!latest) {
+    econBody.replaceChildren(diagElement("p", "observatory-empty", "No samples yet — the first one lands within a few seconds."));
+    return;
+  }
+
+  syncEconPlaceOptions(latest);
+  const place = econPlaceSelect?.value ?? "";
+  const basis = econPriceBasisSelect?.value ?? "ask";
+
+  // Rebuilding a dozen SVG charts on the 700 ms diagnostic cadence would throw
+  // away the reader's hover and scroll four times per sample for no new data.
+  const key = `${samples.length}|${econWindowSelect?.value}|${basis}|${place}|${econPaused}`;
+  if (econPaused || key === econRenderKey) return;
+  econRenderKey = key;
+
+  const settlements = Object.values(latest.actors).filter((actor) => actor.isSettlement);
+  const inPlace = (actorId) => !place || actorId === place;
+  const populations = Object.values(latest.populations)
+    .filter((record) => !place || record.hubInstitutionId === place);
+
+  const fragments = [];
+  fragments.push(econTentPoles(samples, latest));
+  const grid = diagElement("div", "econ-grid");
+
+  // ── Money: the direct answer to "is everybody just making more money?" ────
+  grid.append(createStackedAreaChart({
+    title: "Money in the world",
+    subtitle: "who is holding the credits",
+    series: [
+      { key: "populations", label: "Households", points: toSeries(samples, (sample) => sample.money.populations) },
+      { key: "institutions", label: "Institutions", points: toSeries(samples, (sample) => sample.money.institutions) },
+      { key: "player", label: "Player", points: toSeries(samples, (sample) => sample.money.player) },
+    ],
+    format: formatCredits,
+    note: "Credits enter only as household background income and leave only as a hub's production conversion cost. Everything else is a transfer between these three bands.",
+  }));
+
+  grid.append(createLineChart({
+    title: "Credit creation, burn and spend",
+    subtitle: "per minute",
+    series: [
+      { key: "created", label: "Income created", points: toRateSeries(samples, (sample) => sample.money.incomeCumulative) },
+      { key: "burned", label: "Burned in production", points: toRateSeries(samples, (sample) => sample.money.productionSpendCumulative) },
+      { key: "spend", label: "Spent on goods", color: "#73d2ff", points: toRateSeries(samples, (sample) => sample.money.spentCumulative) },
+      { key: "capped", label: "Not created (at cap)", color: "#7f8da2", dashed: true, points: toRateSeries(samples, (sample) => sample.money.discardedCumulative) },
+    ],
+    format: formatRate,
+    note: "\"Spent on goods\" is final consumption — the closest thing this world has to a GDP: value that actually left the economy into a household.",
+  }));
+
+  grid.append(econReconciliation(samples));
+
+  // ── Prices ───────────────────────────────────────────────────────────────
+  grid.append(econPriceChart(samples, basis, place));
+
+  // ── Cash and solvency, per actor ─────────────────────────────────────────
+  const cashKeys = [...collectSeriesKeys(samples, (sample) => sample.actors).entries()]
+    .filter(([actorId]) => inPlace(actorId));
+  grid.append(createLineChart({
+    title: "Cash by institution",
+    subtitle: place ? "selected place" : "every balance sheet in the world",
+    series: cashKeys.map(([actorId, actor]) => ({
+      key: actorId,
+      label: actor.name,
+      points: toSeries(samples, (sample) => sample.actors[actorId]?.cash ?? null),
+    })),
+    format: formatCredits,
+    note: "A line trending to the floor is an actor going broke. A line that only rises is an actor with no sink.",
+  }));
+
+  grid.append(createBarChart({
+    title: "Balance sheets now",
+    subtitle: "cash, and how much of it is already committed",
+    bars: Object.values(latest.actors)
+      .filter((actor) => inPlace(actor.id))
+      .sort((left, right) => right.cash - left.cash)
+      .map((actor) => ({
+        key: actor.id,
+        label: actor.name,
+        value: actor.cash,
+        marker: actor.committed > 0 ? actor.committed : null,
+        note: `${formatCredits(actor.available)} free`,
+      })),
+    format: formatCredits,
+    note: "The tick on each bar is money already committed to open orders — cash the actor holds but cannot spend.",
+  }));
+
+  // ── Material ─────────────────────────────────────────────────────────────
+  grid.append(createStackedAreaChart({
+    title: "Material in the world",
+    subtitle: "units, by where they are",
+    series: [
+      { key: "onShelf", label: "On shelves", color: "#ffc46b", points: toSeries(samples, (sample) => sample.material.onShelf) },
+      { key: "inFlight", label: "In flight", color: "#73d2ff", points: toSeries(samples, (sample) => sample.material.inFlight) },
+      { key: "finishedGoods", label: "Finished goods", color: "#8ce99a", points: toSeries(samples, (sample) => sample.material.finishedGoods) },
+    ],
+    format: formatUnits,
+    note: "Material enters by extraction and leaves by consumption. A total that only climbs means the demand sink is not keeping up with the mines.",
+  }));
+
+  grid.append(createLineChart({
+    title: "Shelf stock by place",
+    subtitle: "raw units held",
+    series: cashKeys.map(([actorId, actor]) => ({
+      key: actorId,
+      label: actor.name,
+      points: toSeries(samples, (sample) => sample.actors[actorId]?.inventoryUnits ?? null),
+    })),
+    format: formatUnits,
+  }));
+
+  grid.append(createGroupedBarChart({
+    title: "Stock against target, now",
+    subtitle: "per settlement, per family — the gap that makes it order",
+    groups: settlements
+      .filter((actor) => inPlace(actor.id))
+      .map((actor) => ({
+        label: actor.name,
+        values: actor.byFamily,
+        markers: Object.fromEntries(Object.entries(actor.coverage ?? {}).map(([family, coverage]) => [
+          family,
+          coverage && coverage > 0 ? Math.round((actor.byFamily[family] ?? 0) / coverage) : null,
+        ])),
+      })),
+    keys: [
+      { key: "structural", label: "Structural" },
+      { key: "industrial", label: "Industrial" },
+      { key: "volatile", label: "Volatile" },
+    ],
+    format: formatUnits,
+    note: "The tick is the target its population's consumption implies. A bar short of its tick is what opens a purchase order.",
+  }));
+
+  // ── Demand side ──────────────────────────────────────────────────────────
+  grid.append(createLineChart({
+    title: "Household cash by settlement",
+    subtitle: "the buyers, not the hubs",
+    series: populations.map((record) => ({
+      key: record.id,
+      label: record.name,
+      points: toSeries(samples, (sample) => sample.populations[record.id]?.cash ?? null),
+    })),
+    format: formatCredits,
+    note: "A household pinned at its cap is a population whose income is being discarded — demand it cannot express, and the clearest place this economy is currently cheating.",
+  }));
+
+  grid.append(createLineChart({
+    title: "Unmet demand",
+    subtitle: "outstanding needs nobody has supplied",
+    includeZero: true,
+    series: populations.map((record) => ({
+      key: record.id,
+      label: record.name,
+      points: toSeries(samples, (sample) => sample.populations[record.id]?.backlog ?? null),
+    })),
+    format: formatUnits,
+  }));
+
+  // ── Hubs as businesses ───────────────────────────────────────────────────
+  grid.append(createBarChart({
+    title: "Hub trade books",
+    subtitle: "cumulative, selling to their own populations",
+    bars: settlements.filter((actor) => inPlace(actor.id)).flatMap((actor) => [
+      { key: `${actor.id}-revenue`, label: `${actor.name} · revenue`, value: actor.revenue, color: "#8ce99a" },
+      { key: `${actor.id}-cogs`, label: `${actor.name} · cost of goods`, value: actor.costOfGoodsSold, color: "#ff8f73" },
+      { key: `${actor.id}-margin`, label: `${actor.name} · margin`, value: actor.margin, color: "#73d2ff", note: `${actor.unitsSold} sold` },
+    ]),
+    format: formatCredits,
+    note: "Cost of goods is the cost basis carried through production, so margin here is real trading profit — not the conversion cost, which is burned separately.",
+  }));
+
+  // ── Friction ─────────────────────────────────────────────────────────────
+  grid.append(createLineChart({
+    title: "Purchase orders by status",
+    subtitle: "hub-to-hub trade, in flight",
+    series: [
+      { key: "offered", label: "Offered", points: toSeries(samples, (sample) => sample.orders.offered) },
+      { key: "accepted", label: "Accepted", points: toSeries(samples, (sample) => sample.orders.accepted) },
+      { key: "ready", label: "Ready", points: toSeries(samples, (sample) => sample.orders.ready) },
+      { key: "shipped", label: "Shipped", points: toSeries(samples, (sample) => sample.orders.shipped) },
+      { key: "withheld", label: "Withheld", color: "#ff8f73", points: toSeries(samples, (sample) => sample.orders.withheld) },
+      { key: "declined", label: "Declined", color: "#7f8da2", dashed: true, points: toSeries(samples, (sample) => sample.orders.declined) },
+    ],
+    format: formatUnits,
+  }));
+
+  grid.append(createLineChart({
+    title: "Friction",
+    subtitle: "who is stuck, and how much is moving",
+    series: [
+      { key: "blocked", label: "Blocked actors", color: "#ff8f73", points: toSeries(samples, (sample) => sample.health.blockedActors) },
+      { key: "shipments", label: "Active shipments", color: "#73d2ff", points: toSeries(samples, (sample) => sample.health.activeShipments) },
+      { key: "allocations", label: "Active extraction", color: "#ffc46b", points: toSeries(samples, (sample) => sample.health.activeAllocations) },
+    ],
+    format: formatUnits,
+    note: "Cross-reference a rise here with the Blockers tab: this says how many, that says why.",
+  }));
+
+  fragments.push(grid);
+  econBody.replaceChildren(...fragments);
+}
+
+// The half-dozen numbers worth looking at before any chart.
+function econTentPoles(samples, latest) {
+  const row = diagElement("div", "econ-tiles");
+  const moneySeries = toSeries(samples, (sample) => sample.money.total);
+  const moneyChange = seriesChange(moneySeries);
+  const consumption = toRateSeries(samples, (sample) => sample.money.spentCumulative);
+  const materialSeries = toSeries(samples, (sample) => sample.material.total);
+  const materialChange = seriesChange(materialSeries);
+  const backlogSeries = toSeries(samples, (sample) => sample.health.backlog);
+  const blockedSeries = toSeries(samples, (sample) => sample.health.blockedActors);
+  const marginSeries = toSeries(samples, (sample) => sample.trade.marginCumulative);
+
+  row.append(
+    createStatTile({
+      label: "Money in the world", value: latest.money.total,
+      delta: moneyChange?.delta ?? null, points: moneySeries, format: formatCredits,
+      hint: "households + institutions + player",
+    }),
+    createStatTile({
+      label: "Final consumption", value: latestValue(consumption),
+      points: consumption, format: formatRate,
+      hint: "credits reaching households as goods",
+    }),
+    createStatTile({
+      label: "Material in the world", value: latest.material.total,
+      delta: materialChange?.delta ?? null, points: materialSeries, format: formatUnits,
+      hint: "shelves + freight + finished goods",
+    }),
+    createStatTile({
+      label: "Unmet demand", value: latest.health.backlog,
+      delta: seriesChange(backlogSeries)?.delta ?? null, points: backlogSeries, format: formatUnits,
+      hint: "needs raised and not yet supplied",
+    }),
+    createStatTile({
+      label: "Blocked actors", value: latest.health.blockedActors,
+      delta: seriesChange(blockedSeries)?.delta ?? null, points: blockedSeries, format: formatUnits,
+      hint: "carrying a diagnostic blocker",
+    }),
+    createStatTile({
+      label: "Hub trading margin", value: latest.trade.marginCumulative,
+      delta: seriesChange(marginSeries)?.delta ?? null, points: marginSeries, format: formatCredits,
+      hint: "cumulative, revenue less cost of goods",
+    }),
+  );
+  return row;
+}
+
+// Money is created in one place and destroyed in one place, so the change in
+// the world total is predictable. Showing the residual rather than hiding it
+// means a leak announces itself instead of being read as growth.
+function econReconciliation(samples) {
+  const card = diagElement("figure", "econ-chart econ-reconcile");
+  const head = diagElement("figcaption", "econ-chart-head");
+  head.append(diagElement("strong", null, "Where the money came from"));
+  head.append(diagElement("span", "econ-chart-sub", "across this window"));
+  card.append(head);
+
+  const reconciliation = reconcileMoney(samples);
+  if (!reconciliation) {
+    card.append(diagElement("p", "econ-chart-empty", "Needs at least two samples."));
+    return card;
+  }
+
+  const rows = [
+    ["Created as household income", formatCredits(reconciliation.created)],
+    ["Burned as production cost", `-${formatCredits(reconciliation.burned)}`],
+    ["Expected change", formatCredits(reconciliation.expected)],
+    ["Observed change", formatCredits(reconciliation.observed)],
+    ["Unexplained residual", formatCredits(reconciliation.residual)],
+    ["Not created — households at cap", formatCredits(reconciliation.notCreatedAtCap)],
+    ["Final consumption", formatCredits(reconciliation.finalConsumption)],
+  ];
+  const list = diagElement("dl", "econ-reconcile-list");
+  rows.forEach(([label, value], index) => {
+    const term = diagElement("dt", null, label);
+    const data = diagElement("dd", index === 4 && Math.abs(reconciliation.residual) > 1 ? "is-warning" : null, value);
+    list.append(term, data);
+  });
+  card.append(list);
+  card.append(diagElement("figcaption", "econ-chart-note",
+    Math.abs(reconciliation.residual) > 1
+      ? "A non-zero residual means credits moved through a path this layer does not know about. That is a finding, not a rounding error."
+      : "Balanced: every credit is accounted for by creation, burn, or transfer."));
+  return card;
+}
+
+// Three different things are called a "price" in this economy and they move for
+// different reasons, so they are never mixed on one axis.
+function econPriceChart(samples, basis, place) {
+  const accessor = (sample) => sample.prices[basis] ?? {};
+  const keys = [...collectSeriesKeys(samples, accessor).entries()]
+    .filter(([, entry]) => !place || basis !== "ask" || entry.sellerId === place);
+
+  const titles = {
+    ask: ["Supplier asking prices", "per unit, by seller and material"],
+    order: ["Open purchase-order prices", "per unit, unit-weighted across open orders"],
+    freight: ["Posted freight rates", "per run, where a hub has had to raise one"],
+  };
+  const notes = {
+    ask: "A seller walks its ask down toward what the next unit costs it to dig when nobody is buying, and firms back up when its book fills. A flat line means neither has happened.",
+    order: "This is what buyers are actually committing, which drifts above the ask whenever a buyer has repriced to close a refusal.",
+    freight: "Only templates a hub has repriced appear here; anything still at its authored rate has never needed to move.",
+  };
+  const [title, subtitle] = titles[basis] ?? titles.ask;
+
+  return createLineChart({
+    title,
+    subtitle,
+    series: keys.map(([key, entry]) => ({
+      key,
+      label: econPriceLabel(basis, key, entry),
+      color: colorForKey(key),
+      points: toSeries(samples, (sample) => sample.prices[basis]?.[key]?.value ?? null),
+    })),
+    format: formatCredits,
+    empty: basis === "freight"
+      ? "No freight rate has been repriced yet — every run is still at its authored payment."
+      : "No prices recorded in this window.",
+    note: notes[basis],
+  });
+}
+
+function econPriceLabel(basis, key, entry) {
+  if (basis === "ask") return `${entry.sellerName ?? entry.sellerId} · ${prettyId(entry.resourceId)}`;
+  if (basis === "order") return prettyId(entry.resourceId ?? key);
+  return prettyId(key);
+}
+
+function prettyId(id) {
+  return String(id ?? "").replaceAll("-", " ").replace(/^\w/, (character) => character.toUpperCase());
+}
+
+window.__asteroids.economy = {
+  snapshot: () => getEconomySamples(state, {}).slice(-1)[0] ?? null,
+  samples: (windowMs = Infinity) => getEconomySamples(state, { windowMs }),
+  reconcile: (windowMs = Infinity) => reconcileMoney(getEconomySamples(state, { windowMs })),
 };
 
 // ── Ledger event browser ────────────────────────────────────────────────────

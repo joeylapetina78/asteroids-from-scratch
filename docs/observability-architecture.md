@@ -313,3 +313,130 @@ player-facing history or the player becomes omniscient.
 ## Not touched this pass
 
 Stats, Population, Institutions, Contracts, trends, retention pruning.
+
+---
+
+# Economy tab: trends over time (2026-08-02)
+
+The one deferred item from the original plan that could not be built out of the
+existing layers. Every other observatory tab reads a projection or the stream
+and answers *"what is true now"*. Nothing anywhere remembered a **number** over
+time, so *"which way is this going"* had no substrate at all.
+
+## Why a sampler and not a ledger query
+
+Reconstructing a price series from `institution.offerRepriced` events would be
+exactly the ledger scan the diagnostics layer refuses to do, over a stream that
+rotates at 6000 entries — and it only works for quantities that happen to emit
+an event. Cash balances, shelf stock and open-order counts emit nothing when
+they sit still, which is precisely the reading a trend needs.
+
+So `src/systems/economySampler.js` takes a periodic snapshot instead. It is
+read-only over live state, holds a bounded ring, and is **deliberately absent
+from the save**: `saveManager` is an explicit allowlist, and a session's history
+does not belong in localStorage.
+
+| Constant | Value | Why |
+|---|---|---|
+| `SAMPLE_INTERVAL_MS` | 5 s | Repricing is throttled to 60 s, so 5 s renders a move as a step rather than a jump |
+| `MAX_SAMPLES` | 1440 | Two hours of history as a few thousand small objects |
+
+## Two rules that keep the charts honest
+
+1. **Stocks are read, flows are derived.** Cash, inventory, coverage and order
+   counts are levels and are sampled directly. Income, spend, production burn
+   and units sold are cumulative counters the domain systems already maintain,
+   so a rate is a difference between two samples — never an estimate.
+2. **A `null` is a gap, not a zero.** An actor with no reading, or a rate with
+   no previous sample to difference against, breaks the line. Drawing it to the
+   floor would render an actor that did not exist yet as one that went broke.
+
+## What the sampler reads
+
+`money` (households / institutions / player, plus the four cumulative
+counters) · `material` (on shelves / in flight / finished goods / under
+extraction) · `trade` (revenue, cost of goods, margin, units sold) ·
+`actors` (cash, committed, available, inventory by family, coverage against
+target, wear, trade book) · `populations` (household cash, cap saturation,
+backlog, how long unmet, per-need detail) · `prices` (supplier asks, open
+purchase orders unit-weighted, posted freight rates, retail) · `orders` by
+status · `health` (blocked actors, backlog, active shipments and allocations).
+
+SPRC is read separately: it keeps its account and shelf *beside* the
+institution rather than on it, so the logistics sweep does not see it. Omitting
+it would have understated world cash by a whole repair yard.
+
+## The tab found its first defect in itself, in three minutes
+
+The reconciliation went to **−15,440** almost immediately. Chasing it down: the
+first version of the sampler enumerated `state.logistics.institutions` plus a
+special case for SPRC — which is how the money side of this codebase *looks*
+from the outside. It missed **five treasuries** that live under their own
+operation's state key: `miningOperations.*.institution` (Cinder Contracting,
+Flint Prospecting), `fleetInsurance.institution`, `towing.institution`,
+`farm.institution`. Roughly 52,000 credits, and every payment into one of them
+read as money vanishing from the world.
+
+The fix is to stop enumerating: `listAccountHolders(state)` mirrors the roots
+`findActorRecord` already searches, so an operation with its own institution is
+a balance sheet no matter which key it lives under. Two tests now guard it —
+one asserts every treasury appears in the roster, one asserts that paying an
+actor outside `logistics` produces a zero residual.
+
+Worth stating plainly: the residual is the feature. Had the sampler quietly
+balanced its own books, the charts would have shown a slow, confident,
+completely wrong decline in world money.
+
+## One seam repaired on the way
+
+`shadedUnitCost` — the rule that decides what a supplier is currently asking —
+lived only inside the procurement operation's closure. Anything wanting to
+*read* the current ask had to re-derive it and would silently drift from the
+real rule. It is now `getSupplierAskPrice(state, supplierId, resourceId)`,
+exported from `hubProcurement`, and the operation's own pricing reads it too.
+A test asserts the sampled ask equals the exported rule rather than a copy.
+
+## Money reconciliation
+
+Credits are created in exactly one place (population background income) and
+destroyed in exactly one place (the conversion cost a hub burns turning
+material into a finished good). Everything else is a transfer. So the change in
+world total must equal created minus burned, and the tab reports the
+**residual** rather than smoothing it away — a non-zero residual is a real
+finding about the simulation, not a rounding artefact. Both a unit test and a
+live 20-minute population run currently reconcile to zero.
+
+## UI
+
+`src/systems/economyCharts.js` draws three shapes in raw SVG — line, stacked
+band, bar — with colour assigned per series key so a hub keeps its colour when
+another appears or drops out. No chart library: a dependency would decide what
+the data is allowed to look like.
+
+Six stat tiles (money in the world, final consumption, material, unmet demand,
+blocked actors, hub trading margin) above fourteen chart cards: money by
+holder · creation/burn/spend rates · the reconciliation · prices (switchable
+between supplier asks, open-order prices and freight rates) · cash by
+institution · balance sheets now · material by location · shelf stock by place ·
+stock against target · household cash · unmet demand · hub trade books ·
+purchase orders by status · friction.
+
+Controls: time window (5 m / 15 m / 1 h / session), price basis, place filter,
+and a Pause that freezes only the display. Charts rebuild only when the sample
+count or a control changes, not on the 700 ms diagnostic cadence, so a reader's
+scroll survives.
+
+Console access: `window.__asteroids.economy.{snapshot, samples, reconcile}`.
+
+## Known limits, stated rather than hidden
+
+- **Populations are exogenous.** Household income is created from nothing on a
+  fixed cadence and capped; the cap discards the surplus. Settlements start
+  *at* their cap, so the first accrual is discarded in full. The tab shows this
+  directly (a "Not created (at cap)" series and a household-cash line pinned to
+  the ceiling) rather than presenting it as demand.
+- **Final consumption is a GDP proxy, not GDP.** It is the value that actually
+  left the economy into a household, which is the only terminal flow that
+  exists.
+- Freight rates only appear once a hub has had to raise one; anything still at
+  its authored payment has never needed to move.

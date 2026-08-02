@@ -25,16 +25,16 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-0035-693f473";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260802-0035-693f473";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260802-0035-693f473";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260802-0035-693f473";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260802-0035-693f473";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260802-0035-693f473";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260802-0035-693f473";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260802-0035-693f473";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260802-0035-693f473";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260802-0035-693f473";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1248-85b6ff4";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260802-1248-85b6ff4";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260802-1248-85b6ff4";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260802-1248-85b6ff4";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260802-1248-85b6ff4";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260802-1248-85b6ff4";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260802-1248-85b6ff4";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260802-1248-85b6ff4";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260802-1248-85b6ff4";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260802-1248-85b6ff4";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -122,6 +122,21 @@ export function createInitialProcurementState() {
 // Exported so the state can be inspected without reaching into the shape.
 export function getAskConcession(state, supplierInstitutionId, resourceId) {
   return state.hubProcurement?.asks?.[`${supplierInstitutionId}|${resourceId}`]?.concession ?? 0;
+}
+
+// What this supplier is asking for one unit right now, and the band it moves
+// in. The band is the reading: an ask sitting on `marginalCost` is a seller
+// with nothing to sell, one pinned to `firmCost` is a seller with a full book.
+//
+// Exported because the operation's own pricing used to live only inside its
+// closure, so anything wanting to READ the current ask — an inspector, a chart,
+// a test — had to re-derive it and would silently drift from the real rule.
+export function getSupplierAskPrice(state, supplierInstitutionId, resourceId) {
+  const marginalCost = getResourceTradeValue(resourceId);
+  const bookCost = getUnitCost(state, supplierInstitutionId, resourceId) || 0;
+  const firmCost = Math.max(bookCost, marginalCost);
+  const concession = getAskConcession(state, supplierInstitutionId, resourceId);
+  return { ask: firmCost - (firmCost - marginalCost) * concession, marginalCost, firmCost, concession };
 }
 
 
@@ -559,20 +574,20 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     return procurement.asks[key];
   }
 
+  // What one more unit would really cost: the rate a miner takes at routine
+  // urgency against a full shelf, which is the plain trade value. Scarcity
+  // premiums this hub paid while it was short are history, not the cost of the
+  // next unit — but they are what it holds out to recover while it can.
+  //
+  // Both now read `getSupplierAskPrice` so the exported rule and the rule the
+  // operation actually prices with cannot drift apart.
   function unitCostBand(supplierInstitutionId, resourceId) {
-    // What one more unit would really cost: the rate a miner takes at routine
-    // urgency against a full shelf, which is the plain trade value. Scarcity
-    // premiums this hub paid while it was short are history, not the cost of
-    // the next unit — but they are what it holds out to recover while it can.
-    const marginalCost = getResourceTradeValue(resourceId);
-    const bookCost = getUnitCost(state, supplierInstitutionId, resourceId) || 0;
-    return { marginalCost, firmCost: Math.max(bookCost, marginalCost) };
+    const { marginalCost, firmCost } = getSupplierAskPrice(state, supplierInstitutionId, resourceId);
+    return { marginalCost, firmCost };
   }
 
   function shadedUnitCost(supplierInstitutionId, resourceId) {
-    const { marginalCost, firmCost } = unitCostBand(supplierInstitutionId, resourceId);
-    const concession = askRecord(supplierInstitutionId, resourceId).concession ?? 0;
-    return firmCost - (firmCost - marginalCost) * concession;
+    return getSupplierAskPrice(state, supplierInstitutionId, resourceId).ask;
   }
 
   // The supplier's terms on one order, at whatever it is currently asking.
