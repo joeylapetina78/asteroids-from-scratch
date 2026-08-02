@@ -1,5 +1,5 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260801-2156-8671710";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260801-2156-8671710";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260801-2226-7cf73ef";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260801-2226-7cf73ef";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
@@ -34,6 +34,8 @@ export class MiningWorkerShip {
     this.velocity = { x: 0, y: 0 };
     this.angle = angle;
     this.radius = 18;
+    this.hull = 120;
+    this.maxHull = 120;
     this.isAlive = true;
     this.isThrusting = false;
     this.state = "idle";
@@ -51,6 +53,11 @@ export class MiningWorkerShip {
     this.pulse = 0;
     this.onEvent = onEvent;
     this.onDelivery = onDelivery;
+  }
+
+  damage(amount) {
+    this.hull = Math.max(0, this.hull - Math.max(0, amount));
+    if (this.hull === 0) this.isAlive = false;
   }
 
   assign({ allocationId, contractId, resourceId, quantity, harvestTargetQuantity = quantity, destination, depositCandidates = [] }) {

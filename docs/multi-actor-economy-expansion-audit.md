@@ -307,6 +307,8 @@ Each hub should introduce one controlled asymmetry or stress case: remote cheap 
 
 Disable a major supplier, route, carrier, or repair provider during a long run. The system should reroute, reprice, defer, substitute, contract capacity, or visibly fail. A believable economy is demonstrated more by its response to loss than by steady-state throughput.
 
+**Incursion-pressure foundation started 2026-08-01:** Rift fighters no longer contain a player-only target assumption. A shared target evaluator ranks every detectable, attackable craft by distance, strategic value, vulnerability, and target continuity. Player, freight, and mining craft publish the same target shape; remote portal forces continue simulating when an economic craft is nearby. Fighter shots carry their intended target, damage both freight and mining hulls, and record NPC hits. Destruction releases mining allocations, marks freight and custody records lost, releases freight commitments, drops carried resources into physical space, and marks the affected institutional asset destroyed. This establishes real economic loss without yet adding security buyers or providers. Hubs remain protected infrastructure until disruption, reconstruction, and defense affordability are defined rather than improvised.
+
 ## 8. Success criteria for a real multi-actor economy
 
 ### Configuration and architecture

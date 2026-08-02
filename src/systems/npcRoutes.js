@@ -1,4 +1,4 @@
-import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260801-2156-8671710";
+import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260801-2226-7cf73ef";
 import { FIRST_REACH_CARRIERS } from "../content/transportation/firstReachCarriers.js";
 
 export const HAULER_PALETTES = Object.freeze(Object.fromEntries(FIRST_REACH_CARRIERS.map((seed) => [seed.institution.id, seed.palette])));

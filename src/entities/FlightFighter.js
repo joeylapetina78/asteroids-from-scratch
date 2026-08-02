@@ -1,4 +1,5 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260801-2156-8671710";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260801-2226-7cf73ef";
+import { selectIncursionTarget } from "../systems/incursionTargeting.js?v=fresh-20260801-2226-7cf73ef";
 
 const FIGHTER_FLIGHT = {
   rotationSpeed: 2.55,
@@ -39,9 +40,13 @@ export class FlightFighter {
     this.pulse += deltaSeconds;
     this.fireCooldown = Math.max(0, this.fireCooldown - deltaSeconds);
 
-    const target = world.ship;
-    const distanceToShip = Math.hypot(target.position.x - this.position.x, target.position.y - this.position.y);
-    const isEngaging = world.shipPowered && distanceToShip <= FIGHTER_ENGAGE_RANGE;
+    const target = selectIncursionTarget(this.position, world.attackableTargets, {
+      maximumRange: FIGHTER_ENGAGE_RANGE,
+      preferredTargetId: this.targetId,
+    });
+    if (target) this.targetId = target.id;
+    const distanceToShip = target?.distance ?? Infinity;
+    const isEngaging = Boolean(target);
     const aimTarget = isEngaging ? getLeadPosition(target, distanceToShip) : this.getPatrolTarget(world.portalPosition);
     const targetAngle = Math.atan2(aimTarget.y - this.position.y, aimTarget.x - this.position.x);
     const angleError = wrapAngle(targetAngle - this.angle);
@@ -61,7 +66,7 @@ export class FlightFighter {
 
     if (isEngaging && distanceToShip <= FIGHTER_FIRE_RANGE && Math.abs(angleError) <= FIGHTER_FIRE_ARC && this.fireCooldown === 0) {
       this.fireCooldown = FIGHTER_FIRE_COOLDOWN;
-      this.pendingShots.push(this.createShot());
+      this.pendingShots.push(this.createShot(target));
     }
   }
 
@@ -76,10 +81,11 @@ export class FlightFighter {
     };
   }
 
-  createShot() {
+  createShot(target) {
     return {
       portalId: this.sourcePortalId,
       sourceType: "fighter",
+      targetId: target?.id ?? null,
       position: {
         x: this.position.x + Math.cos(this.angle) * 24,
         y: this.position.y + Math.sin(this.angle) * 24,
