@@ -28,13 +28,15 @@ test("a direct-governance hub assigns its own available patrol", () => {
   assert.equal(request.craftId, "patrol-craft:yard-exchange");
 });
 
-test("an outsourcing hub publishes funded work instead of naming its own patrol", () => {
+test("an outsourcing hub accepts an affordable independent patrol bid", () => {
   const value = state();
   const requests = evaluateProtectionThreat(value, sites, { id: "rift:2", position: { x: 20100, y: 0 }, enemyCount: 8, waveCount: 2 }, 20);
   const request = requests.find((entry) => entry.siteId === "the-ledge");
-  assert.equal(request.status, PROTECTION_REQUEST_STATUS.OFFERED);
-  assert.equal(request.providerInstitutionId, null);
-  assert.ok(request.maximumPayment > 0);
+  assert.equal(request.status, PROTECTION_REQUEST_STATUS.CONTRACTED);
+  assert.equal(request.providerInstitutionId, "sable-meridian-security");
+  assert.equal(request.craftId, "patrol-craft:sable-one");
+  assert.ok(request.agreedPayment > 0 && request.agreedPayment <= request.maximumPayment);
+  assert.ok(request.bids[0].reasons.length > 0);
 });
 
 test("protected cash can visibly withhold an otherwise necessary response", () => {
@@ -61,21 +63,45 @@ test("the same threat is not posted twice for the same institution", () => {
   assert.equal(again.length, 0);
 });
 
-test("open protection work appears on the common contract board", () => {
+test("contracted protection work appears as taken on the common contract board", () => {
   const value = state();
   evaluateProtectionThreat(value, sites, { id: "rift:6", position: { x: 20100, y: 0 }, enemyCount: 8, waveCount: 2 }, 70);
   const contract = listContracts(value).find((entry) => entry.kind === CONTRACT_KIND.PROTECTION && entry.siteId === "the-ledge");
-  assert.equal(contract.state, CONTRACT_STATE.AVAILABLE);
+  assert.equal(contract.state, CONTRACT_STATE.TAKEN);
   assert.equal(contract.issuerId, "the-ledge");
-  assert.equal(contract.supplierId, null);
+  assert.equal(contract.supplierId, "sable-meridian-security");
   assert.ok(contract.value > 0);
 });
 
-test("one owned craft cannot cover two simultaneous threats", () => {
+test("one owned craft cannot cover two simultaneous threats, so the second goes to market", () => {
   const value = state();
   evaluateProtectionThreat(value, sites, { id: "rift:7", position: { x: 100, y: 0 }, enemyCount: 8, waveCount: 2 }, 80);
   const second = evaluateProtectionThreat(value, sites, { id: "rift:8", position: { x: 120, y: 0 }, enemyCount: 8, waveCount: 2 }, 81)
     .find((entry) => entry.siteId === "yard-exchange");
-  assert.equal(second.status, PROTECTION_REQUEST_STATUS.OFFERED);
+  assert.equal(second.status, PROTECTION_REQUEST_STATUS.CONTRACTED);
   assert.equal(second.reason, "no-owned-capacity");
+});
+
+test("one mercenary craft cannot accept two simultaneous contracts", () => {
+  const value = state();
+  evaluateProtectionThreat(value, sites, { id: "rift:9", position: { x: 20100, y: 0 }, enemyCount: 8, waveCount: 2 }, 90);
+  const second = evaluateProtectionThreat(value, sites, { id: "rift:10", position: { x: 20200, y: 0 }, enemyCount: 8, waveCount: 2 }, 91)
+    .find((entry) => entry.siteId === "the-ledge");
+  assert.equal(second.status, PROTECTION_REQUEST_STATUS.OFFERED);
+  assert.equal(second.providerInstitutionId, null);
+  assert.equal(second.bids[0].eligible, false);
+  assert.match(second.bids[0].reasons.at(-1), /committed/);
+});
+
+test("acceptance reserves hub funds and threat closure releases both cash and craft", () => {
+  const value = state();
+  const before = value.logistics.institutions["the-ledge"].accounts.operating.committed;
+  const request = evaluateProtectionThreat(value, sites, { id: "rift:11", position: { x: 20100, y: 0 }, enemyCount: 8, waveCount: 2 }, 100)
+    .find((entry) => entry.siteId === "the-ledge");
+  assert.equal(value.logistics.institutions["the-ledge"].accounts.operating.committed, before + request.agreedPayment);
+  assert.equal(value.protectionProviders["sable-meridian-security"].craft.status, "committed");
+  closeProtectionRequestsForThreat(value, "rift:11", 110);
+  assert.equal(value.logistics.institutions["the-ledge"].accounts.operating.committed, before);
+  assert.equal(value.protectionProviders["sable-meridian-security"].craft.status, "available");
+  assert.equal(request.paymentReleased, true);
 });

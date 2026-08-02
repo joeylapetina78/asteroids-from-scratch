@@ -34,22 +34,32 @@ larger incident. A hub unable to fund a response without crossing its reserve
 publishes a visible blocked request rather than receiving free protection.
 Requests close when their originating threat is destroyed.
 
-The next implementation slice is provider-side bidding and execution. Open
-requests do not yet choose or pay an independent mercenary company.
+## Current checkpoint: independent provider bidding
+
+Sable Meridian Security is the first independent patrol institution. It has a
+controller, contract-patrol authority, an operating account and protected cash,
+and one titled, registered craft. It quotes open protection work from real
+mobilization, travel, risk, maintenance, relationship, and trait inputs.
+
+An affordable bid contracts the provider, reserves the hiring hub's funds, and
+commits the specific craft. Bid reasons remain on the request for inspection.
+One craft cannot accept two incidents. If the threat disappears before physical
+execution begins, the reservation is released and the craft returns to
+availability; no unearned payment changes hands.
+
+The next implementation slice is physical contract execution and settlement.
+Contracted craft do not yet travel to or fight at the incident.
 
 ## Next patrol/incursion steps
 
-1. Instantiate the first independent patrol company and let qualified providers
-   bid on open threat-response work by price, distance, risk, relationships,
-   current damage, and commitments.
-2. Execute accepted patrol, escort, and incursion-clearance contracts with a
+1. Execute accepted patrol, escort, and incursion-clearance contracts with a
    physical craft. Leave the player eligibility seam open for the same jobs.
-3. Charge deployment and damage costs to the patrol office and pay successful
+2. Charge deployment and damage costs to the patrol office and pay successful
    work from the hiring institution's account.
-4. Route damaged patrol craft through public repair matching. A destroyed craft
+3. Route damaged patrol craft through public repair matching. A destroyed craft
    should create a replacement need that must be funded, built, titled, and
    registered before local capacity returns.
-5. Expand encounter streaming so multiple distant patrol outcomes can resolve
+4. Expand encounter streaming so multiple distant patrol outcomes can resolve
    without inventing phantom scans or combat.
 
 ## Invariants

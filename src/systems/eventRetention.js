@@ -73,6 +73,7 @@ const EXPLICIT_CLASSES = Object.freeze({
   "sprc.productionCompleted": RETENTION_CLASS.OPERATIONAL,
   "contract.offered": RETENTION_CLASS.OPERATIONAL,
   "protection.requestCreated": RETENTION_CLASS.OPERATIONAL,
+  "protection.contractAccepted": RETENTION_CLASS.OPERATIONAL,
   "contract.accepted": RETENTION_CLASS.OPERATIONAL,
   "contract.deadlineExtended": RETENTION_CLASS.OPERATIONAL,
   "ship.panelConditionChanged": RETENTION_CLASS.OPERATIONAL,

@@ -15,10 +15,10 @@
 //   WHO IS DOING IT   supplier — null while it is still up for grabs
 //   WHERE IS IT       one of available / taken / done / blocked
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-2328-b73c5fd";
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260801-2328-b73c5fd";
-import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260801-2328-b73c5fd";
-import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260801-2328-b73c5fd";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260801-2339-cae4bce";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260801-2339-cae4bce";
+import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260801-2339-cae4bce";
+import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260801-2339-cae4bce";
 import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js";
 
 export const CONTRACT_STATE = Object.freeze({
@@ -305,7 +305,7 @@ function collectProtection(state) {
     kind: CONTRACT_KIND.PROTECTION,
     state: request.status === PROTECTION_REQUEST_STATUS.CLOSED ? CONTRACT_STATE.DONE
       : request.status === PROTECTION_REQUEST_STATUS.WITHHELD ? CONTRACT_STATE.BLOCKED
-        : request.status === PROTECTION_REQUEST_STATUS.INTERNAL ? CONTRACT_STATE.TAKEN
+        : [PROTECTION_REQUEST_STATUS.INTERNAL, PROTECTION_REQUEST_STATUS.CONTRACTED].includes(request.status) ? CONTRACT_STATE.TAKEN
           : CONTRACT_STATE.AVAILABLE,
     title: `Protect ${actorLabel(state, request.issuerInstitutionId)} from ${request.threatType}`,
     issuerId: request.issuerInstitutionId,
@@ -315,8 +315,8 @@ function collectProtection(state) {
     siteId: request.siteId,
     units: 1,
     remainingUnits: request.status === PROTECTION_REQUEST_STATUS.CLOSED ? 0 : 1,
-    value: request.maximumPayment,
-    servicePayment: request.maximumPayment,
+    value: request.agreedPayment ?? request.maximumPayment,
+    servicePayment: request.agreedPayment ?? request.maximumPayment,
     createdAt: request.createdAt,
     closedAt: request.closedAt,
     note: `${request.status} · ${request.policyMode} policy · severity ${Math.round(request.severity * 100)}%`,

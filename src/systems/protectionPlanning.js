@@ -1,10 +1,12 @@
 import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js";
 import { ensurePatrolOperations } from "./patrolOperations.js";
+import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js";
 
 export const PROTECTION_REQUEST_STATUS = Object.freeze({
   INTERNAL: "covered-internally",
   OFFERED: "offered",
   WITHHELD: "withheld",
+  CONTRACTED: "contracted",
   CLOSED: "closed",
 });
 
@@ -92,6 +94,7 @@ export function evaluateProtectionThreat(state, sites, threat, now = Date.now())
       providerInstitutionId: request.providerInstitutionId,
     }, { visible: true });
   });
+  allocateProtectionProviders(state, sites, created, now);
   return created;
 }
 
@@ -101,6 +104,7 @@ export function closeProtectionRequestsForThreat(state, threatId, now = Date.now
   Object.values(planning.requests).forEach((request) => {
     if (request.threatId !== threatId || request.status === PROTECTION_REQUEST_STATUS.CLOSED) return;
     request.previousStatus = request.status;
+    releaseProtectionContract(state, request);
     request.status = PROTECTION_REQUEST_STATUS.CLOSED;
     request.closedAt = now;
     closed.push(request);
