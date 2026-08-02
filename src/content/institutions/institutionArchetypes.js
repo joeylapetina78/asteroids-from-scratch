@@ -109,6 +109,17 @@ export const INSTITUTION_ARCHETYPES = Object.freeze({
     },
     recipes: [],
   }),
+  "patrol-service": Object.freeze({
+    id: "patrol-service",
+    capabilities: ["inspect-traffic", "patrol-jurisdiction", "defend-shipping", "interdict-threat"],
+    offerTypes: ["patrol", "escort", "threat-response"],
+    defaultPolicy: {
+      protectedCash: 400,
+      priorityWeights: { routine: 15, urgent: 65, emergency: 100 },
+      purposeWeights: { "inspect-traffic": 25, "defend-jurisdiction": 70, "protect-contracted-traffic": 55 },
+    },
+    recipes: [],
+  }),
   "mining-contractor": Object.freeze({
     id: "mining-contractor",
     capabilities: ["accept-extraction-order", "prospect", "mine", "collect", "deliver"],

@@ -1,5 +1,5 @@
-import { createValueNoise } from "./valueNoise.js?v=fresh-20260801-2307-1fd54b6";
-import { limitVelocity } from "./flightPhysics.js?v=fresh-20260801-2307-1fd54b6";
+import { createValueNoise } from "./valueNoise.js?v=fresh-20260801-2313-adfc7a9";
+import { limitVelocity } from "./flightPhysics.js?v=fresh-20260801-2313-adfc7a9";
 
 // The environment field: colored regions of open space that act on the ship
 // each frame. This is the "substance" of hazards and boons — spatial fields,
