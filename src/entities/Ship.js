@@ -1,4 +1,4 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260802-2208-f8594ea";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260803-1827-46bd67b";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_THRUST_POWER = 95;

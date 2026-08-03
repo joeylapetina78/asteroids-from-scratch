@@ -32,15 +32,22 @@ export function ensureSecurityReports(state) {
 // File or refresh a report. A second hit from the same threat strengthens the
 // existing report rather than opening a new one, so a gate under sustained
 // assault reads as one escalating call, not fifty.
-export function fileAttackReport(state, { threatId = null, position, kind = "raid", severity = null, reporterId = null, siteId = null, at = Date.now() } = {}) {
+//
+// `heartbeat: true` is the "still here" pulse a persistent threat sends to keep
+// its report alive while it exists — it extends the lifetime WITHOUT counting as
+// a fresh hit or re-logging, so a gate nobody has flown near yet stays reported
+// for as long as it is open rather than lapsing after one TTL.
+export function fileAttackReport(state, { threatId = null, position, kind = "raid", severity = null, reporterId = null, siteId = null, heartbeat = false, at = Date.now() } = {}) {
   if (!position) return null;
   const security = ensureSecurityReports(state);
   if (isPositionJammed(security, position, at)) {
-    // The call never made it out. Recorded so the silence is legible rather
-    // than looking like nothing happened.
-    state.ledger?.recordEvent("security.reportJammed", {
-      threatId, kind, reporterId, x: Math.round(position.x), y: Math.round(position.y),
-    }, { visible: false });
+    // The call never made it out. A jammed heartbeat is silent — only a genuine
+    // new report is worth recording as suppressed.
+    if (!heartbeat) {
+      state.ledger?.recordEvent("security.reportJammed", {
+        threatId, kind, reporterId, x: Math.round(position.x), y: Math.round(position.y),
+      }, { visible: false });
+    }
     return null;
   }
   const key = threatId ?? `loc:${Math.round(position.x)}:${Math.round(position.y)}`;
@@ -49,11 +56,25 @@ export function fileAttackReport(state, { threatId = null, position, kind = "rai
   if (existing) {
     existing.lastSeenAt = at;
     existing.expiresAt = at + REPORT_TTL_MS;
-    existing.hits = (existing.hits ?? 1) + 1;
-    existing.severity = Math.max(existing.severity, sev);
+    if (!heartbeat) {
+      existing.hits = (existing.hits ?? 1) + 1;
+      existing.severity = Math.max(existing.severity, sev);
+    }
     existing.position = { x: position.x, y: position.y };
     if (siteId && !existing.siteId) existing.siteId = siteId;
     return existing;
+  }
+  // A heartbeat for a report that has already lapsed re-opens it quietly rather
+  // than firing a fresh "attack reported" as though it were news.
+  if (heartbeat) {
+    const revived = {
+      id: `report:${security.nextId++}`, key, threatId,
+      position: { x: position.x, y: position.y }, kind, severity: sev,
+      reporterId, siteId, channel: "open", hits: 1,
+      reportedAt: at, lastSeenAt: at, expiresAt: at + REPORT_TTL_MS,
+    };
+    security.reports[key] = revived;
+    return revived;
   }
   const report = {
     id: `report:${security.nextId++}`, key, threatId,
