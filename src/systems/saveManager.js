@@ -1,7 +1,7 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260802-2159-698bdac";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260802-2159-698bdac";
-import { ensureObligations } from "./obligations.js?v=fresh-20260802-2159-698bdac";
-import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260802-2159-698bdac";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260802-2208-f8594ea";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260802-2208-f8594ea";
+import { ensureObligations } from "./obligations.js?v=fresh-20260802-2208-f8594ea";
+import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260802-2208-f8594ea";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 
@@ -78,6 +78,9 @@ export function loadSavedProfile(state) {
     mergePlainObject(state.towing, save.towing);
     if (save.fleetInsurance) state.fleetInsurance = cloneJsonSafe(save.fleetInsurance);
     if (save.fleetProtection) state.fleetProtection = cloneJsonSafe(save.fleetProtection);
+    // The gate-bounty fund depletes as it pays out, so it has to survive a
+    // reload; the live attack reports do not — they are transient and expire.
+    if (save.gateBounty) state.gateBounty = cloneJsonSafe(save.gateBounty);
 
     if (!save.ship?.purchasedOfferId && save.components?.merchant?.purchasedOfferId) {
       state.ship.purchasedOfferId = save.components.merchant.purchasedOfferId;
@@ -114,6 +117,7 @@ export function saveProfile({ state, game, cargoHold }) {
     towing: cloneJsonSafe(state.towing),
     fleetInsurance: cloneJsonSafe(state.fleetInsurance),
     fleetProtection: cloneJsonSafe(state.fleetProtection),
+    gateBounty: cloneJsonSafe(state.gateBounty),
     world: game?.getSaveSnapshot?.() ?? null,
     cargo: cargoHold?.getSaveSnapshot?.() ?? null,
   };
