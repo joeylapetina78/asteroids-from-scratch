@@ -1,4 +1,4 @@
-import { retireDiagnostic } from "./diagnostics.js?v=fresh-20260802-2109-ecbb96a";
+import { retireDiagnostic } from "./diagnostics.js?v=fresh-20260802-2159-698bdac";
 
 // Close every present-tense intention owned by a physical actor that no longer
 // exists. Destruction is shared lifecycle state; mining, freight, service and
