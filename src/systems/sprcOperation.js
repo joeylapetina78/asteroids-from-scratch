@@ -1,16 +1,16 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260802-1836-3c7568a";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260802-1836-3c7568a";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260802-1836-3c7568a";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260802-1836-3c7568a";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260802-1836-3c7568a";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260802-1836-3c7568a";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260802-1836-3c7568a";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260802-1836-3c7568a";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260802-1836-3c7568a";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1836-3c7568a";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1836-3c7568a";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260802-1836-3c7568a";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260802-1836-3c7568a";
+import { depositCredits } from "./accounts.js?v=fresh-20260802-1917-b5c9143";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260802-1917-b5c9143";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260802-1917-b5c9143";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260802-1917-b5c9143";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260802-1917-b5c9143";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260802-1917-b5c9143";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260802-1917-b5c9143";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260802-1917-b5c9143";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260802-1917-b5c9143";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260802-1917-b5c9143";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260802-1917-b5c9143";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260802-1917-b5c9143";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260802-1917-b5c9143";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -658,12 +658,52 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     });
   }
 
+  // Does physical stock actually cover everything this order reserved? Within a
+  // running session it always does — an order only reaches "ready" after
+  // reserving against real available stock, and physical produced stock only
+  // grows before it is consumed. But the reservation ledger, the repair orders,
+  // and physical inventory are persisted SEPARATELY, so a save/load can restore
+  // them out of step: a ready order claiming a machine-part while the global
+  // reserved ledger is empty and only part of the stock came back. Consuming
+  // anyway underflows the inventory and throws in the middle of the tick.
+  function repairReservationIsBacked(order) {
+    const backed = (bucket) => Object.entries(order.reserved?.[bucket] ?? {})
+      .every(([itemId, amount]) => (sprc.inventories[bucket][itemId] ?? 0) >= amount);
+    return backed("produced") && backed("raw");
+  }
+
+  // Unwind a drifted order's phantom reservation — releasing from the global
+  // ledger only what it actually still holds — and send it back for
+  // reassessment, so it re-reserves against real stock and re-queues any
+  // production it needs. A recoverable refusal, not a frame-killing throw.
+  function reconcileRepairReservation(order) {
+    const dropped = {};
+    ["produced", "raw"].forEach((bucket) => {
+      Object.entries(order.reserved?.[bucket] ?? {}).forEach(([itemId, amount]) => {
+        const held = sprc.inventories.reserved[bucket][itemId] ?? 0;
+        const release = Math.min(amount, held);
+        if (release > 0) addReserved(bucket, itemId, -release);
+        dropped[`${bucket}.${itemId}`] = amount;
+      });
+      order.reserved[bucket] = {};
+    });
+    order.status = "waiting-production";
+    appendHistory("repair.reservationReconciled", { repairOrderId: order.id, dropped });
+    state.ledger.recordEvent("sprc.repairReservationReconciled", {
+      repairOrderId: order.id, subjectId: order.subjectId, haulerId: order.subjectHaulerId, dropped,
+    }, { visible: false });
+  }
+
   function startNextRepair() {
     if (sprc.facilities.berthTwo.activeRepairOrderId) return;
     const order = sprc.repairQueue.map((id) => sprc.repairOrders[id])
       .filter((entry) => entry?.status === "ready")
       .sort((first, second) => (second.priority ?? 0) - (first.priority ?? 0) || (first.createdAt ?? 0) - (second.createdAt ?? 0))[0];
     if (!order) return;
+    if (!repairReservationIsBacked(order)) {
+      reconcileRepairReservation(order);
+      return;
+    }
     Object.entries(order.reserved.produced).forEach(([itemId, amount]) => {
       removeInventory("produced", itemId, amount);
       addReserved("produced", itemId, -amount);

@@ -1316,3 +1316,32 @@ test("concurrent repairs share Sal's material orders instead of publishing tiny 
   assert.equal(silicateOrders[0].requiredEquivalentUnits, 6);
   assert.equal(silicateOrders[0].needIds.length, 3);
 });
+
+test("a ready repair whose reservation outruns real stock is reconciled, not crashed", () => {
+  const harness = createHarness();
+  harness.operation.update();
+  const sprc = harness.state.sprc;
+
+  // The drift seen live at boot: a ready order still claims a machine-part it
+  // once reserved, but only part of the stock came back and the global reserved
+  // ledger restored empty. Consuming the stale claim used to underflow the
+  // inventory and throw in the middle of the tick.
+  sprc.inventories.produced["machine-part"] = 1;
+  sprc.inventories.reserved.produced = {};
+  sprc.inventories.reserved.raw = {};
+  sprc.facilities.berthTwo.status = "available";
+  sprc.facilities.berthTwo.activeRepairOrderId = null;
+  const drifted = {
+    id: "SPRC-RPR-DRIFT", status: "ready", priority: 100, createdAt: 1_000, subjectId: "worker:drift",
+    requirements: { produced: { "machine-part": 2 }, raw: {} },
+    reserved: { produced: { "machine-part": 2 }, raw: {} },
+  };
+  sprc.repairOrders[drifted.id] = drifted;
+  sprc.repairQueue.push(drifted.id);
+
+  assert.doesNotThrow(() => harness.operation.update());
+  assert.notEqual(drifted.status, "repairing", "the drifted order does not seize the berth on short stock");
+  assert.ok((sprc.inventories.produced["machine-part"] ?? 0) >= 0, "physical stock never went negative");
+  assert.ok(harness.state.ledger.getRecentEvents(80, { includeHidden: true }).some((event) => event.type === "sprc.repairReservationReconciled"),
+    "the drift is reconciled and recorded, not swallowed");
+});
