@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addToTank, applyPanelPatch, HULL_REPAIR_RATE } from "../src/systems/panelMaintenance.js";
+import { addToTank, applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_RATE } from "../src/systems/panelMaintenance.js";
 import { getResourceProcessValue } from "../src/systems/resourceDefinitions.js";
 import { createGameState } from "../src/state/gameState.js";
 
@@ -56,6 +56,12 @@ test("applyPanelPatch is bounded by the per-frame rate budget", () => {
   assert.equal(patched, HULL_REPAIR_RATE * deltaSeconds, "one frame patches at most rate*dt");
   assert.equal(hull.integrity, 2);
   assert.equal(hull.repairReserve, 98);
+});
+
+test("repair rate ramps from ten percent to full speed over an episode", () => {
+  assert.equal(getHullRepairRateMultiplier(40, 40, 80), 0.1);
+  assert.equal(getHullRepairRateMultiplier(60, 40, 80), 0.55);
+  assert.equal(getHullRepairRateMultiplier(80, 40, 80), 1);
 });
 
 test("no patch occurs without stored reserve, and integrity never exceeds max", () => {

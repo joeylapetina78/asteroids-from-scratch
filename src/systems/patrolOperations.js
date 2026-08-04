@@ -1,6 +1,6 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-1805-35a96ea";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-1805-35a96ea";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-1805-35a96ea";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-1857-0735c8c";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-1857-0735c8c";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-1857-0735c8c";
 
 const PATROL_OPENING_BALANCE = 1800;
 

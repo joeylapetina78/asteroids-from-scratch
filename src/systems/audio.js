@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260804-1805-35a96ea";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260804-1857-0735c8c";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;
@@ -68,11 +68,12 @@ export function createGameAudio() {
     noiseBurst({ duration: 0.045, volume: 0.08 });
   }
 
-  function playRockBreak(tier = 1) {
+  function playRockBreak(tier = 1, volumeScale = 1) {
     const base = tier <= 1 ? 180 : 130;
+    const scale = Math.min(1, Math.max(0, volumeScale));
 
-    tone({ frequency: base, endFrequency: 70, duration: 0.12, type: "square", volume: 0.08 });
-    noiseBurst({ duration: 0.08 + Math.min(0.08, tier * 0.025), volume: 0.07 });
+    tone({ frequency: base, endFrequency: 70, duration: 0.12, type: "square", volume: 0.08 * scale });
+    noiseBurst({ duration: 0.08 + Math.min(0.08, tier * 0.025), volume: 0.07 * scale });
   }
 
   function playPickup(type = "fuel") {

@@ -11,6 +11,22 @@ export const HULL_REPAIR_DELAY_SECONDS = 5;
 // Integrity points restored per second once patching is active. At 20/s a full
 // 100-point hull re-patches in ~5s and a small top-off resolves in well under 1s.
 export const HULL_REPAIR_RATE = 20;
+export const HULL_REPAIR_START_RATE_MULTIPLIER = 0.1;
+
+// Onboard patching deliberately starts as a cautious trickle, then accelerates
+// as the repair settles in. Progress is measured against the integrity the
+// current repair episode can actually reach, so a partly filled reserve still
+// gets the complete 10%-to-100% curve.
+export function getHullRepairRateMultiplier(currentIntegrity, startIntegrity, targetIntegrity) {
+  const span = Math.max(0, (targetIntegrity ?? 0) - (startIntegrity ?? 0));
+
+  if (span <= 0) {
+    return 1;
+  }
+
+  const progress = Math.min(1, Math.max(0, ((currentIntegrity ?? 0) - startIntegrity) / span));
+  return HULL_REPAIR_START_RATE_MULTIPLIER + (1 - HULL_REPAIR_START_RATE_MULTIPLIER) * progress;
+}
 
 // Clamp a tank value into [0, max]. Used for every onboard tank (fuel, charge,
 // scanergy, repair reserve) so nothing can be overfilled past its capacity.
