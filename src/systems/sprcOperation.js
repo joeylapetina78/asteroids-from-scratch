@@ -1,16 +1,16 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260803-1827-46bd67b";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260803-1827-46bd67b";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260803-1827-46bd67b";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260803-1827-46bd67b";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260803-1827-46bd67b";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260803-1827-46bd67b";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260803-1827-46bd67b";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260803-1827-46bd67b";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260803-1827-46bd67b";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260803-1827-46bd67b";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260803-1827-46bd67b";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260803-1827-46bd67b";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260803-1827-46bd67b";
+import { depositCredits } from "./accounts.js?v=fresh-20260803-1917-5d1b109";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260803-1917-5d1b109";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260803-1917-5d1b109";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260803-1917-5d1b109";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260803-1917-5d1b109";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260803-1917-5d1b109";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260803-1917-5d1b109";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260803-1917-5d1b109";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260803-1917-5d1b109";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260803-1917-5d1b109";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260803-1917-5d1b109";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260803-1917-5d1b109";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260803-1917-5d1b109";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //

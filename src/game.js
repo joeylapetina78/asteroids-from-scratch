@@ -1,51 +1,51 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260803-1827-46bd67b";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260803-1827-46bd67b";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260803-1827-46bd67b";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260803-1827-46bd67b";
-import { Ship } from "./entities/Ship.js?v=fresh-20260803-1827-46bd67b";
-import { ShipWreck } from "./entities/ShipWreck.js?v=fresh-20260803-1827-46bd67b";
-import { completeWreckSalvage, registerOwnedWreck } from "./systems/wreckRegistry.js?v=fresh-20260803-1827-46bd67b";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260803-1827-46bd67b";
-import { applyPanelPatch, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260803-1827-46bd67b";
-import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260803-1827-46bd67b";
-import { createCamera } from "./systems/camera.js?v=fresh-20260803-1827-46bd67b";
-import { createInput } from "./systems/input.js?v=fresh-20260803-1827-46bd67b";
-import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260803-1827-46bd67b";
-import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260803-1827-46bd67b";
-import { HAULER_PALETTES, RELIEF_HAULER_PALETTE, createNpcRouteShips, createRouteShip } from "./systems/npcRoutes.js?v=fresh-20260803-1827-46bd67b";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260803-1827-46bd67b";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260803-1827-46bd67b";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260803-1827-46bd67b";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260803-1827-46bd67b";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260803-1827-46bd67b";
-import { completeInternalProtectionResponse, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, getAvailablePatrolCraft, markPatrolCraftStatus, servicePatrolCraft, startInternalProtectionResponse } from "./systems/patrolOperations.js?v=fresh-20260803-1827-46bd67b";
-import { closeProtectionRequestsForThreat, evaluateProtectionThreat, reviewProtectionRequests } from "./systems/protectionPlanning.js?v=fresh-20260803-1827-46bd67b";
-import { completeProtectionContract, ensureProtectionProviders, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "./systems/protectionProviders.js?v=fresh-20260803-1827-46bd67b";
-import { fileAttackReport, nearestActiveReport, resolveAttackReport } from "./systems/securityReports.js?v=fresh-20260803-1827-46bd67b";
-import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260803-1827-46bd67b";
-import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260803-1827-46bd67b";
-import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260803-1827-46bd67b";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260803-1827-46bd67b";
-import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260803-1827-46bd67b";
-import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260803-1827-46bd67b";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260803-1827-46bd67b";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260803-1827-46bd67b";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260803-1827-46bd67b";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260803-1827-46bd67b";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260803-1827-46bd67b";
-import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260803-1827-46bd67b";
-import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260803-1827-46bd67b";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260803-1827-46bd67b";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260803-1827-46bd67b";
-import { createCommercialCraftPublicIdentity, createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260803-1827-46bd67b";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260803-1827-46bd67b";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260803-1827-46bd67b";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260803-1827-46bd67b";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260803-1827-46bd67b";
-import { createGameState } from "./state/gameState.js?v=fresh-20260803-1827-46bd67b";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260803-1827-46bd67b";
-import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260803-1827-46bd67b";
-import { terminateDestroyedActor } from "./systems/actorLifecycle.js?v=fresh-20260803-1827-46bd67b";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260803-1917-5d1b109";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260803-1917-5d1b109";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260803-1917-5d1b109";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260803-1917-5d1b109";
+import { Ship } from "./entities/Ship.js?v=fresh-20260803-1917-5d1b109";
+import { ShipWreck } from "./entities/ShipWreck.js?v=fresh-20260803-1917-5d1b109";
+import { completeWreckSalvage, registerOwnedWreck } from "./systems/wreckRegistry.js?v=fresh-20260803-1917-5d1b109";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260803-1917-5d1b109";
+import { applyPanelPatch, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260803-1917-5d1b109";
+import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260803-1917-5d1b109";
+import { createCamera } from "./systems/camera.js?v=fresh-20260803-1917-5d1b109";
+import { createInput } from "./systems/input.js?v=fresh-20260803-1917-5d1b109";
+import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260803-1917-5d1b109";
+import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260803-1917-5d1b109";
+import { HAULER_PALETTES, RELIEF_HAULER_PALETTE, createNpcRouteShips, createRouteShip } from "./systems/npcRoutes.js?v=fresh-20260803-1917-5d1b109";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260803-1917-5d1b109";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260803-1917-5d1b109";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260803-1917-5d1b109";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260803-1917-5d1b109";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260803-1917-5d1b109";
+import { completeInternalProtectionResponse, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, getAvailablePatrolCraft, markPatrolCraftStatus, servicePatrolCraft, startInternalProtectionResponse } from "./systems/patrolOperations.js?v=fresh-20260803-1917-5d1b109";
+import { closeProtectionRequestsForThreat, evaluateProtectionThreat, reviewProtectionRequests } from "./systems/protectionPlanning.js?v=fresh-20260803-1917-5d1b109";
+import { completeProtectionContract, ensureProtectionProviders, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "./systems/protectionProviders.js?v=fresh-20260803-1917-5d1b109";
+import { fileAttackReport, nearestActiveReport, resolveAttackReport } from "./systems/securityReports.js?v=fresh-20260803-1917-5d1b109";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260803-1917-5d1b109";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260803-1917-5d1b109";
+import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260803-1917-5d1b109";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260803-1917-5d1b109";
+import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260803-1917-5d1b109";
+import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260803-1917-5d1b109";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260803-1917-5d1b109";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260803-1917-5d1b109";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260803-1917-5d1b109";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260803-1917-5d1b109";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260803-1917-5d1b109";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260803-1917-5d1b109";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260803-1917-5d1b109";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260803-1917-5d1b109";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260803-1917-5d1b109";
+import { createCommercialCraftPublicIdentity, createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260803-1917-5d1b109";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260803-1917-5d1b109";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260803-1917-5d1b109";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260803-1917-5d1b109";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260803-1917-5d1b109";
+import { createGameState } from "./state/gameState.js?v=fresh-20260803-1917-5d1b109";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260803-1917-5d1b109";
+import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260803-1917-5d1b109";
+import { terminateDestroyedActor } from "./systems/actorLifecycle.js?v=fresh-20260803-1917-5d1b109";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -143,6 +143,11 @@ const PATROL_COMBAT_STANDOFF_DISTANCE = 300;
 // "belongs" to another hub's jurisdiction. Beyond weapon range so the patrol
 // closes to fight rather than only shooting what is already in its lap.
 const PATROL_GATE_SIGHT_RANGE = 1900;
+// How many patrol craft can be streamed and simulated at once — the security
+// fleet's version of the hauler cap. Enough that several simultaneous threats
+// each get their own responder plus an ambient inspection craft near the
+// player, bounded so the frame budget stays predictable.
+const MAX_ACTIVE_PATROLS = 4;
 const SCAN_RING_MAX_RADIUS = 130;
 const SCAN_RING_DURATION = 1.4;
 const PATROL_FLYBY_CHECK_INTERVAL = 8;
@@ -379,7 +384,7 @@ export class Game {
       control: "hold",
       pulse: 0,
     };
-    this.activePatrolIntercept = null;
+    this.activePatrolIntercepts = [];
   }
 
   start() {
@@ -1155,7 +1160,7 @@ export class Game {
     this.updateWorkerShips(deltaSeconds);
     this.reviewProtectionMarket();
     this.dispatchPendingProtectionPatrol();
-    this.updatePatrolIntercept(deltaSeconds);
+    this.updatePatrolIntercepts(deltaSeconds);
     this.updateScanRings(deltaSeconds);
     this.updateEmergencyTow(deltaSeconds);
     this.updateNpcBulletHits();
@@ -1217,13 +1222,12 @@ export class Game {
       detectable: true, strategicValue: ship.assignment ? 1.35 : 0.8,
       vulnerability: Math.max(0.4, 1.4 - ship.hull / ship.maxHull),
     }));
-    const patrol = this.activePatrolIntercept;
-    if (patrol?.isAlive) targets.push({
+    this.activePatrolIntercepts.filter((patrol) => patrol.isAlive).forEach((patrol) => targets.push({
       id: patrol.id, kind: "patrol-ship", body: patrol,
       position: patrol.position, velocity: patrol.velocity, radius: patrol.radius,
       detectable: true, strategicValue: 1.7,
       vulnerability: Math.max(0.4, 1.4 - patrol.hull / patrol.maxHull),
-    });
+    }));
     return targets;
   }
 
@@ -1250,8 +1254,7 @@ export class Game {
       return true;
     }
 
-    const patrolPhase = this.activePatrolIntercept?.phase;
-    return patrolPhase === "standoff" || patrolPhase === "hold";
+    return this.activePatrolIntercepts.some((patrol) => patrol.phase === "standoff" || patrol.phase === "hold");
   }
 
   updatePilotDebugMarker(directInputSuspended) {
@@ -1267,7 +1270,7 @@ export class Game {
 
     const activeElement = document.activeElement;
     const inputSnapshot = this.input.getDebugSnapshot();
-    const patrol = this.activePatrolIntercept;
+    const patrol = this.playerFacingPatrol();
     const tow = this.activeTow;
 
     this.state.ledger.recordEvent(
@@ -1881,7 +1884,8 @@ export class Game {
     const site = this.worldSites.find((worldSite) => worldSite.id === siteId);
 
     const craft = getAvailablePatrolCraft(this.state, siteId);
-    if (!site || !craft || this.activePatrolIntercept) {
+    // One ambient craft per hub, and never past the streamed-patrol cap.
+    if (!site || !craft || this.ambientPatrolForHub(siteId) || this.activePatrolIntercepts.length >= MAX_ACTIVE_PATROLS) {
       return false;
     }
 
@@ -1890,7 +1894,7 @@ export class Game {
     const startIdx = seed % waypoints.length;
     const startWp = waypoints[startIdx];
 
-    this.activePatrolIntercept = {
+    const patrol = {
       id: craft.id,
       name: craft.name,
       institutionId: craft.ownerInstitutionId,
@@ -1923,13 +1927,14 @@ export class Game {
       flybyCheckTimer: 0,
       flybyHasScanned: false,
     };
+    this.activePatrolIntercepts.push(patrol);
     markPatrolCraftStatus(this.state, siteId, "deployed");
 
     this.state.ledger.recordEvent(
       "patrol.dispatched",
       {
-        patrolId: this.activePatrolIntercept.id,
-        patrolName: this.activePatrolIntercept.name,
+        patrolId: patrol.id,
+        patrolName: patrol.name,
         siteId: site.id,
         siteName: site.name,
         reason: "ambient",
@@ -1947,24 +1952,24 @@ export class Game {
       return false;
     }
 
-    // If patrol already exists for this hub, force it into intercept mode.
-    if (this.activePatrolIntercept?.site?.id === site.id) {
-      const patrol = this.activePatrolIntercept;
-
-      if (patrol.phase === "drift" || patrol.phase === "return") {
-        patrol.phase = "transit";
-        patrol.reason = reason;
-        patrol.requiresManualClearance = reason === "arrival-clearance";
-        patrol.hasArrived = false;
-        patrol.scanTimer = 0;
-        patrol.hasScanned = false;
-        patrol.orbitAngle = null;
+    // If this hub's ambient patrol already exists, force it into intercept mode.
+    const existing = this.ambientPatrolForHub(site.id);
+    if (existing) {
+      if (existing.phase === "drift" || existing.phase === "return") {
+        existing.phase = "transit";
+        existing.reason = reason;
+        existing.requiresManualClearance = reason === "arrival-clearance";
+        existing.hasArrived = false;
+        existing.scanTimer = 0;
+        existing.hasScanned = false;
+        existing.orbitAngle = null;
       }
 
       return true;
     }
 
-    if (this.activePatrolIntercept) {
+    // Only one craft interacts with the player at a time, and never past the cap.
+    if (this.playerFacingPatrol() || this.activePatrolIntercepts.length >= MAX_ACTIVE_PATROLS) {
       return false;
     }
 
@@ -1980,7 +1985,7 @@ export class Game {
       y: site.position.y + directionToShip.y * startDistance + side.y * 160,
     };
 
-    this.activePatrolIntercept = {
+    const patrol = {
       id: craft.id,
       name: craft.name,
       institutionId: craft.ownerInstitutionId,
@@ -2016,13 +2021,14 @@ export class Game {
       flybyCheckTimer: 0,
       flybyHasScanned: false,
     };
+    this.activePatrolIntercepts.push(patrol);
     markPatrolCraftStatus(this.state, siteId, "deployed");
 
     this.state.ledger.recordEvent(
       "patrol.dispatched",
       {
-        patrolId: this.activePatrolIntercept.id,
-        patrolName: this.activePatrolIntercept.name,
+        patrolId: patrol.id,
+        patrolName: patrol.name,
         siteId: site.id,
         siteName: site.name,
         reason,
@@ -2034,7 +2040,7 @@ export class Game {
   }
 
   dismissPatrolIntercept(siteId = null) {
-    const patrol = this.activePatrolIntercept;
+    const patrol = this.playerFacingPatrol();
 
     if (!patrol || (siteId && patrol.site.id !== siteId) || patrol.phase === "depart" || patrol.phase === "return") {
       return false;
@@ -2064,9 +2070,9 @@ export class Game {
   }
 
   departHubPatrol(siteId) {
-    const patrol = this.activePatrolIntercept;
+    const patrol = this.ambientPatrolForHub(siteId);
 
-    if (!patrol || patrol.site.id !== siteId || patrol.phase === "depart") {
+    if (!patrol || patrol.phase === "depart") {
       return false;
     }
 
@@ -2096,20 +2102,36 @@ export class Game {
   }
 
   dispatchPendingProtectionPatrol() {
-    // Both ways a settlement can answer a threat launch through here. A hub
-    // covering a threat with its own watch craft ("covered-internally") used to
-    // be filtered out and never flew — the request said "handled" forever while
-    // the craft sat at the dock.
-    const request = Object.values(this.state.protectionPlanning?.requests ?? {})
+    // Every pending threat response gets its own craft, up to the streamed-patrol
+    // cap — several simultaneous gates are answered by several patrols, not one
+    // that can only be in one place. A hub covering a threat with its own watch
+    // craft ("covered-internally") and a contracted security firm both launch
+    // through here.
+    const pending = Object.values(this.state.protectionPlanning?.requests ?? {})
       .filter((candidate) => ["contracted", "covered-internally"].includes(candidate.status) && !candidate.dispatchedAt)
-      .sort((left, right) => (right.severity ?? 0) - (left.severity ?? 0) || left.createdAt - right.createdAt)[0];
-    if (!request) return false;
-    if (this.activePatrolIntercept) {
-      // Paid emergency work outranks an ambient inspection loop. The local
-      // craft still physically departs before the responding craft is streamed.
-      if (!this.activePatrolIntercept.protectionRequestId) this.departHubPatrol(this.activePatrolIntercept.site.id);
-      return false;
+      .sort((left, right) => (right.severity ?? 0) - (left.severity ?? 0) || left.createdAt - right.createdAt);
+    if (pending.length === 0) return false;
+
+    let launched = false;
+    for (const request of pending) {
+      // Already flying this one.
+      if (this.activePatrolIntercepts.some((patrol) => patrol.protectionRequestId === request.id)) continue;
+
+      if (this.activePatrolIntercepts.length >= MAX_ACTIVE_PATROLS) {
+        // No free berth. Paid/own-craft threat response outranks a routine
+        // inspection loop, so send an ambient patrol home to free one and pick
+        // this up next tick once the slot actually clears.
+        const ambient = this.activePatrolIntercepts.find((patrol) => !patrol.protectionRequestId && patrol.phase !== "depart");
+        if (ambient) this.departHubPatrol(ambient.site.id);
+        break;
+      }
+
+      if (this.launchProtectionResponse(request)) launched = true;
     }
+    return launched;
+  }
+
+  launchProtectionResponse(request) {
     const portal = this.incursionField.getActivePortals().find((candidate) => candidate.id === request.threatId);
     const site = this.worldSites.find((candidate) => candidate.id === request.siteId);
     if (!portal || !site) return false;
@@ -2127,7 +2149,7 @@ export class Game {
       if (!provider || provider.craft.status !== "committed") return false;
       if (!startProtectionContract(this.state, request.id)) return false;
     }
-    this.activePatrolIntercept = {
+    this.activePatrolIntercepts.push({
       id: craft.id, name: craft.name, institutionId: craft.ownerInstitutionId,
       publicIdentity: craft.publicIdentity, hull: craft.hull, maxHull: craft.maxHull,
       radius: 22, isAlive: true,
@@ -2142,7 +2164,7 @@ export class Game {
       waypoints: this.generatePatrolWaypoints(site), waypointIndex: 0, waypointDwellTimer: 0,
       passiveScanTimer: 0, flaggedDismissTimer: 0, weaponCooldown: 0,
       flybyTarget: null, flybyCheckTimer: 0, flybyHasScanned: false,
-    };
+    });
     return true;
   }
 
@@ -2165,9 +2187,31 @@ export class Game {
     });
   }
 
-  updatePatrolIntercept(deltaSeconds) {
-    const patrol = this.activePatrolIntercept;
+  // The one patrol currently dealing with the PLAYER — inspecting traffic,
+  // holding a standoff, awaiting manual clearance. Only an ambient hub craft
+  // ever does this (a threat responder is committed elsewhere), and only one at
+  // a time, so the HUD, the input lock and the clearance objectives have a
+  // single subject even though several craft may be in the air.
+  playerFacingPatrol() {
+    return this.activePatrolIntercepts.find((patrol) =>
+      !patrol.protectionRequestId
+      && (patrol.phase === "standoff" || patrol.phase === "approach" || patrol.phase === "hold" || patrol.requiresManualClearance),
+    ) ?? null;
+  }
 
+  // The ambient (non-responder) patrol belonging to a hub, if one is out.
+  ambientPatrolForHub(siteId) {
+    return this.activePatrolIntercepts.find((patrol) => !patrol.protectionRequestId && patrol.site?.id === siteId) ?? null;
+  }
+
+  // Advance every streamed patrol, then drop the ones that have retired (flown
+  // home, departed the player's view, or been destroyed) in one pass.
+  updatePatrolIntercepts(deltaSeconds) {
+    this.activePatrolIntercepts.forEach((patrol) => this.updatePatrolIntercept(patrol, deltaSeconds));
+    this.activePatrolIntercepts = this.activePatrolIntercepts.filter((patrol) => patrol.isAlive && !patrol.retired);
+  }
+
+  updatePatrolIntercept(patrol, deltaSeconds) {
     if (!patrol) {
       return;
     }
@@ -2181,7 +2225,7 @@ export class Game {
         const request = this.state.protectionPlanning?.requests?.[patrol.protectionRequestId];
         if (patrol.protectionInternal) finishInternalProtectionReturn(this.state, request, patrol.hull);
         else finishProtectionReturn(this.state, patrol.protectionRequestId, patrol.hull);
-        this.activePatrolIntercept = null;
+        patrol.retired = true;
       }
       return;
     }
@@ -2197,7 +2241,7 @@ export class Game {
           craft.hull = patrol.hull;
           markPatrolCraftStatus(this.state, patrol.site.id, "available");
         }
-        this.activePatrolIntercept = null;
+        patrol.retired = true;
       }
 
       return;
@@ -2683,6 +2727,9 @@ export class Game {
           : "patrol-defense",
         site: patrol.site,
         protectionRequestId: settlesContract ? patrol.protectionRequestId : null,
+        // Whichever craft made the kill carries its surviving hull into the
+        // contract settlement — not "the patrol", of which there are now several.
+        patrolHull: patrol.hull,
       });
     }
   }
@@ -2836,7 +2883,7 @@ export class Game {
 
     // Block docking at a hub while its patrol has an active intercept in progress.
     if (!this.dockedSite && this.nearbySite) {
-      const patrol = this.activePatrolIntercept;
+      const patrol = this.playerFacingPatrol();
       const intercepting = patrol?.site?.id === this.nearbySite.id &&
         (patrol.phase === "standoff" || patrol.phase === "approach" || patrol.phase === "hold");
 
@@ -4256,8 +4303,8 @@ export class Game {
         return;
       }
 
-      const patrolTarget = this.activePatrolIntercept?.isAlive ? [this.activePatrolIntercept] : [];
-      const npcTarget = [...this.npcShips, ...this.workerShips, ...patrolTarget]
+      const patrolTargets = this.activePatrolIntercepts.filter((patrol) => patrol.isAlive);
+      const npcTarget = [...this.npcShips, ...this.workerShips, ...patrolTargets]
         .filter((ship) => ship.isAlive)
         .filter((ship) => !shot.targetId || ship.id === shot.targetId)
         .find((ship) => circlesOverlap(shot.position, shot.radius, ship.position, ship.radius));
@@ -4274,7 +4321,7 @@ export class Game {
         // A working ship taking fire is the economy calling for help. File it
         // against the gate that is shooting it, so the report coalesces with the
         // gate's own and points patrols at the source rather than the victim.
-        if (npcTarget !== this.activePatrolIntercept) {
+        if (!this.activePatrolIntercepts.includes(npcTarget)) {
           fileAttackReport(this.state, {
             threatId: shot.portalId ?? `raid:${npcTarget.id}`,
             position: { x: npcTarget.position.x, y: npcTarget.position.y },
@@ -4285,7 +4332,7 @@ export class Game {
           this.reconcileIncursionDestroyedShip(npcTarget);
           this.recordNpcDestroyed(npcTarget, "incursion");
           this.createNpcBurst(npcTarget, shot.velocity);
-          if (npcTarget === this.activePatrolIntercept) this.activePatrolIntercept = null;
+          this.activePatrolIntercepts = this.activePatrolIntercepts.filter((patrol) => patrol !== npcTarget);
         }
         return;
       }
@@ -4369,11 +4416,9 @@ export class Game {
       patrolOperation.craft.destroyedAt = Date.now();
       // A watch craft lost on a threat response has to fail its request too,
       // or the settlement stays "covered" by a wreck and cannot ask anyone else.
-      const internalRequestId = this.activePatrolIntercept?.protectionInternal && this.activePatrolIntercept.id === ship.id
-        ? this.activePatrolIntercept.protectionRequestId
-        : null;
-      if (internalRequestId) {
-        failInternalProtectionResponse(this.state, this.state.protectionPlanning?.requests?.[internalRequestId], { hull: 0, reason: "craft-destroyed" });
+      const destroyedResponder = this.activePatrolIntercepts.find((patrol) => patrol.id === ship.id && patrol.protectionInternal);
+      if (destroyedResponder?.protectionRequestId) {
+        failInternalProtectionResponse(this.state, this.state.protectionPlanning?.requests?.[destroyedResponder.protectionRequestId], { hull: 0, reason: "craft-destroyed" });
       }
       this.state.ledger.recordEvent("patrol.craftDestroyed", {
         patrolId: ship.id, patrolName: ship.name, institutionId: patrolOperation.institution.id,
@@ -4483,15 +4528,15 @@ export class Game {
     });
   }
 
-  clearIncursionPortal(portal, { rewardCredits = true, cause = "weapon", site = null, protectionRequestId = null } = {}) {
+  clearIncursionPortal(portal, { rewardCredits = true, cause = "weapon", site = null, protectionRequestId = null, patrolHull = null } = {}) {
     const reward = getIncursionPortalReward(portal.waveCount);
 
     this.incursionField.portals = this.incursionField.portals.filter((candidate) => candidate !== portal);
     if (protectionRequestId && cause === "contract-patrol-defense") {
-      completeProtectionContract(this.state, protectionRequestId, { hull: this.activePatrolIntercept?.hull });
+      completeProtectionContract(this.state, protectionRequestId, { hull: patrolHull });
     }
     if (protectionRequestId && cause === "internal-patrol-defense") {
-      completeInternalProtectionResponse(this.state, this.state.protectionPlanning?.requests?.[protectionRequestId], { hull: this.activePatrolIntercept?.hull });
+      completeInternalProtectionResponse(this.state, this.state.protectionPlanning?.requests?.[protectionRequestId], { hull: patrolHull });
     }
     closeProtectionRequestsForThreat(this.state, portal.id);
     resolveAttackReport(this.state, portal.id);
@@ -4994,14 +5039,14 @@ export class Game {
         // craft to approach and perform its existing flyby scan.
 
         const patrolCreateRadius = site.interactionRadius * PATROL_CREATE_RANGE_FACTOR;
-        const isPatrolForThisHub = this.activePatrolIntercept?.site?.id === site.id;
+        const ambientForHub = this.ambientPatrolForHub(site.id);
         const playerInPatrolRange = distance(this.ship.position, site.position) <= patrolCreateRadius;
 
         if (!playerInPatrolRange) {
-          // Player left patrol territory  depart any patrol belonging to this hub.
-          // Contracted protection craft answer the threat, not the player's
-          // viewport location, and must remain simulated outside local range.
-          if (isPatrolForThisHub && !this.activePatrolIntercept?.protectionRequestId) {
+          // Player left patrol territory  send this hub's ambient patrol home.
+          // Threat responders answer the threat, not the player's viewport
+          // location, and stay simulated outside local range.
+          if (ambientForHub) {
             this.departHubPatrol(site.id);
           }
           return;
@@ -5011,14 +5056,13 @@ export class Game {
           return;
         }
 
-        // Accepted emergency work owns the streamed patrol slot once the
-        // current ambient inspection has departed. Do not immediately spawn
-        // another local watch craft and starve the contractor's launch.
+        // A berth held open for paid work: don't spawn an ambient inspection
+        // craft while a responder is still waiting to launch, so the cap stays
+        // available for threats over routine patrols.
         const protectionDispatchPending = Object.values(this.state.protectionPlanning?.requests ?? {})
           .some((request) => ["contracted", "covered-internally"].includes(request.status) && !request.dispatchedAt);
 
-        // Create hub patrol if none exists and no contractor is queued.
-        if (!this.activePatrolIntercept && !protectionDispatchPending) {
+        if (!ambientForHub && !protectionDispatchPending) {
           this.createHubPatrol(site.id);
         }
       });
@@ -6415,7 +6459,7 @@ export class Game {
     this.wrecks.forEach((wreck) => {
       if (isVisible(wreck, drawCanvas, drawCamera)) wreck.draw(this.context, drawCamera);
     });
-    this.drawPatrolIntercept(drawCamera);
+    this.activePatrolIntercepts.forEach((patrol) => this.drawPatrolIntercept(patrol, drawCamera));
     this.drawScanRings(drawCamera);
     this.drawEmergencyTow(drawCamera);
     this.pickups.forEach((pickup) => {
@@ -7128,12 +7172,11 @@ export class Game {
     });
   }
 
-  drawPatrolIntercept(camera = this.camera) {
-    if (!this.activePatrolIntercept) {
+  drawPatrolIntercept(patrol, camera = this.camera) {
+    if (!patrol) {
       return;
     }
 
-    const patrol = this.activePatrolIntercept;
     const screenX = patrol.position.x - camera.x;
     const screenY = patrol.position.y - camera.y;
     const pulse = 0.45 + Math.sin(patrol.pulse * 7.2) * 0.18;
