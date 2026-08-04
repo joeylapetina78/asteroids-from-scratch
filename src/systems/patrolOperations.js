@@ -1,11 +1,13 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260803-1917-5d1b109";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260803-1917-5d1b109";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260803-1917-5d1b109";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-1805-35a96ea";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-1805-35a96ea";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-1805-35a96ea";
 
 const PATROL_OPENING_BALANCE = 1800;
 
 export function createInitialPatrolOperations(now = Date.now()) {
-  return Object.fromEntries(FIRST_REACH_SETTLEMENTS.map((seed, index) => {
+  return Object.fromEntries(FIRST_REACH_SETTLEMENTS
+    .filter((seed) => seed.institution.protectionPolicy?.mode !== "contract")
+    .map((seed, index) => {
     const siteId = seed.institution.siteId;
     const institution = {
       id: `patrol:${siteId}`,
@@ -43,12 +45,23 @@ export function createInitialPatrolOperations(now = Date.now()) {
       registeredHubIds: [siteId],
       authorizedActivities: ["patrol", "inspect-traffic", "defend-jurisdiction"],
     });
-    return [siteId, { institution, controller, craft }];
-  }));
+      return [siteId, { institution, controller, craft }];
+    }));
 }
 
 export function ensurePatrolOperations(state, now = Date.now()) {
   state.patrolOperations ??= createInitialPatrolOperations(now);
+  // Migrate older saves that synthesized a watch for every settlement. Only
+  // remove the known generated operation; a separately authored patrol firm at
+  // an outsourcing hub is a different institution and remains valid.
+  FIRST_REACH_SETTLEMENTS
+    .filter((seed) => seed.institution.protectionPolicy?.mode === "contract")
+    .forEach((seed) => {
+      const siteId = seed.institution.siteId;
+      if (state.patrolOperations[siteId]?.institution?.id === `patrol:${siteId}`) {
+        delete state.patrolOperations[siteId];
+      }
+    });
   const defaults = createInitialPatrolOperations(now);
   Object.entries(defaults).forEach(([siteId, seed]) => {
     state.patrolOperations[siteId] ??= seed;
@@ -223,4 +236,3 @@ export function finishInternalProtectionReturn(state, request, hull, now = Date.
   });
   return craft;
 }
-

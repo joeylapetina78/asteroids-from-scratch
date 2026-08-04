@@ -4,10 +4,11 @@ import test from "node:test";
 import { FIRST_REACH_SETTLEMENTS } from "../src/content/economy/firstReachSettlements.js";
 import { createInitialPatrolOperations, ensurePatrolOperations, getAvailablePatrolCraft, markPatrolCraftStatus } from "../src/systems/patrolOperations.js";
 
-test("every settlement owns one funded, titled patrol craft", () => {
+test("settlements with owned-capacity policies receive funded, titled patrol craft", () => {
   const operations = createInitialPatrolOperations(100);
-  assert.equal(Object.keys(operations).length, FIRST_REACH_SETTLEMENTS.length);
-  FIRST_REACH_SETTLEMENTS.forEach((seed) => {
+  const owners = FIRST_REACH_SETTLEMENTS.filter((seed) => seed.institution.protectionPolicy?.mode !== "contract");
+  assert.equal(Object.keys(operations).length, owners.length);
+  owners.forEach((seed) => {
     const operation = operations[seed.institution.siteId];
     assert.equal(operation.institution.siteId, seed.institution.siteId);
     assert.ok(operation.institution.accounts.operating.balance > operation.institution.policies.protectedCash);
@@ -16,6 +17,9 @@ test("every settlement owns one funded, titled patrol craft", () => {
     assert.equal(operation.craft.publicIdentity.registrationStatus, "active");
     assert.ok(operation.craft.publicIdentity.authorizedActivities.includes("defend-jurisdiction"));
   });
+  FIRST_REACH_SETTLEMENTS
+    .filter((seed) => seed.institution.protectionPolicy?.mode === "contract")
+    .forEach((seed) => assert.equal(operations[seed.institution.siteId], undefined));
 });
 
 test("a deployed or destroyed patrol craft cannot be conjured again", () => {

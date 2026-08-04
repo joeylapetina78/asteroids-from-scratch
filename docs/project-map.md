@@ -318,6 +318,14 @@ Asteroids are chunk-streamed around the ship. Dynamic fragments remain live unti
 
 [src/systems/saveManager.js](../src/systems/saveManager.js)  temporary browser-local playtest save in `localStorage`. Stores components, credits, debt, contracts, ship frame, journey mission pointer, cargo, world position. Not a durable account system. Save key may be bumped during architecture cleanup.
 
+### Patrol And Protection
+
+[src/systems/patrolOperations.js](../src/systems/patrolOperations.js) owns settlement watch institutions and their durable craft. Only direct and hybrid protection policies synthesize local watch capacity; contract-only settlements depend on the protection market.
+
+[src/systems/protectionPlanning.js](../src/systems/protectionPlanning.js) turns threats into institution requests, while [src/systems/protectionProviders.js](../src/systems/protectionProviders.js) evaluates and settles independent providers. [src/systems/patrolDispatch.js](../src/systems/patrolDispatch.js) selects every valid unlaunched assignment without imposing a universe-wide viewport cap. [src/systems/patrolRuntime.js](../src/systems/patrolRuntime.js) creates the shared physical actor shape used by ambient watches, inspections, and threat responders.
+
+The current durable operation still owns one craft. Moving from one-craft operations to data-defined fleets is intentionally a later seam; the runtime and dispatcher no longer assume only one patrol may exist globally.
+
 ## Resource And Economy Flow
 
 1. Bullets or ship impacts break resource rocks  small square pickups

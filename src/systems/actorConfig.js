@@ -1,4 +1,4 @@
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260803-1917-5d1b109";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260804-1805-35a96ea";
 // One place to ask what an actor is and what it has.
 //
 // Actor records are spread across seven state shapes that grew separately —

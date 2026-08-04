@@ -5,7 +5,7 @@ import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { evaluateProtectionThreat, closeProtectionRequestsForThreat, reviewProtectionRequests, PROTECTION_REQUEST_STATUS } from "../src/systems/protectionPlanning.js";
 import { CONTRACT_KIND, CONTRACT_STATE, listContracts } from "../src/systems/contractBoard.js";
 import { completeProtectionContract, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "../src/systems/protectionProviders.js";
-import { completeInternalProtectionResponse, failInternalProtectionResponse, finishInternalProtectionReturn, servicePatrolCraft, startInternalProtectionResponse } from "../src/systems/patrolOperations.js";
+import { completeInternalProtectionResponse, createInitialPatrolOperations, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, servicePatrolCraft, startInternalProtectionResponse } from "../src/systems/patrolOperations.js";
 import { listInspectableActors } from "../src/systems/actorInspector.js";
 
 const sites = [
@@ -43,6 +43,28 @@ test("an outsourcing hub accepts an affordable independent patrol bid", () => {
   const sable = listInspectableActors(value).find((actor) => actor.actorId === "patrol-craft:sable-one");
   assert.equal(sable?.name, "Sable One");
   assert.equal(sable?.locationSiteId, "blue-lantern");
+});
+
+test("contract-only settlements do not secretly own local watch craft", () => {
+  const patrols = createInitialPatrolOperations(10);
+  assert.equal(patrols["the-ledge"], undefined);
+  assert.equal(patrols["morrow-shoal"], undefined);
+  assert.ok(patrols["yard-exchange"]?.craft);
+  assert.ok(patrols["blue-lantern"]?.craft);
+});
+
+test("old synthetic watches are removed from outsourcing hubs during migration", () => {
+  const value = state();
+  value.patrolOperations = {
+    "the-ledge": {
+      institution: { id: "patrol:the-ledge" },
+      controller: {},
+      craft: { id: "patrol-craft:the-ledge", hull: 150, maxHull: 150, status: "available" },
+    },
+  };
+  const patrols = ensurePatrolOperations(value, 20);
+  assert.equal(patrols["the-ledge"], undefined);
+  assert.ok(patrols["yard-exchange"]?.craft);
 });
 
 test("protected cash can visibly withhold an otherwise necessary response", () => {
