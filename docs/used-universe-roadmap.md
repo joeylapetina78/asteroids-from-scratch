@@ -71,15 +71,19 @@ breakdowns, cargo loss, and misrepresented condition should worsen it.
    service count, stage, and the legacy wear projection. Old saves migrate.
    Deferred maintenance accelerates subsequent wear; service respects the aged
    ceiling. Player engine and hull records use this shape.
-2. **Mining-craft proof.** Give structure, mining laser, tractor field, and field
-   control separate records. Mining actions wear the relevant component and
-   existing SPRC issue recipes repair the actual failed component.
+2. **Mining-craft proof — implemented.** Structure, mining laser, tractor field,
+   and field control have separate records. Completed extraction work wears each
+   system at a component-specific rate. A failure names the affected component,
+   SPRC carries that identity through its public repair order, and service repairs
+   only that component while preserving its permanent degradation and the wear
+   on neighboring systems. These records are visible in the actor observatory.
 3. **Freight proof.** Give haulers propulsion, steering, docking, hull, and cargo
    handling records. Job valuation reads the real components and projected trip
    use; the scalar wear field becomes a compatibility projection only.
-4. **Physical repair completion.** Repair orders name component IDs, preserve
-   lifetime degradation and service history, and distinguish repair from
-   replacement or rebuilding.
+4. **Physical repair completion — initial path implemented.** Mining repair
+   orders name component IDs and preserve lifetime degradation and service
+   history. Freight and other craft still need this migration, followed by an
+   explicit distinction between repair, replacement, and rebuilding.
 5. **Expand craft classes.** Patrol, recovery, incursion, and gate machinery use
    the same records with different component archetypes and service rights.
 6. **Used assets and reliability.** Persist ownership and service history through

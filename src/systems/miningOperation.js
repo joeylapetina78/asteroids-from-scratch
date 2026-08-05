@@ -1,19 +1,20 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260804-2029-b26c569";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260804-2029-b26c569";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-2029-b26c569";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260804-2029-b26c569";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260804-2029-b26c569";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260804-2029-b26c569";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260804-2029-b26c569";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260804-2029-b26c569";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-2029-b26c569";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260804-2029-b26c569";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260804-2029-b26c569";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260804-2029-b26c569";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2029-b26c569";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-2029-b26c569";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260804-2047-0ceced2";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260804-2047-0ceced2";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-2047-0ceced2";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260804-2047-0ceced2";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260804-2047-0ceced2";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260804-2047-0ceced2";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260804-2047-0ceced2";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260804-2047-0ceced2";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-2047-0ceced2";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260804-2047-0ceced2";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260804-2047-0ceced2";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260804-2047-0ceced2";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2047-0ceced2";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-2047-0ceced2";
 import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-2029-b26c569";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-2047-0ceced2";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260804-2047-0ceced2";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -47,6 +48,12 @@ const MINING_ISSUES = Object.freeze([
   { issueType: "tractor-field-instability", requiredCapabilities: ["tractor-field", "mechanical-repair"] },
   { issueType: "field-control-failure", requiredCapabilities: ["field-control"] },
   { issueType: "preventive-calibration", requiredCapabilities: ["field-control"] },
+]);
+const MINING_COMPONENT_DEFINITIONS = Object.freeze([
+  { id: "structure", label: "Primary Structure", initialWearFactor: 0.35, issueType: "structural-fatigue" },
+  { id: "mining-laser", label: "Mining Laser", initialWearFactor: 1, issueType: "preventive-calibration" },
+  { id: "tractor-field", label: "Tractor Field", initialWearFactor: 0.65, issueType: "tractor-field-instability" },
+  { id: "field-control", label: "Field Control", initialWearFactor: 0.45, issueType: "field-control-failure" },
 ]);
 const MINING_SERVICE_PRICE = 2200;
 
@@ -252,6 +259,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     operation.ships[defaults.id].maintenanceStatus ??= "available";
     operation.ships[defaults.id].issueCount ??= 0;
     operation.ships[defaults.id].pendingIssue ??= null;
+    ensureCraftComponents(operation.ships[defaults.id], MINING_COMPONENT_DEFINITIONS, {
+      initialWear: operation.ships[defaults.id].wear ?? defaults.initialWear ?? 0,
+    });
+    operation.ships[defaults.id].wear = operation.ships[defaults.id].aggregateWear;
   });
   const sites = new Map(game.worldSites.map((site) => [site.id, site]));
   seedDepositKnowledge();
@@ -974,11 +985,17 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     }
     shipRecord.currentSiteId = siteId;
     const workWear = getMiningWorkWear();
-    shipRecord.wear = Math.min(1, (shipRecord.wear ?? 0) + workWear);
+    const componentUse = applyCraftUse(shipRecord, {
+      structure: workWear * 0.35,
+      "mining-laser": workWear,
+      "tractor-field": workWear * 0.65,
+      "field-control": workWear * 0.45,
+    }, { at: now() });
+    shipRecord.wear = componentUse.aggregateWear;
     operation.completedContracts += 1;
     operation.wear = Object.values(operation.ships).reduce((sum, record) => sum + (record.wear ?? 0), 0) / Object.keys(operation.ships).length;
     record("mining.contractFulfilled", `${ship.name} delivered ${delivered} ${resourceId.replaceAll("-", " ")} to ${siteName(siteId)}, earned ${payment} cr, and completed ${orderLabel}. Wear is now ${shipRecord.wear.toFixed(2)}.`, { orderId: allocation.orderId, siteId, resourceId, quantity: delivered, payment, accountBalance: operation.institution.accounts.operating.balance, wear: operation.wear, shipWear: shipRecord.wear, shipInstitutionId: ship.id, shipName: ship.name });
-    if (shipRecord.wear >= 1 && shipRecord.maintenanceStatus === "available") beginMaintenance(shipRecord, ship);
+    if (componentUse.worst?.condition.stage === "failed" && shipRecord.maintenanceStatus === "available") beginMaintenance(shipRecord, ship);
   }
 
   function siteName(siteId) {
@@ -986,11 +1003,18 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   }
 
   function beginMaintenance(shipRecord, ship, forcedIssue = null, cause = "work-wear") {
-    const issue = forcedIssue ?? MINING_ISSUES[shipRecord.issueCount % MINING_ISSUES.length];
+    const worstComponent = getWorstComponent(shipRecord);
+    const worstDefinition = MINING_COMPONENT_DEFINITIONS.find((entry) => entry.id === worstComponent?.id);
+    const issue = forcedIssue ?? MINING_ISSUES.find((entry) => entry.issueType === worstDefinition?.issueType)
+      ?? MINING_ISSUES[shipRecord.issueCount % MINING_ISSUES.length];
+    const componentDefinition = forcedIssue
+      ? MINING_COMPONENT_DEFINITIONS.find((entry) => entry.issueType === forcedIssue.issueType)
+      : worstDefinition;
     const serviceSite = sites.get("scrap-porch");
     if (!serviceSite) return;
     shipRecord.issueCount += 1;
     shipRecord.pendingIssue = issue.issueType;
+    shipRecord.pendingComponentId = componentDefinition?.id ?? (issue.issueType === "structural-fatigue" ? "structure" : null);
     shipRecord.maintenanceStatus = "returning-for-service";
     ship.returnForService({ destination: serviceSite.position, destinationSiteId: "scrap-porch", issueType: issue.issueType });
     // Diagnostics: disabled and dependent on a service provider. The blocker
@@ -1003,10 +1027,11 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       waitingFor: "a repair berth and the materials the fix needs",
       wakeOn: ["sprc.repairCompleted", "sprc.repairRetryAdmitted"],
       causedBy: [{ actorId: "sprc", note: "Scrap Porch Recovery Cooperative holds the repair" }],
-      detail: { issueType: issue.issueType, requiredCapabilities: issue.requiredCapabilities, wear: shipRecord.wear },
+      detail: { issueType: issue.issueType, componentId: shipRecord.pendingComponentId,
+        requiredCapabilities: issue.requiredCapabilities, wear: shipRecord.wear },
       at: now(),
     }), { state: DIAGNOSTIC_STATE.DISABLED, at: now() });
-    record("mining.maintenanceRequired", `${shipRecord.name} developed ${issue.issueType.replaceAll("-", " ")} ${cause === "combat-damage" ? "after combat damage" : "after mining work"} and is returning to Scrap Porch.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, issueType: issue.issueType, wear: shipRecord.wear, requiredCapabilities: issue.requiredCapabilities, cause });
+    record("mining.maintenanceRequired", `${shipRecord.name}'s ${worstComponent?.label ?? "equipment"} developed ${issue.issueType.replaceAll("-", " ")} ${cause === "combat-damage" ? "after combat damage" : "after mining work"} and is returning to Scrap Porch.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, issueType: issue.issueType, componentId: shipRecord.pendingComponentId, wear: shipRecord.wear, requiredCapabilities: issue.requiredCapabilities, cause });
   }
 
   function consumeMaintenanceEvents() {
@@ -1017,7 +1042,8 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         const ship = workers.find((candidate) => candidate.id === event.payload.npcId);
         if (shipRecord && ship && shipRecord.maintenanceStatus === "available"
           && event.payload.hullAfter > 0 && event.payload.hullAfter / ship.maxHull <= 0.5) {
-          shipRecord.wear = Math.max(1, shipRecord.wear ?? 0);
+          applyCraftUse(shipRecord, { structure: 1 }, { at: now() });
+          shipRecord.wear = shipRecord.aggregateWear;
           const issue = MINING_ISSUES.find((candidate) => candidate.issueType === "structural-fatigue");
           beginMaintenance(shipRecord, ship, issue, "combat-damage");
         }
@@ -1079,8 +1105,13 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     // Book what upkeep actually costs Cinder. Its own job pricing reads this,
     // so when Sal raises repair prices the miner's cost-to-serve rises too.
     recordServiceCost(state, { institutionId: operation.institution.id, serviceType: "maintenance", price, at: now() });
-    shipRecord.wear = 0;
+    const componentId = shipRecord.pendingComponentId ?? getWorstComponent(shipRecord)?.id;
+    const service = serviceCraftComponent(shipRecord, componentId, {
+      at: now(), providerId: "sprc", repairOrderId,
+    });
+    shipRecord.wear = shipRecord.aggregateWear;
     shipRecord.pendingIssue = null;
+    shipRecord.pendingComponentId = null;
     shipRecord.maintenanceStatus = "available";
     shipRecord.currentSiteId = "scrap-porch";
     const servicedWorker = workers.find((worker) => worker.id === shipRecord.id);
@@ -1092,7 +1123,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       summary: `${shipRecord.name} paid ${price} cr for service and is available for work`,
       at: now(),
     });
-    record("mining.maintenanceCompleted", `${shipRecord.name} paid SPRC ${price} cr, completed service, and returned to mining duty.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, repairOrderId, payment: price, accountBalance: account.balance });
+    record("mining.maintenanceCompleted", `${shipRecord.name} paid SPRC ${price} cr, serviced its ${service?.componentId ?? "affected component"}, and returned to mining duty.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, componentId: service?.componentId ?? null, repairOrderId, payment: price, accountBalance: account.balance });
   }
 
   function recordWorkerEvent(shipRecord, actionType, payload) {
@@ -1121,6 +1152,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         locationSiteId: payload.destinationSiteId, mobility: "self-return", payerInstitutionId: operation.institution.id,
         payer: { balance: operation.institution.accounts.operating.balance, committed: operation.institution.accounts.operating.committed ?? 0, protectedCash: getActorProtectedCash(state, operation.institution.id) },
         servicePrice: MINING_SERVICE_PRICE, wear: shipRecord.wear, issueCount: shipRecord.issueCount,
+        componentId: shipRecord.pendingComponentId,
       }, { visible: false });
     }
   }
@@ -1155,5 +1187,8 @@ function createInitialState(now, seed = CINDER_MINING_SEED) {
 }
 
 function createWorkerRecord(defaults, ownerInstitutionId = CINDER_MINING_SEED.institution.id) {
-  return { id: defaults.id, name: defaults.name, archetypeId: "mining-worker", ownerInstitutionId, referenceId: defaults.referenceId, currentSiteId: defaults.currentSiteId, status: "idle", cargo: {}, wear: defaults.initialWear ?? 0, issueCount: 0, pendingIssue: null, maintenanceStatus: "available", lastDecisionKey: null, capabilities: { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } } };
+  const record = { id: defaults.id, name: defaults.name, archetypeId: "mining-worker", ownerInstitutionId, referenceId: defaults.referenceId, currentSiteId: defaults.currentSiteId, status: "idle", cargo: {}, wear: defaults.initialWear ?? 0, issueCount: 0, pendingIssue: null, pendingComponentId: null, maintenanceStatus: "available", lastDecisionKey: null, capabilities: { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } } };
+  ensureCraftComponents(record, MINING_COMPONENT_DEFINITIONS, { initialWear: record.wear });
+  record.wear = record.aggregateWear;
+  return record;
 }

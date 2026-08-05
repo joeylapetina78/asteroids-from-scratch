@@ -4,14 +4,14 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260804-2029-b26c569";
-import { collectIntentions } from "./intentions.js?v=fresh-20260804-2029-b26c569";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260804-2029-b26c569";
-import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260804-2029-b26c569";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-2029-b26c569";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260804-2029-b26c569";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260804-2029-b26c569";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260804-2029-b26c569";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260804-2047-0ceced2";
+import { collectIntentions } from "./intentions.js?v=fresh-20260804-2047-0ceced2";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260804-2047-0ceced2";
+import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260804-2047-0ceced2";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-2047-0ceced2";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260804-2047-0ceced2";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260804-2047-0ceced2";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260804-2047-0ceced2";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
@@ -89,6 +89,13 @@ export function inspectActor(state, actorId, { game = null } = {}) {
       maintenanceStatus: miningShip.maintenanceStatus,
       pendingIssue: miningShip.pendingIssue ?? null,
       issueCount: miningShip.issueCount ?? 0,
+      components: Object.values(miningShip.components ?? {}).map((component) => ({
+        id: component.id, label: component.label, stage: component.condition?.stage ?? "healthy",
+        currentCondition: round2(component.condition?.currentCondition),
+        maxRecoverableCondition: round2(component.condition?.maxRecoverableCondition),
+        lifetimeDegradation: round2(component.condition?.lifetimeDegradation),
+        serviceCount: component.condition?.serviceCount ?? 0,
+      })),
     };
   } else if (shipInstitution) {
     const npc = (game?.npcShips ?? []).find((entry) => entry.id === actorId) ?? null;

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createGameState } from "../src/state/gameState.js";
+import { applyCraftUse } from "../src/systems/componentCondition.js";
 import { createSprcOperation, SPRC } from "../src/systems/sprcOperation.js";
 import { createShipPaperworkInspectionReport } from "../src/systems/paperworkInspections.js";
 import { createFarmOperation } from "../src/systems/farmOperation.js";
@@ -413,12 +414,13 @@ test("a worn Cinder craft is sent to service when a delivery crosses the wear th
   ], addWorkerShip: () => {} };
   const manager = createMiningOperation({ state, game, now: () => 1_000 });
   const worker = manager.worker;
-  // One routine delivery away from needing service.
-  manager.getState().ships[worker.id].wear = 0.98;
+  // One routine delivery away from a mining-laser calibration failure.
+  applyCraftUse(manager.getState().ships[worker.id], { "mining-laser": 0.98 });
   worker.cargo[worker.assignment.resourceId] = worker.assignment.quantity;
   worker.deliver();
   assert.equal(manager.getState().ships[worker.id].maintenanceStatus, "returning-for-service");
-  assert.equal(manager.getState().ships[worker.id].pendingIssue, "structural-fatigue");
+  assert.equal(manager.getState().ships[worker.id].pendingIssue, "preventive-calibration");
+  assert.equal(manager.getState().ships[worker.id].pendingComponentId, "mining-laser");
 });
 
 test("idle Cinder craft report unfunded work once instead of failing silently", () => {
@@ -531,9 +533,8 @@ test("an unregistered Cinder craft receives paid technology service through SPRC
   Object.values(mining.getState().ships).forEach((record) => {
     if (record.id !== worker.id) record.maintenanceStatus = "servicing";
   });
-  workerRecord.issueCount = 1;
-  // Just under the threshold so routine deliveries carry it into service.
-  workerRecord.wear = 0.95;
+  // Just under the threshold so tractor use carries the real component into service.
+  applyCraftUse(workerRecord, { "tractor-field": 0.98 });
   const minerCashBefore = mining.getState().institution.accounts.operating.balance;
   const sprcCashBefore = state.sprc.account.balance;
 
@@ -569,7 +570,10 @@ test("an unregistered Cinder craft receives paid technology service through SPRC
   mining.update();
 
   assert.equal(workerRecord.maintenanceStatus, "available");
-  assert.equal(workerRecord.wear, 0);
+  assert.equal(workerRecord.components["tractor-field"].condition.wear, 0,
+    "the failed tractor field was serviced");
+  assert.ok(workerRecord.wear > 0, "service did not magically reset unrelated component history");
+  assert.equal(workerRecord.wear, workerRecord.aggregateWear);
   assert.equal(worker.miningDisabled, false);
   // Service is priced from Sal's live cost basis plus margin, so assert the
   // money moved matches the quoted price rather than a hard-coded constant.

@@ -4,6 +4,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
+import { applyCraftUse } from "../src/systems/componentCondition.js";
 import {
   BLOCKER_KIND,
   DIAGNOSTIC_STATE,
@@ -304,12 +305,12 @@ test("a disabled worker points its blocker at the service provider", () => {
   const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => 1_000 });
   const worker = mining.workers[0];
   const shipRecord = mining.getState().ships[worker.id];
-  shipRecord.issueCount = 1;
-  // Start just under the threshold so two routine deliveries cross it.
-  shipRecord.wear = 0.95;
+  // Start the actual mining laser just under failure so two routine deliveries
+  // cross it. Scalar wear is now only a read-only compatibility projection.
+  applyCraftUse(shipRecord, { "mining-laser": 0.99 });
 
-  // Two completed deliveries push it over the wear threshold into service.
-  for (let completed = 0; completed < 2; completed += 1) {
+  // One completed delivery pushes that component over the failure threshold.
+  for (let completed = 0; completed < 1; completed += 1) {
     worker.cargo[worker.assignment.resourceId] = worker.assignment.harvestTargetQuantity ?? worker.assignment.quantity;
     worker.deliver();
     mining.update();

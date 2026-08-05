@@ -1,16 +1,16 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260804-2029-b26c569";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260804-2029-b26c569";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260804-2029-b26c569";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260804-2029-b26c569";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260804-2029-b26c569";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260804-2029-b26c569";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260804-2029-b26c569";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260804-2029-b26c569";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260804-2029-b26c569";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-2029-b26c569";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2029-b26c569";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260804-2029-b26c569";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260804-2029-b26c569";
+import { depositCredits } from "./accounts.js?v=fresh-20260804-2047-0ceced2";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260804-2047-0ceced2";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260804-2047-0ceced2";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260804-2047-0ceced2";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260804-2047-0ceced2";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260804-2047-0ceced2";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260804-2047-0ceced2";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260804-2047-0ceced2";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260804-2047-0ceced2";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-2047-0ceced2";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2047-0ceced2";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260804-2047-0ceced2";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260804-2047-0ceced2";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -327,15 +327,15 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     clearDeferredServiceRequest(subjectId);
     const id = nextId("repair", "SPRC-RPR");
     const acceptedPrice = match.quotedPrice;
-    const order = sprc.repairOrders[id] = { id, facilityId: match.facility.id, serviceCapabilityId: match.capability.id, subjectId, subjectHaulerId: subjectId, subjectShipVin: subject.shipVin, craftClass: payload.craftClass, payerInstitutionId: payload.payerInstitutionId, servicePrice: acceptedPrice, quotedPrice: acceptedPrice, referenceServicePrice: payload.servicePrice ?? match.capability.servicePrice, priceValuation: priceValuation ? summarizeValuation(priceValuation) : null, condition: payload.issueType, origin: { type: "operational-wear", wear: payload.wear, issueCount: payload.issueCount, causedByCarefulMode: payload.causedByCarefulMode }, requirements: { produced: { ...requirements.produced }, raw: { ...requirements.raw } }, reserved: { produced: {}, raw: {} }, status: "waiting-stock", priority: payload.issueType.includes("failure") || payload.issueType === "control-fault" ? 80 : 60, createdAt: now(), startedAt: null, completesAt: null };
+    const order = sprc.repairOrders[id] = { id, facilityId: match.facility.id, serviceCapabilityId: match.capability.id, subjectId, subjectHaulerId: subjectId, subjectShipVin: subject.shipVin, craftClass: payload.craftClass, componentId: payload.componentId ?? null, payerInstitutionId: payload.payerInstitutionId, servicePrice: acceptedPrice, quotedPrice: acceptedPrice, referenceServicePrice: payload.servicePrice ?? match.capability.servicePrice, priceValuation: priceValuation ? summarizeValuation(priceValuation) : null, condition: payload.issueType, origin: { type: "operational-wear", wear: payload.wear, issueCount: payload.issueCount, causedByCarefulMode: payload.causedByCarefulMode }, requirements: { produced: { ...requirements.produced }, raw: { ...requirements.raw } }, reserved: { produced: {}, raw: {} }, status: "waiting-stock", priority: payload.issueType.includes("failure") || payload.issueType === "control-fault" ? 80 : 60, createdAt: now(), startedAt: null, completesAt: null };
     sprc.repairQueue.push(id);
     state.ledger.recordEvent("institution.servicePriced", {
       institutionId: sprc.institution.id, actorName: sprc.controller?.name ?? "Sal", repairOrderId: id, subjectId,
       servicePrice: order.servicePrice, referencePrice: order.referenceServicePrice, reasons: priceValuation.reasons,
     }, { visible: true, message: `${sprc.controller?.name ?? "Sal"} quotes ${order.servicePrice} cr to repair ${subject.shipName} (materials at live cost).` });
     subject.condition = payload.issueType; subject.maintenanceStatus = "queued"; subject.availableForWork = false; subject.currentLocationSiteId = payload.locationSiteId;
-    appendHistory("repair.created", { repairOrderId: id, subjectId, haulerId: subjectId, issueType: payload.issueType, wear: payload.wear });
-    state.ledger.recordEvent("sprc.repairCreated", { repairOrderId: id, subjectId, haulerId: subjectId, shipName: subject.shipName, craftClass: payload.craftClass, condition: order.condition }, { visible: true });
+    appendHistory("repair.created", { repairOrderId: id, subjectId, haulerId: subjectId, componentId: order.componentId, issueType: payload.issueType, wear: payload.wear });
+    state.ledger.recordEvent("sprc.repairCreated", { repairOrderId: id, subjectId, haulerId: subjectId, componentId: order.componentId, shipName: subject.shipName, craftClass: payload.craftClass, condition: order.condition }, { visible: true });
     return order;
   }
 
@@ -734,8 +734,8 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       }
       sprc.facilities.berthTwo.status = "available";
       sprc.facilities.berthTwo.activeRepairOrderId = null;
-      appendHistory("repair.completed", { repairOrderId: order.id, subjectId: order.subjectId, haulerId: order.subjectHaulerId, serviceRevenue: order.servicePrice ?? 180 });
-      state.ledger.recordEvent("sprc.repairCompleted", { repairOrderId: order.id, subjectId: order.subjectId, haulerId: order.subjectHaulerId, shipName: subject?.shipName, craftClass: order.craftClass, payerInstitutionId: order.payerInstitutionId, serviceRevenue: order.servicePrice ?? 180 }, { visible: true });
+      appendHistory("repair.completed", { repairOrderId: order.id, subjectId: order.subjectId, haulerId: order.subjectHaulerId, componentId: order.componentId ?? null, serviceRevenue: order.servicePrice ?? 180 });
+      state.ledger.recordEvent("sprc.repairCompleted", { repairOrderId: order.id, subjectId: order.subjectId, haulerId: order.subjectHaulerId, componentId: order.componentId ?? null, shipName: subject?.shipName, craftClass: order.craftClass, payerInstitutionId: order.payerInstitutionId, serviceRevenue: order.servicePrice ?? 180 }, { visible: true });
     });
   }
 
