@@ -106,6 +106,8 @@ const EXPLICIT_CLASSES = Object.freeze({
   "population.goodsPurchased": RETENTION_CLASS.DURABLE,
   "population.goodsConsumed": RETENTION_CLASS.DURABLE,
   "population.incomeReceived": RETENTION_CLASS.DURABLE,
+  "population.emergencyCreditDrawn": RETENTION_CLASS.DURABLE,
+  "population.emergencyCreditRepaid": RETENTION_CLASS.DURABLE,
   "contract.expired": RETENTION_CLASS.DURABLE,
   "legal.zoneFlag": RETENTION_CLASS.DURABLE,
   "institution.action": RETENTION_CLASS.DURABLE,

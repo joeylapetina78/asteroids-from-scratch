@@ -130,6 +130,13 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
       id: "population:morrow-shoal", name: "Morrow Shoal Population", size: 78,
       householdCash: 12000, householdCashCap: 18000,
       incomeAmount: 4200, incomeIntervalSeconds: 120, needIds: STANDARD_NEEDS,
+      distressPolicy: {
+        cashThreshold: 3600,
+        essentialNeedIds: ["life-support-pack", "general-materials"],
+        deferredNeedIds: ["settlement-supply-unit", "household-goods-unit"],
+        emergencyCreditLimit: 6000,
+        repaymentShare: 0.25,
+      },
     },
     extraction: {
       id: "mine-morrow-iron", resourceId: "iron-nickel", resourceName: "Iron Nickel",
@@ -174,6 +181,11 @@ export function settlementInstitutionRecords() {
 export function settlementPopulationProfiles() {
   return FIRST_REACH_SETTLEMENTS.map((seed) => ({
     ...seed.population,
+    distressPolicy: seed.population.distressPolicy ? {
+      ...seed.population.distressPolicy,
+      essentialNeedIds: [...seed.population.distressPolicy.essentialNeedIds],
+      deferredNeedIds: [...seed.population.distressPolicy.deferredNeedIds],
+    } : null,
     hubInstitutionId: seed.institution.id,
     siteId: seed.institution.siteId,
     needIds: [...seed.population.needIds],

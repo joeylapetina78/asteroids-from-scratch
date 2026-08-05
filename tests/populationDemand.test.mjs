@@ -260,6 +260,81 @@ test("the population is an inspectable actor in the observatory", () => {
   assert.ok(entry.summary.length > 0);
 });
 
+test("an opted-in population defers nonessential demand while distressed", () => {
+  const world = createWorld({ stock: FULL_STOCK });
+  const record = world.record();
+  record.householdCash = 100;
+  record.incomeAmount = 0;
+  record.distressPolicy = {
+    cashThreshold: 1000,
+    essentialNeedIds: ["life-support-pack", "general-materials"],
+    deferredNeedIds: ["settlement-supply-unit", "household-goods-unit"],
+    emergencyCreditLimit: 0,
+    repaymentShare: 0.25,
+  };
+
+  world.advance(POPULATION_NEEDS["household-goods-unit"].demandIntervalSeconds);
+  world.population.update();
+
+  assert.equal(record.needs["household-goods-unit"].backlog, 0, "the unaffordable target was not allowed to accumulate");
+  assert.equal(record.needs["household-goods-unit"].deferred, 1, "the forgone demand remains visible");
+  assert.equal(world.events("population.demandDeferred").length, 2,
+    "both nonessential targets that became due were explicitly deferred");
+});
+
+test("emergency credit is bounded, protects the hub reserve, and buys only essentials", () => {
+  const world = createWorld({ stock: FULL_STOCK, hubCash: 5000 });
+  const record = world.record();
+  record.householdCash = 100;
+  record.incomeAmount = 0;
+  record.distressPolicy = {
+    cashThreshold: 1000,
+    essentialNeedIds: ["general-materials"],
+    deferredNeedIds: [],
+    emergencyCreditLimit: 1000,
+    repaymentShare: 0.25,
+  };
+  world.hub.protectionPolicy = { protectedCash: 4500 };
+
+  world.advance(POPULATION_NEEDS["general-materials"].demandIntervalSeconds);
+  world.population.update();
+
+  assert.equal(world.events("population.emergencyCreditDrawn").length, 0,
+    "the hub refuses an advance that would cross its protected reserve");
+  world.hub.accounts.operating.balance += 1000;
+  world.population.update();
+  const advance = world.events("population.emergencyCreditDrawn")[0];
+  assert.ok(advance, "the same essential demand becomes fundable when the reserve is safe");
+  assert.equal(advance.payload.amount, POPULATION_NEEDS["general-materials"].price - 100);
+  assert.equal(record.emergencyDebt, advance.payload.amount);
+  assert.equal(world.events("population.goodsPurchased").length, 1);
+});
+
+test("later household income repays emergency credit as a conserved transfer", () => {
+  const world = createWorld({ stock: FULL_STOCK, hubCash: 5000 });
+  const record = world.record();
+  record.householdCash = 0;
+  record.emergencyDebt = 800;
+  record.incomeAmount = 400;
+  record.incomeIntervalSeconds = 10;
+  record.distressPolicy = {
+    cashThreshold: 1000,
+    essentialNeedIds: ["general-materials"], deferredNeedIds: [],
+    emergencyCreditLimit: 1000, repaymentShare: 0.25,
+  };
+  const hubBefore = world.hub.accounts.operating.balance;
+
+  world.advance(10);
+  world.population.update();
+
+  assert.equal(record.emergencyDebt, 700);
+  assert.equal(record.householdCash, 300);
+  assert.equal(world.hub.accounts.operating.balance, hubBefore + 100);
+  assert.equal(world.events("population.emergencyCreditRepaid")[0].payload.amount, 100);
+  assert.equal(world.events("population.incomeReceived")[0].payload.amount, 400,
+    "the ledger records all created income, including the portion transferred to the hub");
+});
+
 test("settlements begin on staggered demand clocks instead of one regional production wave", () => {
   const state = createGameState();
   const demandTimes = Object.values(state.population.populations)

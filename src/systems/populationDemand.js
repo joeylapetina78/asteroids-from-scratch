@@ -23,11 +23,11 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260804-1934-c7f9eb5";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260804-1934-c7f9eb5";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260804-1934-c7f9eb5";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-1934-c7f9eb5";
-import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-1934-c7f9eb5";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260804-1941-8cd7846";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260804-1941-8cd7846";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260804-1941-8cd7846";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-1941-8cd7846";
+import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-1941-8cd7846";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -132,6 +132,13 @@ function createPopulationRecord(profile, now) {
     householdCashCap: profile.householdCashCap,
     incomeAmount: profile.incomeAmount,
     incomeIntervalSeconds: profile.incomeIntervalSeconds,
+    distressPolicy: profile.distressPolicy ? {
+      ...profile.distressPolicy,
+      essentialNeedIds: [...profile.distressPolicy.essentialNeedIds],
+      deferredNeedIds: [...profile.distressPolicy.deferredNeedIds],
+    } : null,
+    emergencyDebt: 0,
+    distressActive: false,
     lastIncomeAt: now,
     totalIncome: 0,
     totalSpent: 0,
@@ -149,6 +156,15 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
   POPULATION_PROFILES.forEach((profile) => {
     population.populations[profile.id] ??= createPopulationRecord(profile, now());
     const record = population.populations[profile.id];
+    if (record.distressPolicy === undefined && profile.distressPolicy) {
+      record.distressPolicy = {
+        ...profile.distressPolicy,
+        essentialNeedIds: [...profile.distressPolicy.essentialNeedIds],
+        deferredNeedIds: [...profile.distressPolicy.deferredNeedIds],
+      };
+    }
+    record.emergencyDebt ??= 0;
+    record.distressActive ??= false;
     profile.needIds.forEach((needId) => {
       record.needs[needId] ??= { needId, backlog: 0, lastDemandAt: now(), purchased: 0, consumed: 0, unmetSince: null, spent: 0 };
     });
@@ -246,26 +262,59 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
     if (now() < dueAt) return;
     populationRecord.lastIncomeAt = now();
     const before = populationRecord.householdCash;
-    populationRecord.householdCash = Math.min(populationRecord.householdCashCap, populationRecord.householdCash + populationRecord.incomeAmount);
+    let income = populationRecord.incomeAmount;
+    const policy = populationRecord.distressPolicy;
+    const hub = getHub(populationRecord);
+    const repayment = policy && hub && populationRecord.emergencyDebt > 0
+      ? Math.min(populationRecord.emergencyDebt, Math.floor(income * policy.repaymentShare))
+      : 0;
+    if (repayment > 0) {
+      income -= repayment;
+      populationRecord.emergencyDebt -= repayment;
+      hub.accounts.operating.balance += repayment;
+      emit("population.emergencyCreditRepaid", `${populationRecord.name} repaid ${repayment} cr of emergency credit to ${hubName(hub)}.`, {
+        populationId: populationRecord.id, hubInstitutionId: hub.id, amount: repayment,
+        remainingDebt: populationRecord.emergencyDebt, hubBalance: hub.accounts.operating.balance,
+      });
+    }
+    populationRecord.householdCash = Math.min(populationRecord.householdCashCap, populationRecord.householdCash + income);
     const received = populationRecord.householdCash - before;
-    const discarded = populationRecord.incomeAmount - received;
-    populationRecord.totalIncome += received;
+    const discarded = income - received;
+    const created = received + repayment;
+    populationRecord.totalIncome += created;
     populationRecord.totalDiscarded = (populationRecord.totalDiscarded ?? 0) + discarded;
 
     // Saturation is reported on the transition, not every interval. At the cap
     // this fires forever otherwise, and a recurring event that says nothing new
     // is how the ledger got flooded before.
-    const saturated = received <= 0;
+    const saturated = created <= 0;
     const wasSaturated = populationRecord.saturated === true;
     populationRecord.saturated = saturated;
     if (saturated && wasSaturated) return;
 
     emit("population.incomeReceived", saturated
       ? `${populationRecord.name} is at its household cash cap; ${discarded} cr of income was not created.`
-      : `${populationRecord.name} received ${received} cr of background income.`, {
-      populationId: populationRecord.id, amount: received, householdCash: populationRecord.householdCash,
+      : `${populationRecord.name} received ${created} cr of background income${repayment > 0 ? ` and used ${repayment} cr to repay emergency credit` : ""}.`, {
+      populationId: populationRecord.id, amount: created, householdCash: populationRecord.householdCash,
       cappedAway: discarded, totalDiscarded: populationRecord.totalDiscarded, atCap: saturated,
+      debtRepaid: repayment, remainingDebt: populationRecord.emergencyDebt,
     });
+  }
+
+  function updateDistress(populationRecord) {
+    const policy = populationRecord.distressPolicy;
+    if (!policy) return false;
+    const active = populationRecord.householdCash < policy.cashThreshold || populationRecord.emergencyDebt > 0;
+    if (active !== populationRecord.distressActive) {
+      populationRecord.distressActive = active;
+      emit(active ? "population.distressEntered" : "population.distressCleared", active
+        ? `${populationRecord.name} entered its hardship plan: essential purchases continue and nonessential demand is deferred.`
+        : `${populationRecord.name} left its hardship plan and resumed ordinary purchasing targets.`, {
+        populationId: populationRecord.id, householdCash: populationRecord.householdCash,
+        emergencyDebt: populationRecord.emergencyDebt, cashThreshold: policy.cashThreshold,
+      });
+    }
+    return active;
   }
 
   function generateDemand(populationRecord) {
@@ -275,6 +324,14 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
       const dueAt = needState.lastDemandAt + need.demandIntervalSeconds * 1000;
       if (now() < dueAt) return;
       needState.lastDemandAt = now();
+      if (populationRecord.distressActive && populationRecord.distressPolicy?.deferredNeedIds.includes(need.id)) {
+        needState.deferred = (needState.deferred ?? 0) + 1;
+        emit("population.demandDeferred", `${populationRecord.name} deferred ${need.label} under its hardship plan.`, {
+          populationId: populationRecord.id, needId: need.id, deferred: needState.deferred,
+          householdCash: populationRecord.householdCash, emergencyDebt: populationRecord.emergencyDebt,
+        });
+        return;
+      }
       if (needState.backlog >= need.maxBacklog) return;
       needState.backlog += 1;
       if (needState.unmetSince === null) needState.unmetSince = now();
@@ -336,7 +393,28 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
   function tryPurchase(populationRecord, hub, needState) {
     const need = POPULATION_NEEDS[needState.needId];
     if (!need || needState.backlog <= 0) return null;
-    if (populationRecord.householdCash < need.price) return { blocked: "population-cannot-afford" };
+    if (populationRecord.householdCash < need.price) {
+      const policy = populationRecord.distressPolicy;
+      const essential = policy?.essentialNeedIds.includes(need.id);
+      const shortfall = need.price - populationRecord.householdCash;
+      const availableCredit = Math.max(0, (policy?.emergencyCreditLimit ?? 0) - populationRecord.emergencyDebt);
+      const protectedCash = hub.protectionPolicy?.protectedCash ?? 0;
+      const hubCanAdvance = Math.max(0, (hub.accounts?.operating?.balance ?? 0) - protectedCash);
+      if (!essential || shortfall > availableCredit || shortfall > hubCanAdvance) {
+        return { blocked: "population-cannot-afford" };
+      }
+      const populationCashBefore = populationRecord.householdCash;
+      const hubCashBefore = hub.accounts.operating.balance;
+      populationRecord.householdCash += shortfall;
+      populationRecord.emergencyDebt += shortfall;
+      hub.accounts.operating.balance -= shortfall;
+      emit("population.emergencyCreditDrawn", `${hubName(hub)} advanced ${shortfall} cr to ${populationRecord.name} for ${need.label}.`, {
+        populationId: populationRecord.id, hubInstitutionId: hub.id, needId: need.id,
+        amount: shortfall, totalDebt: populationRecord.emergencyDebt,
+        populationCashBefore, populationCashAfter: populationRecord.householdCash,
+        hubCashBefore, hubCashAfter: hub.accounts.operating.balance,
+      });
+    }
 
     let consumedDescription = null;
     if (need.kind === NEED_KIND.MANUFACTURED) {
@@ -469,9 +547,12 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
         householdCash: Math.round(populationRecord.householdCash),
         totalIncome: Math.round(populationRecord.totalIncome),
         totalSpent: Math.round(populationRecord.totalSpent),
+        distressActive: populationRecord.distressActive,
+        emergencyDebt: Math.round(populationRecord.emergencyDebt),
         needs: Object.values(populationRecord.needs).map((entry) => ({
           need: POPULATION_NEEDS[entry.needId]?.label ?? entry.needId,
           backlog: entry.backlog, purchased: entry.purchased, consumed: entry.consumed,
+          deferred: entry.deferred ?? 0,
         })),
       },
     }, now());
@@ -556,6 +637,7 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
       const hub = getHub(populationRecord);
       if (!hub) return;
       accrueIncome(populationRecord);
+      updateDistress(populationRecord);
       generateDemand(populationRecord);
 
       // Two separate books of problems, because these are two separate actors.
