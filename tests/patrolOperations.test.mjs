@@ -16,6 +16,7 @@ test("settlements with owned-capacity policies receive funded, titled patrol cra
     assert.equal(operation.craft.publicIdentity.titleStatus, "active");
     assert.equal(operation.craft.publicIdentity.registrationStatus, "active");
     assert.ok(operation.craft.publicIdentity.authorizedActivities.includes("defend-jurisdiction"));
+    assert.deepEqual(Object.keys(operation.craft.components), ["propulsion", "flight-control", "sensor-suite", "weapons", "hull"]);
   });
   FIRST_REACH_SETTLEMENTS
     .filter((seed) => seed.institution.protectionPolicy?.mode === "contract")

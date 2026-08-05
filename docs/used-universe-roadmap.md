@@ -84,12 +84,22 @@ breakdowns, cargo loss, and misrepresented condition should worsen it.
    projection, degraded propulsion visibly slows the craft, and SPRC repairs the
    named system without resetting its neighbors. The old 0–6 wear field remains
    only as a compatibility projection while physical flight code is migrated.
-4. **Physical repair completion — initial path implemented.** Mining repair
-   orders name component IDs and preserve lifetime degradation and service
-   history. Freight and other craft still need this migration, followed by an
-   explicit distinction between repair, replacement, and rebuilding.
-5. **Expand craft classes.** Patrol, recovery, incursion, and gate machinery use
-   the same records with different component archetypes and service rights.
+4. **Physical repair completion — initial path implemented.** Mining and freight
+   repair orders name component IDs and preserve lifetime degradation and
+   service history. Patrol and recovery craft still need to enter the public
+   maintenance market, followed by an explicit distinction between repair,
+   replacement, and rebuilding.
+5. **Expand craft classes — initial component pass implemented.** Local and
+   contracted patrol craft, recovery craft, incursion fighters, and incursion
+   gates now use the shared records with class-specific component sets. Sorties,
+   weapons fire, damage, towing, salvage, thrust, targeting, shield load, and
+   wave fabrication wear the systems that performed the work. A failed system
+   prevents persistent patrol and recovery craft from accepting new work.
+   Persistent friendly service craft expose these records in the Observatory;
+   hostile machinery retains them only for its physical lifetime. Remaining
+   work is public maintenance matching for patrol and recovery providers,
+   component-driven symptoms beyond propulsion, and persistent hostile wrecks
+   that carry their component history into salvage.
 6. **Used assets and reliability.** Persist ownership and service history through
    resale, wreckage, salvage, recycling, insurance, lending, and reputation.
 

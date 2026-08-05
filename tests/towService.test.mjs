@@ -66,6 +66,18 @@ test("Nell is a recovery actor through her archetype, not a tow-shaped module", 
     "this firm does not restate what every recovery outfit already knows");
 });
 
+test("Blue Hook carries persistent recovery systems that wear through actual towing", () => {
+  const world = createWorld();
+  assert.deepEqual(Object.keys(world.state.towing.vehicle.components), ["propulsion", "tow-coupling", "winch", "navigation", "hull"]);
+  const request = requestRecovery(world);
+  world.state.ledger.recordEvent("npc.routeCompleted", {
+    npcId: world.ship.id, towRequestId: request.id, siteId: request.destinationSiteId,
+  }, { visible: false });
+  world.manager.update();
+  assert.ok(world.state.towing.vehicle.components.winch.condition.wear > 0);
+  assert.ok(world.state.towing.vehicle.components.propulsion.condition.lifetimeDegradation > 0);
+});
+
 test("her quote is her own cost plus her own margin, and it explains itself", () => {
   const world = createWorld();
   const request = requestRecovery(world);

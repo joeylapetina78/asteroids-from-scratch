@@ -1,7 +1,7 @@
-import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260804-2058-2977c87";
-import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260804-2058-2977c87";
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260804-2058-2977c87";
-import { hashNumbers } from "./random.js?v=fresh-20260804-2058-2977c87";
+import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260804-2105-207b171";
+import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260804-2105-207b171";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260804-2105-207b171";
+import { hashNumbers } from "./random.js?v=fresh-20260804-2105-207b171";
 
 const PORTAL_WAVE_SIZES = [5, 10, 30];
 const BASE_WAVE_SECONDS = 70;
@@ -37,6 +37,7 @@ export function createIncursionField() {
       this.portals.push(portal);
       const portalPacing = getPortalPacing(portal, pacing);
       const spawned = spawnPortalWave(portal, getPacedWaveSize(0, portalPacing), 0);
+      portal.recordWaveFabrication(spawned.length);
       portal.waveCount = 1;
       portal.nextWaveIn = getNextWaveSeconds(portal, portalPacing);
       portal.isWaveHeld = false;
@@ -92,6 +93,7 @@ export function createIncursionField() {
         const portalPacing = getPortalPacing(portal, pacing);
         const waveSize = getPacedWaveSize(portal.waveCount, portalPacing);
         const wave = spawnPortalWave(portal, waveSize, portal.waveCount);
+        portal.recordWaveFabrication(wave.length);
         portal.isWaveHeld = false;
         spawned.push(...wave);
         portal.waveCount += 1;

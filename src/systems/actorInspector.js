@@ -4,14 +4,14 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260804-2058-2977c87";
-import { collectIntentions } from "./intentions.js?v=fresh-20260804-2058-2977c87";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260804-2058-2977c87";
-import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260804-2058-2977c87";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-2058-2977c87";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260804-2058-2977c87";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260804-2058-2977c87";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260804-2058-2977c87";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260804-2105-207b171";
+import { collectIntentions } from "./intentions.js?v=fresh-20260804-2105-207b171";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260804-2105-207b171";
+import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260804-2105-207b171";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-2105-207b171";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260804-2105-207b171";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260804-2105-207b171";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260804-2105-207b171";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
@@ -105,6 +105,20 @@ export function inspectActor(state, actorId, { game = null } = {}) {
       pendingIssue: npc?.pendingWearIssue ?? null,
       issueCount: shipInstitution.issueCount ?? 0,
       components: Object.values(shipInstitution.components ?? {}).map((component) => ({
+        id: component.id, label: component.label, stage: component.condition?.stage ?? "healthy",
+        currentCondition: round2(component.condition?.currentCondition),
+        maxRecoverableCondition: round2(component.condition?.maxRecoverableCondition),
+        lifetimeDegradation: round2(component.condition?.lifetimeDegradation),
+        serviceCount: component.condition?.serviceCount ?? 0,
+      })),
+    };
+  } else if (diagnostic?.detail?.components) {
+    view.condition = {
+      wear: round2(diagnostic.detail.aggregateWear ?? Math.max(0, ...Object.values(diagnostic.detail.components).map((component) => component.condition?.wear ?? 0))),
+      maintenanceStatus: diagnostic.state,
+      pendingIssue: null,
+      issueCount: 0,
+      components: Object.values(diagnostic.detail.components).map((component) => ({
         id: component.id, label: component.label, stage: component.condition?.stage ?? "healthy",
         currentCondition: round2(component.condition?.currentCondition),
         maxRecoverableCondition: round2(component.condition?.maxRecoverableCondition),

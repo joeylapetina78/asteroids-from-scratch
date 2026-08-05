@@ -1,3 +1,12 @@
+import { applyCraftUse, ensureCraftComponents } from "../systems/componentCondition.js?v=fresh-20260804-2105-207b171";
+
+const PORTAL_COMPONENTS = Object.freeze([
+  { id: "rift-core", label: "Rift Core", capabilityIds: ["hold-gate"] },
+  { id: "wave-fabricator", label: "Wave Fabricator", capabilityIds: ["fabricate-guard"] },
+  { id: "shield-array", label: "Shield Array", capabilityIds: ["shield-gate"] },
+  { id: "anchor", label: "Spatial Anchor", capabilityIds: ["stabilize-gate"] },
+]);
+
 const PORTAL_RADIUS = 56;
 const PORTAL_MAX_HEALTH = 220;
 // The guard shield absorbs most damage but never all of it. A binary shield
@@ -20,6 +29,7 @@ export class InvaderPortal {
     this.devices = [];
     this.isWaveHeld = false;
     this.isAlive = true;
+    ensureCraftComponents(this, PORTAL_COMPONENTS);
   }
 
   update(deltaSeconds, livingGuards) {
@@ -29,6 +39,15 @@ export class InvaderPortal {
     this.devices.forEach((device) => {
       device.pulse = (device.pulse ?? 0) + deltaSeconds;
     });
+    applyCraftUse(this, {
+      "rift-core": deltaSeconds * 0.000012,
+      anchor: deltaSeconds * 0.000008,
+      "shield-array": this.isShielded ? deltaSeconds * 0.00002 : 0,
+    });
+  }
+
+  recordWaveFabrication(count) {
+    applyCraftUse(this, { "wave-fabricator": Math.max(0, count) * 0.0015, "rift-core": Math.max(0, count) * 0.00035 });
   }
 
   get isShielded() {
@@ -54,6 +73,7 @@ export class InvaderPortal {
     const appliedAmount = shielded ? amount * PORTAL_SHIELD_CHIP_FACTOR : amount;
 
     this.health = Math.max(0, this.health - appliedAmount);
+    applyCraftUse(this, { "rift-core": appliedAmount / this.maxHealth, "shield-array": shielded ? appliedAmount / this.maxHealth * 0.5 : 0 });
     if (this.health === 0) {
       this.isAlive = false;
     }

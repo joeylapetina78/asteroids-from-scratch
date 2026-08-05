@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { FlightFighter } from "../src/entities/FlightFighter.js";
+import { InvaderPortal } from "../src/entities/InvaderPortal.js";
 import { MiningWorkerShip } from "../src/entities/MiningWorkerShip.js";
 import { selectIncursionTarget } from "../src/systems/incursionTargeting.js";
 
@@ -36,6 +37,17 @@ test("a fighter acquires an NPC economic target and tags its shot with custody",
   });
   assert.equal(fighter.targetId, "haul-one");
   assert.equal(fighter.consumeShots()[0]?.targetId, "haul-one");
+  assert.ok(fighter.components.weapon.condition.wear > 0);
+  fighter.damage(32);
+  assert.ok(fighter.components.hull.condition.currentCondition < fighter.components.hull.condition.maxRecoverableCondition);
+});
+
+test("an incursion gate is persistent machinery while it remains in the world", () => {
+  const portal = new InvaderPortal({ id: "gate", x: 0, y: 0, seed: 7 });
+  portal.recordWaveFabrication(5);
+  portal.damage(22);
+  assert.ok(portal.components["wave-fabricator"].condition.wear > 0);
+  assert.ok(portal.components["rift-core"].condition.lifetimeDegradation > 0);
 });
 
 test("mining craft now have a real weapon-damage lifecycle", () => {

@@ -1,8 +1,32 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-2058-2977c87";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-2058-2977c87";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2058-2977c87";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-2105-207b171";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-2105-207b171";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2105-207b171";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260804-2105-207b171";
 
 const PATROL_OPENING_BALANCE = 1800;
+const PATROL_COMPONENTS = Object.freeze([
+  { id: "propulsion", label: "Patrol Propulsion", capabilityIds: ["intercept"] },
+  { id: "flight-control", label: "Flight Control", capabilityIds: ["maneuver"] },
+  { id: "sensor-suite", label: "Sensor Suite", capabilityIds: ["inspect", "track-threat"] },
+  { id: "weapons", label: "Weapons", capabilityIds: ["interdict-threat"] },
+  { id: "hull", label: "Hull Structure", capabilityIds: ["survive-combat"] },
+]);
+
+function ensurePatrolCraftCondition(craft) {
+  ensureCraftComponents(craft, PATROL_COMPONENTS);
+  return craft;
+}
+
+function applyPatrolSortieWear(craft, hullBefore, hullAfter, now) {
+  const damageFraction = Math.max(0, (hullBefore - hullAfter) / Math.max(1, craft.maxHull));
+  return applyCraftUse(craft, {
+    propulsion: 0.025,
+    "flight-control": 0.018,
+    "sensor-suite": 0.012,
+    weapons: 0.03,
+    hull: damageFraction,
+  }, { at: now });
+}
 
 export function createInitialPatrolOperations(now = Date.now()) {
   return Object.fromEntries(FIRST_REACH_SETTLEMENTS
@@ -38,6 +62,7 @@ export function createInitialPatrolOperations(now = Date.now()) {
       maxHull: 150,
       createdAt: now,
     };
+    ensurePatrolCraftCondition(craft);
     craft.publicIdentity = createCommercialCraftPublicIdentity({
       ship: craft,
       owner: institution,
@@ -70,6 +95,7 @@ export function ensurePatrolOperations(state, now = Date.now()) {
     operation.craft.hull ??= operation.craft.maxHull;
     operation.craft.status ??= "available";
     operation.craft.publicIdentity ??= seed.craft.publicIdentity;
+    ensurePatrolCraftCondition(operation.craft);
     if (state.logistics?.institutions) {
       state.logistics.institutions[operation.institution.id] ??= operation.institution;
       state.logistics.institutions[operation.controller.id] ??= operation.controller;
@@ -80,7 +106,8 @@ export function ensurePatrolOperations(state, now = Date.now()) {
 
 export function getAvailablePatrolCraft(state, siteId) {
   const craft = ensurePatrolOperations(state)[siteId]?.craft;
-  return craft?.status === "available" && craft.hull > 0 ? craft : null;
+  const worst = craft ? getWorstComponent(craft) : null;
+  return craft?.status === "available" && craft.hull > 0 && worst?.condition?.stage !== "failed" ? craft : null;
 }
 
 export function markPatrolCraftStatus(state, siteId, status) {
@@ -107,7 +134,7 @@ export function recordPatrolCraftDiagnostic(state, siteId, now = Date.now(), pat
     state: diagnosticState,
     summary: craft.status === "available" ? `On station at ${siteId}` : `Watch craft is ${craft.status}`,
     locationSiteId: craft.siteId ?? siteId,
-    detail: { hull: craft.hull, maxHull: craft.maxHull, ownerInstitutionId: craft.ownerInstitutionId, referenceId: craft.referenceId },
+    detail: { hull: craft.hull, maxHull: craft.maxHull, ownerInstitutionId: craft.ownerInstitutionId, referenceId: craft.referenceId, components: craft.components },
     ...patch,
   }, now);
 }
@@ -146,7 +173,9 @@ export function startInternalProtectionResponse(state, request, now = Date.now()
 export function completeInternalProtectionResponse(state, request, { hull = null, now = Date.now() } = {}) {
   const craft = ensurePatrolOperations(state)[request?.siteId]?.craft;
   if (!request || request.status !== "active" || !craft) return null;
+  const hullBefore = craft.hull;
   if (hull != null) craft.hull = Math.max(0, hull);
+  applyPatrolSortieWear(craft, hullBefore, craft.hull, now);
   craft.status = "returning";
   request.status = "fulfilled";
   request.paidAmount = 0;
@@ -162,7 +191,9 @@ export function completeInternalProtectionResponse(state, request, { hull = null
 export function failInternalProtectionResponse(state, request, { hull = 0, reason = "craft-destroyed", now = Date.now() } = {}) {
   const craft = ensurePatrolOperations(state)[request?.siteId]?.craft;
   if (!request || !["covered-internally", "active"].includes(request.status) || !craft) return null;
+  const hullBefore = craft.hull;
   craft.hull = Math.max(0, hull);
+  applyPatrolSortieWear(craft, hullBefore, craft.hull, now);
   craft.status = craft.hull > 0 ? "returning" : "destroyed";
   request.status = "failed";
   request.failureReason = reason;
@@ -213,6 +244,8 @@ export function servicePatrolCraft(state, now = Date.now()) {
     craft.destroyedAt = null;
     craft.replacementStartedAt = null;
     craft.replacementCount = (craft.replacementCount ?? 0) + 1;
+    craft.components = {};
+    ensurePatrolCraftCondition(craft);
     replaced.push(siteId);
     recordPatrolCraftDiagnostic(state, siteId, now, { summary: `Replacement watch craft on station at ${siteId}` });
     state.ledger?.recordEvent("patrol.craftReplaced", {
@@ -235,4 +268,12 @@ export function finishInternalProtectionReturn(state, request, hull, now = Date.
     refs: { contractIds: [], targetIds: [] },
   });
   return craft;
+}
+
+export function servicePatrolCraftComponent(state, siteId, { componentId = null, repairOrderId = null, now = Date.now() } = {}) {
+  const craft = ensurePatrolOperations(state, now)[siteId]?.craft;
+  if (!craft) return null;
+  const component = componentId ? craft.components?.[componentId] : getWorstComponent(craft);
+  if (!component) return null;
+  return serviceCraftComponent(craft, component.id, { at: now, providerId: "sprc", repairOrderId });
 }

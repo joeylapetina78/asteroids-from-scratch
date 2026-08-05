@@ -1,7 +1,8 @@
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-2058-2977c87";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-2058-2977c87";
-import { evaluateSupplierAsk, getSpendable } from "./valuation.js?v=fresh-20260804-2058-2977c87";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2058-2977c87";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-2105-207b171";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-2105-207b171";
+import { evaluateSupplierAsk, getSpendable } from "./valuation.js?v=fresh-20260804-2105-207b171";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2105-207b171";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260804-2105-207b171";
 
 const PROVIDER_SEEDS = Object.freeze([
   {
@@ -28,12 +29,37 @@ const PROVIDER_SEEDS = Object.freeze([
     },
   },
 ]);
+const PROTECTION_COMPONENTS = Object.freeze([
+  { id: "propulsion", label: "Patrol Propulsion", capabilityIds: ["intercept"] },
+  { id: "flight-control", label: "Flight Control", capabilityIds: ["maneuver"] },
+  { id: "sensor-suite", label: "Sensor Suite", capabilityIds: ["track-threat"] },
+  { id: "weapons", label: "Weapons", capabilityIds: ["interdict-threat"] },
+  { id: "hull", label: "Hull Structure", capabilityIds: ["survive-combat"] },
+]);
+
+function ensureProtectionCondition(craft) {
+  ensureCraftComponents(craft, PROTECTION_COMPONENTS);
+  return craft;
+}
+
+function applyProtectionSortieWear(craft, hullBefore, hullAfter, travelDistance, now) {
+  const distanceWear = Math.max(0, travelDistance ?? 0) / 250000;
+  const damageFraction = Math.max(0, (hullBefore - hullAfter) / Math.max(1, craft.maxHull));
+  return applyCraftUse(craft, {
+    propulsion: 0.018 + distanceWear,
+    "flight-control": 0.016 + distanceWear * 0.5,
+    "sensor-suite": 0.012,
+    weapons: 0.03,
+    hull: damageFraction,
+  }, { at: now });
+}
 
 export function createInitialProtectionProviders(now = Date.now()) {
   return Object.fromEntries(PROVIDER_SEEDS.map((seed) => {
     const institution = structuredClone(seed.institution);
     const controller = structuredClone(seed.controller);
     const craft = { ...structuredClone(seed.craft), createdAt: now };
+    ensureProtectionCondition(craft);
     craft.publicIdentity = createCommercialCraftPublicIdentity({
       ship: craft, owner: institution, operator: controller,
       registeredHubIds: [institution.siteId],
@@ -46,6 +72,7 @@ export function createInitialProtectionProviders(now = Date.now()) {
 export function ensureProtectionProviders(state, now = Date.now()) {
   state.protectionProviders ??= createInitialProtectionProviders(now);
   Object.values(state.protectionProviders).forEach((provider) => {
+    ensureProtectionCondition(provider.craft);
     if (!state.logistics?.institutions) return;
     state.logistics.institutions[provider.institution.id] ??= provider.institution;
     state.logistics.institutions[provider.controller.id] ??= provider.controller;
@@ -71,7 +98,7 @@ function recordProtectionCraftDiagnostic(state, provider, now = Date.now(), patc
     state: diagnosticState,
     summary: craft.status === "available" ? `Available at ${provider.institution.siteId}` : `Protection craft is ${craft.status}`,
     locationSiteId: craft.siteId ?? provider.institution.siteId,
-    detail: { hull: craft.hull, maxHull: craft.maxHull, ownerInstitutionId: craft.ownerInstitutionId, referenceId: craft.referenceId },
+    detail: { hull: craft.hull, maxHull: craft.maxHull, ownerInstitutionId: craft.ownerInstitutionId, referenceId: craft.referenceId, components: craft.components },
     ...patch,
   }, now);
 }
@@ -87,7 +114,7 @@ export function quoteProtectionRequest(state, sites, provider, request) {
     mobilization: policy.mobilizationCost,
     travel: Number.isFinite(travelDistance) ? travelDistance * policy.operatingCostPerDistance : Infinity,
     risk: request.severity * policy.riskCostAtMaximum,
-    maintenance: policy.routineMaintenanceCost + (1 - provider.craft.hull / provider.craft.maxHull) * 300,
+    maintenance: policy.routineMaintenanceCost + (provider.craft.aggregateWear ?? 0) * 300 + (1 - provider.craft.hull / provider.craft.maxHull) * 300,
   };
   const relationship = getRelationshipProjection(state, { fromId: provider.institution.id, toId: request.issuerInstitutionId });
   const valuation = evaluateSupplierAsk({
@@ -95,8 +122,10 @@ export function quoteProtectionRequest(state, sites, provider, request) {
     traits: provider.controller.traits, policy, relationship,
   });
   const operatingCash = getSpendable(provider.institution.accounts.operating, policy);
+  const worstComponent = getWorstComponent(provider.craft);
   const eligible = provider.craft.status === "available"
     && provider.craft.hull > 0
+    && worstComponent?.condition?.stage !== "failed"
     && Number.isFinite(travelDistance)
     && operatingCash >= valuation.minAcceptablePrice
     && valuation.acceptable;
@@ -208,7 +237,9 @@ export function completeProtectionContract(state, requestId, { hull = null, now 
   buyer.accounts.operating.committed = Math.max(0, (buyer.accounts.operating.committed ?? 0) - payment);
   buyer.accounts.operating.balance = Math.max(0, (buyer.accounts.operating.balance ?? 0) - payment);
   provider.institution.accounts.operating.balance += payment;
+  const hullBefore = provider.craft.hull;
   if (hull != null) provider.craft.hull = Math.max(0, hull);
+  applyProtectionSortieWear(provider.craft, hullBefore, provider.craft.hull, request.bids?.find((bid) => bid.providerInstitutionId === provider.institution.id)?.travelDistance, now);
   provider.craft.status = "returning";
   recordProtectionCraftDiagnostic(state, provider, now, {
     summary: `Returning after protecting ${request.siteId}`,
@@ -230,7 +261,9 @@ export function failProtectionContract(state, requestId, { hull = 0, reason = "c
   const buyer = request && state.logistics?.institutions?.[request.issuerInstitutionId];
   if (!request || !["contracted", "active"].includes(request.status) || !provider) return null;
   if (buyer?.accounts?.operating) buyer.accounts.operating.committed = Math.max(0, (buyer.accounts.operating.committed ?? 0) - (request.agreedPayment ?? 0));
+  const hullBefore = provider.craft.hull;
   provider.craft.hull = Math.max(0, hull);
+  applyProtectionSortieWear(provider.craft, hullBefore, provider.craft.hull, request.bids?.find((bid) => bid.providerInstitutionId === provider.institution.id)?.travelDistance, now);
   provider.craft.status = provider.craft.hull > 0 ? "returning" : "destroyed";
   provider.craft.activeRequestId = provider.craft.hull > 0 ? request.id : null;
   request.status = "failed";
@@ -309,6 +342,8 @@ export function serviceProtectionProviders(state, now = Date.now()) {
       craft.destroyedAt = null;
       craft.replacementStartedAt = null;
       craft.replacementCount = (craft.replacementCount ?? 0) + 1;
+      craft.components = {};
+      ensureProtectionCondition(craft);
       serviced.push({ providerInstitutionId: institution.id, kind: "replacement" });
       recordProtectionCraftDiagnostic(state, provider, now, { summary: `Replacement hull commissioned; available at ${institution.siteId}` });
       state.ledger?.recordEvent("protection.craftReplaced", {
@@ -329,6 +364,8 @@ export function serviceProtectionProviders(state, now = Date.now()) {
     account.balance -= cost;
     account.transactions?.push({ id: `PSC-REP-${now}`, at: now, type: "maintenance-expense", amount: -cost, balance: account.balance, referenceId: craft.id });
     craft.hull = craft.maxHull;
+    const component = getWorstComponent(craft);
+    if (component) serviceCraftComponent(craft, component.id, { at: now, providerId: institution.id, repairOrderId: `PSC-REP-${now}` });
     craft.repairStartedAt = null;
     serviced.push({ providerInstitutionId: institution.id, kind: "repair" });
     recordProtectionCraftDiagnostic(state, provider, now, { summary: `Repaired and available at ${institution.siteId}` });

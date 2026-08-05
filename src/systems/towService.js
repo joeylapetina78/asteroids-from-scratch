@@ -1,14 +1,28 @@
-import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260804-2058-2977c87";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260804-2058-2977c87";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260804-2058-2977c87";
-import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260804-2058-2977c87";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260804-2058-2977c87";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-2058-2977c87";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260804-2058-2977c87";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260804-2058-2977c87";
-import { authorizeWreckSalvage, completeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260804-2058-2977c87";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260804-2105-207b171";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260804-2105-207b171";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260804-2105-207b171";
+import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260804-2105-207b171";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260804-2105-207b171";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-2105-207b171";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260804-2105-207b171";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260804-2105-207b171";
+import { authorizeWreckSalvage, completeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260804-2105-207b171";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent } from "./componentCondition.js?v=fresh-20260804-2105-207b171";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2105-207b171";
 
 const REPAIR_SITE_ID = "scrap-porch";
+const RECOVERY_COMPONENTS = Object.freeze([
+  { id: "propulsion", label: "Recovery Propulsion", capabilityIds: ["travel"] },
+  { id: "tow-coupling", label: "Tow Coupling", capabilityIds: ["attach-casualty"] },
+  { id: "winch", label: "Winch", capabilityIds: ["tow-load"] },
+  { id: "navigation", label: "Recovery Navigation", capabilityIds: ["route-recovery"] },
+  { id: "hull", label: "Hull Structure", capabilityIds: ["survive-recovery"] },
+]);
+
+function ensureRecoveryCondition(vehicle) {
+  ensureCraftComponents(vehicle, RECOVERY_COMPONENTS);
+  return vehicle;
+}
 
 // Recovery pricing is no longer written here at all.
 //
@@ -63,7 +77,38 @@ export function ensureTowServiceState(state, now = Date.now()) {
   state.towing.requests ??= {};
   state.towing.counters ??= { request: 0, transaction: 0 };
   state.towing.lastLedgerEventId ??= 0;
+  ensureRecoveryCondition(state.towing.vehicle);
+  if (state.logistics?.institutions) {
+    state.logistics.institutions[state.towing.institution.id] ??= state.towing.institution;
+    state.logistics.institutions[state.towing.controller.id] ??= state.towing.controller;
+  }
+  recordRecoveryDiagnostic(state, now);
   return state.towing;
+}
+
+function recordRecoveryDiagnostic(state, now = Date.now()) {
+  const towing = state.towing;
+  if (!towing?.vehicle) return null;
+  return recordDiagnostic(state, towing.vehicle.id, {
+    actorName: towing.vehicle.name,
+    actorKind: "ship",
+    controllerId: towing.institution.id,
+    state: towing.vehicle.status === "available" ? DIAGNOSTIC_STATE.FREE : DIAGNOSTIC_STATE.WORKING,
+    summary: towing.vehicle.status === "available" ? "Available for recovery work" : `Recovery craft is ${towing.vehicle.status}`,
+    locationSiteId: towing.vehicle.siteId ?? REPAIR_SITE_ID,
+    detail: { referenceId: towing.vehicle.referenceId, components: towing.vehicle.components },
+  }, now);
+}
+
+function applyRecoveryWork(towing, distance, now) {
+  const distanceWear = Math.max(0, distance ?? 0) / 300000;
+  return applyCraftUse(towing.vehicle, {
+    propulsion: 0.018 + distanceWear,
+    navigation: 0.012 + distanceWear * 0.4,
+    "tow-coupling": 0.018,
+    winch: 0.028 + distanceWear * 0.6,
+    hull: 0.008 + distanceWear * 0.2,
+  }, { at: now });
 }
 
 export function createTowServiceManager({ state, ships = [], destinations = [], now = () => Date.now(), onWreckRecovered = () => {} }) {
@@ -87,6 +132,7 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
 
   function claimNextSalvageJob() {
     if (towing.vehicle.status !== "available") return null;
+    if (getWorstComponent(towing.vehicle)?.condition?.stage === "failed") return null;
     const contract = Object.values(state.contracts?.records ?? {}).find((candidate) =>
       candidate.type === "wreck-salvage" && candidate.status === "offered");
     if (!contract) return null;
@@ -104,8 +150,9 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
     payer.committed = (payer.committed ?? 0) + reward;
     const distance = Math.hypot(wreck.position.x - (network.destinations[contract.terms.destinationSiteId]?.position?.x ?? 0), wreck.position.y - (network.destinations[contract.terms.destinationSiteId]?.position?.y ?? 0));
     const id = `SALVAGE-TOW-${String(++towing.counters.request).padStart(4, "0")}`;
-    const request = towing.requests[id] = { id, purpose: "authorized-wreck-salvage", wreckId: wreck.id, contractId: contract.id, destinationSiteId: contract.terms.destinationSiteId, fee: reward, committedPayment: reward, status: "recovering-wreck", startedAt: now(), completesAt: now() + Math.max(12000, distance / 85 * 1000) };
+    const request = towing.requests[id] = { id, purpose: "authorized-wreck-salvage", wreckId: wreck.id, contractId: contract.id, destinationSiteId: contract.terms.destinationSiteId, routeDistance: distance, fee: reward, committedPayment: reward, status: "recovering-wreck", startedAt: now(), completesAt: now() + Math.max(12000, distance / 85 * 1000) };
     towing.vehicle.status = "recovering-wreck";
+    recordRecoveryDiagnostic(state, now());
     state.ledger.recordEvent("towService.salvageAccepted", { institutionId: towing.institution.id, actorInstitutionId: towing.controller.id, vehicleId: towing.vehicle.id, requestId: id, contractId: contract.id, wreckId: wreck.id, fee: reward }, { visible: true, message: `${towing.controller.name} accepted the recovery of ${wreck.shipName}; ${towing.vehicle.name} is bringing the titled wreck to Scrap Porch.` });
     return request;
   }
@@ -127,6 +174,8 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
       request.providerTransactionId = providerTransaction.id;
       request.committedPayment = 0;
       towing.vehicle.status = "available";
+      applyRecoveryWork(towing, request.routeDistance, now());
+      recordRecoveryDiagnostic(state, now());
       onWreckRecovered(completed);
       state.ledger.recordEvent("towService.salvageCompleted", { institutionId: towing.institution.id, actorInstitutionId: towing.controller.id, vehicleId: towing.vehicle.id, requestId: request.id, contractId: contract.id, wreckId: completed.id, fee: request.fee, salvageYield: completed.salvageYield }, { visible: true, message: `${towing.controller.name} delivered ${completed.shipName} to Sal; First Reach Recovery earned ${request.fee} cr and SPRC received the recovered stock.` });
     });
@@ -161,7 +210,7 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
         callout: policy.calloutCost ?? 0,
         travel: route.distance * (policy.operatingCostPerDistance ?? 0),
         // This run consumes wear/maximumWear of a service cycle.
-        maintenance: maximumWear > 0 ? (wear / maximumWear) * serviceCost : 0,
+        maintenance: maximumWear > 0 ? ((wear / maximumWear) + (towing.vehicle.aggregateWear ?? 0)) * serviceCost : 0,
       },
       traits: getActorTraits(state, towing.institution.id),
       policy,
@@ -178,6 +227,8 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
     if (!hauler || !ship) return null;
     const existing = Object.values(towing.requests).find((request) => request.haulerId === issue.npcId && ["dispatched", "attached"].includes(request.status));
     if (existing) return existing;
+    if (towing.vehicle.status !== "available") return null;
+    if (getWorstComponent(towing.vehicle)?.condition?.stage === "failed") return blockRequest(issue, "recovery-craft-needs-service");
     const carrier = state.logistics.institutions[hauler.carrierInstitutionId];
     const shipment = issue.shipmentId ? state.logistics.shipments[issue.shipmentId] : null;
     const destinationSiteId = options.destinationSiteId ?? shipment?.destinationSiteId ?? REPAIR_SITE_ID;
@@ -190,9 +241,10 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
     const securedReceivable = shipment?.payment ?? 0;
     if (account.balance + securedReceivable - (account.committed ?? 0) - fee < protectedCash) return blockRequest(issue, "carrier-cannot-protect-operating-cash", { fee, balance: account.balance, protectedCash, securedReceivable });
     const id = `TOW-REQ-${String(++towing.counters.request).padStart(4, "0")}`;
-    const request = towing.requests[id] = { id, haulerId: issue.npcId, carrierInstitutionId: carrier.id, shipInstitutionId: hauler.shipInstitutionId, issue: { ...issue }, purpose: options.purpose ?? (shipment ? "preserve-loaded-delivery" : "service-return"), parentRequestId: options.parentRequestId ?? null, originSiteId: hauler.currentSiteId, destinationSiteId, shipmentId: shipment?.id ?? null, securedReceivable, fee, committedPayment: fee, quote: { costToServe: Math.round(quote.metrics.costToServe), floor: quote.minAcceptablePrice, reasons: quote.reasons }, status: "dispatched", createdAt: now(), completedAt: null, followupRequestId: null };
+    const request = towing.requests[id] = { id, haulerId: issue.npcId, carrierInstitutionId: carrier.id, shipInstitutionId: hauler.shipInstitutionId, issue: { ...issue }, purpose: options.purpose ?? (shipment ? "preserve-loaded-delivery" : "service-return"), parentRequestId: options.parentRequestId ?? null, originSiteId: hauler.currentSiteId, destinationSiteId, routeDistance: route.distance, shipmentId: shipment?.id ?? null, securedReceivable, fee, committedPayment: fee, quote: { costToServe: Math.round(quote.metrics.costToServe), floor: quote.minAcceptablePrice, reasons: quote.reasons }, status: "dispatched", createdAt: now(), completedAt: null, followupRequestId: null };
     account.committed = (account.committed ?? 0) + fee;
     towing.vehicle.status = "dispatched";
+    recordRecoveryDiagnostic(state, now());
     ship.assignTow({ requestId: id, destinationSiteId, route: buildPhysicalTransportationRoute(network, route) });
     publish("towService.dispatched", request, `${towing.controller.name} dispatched ${towing.vehicle.name} for ${ship.name}; ${carrier.name} approved a ${fee} cr recovery quote to ${network.destinations[destinationSiteId]?.name ?? destinationSiteId}.`);
     return request;
@@ -212,6 +264,8 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
     request.completedAt = now();
     ship?.clearTow();
     towing.vehicle.status = "available";
+    applyRecoveryWork(towing, request.routeDistance, now());
+    recordRecoveryDiagnostic(state, now());
     if (request.shipmentId && siteId !== REPAIR_SITE_ID) {
       request.status = "delivered-cargo";
       publish("towService.cargoPreserved", request, `${towing.controller.name} recovered ${ship?.name ?? request.haulerId} to ${network.destinations[siteId]?.name ?? siteId}; its loaded contract can unload before repair recovery.`);

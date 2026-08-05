@@ -1,5 +1,14 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260804-2058-2977c87";
-import { selectIncursionTarget } from "../systems/incursionTargeting.js?v=fresh-20260804-2058-2977c87";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260804-2105-207b171";
+import { selectIncursionTarget } from "../systems/incursionTargeting.js?v=fresh-20260804-2105-207b171";
+import { applyCraftUse, ensureCraftComponents } from "../systems/componentCondition.js?v=fresh-20260804-2105-207b171";
+
+const FIGHTER_COMPONENTS = Object.freeze([
+  { id: "propulsion", label: "Rift Propulsion", capabilityIds: ["flight"] },
+  { id: "flight-control", label: "Rift Flight Control", capabilityIds: ["maneuver"] },
+  { id: "targeting", label: "Targeting Array", capabilityIds: ["track-target"] },
+  { id: "weapon", label: "Rift Weapon", capabilityIds: ["attack"] },
+  { id: "hull", label: "Bound Hull", capabilityIds: ["survive-combat"] },
+]);
 
 const FIGHTER_FLIGHT = {
   rotationSpeed: 2.55,
@@ -34,6 +43,7 @@ export class FlightFighter {
     this.fireCooldown = 0.35 + (seed % 7) * 0.08;
     this.pendingShots = [];
     this.pulse = seed * 0.02;
+    ensureCraftComponents(this, FIGHTER_COMPONENTS);
   }
 
   update(deltaSeconds, world) {
@@ -63,10 +73,16 @@ export class FlightFighter {
       },
       FIGHTER_FLIGHT,
     );
+    applyCraftUse(this, {
+      propulsion: shouldThrust ? deltaSeconds * 0.000035 : 0,
+      "flight-control": Math.abs(angleError) > 0.08 ? deltaSeconds * 0.000022 : 0,
+      targeting: isEngaging ? deltaSeconds * 0.000018 : 0,
+    });
 
     if (isEngaging && distanceToShip <= FIGHTER_FIRE_RANGE && Math.abs(angleError) <= FIGHTER_FIRE_ARC && this.fireCooldown === 0) {
       this.fireCooldown = FIGHTER_FIRE_COOLDOWN;
       this.pendingShots.push(this.createShot(target));
+      applyCraftUse(this, { weapon: 0.0009, targeting: 0.00015 });
     }
   }
 
@@ -108,7 +124,9 @@ export class FlightFighter {
   }
 
   damage(amount) {
+    const healthBefore = this.health;
     this.health = Math.max(0, this.health - amount);
+    applyCraftUse(this, { hull: Math.max(0, healthBefore - this.health) / this.maxHealth });
     if (this.health === 0) {
       this.isAlive = false;
     }
