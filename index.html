@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260804-2105-207b171" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260804-2128-90ed81d" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260804-2105-207b171</span>
+      <span class="build-tag">build: fresh-20260804-2128-90ed81d</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -94,6 +94,7 @@
           <button type="button" class="observatory-tab" data-observatory-tab="ledger">Ledger</button>
           <button type="button" class="observatory-tab" data-observatory-tab="stats">Stats</button>
           <button type="button" class="observatory-tab" data-observatory-tab="population">Population</button>
+          <button type="button" class="observatory-tab" data-observatory-tab="wear-lab">Wear Lab</button>
         </nav>
         <input id="observatory-search" type="search" placeholder="filter by name, state, blocker…" spellcheck="false" />
         <span id="observatory-count" class="observatory-count"></span>
@@ -224,6 +225,26 @@
           <h2>Population</h2>
           <ol id="ledger-stream-population" class="ledger-stream-list ledger-stream-population"></ol>
         </section>
+      </div>
+      <div id="observatory-pane-wear-lab" class="observatory-pane observatory-pane-wear-lab" hidden>
+        <header class="wear-lab-head">
+          <div>
+            <h2>Player panel wear lab</h2>
+            <p>Inspect the real installed panels. Tracked panels show persistent condition; stage controls change the live ship immediately.</p>
+          </div>
+          <label>Wear cadence
+            <select id="wear-lab-scale" aria-label="Player condition wear cadence">
+              <option value="0">paused</option>
+              <option value="1" selected>1× normal</option>
+              <option value="10">10×</option>
+              <option value="60">60× test</option>
+            </select>
+          </label>
+        </header>
+        <div class="wear-lab-layout">
+          <nav id="wear-lab-panel-list" class="wear-lab-panel-list" aria-label="Player panels"></nav>
+          <section id="wear-lab-detail" class="wear-lab-detail"></section>
+        </div>
       </div>
     </div>
 
@@ -924,6 +945,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260804-2105-207b171"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260804-2128-90ed81d"></script>
   </body>
 </html>

@@ -3140,6 +3140,22 @@ body.is-viewport-fullscreen .viewport-panel #game {
 .diag-alt-why { grid-column: 1 / -1; color: #7f8da2; font-size: 0.68rem; }
 .diag-alt.is-chosen .diag-alt-score { color: #6fe3a0; }
 
+.condition-card { display: grid; gap: 8px; }
+.condition-meter-list { display: grid; gap: 7px; }
+.condition-meter { display: grid; gap: 3px; }
+.condition-meter-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.condition-meter-head strong { color: #dbe6f5; font-size: 0.72rem; }
+.condition-meter-head span { color: #9cabc0; font-size: 0.66rem; text-transform: capitalize; font-variant-numeric: tabular-nums; }
+.condition-meter-track { position: relative; height: 8px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, 0.07); }
+.condition-meter-recoverable,
+.condition-meter-fill { position: absolute; inset: 0 auto 0 0; border-radius: inherit; }
+.condition-meter-recoverable { background: rgba(135, 158, 184, 0.22); }
+.condition-meter-fill { background: #6fe3a0; box-shadow: 0 0 8px rgba(111, 227, 160, 0.28); }
+.condition-meter.is-degraded .condition-meter-fill { background: #ffd36b; box-shadow: 0 0 8px rgba(255, 211, 107, 0.25); }
+.condition-meter.is-emergency .condition-meter-fill { background: #ff9c67; box-shadow: 0 0 8px rgba(255, 156, 103, 0.28); }
+.condition-meter.is-failed .condition-meter-fill { background: #ff6f7d; box-shadow: 0 0 8px rgba(255, 111, 125, 0.3); }
+.condition-meter small { color: #66768b; font-size: 0.61rem; }
+
 .observatory {
   position: fixed;
   inset: 40px 12px 12px;
@@ -3226,6 +3242,35 @@ body.is-viewport-fullscreen .viewport-panel #game {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.observatory-pane-wear-lab { padding: 0; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.wear-lab-head { display: flex; justify-content: space-between; align-items: end; gap: 18px; padding: 14px 18px; border-bottom: 1px solid rgba(115, 210, 255, 0.16); }
+.wear-lab-head h2 { margin: 0 0 4px; color: #fff; font-size: 1rem; }
+.wear-lab-head p { margin: 0; color: #8291a6; max-width: 720px; }
+.wear-lab-head label { display: grid; gap: 4px; color: #9cabc0; white-space: nowrap; }
+.wear-lab-head select { border: 1px solid rgba(115, 210, 255, 0.3); border-radius: 4px; padding: 4px 8px; background: #0a121c; color: #dbe6f5; }
+.wear-lab-layout { min-height: 0; display: grid; grid-template-columns: minmax(190px, 260px) minmax(0, 1fr); }
+.wear-lab-panel-list { overflow: auto; padding: 10px; border-right: 1px solid rgba(115, 210, 255, 0.14); display: grid; align-content: start; gap: 5px; }
+.wear-lab-panel { border: 1px solid rgba(115, 210, 255, 0.16); border-radius: 5px; padding: 7px 9px; background: rgba(9, 16, 25, 0.8); color: #dbe6f5; text-align: left; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
+.wear-lab-panel span { color: #718198; font-size: 0.66rem; text-transform: uppercase; }
+.wear-lab-panel.is-active { border-color: rgba(115, 210, 255, 0.72); background: rgba(115, 210, 255, 0.12); }
+.wear-lab-detail { overflow: auto; padding: 18px; }
+.wear-lab-detail-content { max-width: 820px; display: grid; gap: 12px; }
+.wear-lab-detail h3 { margin: 0; color: #fff; font-size: 1rem; }
+.wear-lab-detail h4 { margin: 5px 0 0; color: #cdb4ff; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.wear-lab-untracked { margin: 0; padding: 10px 12px; border-left: 2px solid #ffd36b; background: rgba(255, 211, 107, 0.06); color: #aab7c8; }
+.wear-lab-stage-controls { display: flex; flex-wrap: wrap; gap: 7px; }
+.wear-lab-stage-controls .quick-link-button { padding: 5px 12px; text-transform: capitalize; }
+.wear-lab-stage-controls .quick-link-button.is-active { color: #fff; border-color: #9ee8ff; background: rgba(115, 210, 255, 0.16); }
+.wear-lab-effects { display: grid; gap: 6px; }
+.wear-lab-effect-row { display: grid; grid-template-columns: 82px 1fr; gap: 3px 10px; padding: 8px 10px; border: 1px solid rgba(115, 210, 255, 0.12); border-radius: 5px; }
+.wear-lab-effect-row strong { text-transform: capitalize; color: #dbe6f5; }
+.wear-lab-effect-row span { color: #aab7c8; }
+.wear-lab-effect-row small { grid-column: 2; color: #6f8096; }
+@media (max-width: 760px) {
+  .wear-lab-layout { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  .wear-lab-panel-list { grid-auto-flow: column; grid-auto-columns: minmax(160px, 1fr); overflow-x: auto; border-right: 0; border-bottom: 1px solid rgba(115, 210, 255, 0.14); }
 }
 
 .diag-camera-row { display: flex; align-items: center; gap: 8px; margin: 6px 0 2px; }

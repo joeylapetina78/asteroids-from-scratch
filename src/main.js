@@ -1,53 +1,54 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260804-2105-207b171";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260804-2105-207b171";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260804-2105-207b171";
-import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260804-2105-207b171";
-import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260804-2105-207b171";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260804-2105-207b171";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260804-2105-207b171";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260804-2105-207b171";
-import { Game } from "./game.js?v=fresh-20260804-2105-207b171";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260804-2105-207b171";
-import { createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260804-2105-207b171";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260804-2105-207b171";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260804-2105-207b171";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260804-2105-207b171";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260804-2128-90ed81d";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260804-2128-90ed81d";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260804-2128-90ed81d";
+import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260804-2128-90ed81d";
+import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260804-2128-90ed81d";
+import { ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260804-2128-90ed81d";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260804-2128-90ed81d";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260804-2128-90ed81d";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260804-2128-90ed81d";
+import { Game } from "./game.js?v=fresh-20260804-2128-90ed81d";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260804-2128-90ed81d";
+import { createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260804-2128-90ed81d";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260804-2128-90ed81d";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260804-2128-90ed81d";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260804-2128-90ed81d";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260804-2105-207b171";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260804-2105-207b171";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260804-2105-207b171";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260804-2105-207b171";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260804-2105-207b171";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260804-2105-207b171";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260804-2105-207b171";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260804-2105-207b171";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260804-2105-207b171";
-import { Processor } from "./systems/processor.js?v=fresh-20260804-2105-207b171";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260804-2105-207b171";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260804-2105-207b171";
-import { createGameState } from "./state/gameState.js?v=fresh-20260804-2105-207b171";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260804-2105-207b171";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260804-2105-207b171";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260804-2105-207b171";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260804-2105-207b171";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260804-2105-207b171";
-import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260804-2105-207b171";
-import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260804-2105-207b171";
-import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260804-2105-207b171";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260804-2128-90ed81d";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260804-2128-90ed81d";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260804-2128-90ed81d";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260804-2128-90ed81d";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260804-2128-90ed81d";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260804-2128-90ed81d";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260804-2128-90ed81d";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260804-2128-90ed81d";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260804-2128-90ed81d";
+import { Processor } from "./systems/processor.js?v=fresh-20260804-2128-90ed81d";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260804-2128-90ed81d";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260804-2128-90ed81d";
+import { createGameState } from "./state/gameState.js?v=fresh-20260804-2128-90ed81d";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260804-2128-90ed81d";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260804-2128-90ed81d";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260804-2128-90ed81d";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260804-2128-90ed81d";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260804-2128-90ed81d";
+import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260804-2128-90ed81d";
+import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260804-2128-90ed81d";
+import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260804-2128-90ed81d";
 import { FLINT_MINING_SEED } from "./content/economy/miningInstitutions.js";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260804-2105-207b171";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260804-2105-207b171";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260804-2105-207b171";
-import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260804-2105-207b171";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260804-2105-207b171";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260804-2105-207b171";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260804-2105-207b171";
-import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260804-2105-207b171";
-import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260804-2105-207b171";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260804-2128-90ed81d";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260804-2128-90ed81d";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260804-2128-90ed81d";
+import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260804-2128-90ed81d";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260804-2128-90ed81d";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260804-2128-90ed81d";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260804-2128-90ed81d";
+import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260804-2128-90ed81d";
+import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260804-2128-90ed81d";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -6216,10 +6217,14 @@ const observatorySearch = document.querySelector("#observatory-search");
 const observatoryCount = document.querySelector("#observatory-count");
 const observatoryToggle = document.querySelector("#observatory-toggle");
 const observatoryCloseButton = document.querySelector("#observatory-close");
+const wearLabPanelList = document.querySelector("#wear-lab-panel-list");
+const wearLabDetail = document.querySelector("#wear-lab-detail");
+const wearLabScale = document.querySelector("#wear-lab-scale");
 
 const ACTOR_PICK_RADIUS = 60;
 let selectedActorId = null;
 let observatoryTab = "actors";
+let selectedWearLabPanelId = "engine";
 
 function getInspectableWorldActors() {
   const physicalActors = [
@@ -6329,7 +6334,7 @@ function applyObservatoryTab() {
   if (observatoryBody) observatoryBody.hidden = !isTable;
   if (observatorySearch) observatorySearch.hidden = !isTable;
   if (observatoryCount) observatoryCount.hidden = !isTable;
-  ["ledger", "stats", "population", "contracts", "economy"].forEach((pane) => {
+  ["ledger", "stats", "population", "contracts", "economy", "wear-lab"].forEach((pane) => {
     const node = document.querySelector(`#observatory-pane-${pane}`);
     if (node) node.hidden = observatoryTab !== pane;
   });
@@ -6342,6 +6347,11 @@ document.querySelectorAll(".observatory-tab").forEach((tab) => {
     applyObservatoryTab();
     renderObservatory();
   });
+});
+
+wearLabScale?.addEventListener("change", () => {
+  game.setConditionDebugScale(Number(wearLabScale.value));
+  renderWearLab();
 });
 
 // ── Contract board ────────────────────────────────────────────────────────
@@ -6552,6 +6562,119 @@ function diagRows(pairs) {
   return list;
 }
 
+function conditionBar({ label, stage = "healthy", currentCondition = 100, maxRecoverableCondition = 100, lifetimeDegradation = 0, serviceCount = 0 }) {
+  const current = Math.max(0, Math.min(100, Number(currentCondition) || 0));
+  const maximum = Math.max(0, Math.min(100, Number(maxRecoverableCondition) || 0));
+  const row = diagElement("div", `condition-meter is-${stage}`);
+  const heading = diagElement("div", "condition-meter-head");
+  heading.append(
+    diagElement("strong", null, label),
+    diagElement("span", null, `${Math.round(current)} / ${Math.round(maximum)} · ${stage}`),
+  );
+  const track = diagElement("div", "condition-meter-track");
+  const recoverable = diagElement("span", "condition-meter-recoverable");
+  recoverable.style.width = `${maximum}%`;
+  const fill = diagElement("span", "condition-meter-fill");
+  fill.style.width = `${current}%`;
+  track.append(recoverable, fill);
+  row.append(heading, track, diagElement("small", null, `Lifetime loss ${Math.round((Number(lifetimeDegradation) || 0) * 10) / 10} · services ${serviceCount}`));
+  return row;
+}
+
+function renderConditionCard(condition) {
+  const wrap = diagElement("div", "condition-card");
+  if (condition.representedBy) {
+    wrap.append(diagRows([["Represented by", condition.representedBy.name], ["Craft ID", condition.representedBy.id]]));
+  }
+  const meters = diagElement("div", "condition-meter-list");
+  (condition.components ?? []).forEach((component) => meters.append(conditionBar(component)));
+  wrap.append(meters, diagRows([
+    ["Overall wear", condition.wear],
+    ["Status", condition.maintenanceStatus],
+    ["Pending issue", condition.pendingIssue],
+    ["Faults so far", condition.issueCount],
+  ]));
+  return wrap;
+}
+
+const PLAYER_PANEL_LABELS = {
+  engine: "Engine", miner: "Mining laser", beaconLocator: "Beacon locator", beaconBay: "Beacon bay",
+  scanner: "Scanner", processor: "Processor", cargoHold: "Cargo hold", docking: "Docking gear",
+  hull: "Hull", collector: "Collector", shield: "Shield", cloak: "Cloak", towCable: "Tow cable",
+  mossHarvester: "Moss harvester", mossSeeder: "Moss seeder", tractorField: "Tractor field",
+};
+const ENGINE_STAGE_SUMMARIES = {
+  healthy: "Full thrust and speed; no misfires or steering pull.",
+  degraded: "Reduced thrust with occasional short misfires.",
+  emergency: "Severely reduced thrust and speed, frequent misfires, and steering drift.",
+  failed: "Primary thrust is unavailable; the ship is stranded and needs recovery.",
+};
+
+function installedPlayerPanels() {
+  return Object.entries(state.components ?? {})
+    .filter(([, component]) => component?.installed === true)
+    .map(([id, component]) => ({ id, component, label: PLAYER_PANEL_LABELS[id] ?? id.replace(/([A-Z])/g, " $1") }))
+    .sort((left, right) => left.label.localeCompare(right.label));
+}
+
+function renderWearLab() {
+  if (!wearLabPanelList || !wearLabDetail || observatoryTab !== "wear-lab") return;
+  const panels = installedPlayerPanels();
+  if (!panels.some((panel) => panel.id === selectedWearLabPanelId)) selectedWearLabPanelId = panels[0]?.id ?? null;
+  wearLabScale.value = String(game.conditionDebugScale ?? 1);
+  wearLabPanelList.replaceChildren(...panels.map((panel) => {
+    const button = diagElement("button", `wear-lab-panel${panel.id === selectedWearLabPanelId ? " is-active" : ""}`);
+    button.type = "button";
+    button.append(diagElement("strong", null, panel.label), diagElement("span", null, panel.component.condition ? panel.component.condition.stage : "not tracked"));
+    button.addEventListener("click", () => { selectedWearLabPanelId = panel.id; renderWearLab(); });
+    return button;
+  }));
+
+  const selected = panels.find((panel) => panel.id === selectedWearLabPanelId);
+  if (!selected) {
+    wearLabDetail.replaceChildren(diagElement("p", "observatory-empty", "No installed player panels."));
+    return;
+  }
+  const { id, label, component } = selected;
+  const content = diagElement("div", "wear-lab-detail-content");
+  content.append(diagElement("h3", null, label));
+  if (!component.condition) {
+    content.append(diagElement("p", "wear-lab-untracked", "This panel is installed, but persistent wear and stage effects have not been implemented yet. It is listed here so that missing simulation remains visible."));
+    wearLabDetail.replaceChildren(content);
+    return;
+  }
+  content.append(conditionBar({
+    label, stage: component.condition.stage, currentCondition: component.condition.currentCondition,
+    maxRecoverableCondition: component.condition.maxRecoverableCondition,
+    lifetimeDegradation: component.condition.lifetimeDegradation, serviceCount: component.condition.serviceCount,
+  }));
+
+  if (id === "engine") {
+    const controls = diagElement("div", "wear-lab-stage-controls");
+    ["healthy", "degraded", "emergency", "failed"].forEach((stage) => {
+      const button = diagElement("button", `quick-link-button${component.condition.stage === stage ? " is-active" : ""}`, stage);
+      button.type = "button";
+      button.addEventListener("click", () => { game.debugSetEnginePanelStage(stage); renderWearLab(); });
+      controls.append(button);
+    });
+    content.append(diagElement("h4", null, "Set live condition"), controls);
+    const effectsTable = diagElement("div", "wear-lab-effects");
+    Object.entries(ENGINE_CONDITION_CONFIG.stages).forEach(([stage, effects]) => {
+      const row = diagElement("div", `wear-lab-effect-row is-${stage}`);
+      row.append(
+        diagElement("strong", null, stage),
+        diagElement("span", null, ENGINE_STAGE_SUMMARIES[stage]),
+        diagElement("small", null, `thrust ${Math.round(effects.thrustScale * 100)}% · speed ${Math.round(effects.maxSpeedScale * 100)}% · misfire ${Math.round(effects.misfireChance * 100)}%/s${effects.steerPull ? ` · pull ${effects.steerPull}` : ""}`),
+      );
+      effectsTable.append(row);
+    });
+    content.append(diagElement("h4", null, "Effects by level"), effectsTable);
+  } else {
+    content.append(diagElement("p", "wear-lab-untracked", "Persistent hull condition is recorded, but condition-stage symptoms are not connected yet. Physical hull integrity and onboard patching currently remain the gameplay damage model."));
+  }
+  wearLabDetail.replaceChildren(content);
+}
+
 function formatDiagRelativeTime(timestamp) {
   if (!timestamp) return null;
   const seconds = Math.round((timestamp - Date.now()) / 1000);
@@ -6665,15 +6788,7 @@ function renderActorDiagnostic() {
     ])));
   }
   if (view.condition) {
-    fragments.push(diagSection("Condition", diagRows([
-      ["Wear", view.condition.wear],
-      ["Status", view.condition.maintenanceStatus],
-      ["Pending issue", view.condition.pendingIssue],
-      ["Faults so far", view.condition.issueCount],
-      ["Components", view.condition.components?.map((component) =>
-        `${component.label}: ${component.currentCondition}/${component.maxRecoverableCondition} ${component.stage}`
-      ).join(" | ")],
-    ])));
+    fragments.push(diagSection("Condition", renderConditionCard(view.condition)));
   }
 
   const offerList = diagElement("ul", "diag-list");
@@ -6745,6 +6860,7 @@ function renderObservatory() {
   if (!observatoryPanel || observatoryPanel.hidden || !observatoryBody) return;
   if (observatoryTab === "contracts") { renderContractBoard(); return; }
   if (observatoryTab === "economy") { renderEconomy(); return; }
+  if (observatoryTab === "wear-lab") { renderWearLab(); return; }
   // Ledger/stats/population panes are driven by the existing HUD render path.
   if (!OBSERVATORY_TABLE_TABS.has(observatoryTab)) return;
   const search = observatorySearch?.value?.trim() ?? "";

@@ -4,14 +4,14 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260804-2105-207b171";
-import { collectIntentions } from "./intentions.js?v=fresh-20260804-2105-207b171";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260804-2105-207b171";
-import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260804-2105-207b171";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-2105-207b171";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260804-2105-207b171";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260804-2105-207b171";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260804-2105-207b171";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260804-2128-90ed81d";
+import { collectIntentions } from "./intentions.js?v=fresh-20260804-2128-90ed81d";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260804-2128-90ed81d";
+import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260804-2128-90ed81d";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-2128-90ed81d";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260804-2128-90ed81d";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260804-2128-90ed81d";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260804-2128-90ed81d";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
@@ -85,6 +85,7 @@ export function inspectActor(state, actorId, { game = null } = {}) {
   const shipInstitution = logisticsHauler ? state.logistics?.institutions?.[logisticsHauler.shipInstitutionId] : null;
   if (miningShip) {
     view.condition = {
+      representedBy: { id: actorId, name: view.name },
       wear: round2(miningShip.wear),
       maintenanceStatus: miningShip.maintenanceStatus,
       pendingIssue: miningShip.pendingIssue ?? null,
@@ -100,6 +101,7 @@ export function inspectActor(state, actorId, { game = null } = {}) {
   } else if (shipInstitution) {
     const npc = (game?.npcShips ?? []).find((entry) => entry.id === actorId) ?? null;
     view.condition = {
+      representedBy: { id: actorId, name: view.name },
       wear: round2(shipInstitution.wear ?? npc?.wear),
       maintenanceStatus: npc?.operationalStatus ?? logisticsHauler.status,
       pendingIssue: npc?.pendingWearIssue ?? null,
@@ -114,6 +116,7 @@ export function inspectActor(state, actorId, { game = null } = {}) {
     };
   } else if (diagnostic?.detail?.components) {
     view.condition = {
+      representedBy: { id: actorId, name: view.name },
       wear: round2(diagnostic.detail.aggregateWear ?? Math.max(0, ...Object.values(diagnostic.detail.components).map((component) => component.condition?.wear ?? 0))),
       maintenanceStatus: diagnostic.state,
       pendingIssue: null,
@@ -126,6 +129,15 @@ export function inspectActor(state, actorId, { game = null } = {}) {
         serviceCount: component.condition?.serviceCount ?? 0,
       })),
     };
+  }
+
+  // An institution card represents the machine currently carrying out its
+  // work. Craft diagnostics are the shared seam: mining firms, carriers,
+  // patrol offices, and recovery providers can all expose components without
+  // teaching this inspector their domain-specific storage shape.
+  if (isInstitution && !view.condition) {
+    const representative = selectRepresentativeCraftDiagnostic(state, actorId);
+    if (representative?.detail?.components) view.condition = projectDiagnosticCondition(representative);
   }
 
   // Where this actor's configuration actually came from. Read it when an actor
@@ -179,6 +191,38 @@ export function inspectActor(state, actorId, { game = null } = {}) {
   }
 
   return view;
+}
+
+function selectRepresentativeCraftDiagnostic(state, institutionId) {
+  const candidates = Object.values(state.diagnostics?.actors ?? {})
+    .filter((record) => record.actorKind === "ship"
+      && record.controllerId === institutionId
+      && record.state !== "retired"
+      && record.detail?.components);
+  const stateRank = { working: 0, committed: 1, waiting: 2, free: 3, disabled: 4 };
+  return candidates.sort((left, right) =>
+    (stateRank[left.state] ?? 5) - (stateRank[right.state] ?? 5)
+      || String(left.actorName).localeCompare(String(right.actorName), undefined, { sensitivity: "base", numeric: true }))[0] ?? null;
+}
+
+function projectDiagnosticCondition(diagnostic) {
+  const rawComponents = Object.values(diagnostic.detail.components);
+  return {
+    representedBy: { id: diagnostic.actorId, name: diagnostic.actorName },
+    wear: round2(diagnostic.detail.aggregateWear ?? Math.max(0, ...rawComponents.map((component) => component.condition?.wear ?? 0))),
+    maintenanceStatus: diagnostic.state,
+    pendingIssue: null,
+    issueCount: 0,
+    components: rawComponents.map((component) => ({
+      id: component.id,
+      label: component.label,
+      stage: component.condition?.stage ?? "healthy",
+      currentCondition: round2(component.condition?.currentCondition),
+      maxRecoverableCondition: round2(component.condition?.maxRecoverableCondition),
+      lifetimeDegradation: round2(component.condition?.lifetimeDegradation),
+      serviceCount: component.condition?.serviceCount ?? 0,
+    })),
+  };
 }
 
 function getBeaconAccess(state, controllerId) {

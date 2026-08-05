@@ -1,20 +1,20 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260804-2105-207b171";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260804-2105-207b171";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-2105-207b171";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260804-2105-207b171";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260804-2105-207b171";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260804-2105-207b171";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260804-2105-207b171";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260804-2105-207b171";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-2105-207b171";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260804-2105-207b171";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260804-2105-207b171";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260804-2105-207b171";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2105-207b171";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-2105-207b171";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260804-2128-90ed81d";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260804-2128-90ed81d";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-2128-90ed81d";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260804-2128-90ed81d";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260804-2128-90ed81d";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260804-2128-90ed81d";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260804-2128-90ed81d";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260804-2128-90ed81d";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-2128-90ed81d";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260804-2128-90ed81d";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260804-2128-90ed81d";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260804-2128-90ed81d";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2128-90ed81d";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-2128-90ed81d";
 import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-2105-207b171";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260804-2105-207b171";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-2128-90ed81d";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260804-2128-90ed81d";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -314,6 +314,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       shipRecord.position = { x: worker.position.x, y: worker.position.y };
       shipRecord.status = worker.state;
       shipRecord.cargo = { ...worker.cargo };
+      // Keep the generic craft diagnostic complete regardless of which branch
+      // below owns the worker's current status. Institution cards discover
+      // their representative machinery through this shared record.
+      recordWorkerIdentity(worker, shipRecord);
       if (shipRecord.maintenanceStatus !== "available") return;
       // Non-preemptive by design: a worker keeps its commitment until the
       // delivery completes. Only idle workers reconsider.
@@ -445,6 +449,11 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       controllerId: operation.institution.id,
       locationSiteId: shipRecord?.currentSiteId ?? null,
       position: { x: Math.round(worker.position.x), y: Math.round(worker.position.y) },
+      detail: {
+        referenceId: shipRecord?.referenceId ?? null,
+        aggregateWear: shipRecord?.wear ?? 0,
+        components: shipRecord?.components ?? {},
+      },
     }, now());
   }
 
