@@ -23,11 +23,11 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260804-1903-50a9a01";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260804-1903-50a9a01";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260804-1903-50a9a01";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-1903-50a9a01";
-import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-1903-50a9a01";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260804-1934-c7f9eb5";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260804-1934-c7f9eb5";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260804-1934-c7f9eb5";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-1934-c7f9eb5";
+import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-1934-c7f9eb5";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -107,8 +107,11 @@ export const POPULATION_PROFILES = Object.freeze(settlementPopulationProfiles())
 
 export function createInitialPopulationState(now = Date.now()) {
   const populations = {};
-  POPULATION_PROFILES.forEach((profile) => {
-    populations[profile.id] = createPopulationRecord(profile, now);
+  POPULATION_PROFILES.forEach((profile, index) => {
+    // Settlements do not all place their civilian orders on the same second.
+    // The offset persists because each need advances from its own last demand,
+    // turning one artificial production wave into continuous regional demand.
+    populations[profile.id] = createPopulationRecord(profile, now + index * 17_000);
   });
   return { populations, productionOrders: {}, counter: 0 };
 }

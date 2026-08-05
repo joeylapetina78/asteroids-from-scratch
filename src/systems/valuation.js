@@ -191,6 +191,7 @@ export function evaluateMiningJob({
   operatingCostPerDistance = 0.004,
   wearPerDistance = 0.00004,
   wearCostPerPoint = 220,           // what a service visit costs
+  fixedOperatingCost = 0,           // crew, charges, tractor consumables per completed run
   risk = 0,
   traits = {},
   policy = {},
@@ -200,9 +201,10 @@ export function evaluateMiningJob({
   const travelCost = travelDistance * operatingCostPerDistance;
   const wearCost = travelDistance * wearPerDistance * wearCostPerPoint;
   const riskCost = payout * risk * (0.3 + (traits.caution ?? 0.5) * 0.7);
-  const netValue = payout - travelCost - wearCost - riskCost;
+  const netValue = payout - travelCost - wearCost - riskCost - fixedOperatingCost;
 
   reasons.push(`${jobId ?? "job"}: pays ${round(payout)} for ${units} units; travel ${Math.round(travelDistance)}u costs ${round(travelCost)} plus ${round(wearCost)} in wear.`);
+  if (fixedOperatingCost > 0) reasons.push(`Recurring crew and consumables cost ${round(fixedOperatingCost)}.`);
   if (riskCost > 0) reasons.push(`Risk discount ${round(riskCost)}.`);
 
   const acceptable = netValue > 0;
@@ -214,11 +216,11 @@ export function evaluateMiningJob({
     acceptable,
     affordable: true,
     recommendedPrice: Math.round(payout),
-    minAcceptablePrice: Math.round(travelCost + wearCost),
+    minAcceptablePrice: Math.round(travelCost + wearCost + riskCost + fixedOperatingCost),
     maxAcceptablePrice: Math.round(payout),
     decision: acceptable && beatsAlternative ? VALUATION_DECISION.PROCEED : VALUATION_DECISION.DECLINE,
     reasons,
-    metrics: { netValue, travelCost, wearCost, riskCost, payout, units },
+    metrics: { netValue, travelCost, wearCost, riskCost, fixedOperatingCost, payout, units },
   });
 }
 

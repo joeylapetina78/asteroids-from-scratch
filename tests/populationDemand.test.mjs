@@ -260,6 +260,14 @@ test("the population is an inspectable actor in the observatory", () => {
   assert.ok(entry.summary.length > 0);
 });
 
+test("settlements begin on staggered demand clocks instead of one regional production wave", () => {
+  const state = createGameState();
+  const demandTimes = Object.values(state.population.populations)
+    .map((population) => population.needs["life-support-pack"].lastDemandAt);
+  assert.equal(new Set(demandTimes).size, POPULATION_PROFILES.length,
+    "each settlement has its own stable demand phase");
+});
+
 test("hub administrations and populations resolve to their site's viewport position and data card", () => {
   const world = createWorld({ stock: FULL_STOCK, hubCash: 12_000 });
   world.advance(200);

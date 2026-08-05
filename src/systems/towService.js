@@ -1,12 +1,12 @@
-import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260804-1903-50a9a01";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260804-1903-50a9a01";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260804-1903-50a9a01";
-import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260804-1903-50a9a01";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260804-1903-50a9a01";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-1903-50a9a01";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260804-1903-50a9a01";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260804-1903-50a9a01";
-import { authorizeWreckSalvage, completeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260804-1903-50a9a01";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260804-1934-c7f9eb5";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260804-1934-c7f9eb5";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260804-1934-c7f9eb5";
+import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260804-1934-c7f9eb5";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260804-1934-c7f9eb5";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-1934-c7f9eb5";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260804-1934-c7f9eb5";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260804-1934-c7f9eb5";
+import { authorizeWreckSalvage, completeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260804-1934-c7f9eb5";
 
 const REPAIR_SITE_ID = "scrap-porch";
 

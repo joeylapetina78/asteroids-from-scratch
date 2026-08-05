@@ -23,12 +23,12 @@
 //      system, it does not appear here. Where a total cannot be reconciled the
 //      residual is reported as a residual rather than smoothed away.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260804-1903-50a9a01";
-import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260804-1903-50a9a01";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260804-1903-50a9a01";
-import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260804-1903-50a9a01";
-import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260804-1903-50a9a01";
-import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260804-1903-50a9a01";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260804-1934-c7f9eb5";
+import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260804-1934-c7f9eb5";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260804-1934-c7f9eb5";
+import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260804-1934-c7f9eb5";
+import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260804-1934-c7f9eb5";
+import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260804-1934-c7f9eb5";
 
 // 5 s is fast enough to see a repricing (throttled to 60 s) as a step rather
 // than a jump, and slow enough that two hours of history is a few thousand

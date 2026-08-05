@@ -25,16 +25,16 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-1903-50a9a01";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260804-1903-50a9a01";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260804-1903-50a9a01";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260804-1903-50a9a01";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260804-1903-50a9a01";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-1903-50a9a01";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260804-1903-50a9a01";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-1903-50a9a01";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260804-1903-50a9a01";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260804-1903-50a9a01";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-1934-c7f9eb5";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260804-1934-c7f9eb5";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260804-1934-c7f9eb5";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260804-1934-c7f9eb5";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260804-1934-c7f9eb5";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-1934-c7f9eb5";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260804-1934-c7f9eb5";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-1934-c7f9eb5";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260804-1934-c7f9eb5";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260804-1934-c7f9eb5";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -761,6 +761,37 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     });
   }
 
+  // Capacity is a temporary refusal, not a terminal contract state. Reopen the
+  // original order as soon as that supplier has room again, instead of leaving
+  // a stale refusal until retention pruning and making the buyer post a copy.
+  function reopenCapacityDeclines() {
+    listOrders(state, { status: PROCUREMENT_STATUS.DECLINED }).forEach((order) => {
+      if (order.declinedReason !== "supplier-at-capacity") return;
+      const buyer = institution(order.buyerInstitutionId);
+      const supplier = institution(order.supplierInstitutionId);
+      if (!buyer || !supplier) return;
+      const alreadyOwed = getCommittedSupply(state, order.supplierInstitutionId, order.family);
+      if (alreadyOwed + order.units > MAX_OUTSTANDING_SALE_UNITS) return;
+
+      const spendable = (buyer.accounts?.operating?.balance ?? 0)
+        - (buyer.accounts?.operating?.committed ?? 0)
+        - getActorProtectedCash(state, order.buyerInstitutionId);
+      if ((order.committedPayment ?? 0) > spendable) return;
+
+      order.status = PROCUREMENT_STATUS.OFFERED;
+      order.declinedReason = null;
+      order.declinedAt = null;
+      order.reopenedAt = now();
+      order.lastRepricedAt = now();
+      buyer.accounts.operating.committed = (buyer.accounts.operating.committed ?? 0) + (order.committedPayment ?? 0);
+      delete procurement.unavailable[`${order.buyerInstitutionId}|${order.family}`];
+      emit("procurement.capacityReopened", `${hubName(order.supplierInstitutionId)} has room again and reopens ${order.id} for ${order.units} ${order2Label(order.resourceId)}.`, {
+        procurementOrderId: order.id, sellerId: order.supplierInstitutionId, buyerId: order.buyerInstitutionId,
+        units: order.units, alreadyOwed, capacity: MAX_OUTSTANDING_SALE_UNITS,
+      });
+    });
+  }
+
   // ── 4: goods must actually exist before anything is hauled ───────────────
   // A supplier that owes goods and cannot yet cover them says so, and the
   // buyer can see exactly how short it is.
@@ -903,6 +934,9 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     reopenOnConcession();
     repriceUnfilledOrders();
     considerOffers();
+    // Fresh offers resolve first; old capacity refusals may then return to the
+    // board for the next pass without crowding out a deal already in motion.
+    reopenCapacityDeclines();
     // Mined ore lands in the seller's own stock; move what is owed into the
     // contract reserve before anything else can consume it, then settle any
     // reserve that is now whole.

@@ -498,13 +498,16 @@ test("a mining institution delivery conserves material and payment into freight 
   worker.deliver();
 
   // Hubs open with stock and the price is derived from the gap, so assert the
-  // movement rather than absolute levels: what the buyer paid is exactly what
-  // the miner earned, and the material arrived.
+  // movement rather than absolute levels: the buyer's payment reaches the
+  // miner, then the miner pays its own recurring crew and consumables.
   assert.equal(buyer.inventories["water-ice"] - stockBefore, 3);
   const buyerPaid = buyerCashBefore - buyer.accounts.operating.balance;
   assert.ok(buyerPaid > 0, "the buyer paid for the material");
-  assert.equal(manager.getState().institution.accounts.operating.balance - minerCashBefore, buyerPaid,
-    "every credit the buyer spent reached the miner");
+  const operatingExpense = manager.getState().institution.accounts.operating.transactions
+    .find((transaction) => transaction.type === "operating-expense")?.amount ?? 0;
+  assert.equal(manager.getState().institution.accounts.operating.balance - minerCashBefore, buyerPaid + operatingExpense,
+    "the buyer's payment reached the miner and its operating expense then left visibly");
+  assert.equal(operatingExpense, -90);
   assert.equal(manager.getState().completedContracts, 1);
 });
 

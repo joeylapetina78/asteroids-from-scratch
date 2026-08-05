@@ -1,19 +1,19 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260804-1903-50a9a01";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260804-1903-50a9a01";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-1903-50a9a01";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260804-1903-50a9a01";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260804-1903-50a9a01";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260804-1903-50a9a01";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260804-1903-50a9a01";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260804-1903-50a9a01";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-1903-50a9a01";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260804-1903-50a9a01";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260804-1903-50a9a01";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260804-1903-50a9a01";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-1903-50a9a01";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-1903-50a9a01";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260804-1934-c7f9eb5";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260804-1934-c7f9eb5";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-1934-c7f9eb5";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260804-1934-c7f9eb5";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260804-1934-c7f9eb5";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260804-1934-c7f9eb5";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260804-1934-c7f9eb5";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260804-1934-c7f9eb5";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-1934-c7f9eb5";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260804-1934-c7f9eb5";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260804-1934-c7f9eb5";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260804-1934-c7f9eb5";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-1934-c7f9eb5";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-1934-c7f9eb5";
 import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-1903-50a9a01";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-1934-c7f9eb5";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -640,6 +640,8 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       // Price wear against what a service REALLY costs now, not a constant —
       // this is how a repair-price rise reaches the miner's own decisions.
       wearCostPerPoint: getServiceCost(state, operation.institution.id, "maintenance", MINING_SERVICE_PRICE),
+      fixedOperatingCost: (seed.operatingCosts?.crewPayPerContract ?? 0)
+        + (seed.operatingCosts?.consumablesPerContract ?? 0),
       risk: 0,
       traits: operation.controller?.traits ?? {},
       policy: {},
@@ -953,6 +955,23 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     allocation.paid = payment;
     allocation.completedAt = now();
     const shipRecord = operation.ships[ship.id];
+    const crewPay = seed.operatingCosts?.crewPayPerContract ?? 0;
+    const consumables = seed.operatingCosts?.consumablesPerContract ?? 0;
+    const operatingExpense = crewPay + consumables;
+    if (operatingExpense > 0) {
+      operation.institution.accounts.operating.balance -= operatingExpense;
+      operation.institution.accounts.operating.transactions.push({
+        id: `MIN-OPS-${now()}-${ship.id}`,
+        at: now(), type: "operating-expense", amount: -operatingExpense,
+        balance: operation.institution.accounts.operating.balance,
+        referenceId: allocation.id,
+      });
+      record("mining.operatingExpensePaid", `${operation.institution.name} paid ${operatingExpense} cr in crew and consumables after ${ship.name}'s run.`, {
+        institutionId: operation.institution.id, shipInstitutionId: ship.id, shipName: ship.name,
+        allocationId: allocation.id, crewPay, consumables, operatingExpense,
+        accountBalance: operation.institution.accounts.operating.balance,
+      });
+    }
     shipRecord.currentSiteId = siteId;
     const workWear = getMiningWorkWear();
     shipRecord.wear = Math.min(1, (shipRecord.wear ?? 0) + workWear);

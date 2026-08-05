@@ -1,17 +1,17 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260804-1903-50a9a01";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260804-1903-50a9a01";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-1903-50a9a01";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260804-1903-50a9a01";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260804-1903-50a9a01";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-1903-50a9a01";
-import { adaptShipment } from "./intentions.js?v=fresh-20260804-1903-50a9a01";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260804-1903-50a9a01";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260804-1903-50a9a01";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260804-1903-50a9a01";
-import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-1903-50a9a01";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260804-1934-c7f9eb5";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260804-1934-c7f9eb5";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-1934-c7f9eb5";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260804-1934-c7f9eb5";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260804-1934-c7f9eb5";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-1934-c7f9eb5";
+import { adaptShipment } from "./intentions.js?v=fresh-20260804-1934-c7f9eb5";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260804-1934-c7f9eb5";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260804-1934-c7f9eb5";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260804-1934-c7f9eb5";
+import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-1934-c7f9eb5";
 import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js";
 import { rankCarrierBids } from "./carrierSelection.js";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-1903-50a9a01";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-1934-c7f9eb5";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -170,9 +170,14 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
 
   function update() {
     consumeEvents();
-    repriceUnclaimedFreight();
     assessCarrierFleet();
-    const freightWinners = selectFreightWinners();
+    // Price against bids made from the current fleet state, not whichever ask
+    // happened to be recorded on a previous assignment pass. If the issuer
+    // moves, rank once more at the new rate so the contract can clear now.
+    let freightWinners = selectFreightWinners({ recordAsks: true });
+    if (repriceUnclaimedFreight()) {
+      freightWinners = selectFreightWinners({ recordAsks: true });
+    }
     Object.entries(logistics.haulers).forEach(([shipId, hauler]) => {
       const ship = shipById.get(shipId);
       if (!ship) return;
@@ -272,6 +277,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
   // A hub whose freight nobody will carry raises what it pays — bounded,
   // throttled, and logged, mirroring how Sal reprices unfilled purchase orders.
   function repriceUnclaimedFreight() {
+    let changed = false;
     logistics.postedFreightRates ??= {};
     getProcurementFreightOffers(state).forEach((template) => {
       const ask = logistics.freightAsks?.[template.id];
@@ -294,6 +300,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
         return;
       }
       logistics.postedFreightRates[template.id] = next;
+      changed = true;
       appendHistory("freight.repriced", { templateId: template.id, previousPayment: current, payment: next, carrierCost: ask.costToServe });
       state.ledger.recordEvent("institution.freightRepriced", {
         institutionId: template.issuerInstitutionId, templateId: template.id, previousPayment: current, payment: next,
@@ -301,6 +308,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
         reasons: [`No carrier would run ${template.originName}→${template.destinationName} at ${current} cr.`, ...ask.reasons],
       }, { visible: true, message: `${siteName(template.destinationSiteId)} raises ${template.commodityName} freight to ${next} cr — carriers cannot cover ${ask.costToServe} cr of cost at ${current}.` });
     });
+    return changed;
   }
 
   // Diagnostics for an idle carrier. The chain matters most here: "no cargo"
@@ -441,13 +449,13 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     return candidates;
   }
 
-  function selectFreightWinners() {
+  function selectFreightWinners({ recordAsks = false } = {}) {
     const bidsByTemplate = new Map();
     Object.keys(logistics.haulers).sort().forEach((shipId) => {
       const hauler = logistics.haulers[shipId];
       const carrier = logistics.institutions[hauler.carrierInstitutionId];
       const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
-      buildCarrierCandidates(shipId).forEach((candidate) => {
+      buildCarrierCandidates(shipId, { recordAsks }).forEach((candidate) => {
         const bid = {
           offerId: candidate.template.id,
           carrierId: carrier.id,

@@ -7,6 +7,7 @@ export const MINING_INSTITUTION_SEEDS = Object.freeze([
     fleetName: "Cinder",
     shipPalette: { hullStroke: "#ff9a72", hullFill: "rgba(255, 116, 82, 0.16)", cabStroke: "#ffe0a3", tractorStroke: "rgba(126, 231, 255, 0.42)" },
     homeSiteId: "scrap-porch",
+    operatingCosts: { crewPayPerContract: 65, consumablesPerContract: 25 },
     workers: [
       { id: "worker:cinder-one", name: "Cinder One", referenceId: "MW-031-CINDER", currentSiteId: "scrap-porch", initialWear: 0.65, offset: { x: -100, y: 80 } },
       { id: "worker:cinder-two", name: "Cinder Two", referenceId: "MW-032-CINDER", currentSiteId: "yard-exchange", initialWear: 0.25, offset: { x: -90, y: -90 } },
@@ -23,6 +24,7 @@ export const MINING_INSTITUTION_SEEDS = Object.freeze([
     fleetName: "Flint",
     shipPalette: { hullStroke: "#72ffc9", hullFill: "rgba(70, 220, 166, 0.17)", cabStroke: "#c8ffe9", tractorStroke: "rgba(122, 255, 211, 0.46)" },
     homeSiteId: "blue-lantern",
+    operatingCosts: { crewPayPerContract: 75, consumablesPerContract: 30 },
     workers: [
       { id: "worker:flint-one", name: "Flint One", referenceId: "MW-044-FLINT", currentSiteId: "blue-lantern", initialWear: 0.48, offset: { x: -85, y: 70 } },
       { id: "worker:flint-two", name: "Flint Two", referenceId: "MW-045-FLINT", currentSiteId: "yard-exchange", initialWear: 0.18, offset: { x: 90, y: -65 } },

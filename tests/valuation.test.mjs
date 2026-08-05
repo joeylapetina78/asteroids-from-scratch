@@ -99,6 +99,15 @@ test("a job that cannot cover its own costs is declined", () => {
   assert.equal(result.decision, VALUATION_DECISION.DECLINE);
 });
 
+test("recurring mining expenses lower net value and the minimum viable bid", () => {
+  const withoutOverhead = evaluateMiningJob({ jobId: "lean", payout: 300, travelDistance: 1_000 });
+  const withOverhead = evaluateMiningJob({ jobId: "staffed", payout: 300, travelDistance: 1_000, fixedOperatingCost: 90 });
+  assert.equal(withoutOverhead.metrics.netValue - withOverhead.metrics.netValue, 90);
+  assert.equal(withOverhead.metrics.fixedOperatingCost, 90);
+  assert.ok(withOverhead.minAcceptablePrice >= withoutOverhead.minAcceptablePrice + 90);
+  assert.ok(withOverhead.reasons.some((reason) => /crew and consumables/i.test(reason)));
+});
+
 // ── Cost basis + service pricing (cost propagation) ────────────────────────
 
 test("cost basis tracks weighted average and last paid", () => {

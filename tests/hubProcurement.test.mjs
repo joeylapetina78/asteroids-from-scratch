@@ -306,6 +306,34 @@ test("a supplier refuses to owe more than it can realistically dig", () => {
   assert.ok(refusals.length > 0, "and it says every known supplier is committed");
 });
 
+test("a capacity refusal reopens when the supplier clears its book", () => {
+  const world = advanceWorld();
+  const order = listOrders(world.state)[0];
+  const buyer = world.state.logistics.institutions[order.buyerInstitutionId];
+  order.status = PROCUREMENT_STATUS.DECLINED;
+  order.declinedReason = "supplier-at-capacity";
+  order.declinedAt = world.now();
+  order.pricePerUnit = 1_000;
+  order.committedPayment = order.units * order.pricePerUnit;
+  buyer.accounts.operating.committed = 0;
+
+  const blockerId = "capacity-blocker";
+  world.state.hubProcurement.orders[blockerId] = {
+    id: blockerId, buyerInstitutionId: "someone-else",
+    supplierInstitutionId: order.supplierInstitutionId,
+    family: order.family, resourceId: order.resourceId,
+    units: 12, deliveredUnits: 0, status: PROCUREMENT_STATUS.ACCEPTED,
+  };
+  world.tick(1);
+  assert.equal(order.declinedReason, "supplier-at-capacity", "the refusal remains while the book is full");
+
+  world.state.hubProcurement.orders[blockerId].status = PROCUREMENT_STATUS.DELIVERED;
+  world.tick(1);
+  assert.notEqual(order.declinedReason, "supplier-at-capacity", "capacity recovery is a real transition");
+  assert.ok(world.state.ledger.getEventsAfterId(0).some((event) =>
+    event.type === "procurement.capacityReopened" && event.payload.procurementOrderId === order.id));
+});
+
 test("a refused buyer waits before asking again instead of re-posting every tick", () => {
   const { state, procurement } = createWorld();
   for (let tick = 0; tick < 300; tick += 1) procurement.update();
@@ -542,7 +570,7 @@ test("a repriced order goes back on the table and closes once it clears the floo
   world.tick(90);
   assert.ok(order.pricePerUnit > 50, "the buyer moved");
   assert.notEqual(order.status, PROCUREMENT_STATUS.DECLINED,
-    "and the order is live again rather than left dead at the old price");
+    `and the order is live again rather than left dead at the old price (${order.declinedReason})`);
 });
 
 test("repricing is throttled, not run every tick", () => {
