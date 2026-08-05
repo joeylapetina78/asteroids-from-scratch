@@ -696,6 +696,38 @@ function createLogisticsHarness({ now = () => 1_000, commissionHauler = null } =
   return { state, ships, manager, procurement };
 }
 
+test("freight wear belongs to persistent working components and service repairs only the named system", () => {
+  const harness = createLogisticsHarness();
+  const ship = harness.ships[0];
+  const hauler = harness.state.logistics.haulers[ship.id];
+  const shipInstitution = harness.state.logistics.institutions[hauler.shipInstitutionId];
+
+  assert.deepEqual(Object.keys(shipInstitution.components), ["propulsion", "steering", "docking-gear", "hull", "cargo-handling"]);
+  ship.wear = 6;
+  harness.state.ledger.recordEvent("npc.wearIssue", {
+    npcId: ship.id, issueType: "hull-fatigue", wear: 6, issueCount: 1,
+  }, { visible: false });
+  harness.manager.update();
+
+  const request = harness.state.ledger.getEventsAfterId(0, { includeHidden: true }).find((event) =>
+    event.type === "maintenance.requested" && event.payload.subjectId === ship.id);
+  assert.equal(request.payload.componentId, "propulsion", "the real worst component overrides the old alternating scalar issue");
+  const steeringWear = shipInstitution.components.steering.condition.wear;
+  assert.ok(steeringWear > 0, "travel also leaves history on neighboring systems");
+
+  harness.state.sprc = { account: { balance: 0 } };
+  harness.state.ledger.recordEvent("sprc.repairCompleted", {
+    haulerId: ship.id, componentId: "propulsion", repairOrderId: "SPRC-RPR-TEST", serviceRevenue: 180,
+  }, { visible: false });
+  harness.manager.update();
+
+  assert.equal(shipInstitution.components.propulsion.condition.wear, 0);
+  assert.equal(shipInstitution.components.propulsion.condition.serviceCount, 1);
+  assert.equal(shipInstitution.components.steering.condition.wear, steeringWear,
+    "repairing propulsion does not rejuvenate steering");
+  assert.ok(shipInstitution.wear > 0, "legacy scalar wear remains a projection of the unrepaired systems");
+});
+
 test("a carrier with no surviving craft finances and commissions an emergency replacement", () => {
   let clock = 1_000;
   const commissioned = [];
@@ -1241,7 +1273,7 @@ test("player standing freight uses the same container, custody, inventory, and p
 });
 
 test("different wear issues create different SPRC repair recipes", () => {
-  for (const [issueType, expected] of [["maneuvering-strain", { "hull-plate": 1, "machine-part": 1 }], ["hull-fatigue", { "hull-plate": 2, "machine-part": 0 }], ["control-fault", { "hull-plate": 0, "machine-part": 2 }]]) {
+  for (const [issueType, expected] of [["drive-fatigue", { "hull-plate": 0, "machine-part": 1 }], ["maneuvering-strain", { "hull-plate": 1, "machine-part": 1 }], ["hull-fatigue", { "hull-plate": 2, "machine-part": 0 }], ["control-fault", { "hull-plate": 0, "machine-part": 2 }]]) {
     const harness = createHarness();
     harness.state.ledger.recordEvent("logistics.maintenanceRequired", { npcId: SPRC.firstHaulerId, issueType, wear: 1.5, issueCount: 1, causedByCarefulMode: issueType === "maneuvering-strain" }, { visible: false });
     harness.operation.update();

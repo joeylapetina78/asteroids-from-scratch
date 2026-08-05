@@ -6,7 +6,7 @@ export function createSprcInstitutionInstance(now = Date.now()) {
     controllerInstitutionId: "sal",
     siteId: "scrap-porch",
     serviceCapabilities: [
-      { id: "freight-craft-maintenance", craftClasses: ["freight-hauler"], issueTypes: ["maneuvering-strain", "hull-fatigue", "control-fault", "preventive-service"], repairCapabilities: ["structural-repair", "mechanical-repair", "control-systems"], facilityType: "repair-berth", servicePrice: 180 },
+      { id: "freight-craft-maintenance", craftClasses: ["freight-hauler"], issueTypes: ["drive-fatigue", "maneuvering-strain", "hull-fatigue", "control-fault", "preventive-service"], repairCapabilities: ["structural-repair", "mechanical-repair", "control-systems"], facilityType: "repair-berth", servicePrice: 180 },
       { id: "mining-craft-maintenance", craftClasses: ["mining-craft"], issueTypes: ["structural-fatigue", "tractor-field-instability", "field-control-failure", "preventive-calibration"], repairCapabilities: ["structural-repair", "mechanical-repair", "tractor-field", "field-control"], facilityType: "repair-berth", servicePrice: 220 },
     ],
     accounts: { operating: { id: "account:sprc-operating", balance: 18000, committed: 0, currency: "credits" } },

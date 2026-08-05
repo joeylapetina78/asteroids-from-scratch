@@ -1,6 +1,6 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260804-2047-0ceced2";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260804-2047-0ceced2";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260804-2047-0ceced2";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260804-2058-2977c87";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260804-2058-2977c87";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260804-2058-2977c87";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -280,7 +280,7 @@ export class NpcShip {
   getMaxSpeed() {
     const carefulMultiplier = this.isCarefulMode ? CAREFUL_SPEED_MULTIPLIER : 1;
     const corridorMultiplier = this.activeCorridorId ? CORRIDOR_CRUISE_SPEED_MULTIPLIER : 1;
-    return MAX_SPEED * corridorMultiplier * carefulMultiplier * this.getTurnSpeedMultiplier();
+    return MAX_SPEED * corridorMultiplier * carefulMultiplier * this.getTurnSpeedMultiplier() * (this.conditionSpeedMultiplier ?? 1);
   }
 
   getTurnSpeedMultiplier() {

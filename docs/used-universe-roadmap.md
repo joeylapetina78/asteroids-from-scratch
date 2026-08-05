@@ -77,9 +77,13 @@ breakdowns, cargo loss, and misrepresented condition should worsen it.
    SPRC carries that identity through its public repair order, and service repairs
    only that component while preserving its permanent degradation and the wear
    on neighboring systems. These records are visible in the actor observatory.
-3. **Freight proof.** Give haulers propulsion, steering, docking, hull, and cargo
-   handling records. Job valuation reads the real components and projected trip
-   use; the scalar wear field becomes a compatibility projection only.
+3. **Freight proof — implemented.** Haulers carry propulsion, steering, docking
+   gear, hull, and cargo-handling records. Distance, careful maneuvering, loaded
+   travel, docking, cargo transfer, and combat affect the relevant systems at
+   different rates. Freight eligibility and upkeep valuation read the component
+   projection, degraded propulsion visibly slows the craft, and SPRC repairs the
+   named system without resetting its neighbors. The old 0–6 wear field remains
+   only as a compatibility projection while physical flight code is migrated.
 4. **Physical repair completion — initial path implemented.** Mining repair
    orders name component IDs and preserve lifetime degradation and service
    history. Freight and other craft still need this migration, followed by an

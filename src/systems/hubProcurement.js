@@ -25,16 +25,16 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-2047-0ceced2";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260804-2047-0ceced2";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260804-2047-0ceced2";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260804-2047-0ceced2";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260804-2047-0ceced2";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-2047-0ceced2";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260804-2047-0ceced2";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-2047-0ceced2";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260804-2047-0ceced2";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260804-2047-0ceced2";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-2058-2977c87";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260804-2058-2977c87";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260804-2058-2977c87";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260804-2058-2977c87";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260804-2058-2977c87";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-2058-2977c87";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260804-2058-2977c87";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-2058-2977c87";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260804-2058-2977c87";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260804-2058-2977c87";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
