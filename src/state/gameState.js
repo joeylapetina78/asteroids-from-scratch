@@ -1,15 +1,15 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260804-1941-8cd7846";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260804-1941-8cd7846";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260804-1941-8cd7846";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260804-1941-8cd7846";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260804-1941-8cd7846";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260804-1941-8cd7846";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260804-1941-8cd7846";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260804-1941-8cd7846";
-import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260804-1941-8cd7846";
-import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260804-1941-8cd7846";
-import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260804-1941-8cd7846";
-import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260804-1941-8cd7846";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260804-2029-b26c569";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260804-2029-b26c569";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260804-2029-b26c569";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260804-2029-b26c569";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260804-2029-b26c569";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260804-2029-b26c569";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260804-2029-b26c569";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260804-2029-b26c569";
+import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260804-2029-b26c569";
+import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260804-2029-b26c569";
+import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260804-2029-b26c569";
+import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260804-2029-b26c569";
 
 export function createGameState() {
   const state = {
@@ -138,7 +138,10 @@ export function createGameState() {
         // Persistent wear/fault state, driven by the shared panel-condition
         // machine (panelMaintenance.js) with engine-specific rules from
         // engineCondition.js. First panel wired into that system.
-        condition: { stage: "healthy", wear: 0 },
+        condition: {
+          stage: "healthy", wear: 0, currentCondition: 100,
+          lifetimeDegradation: 0, maxRecoverableCondition: 100, serviceCount: 0,
+        },
         thrustVisual: {
           style: "ragged-flame",
           color: "#ffb85c",
@@ -195,10 +198,10 @@ export function createGameState() {
         // other panels draw from it.
         repairReserve: 0,
         maxRepairReserve: 100,
-        // Dormant: the persistent wear/condition state the shared panel-condition
-        // system will drive later. Nothing reads it yet; declared now so saves
-        // already carry it and no migration is needed.
-        condition: "healthy",
+        condition: {
+          stage: "healthy", wear: 0, currentCondition: 100,
+          lifetimeDegradation: 0, maxRecoverableCondition: 100, serviceCount: 0,
+        },
         vin: "YRDSKF-01-7A3",
         vinPlateAttached: true,
       },

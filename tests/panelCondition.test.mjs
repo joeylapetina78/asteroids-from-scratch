@@ -53,17 +53,46 @@ test("repairPanelCondition clears to healthy and returns the prior stage", () =>
   assert.equal(prior, "emergency");
   assert.equal(c.stage, "healthy");
   assert.equal(c.wear, 0);
+  assert.equal(c.currentCondition, c.maxRecoverableCondition,
+    "service restores repairable condition only as far as the aged component permits");
+  assert.equal(c.serviceCount, 1);
 });
 
 test("ensurePanelCondition migrates missing or stale condition data", () => {
   const missing = {};
   ensurePanelCondition(missing);
-  assert.deepEqual(missing.condition, { stage: "healthy", wear: 0 });
+  assert.deepEqual(missing.condition, {
+    stage: "healthy", wear: 0, currentCondition: 100,
+    lifetimeDegradation: 0, maxRecoverableCondition: 100, serviceCount: 0,
+  });
 
   const stale = { condition: "healthy" }; // old string placeholder
   const migrated = ensurePanelCondition(stale);
   assert.equal(migrated.stage, "healthy");
   assert.equal(migrated.wear, 0);
+  assert.equal(migrated.currentCondition, 100);
+});
+
+test("ordinary use lowers current condition and ages maximum recoverable condition independently", () => {
+  const c = createPanelCondition();
+  accumulatePanelWear(c, T.degraded, T);
+  assert.ok(c.currentCondition < 100, "repairable condition reflects current use");
+  assert.ok(c.lifetimeDegradation > 0, "the same real use leaves a small permanent history");
+  const agedMaximum = c.maxRecoverableCondition;
+
+  repairPanelCondition(c);
+  assert.equal(c.currentCondition, agedMaximum);
+  assert.ok(c.currentCondition < 100, "ordinary service cannot make an old component factory-new");
+  assert.equal(c.lifetimeDegradation, 0.3);
+});
+
+test("continued operation after a warning accelerates subsequent wear", () => {
+  const c = createPanelCondition();
+  accumulatePanelWear(c, T.degraded, T);
+  const before = c.wear;
+  const result = accumulatePanelWear(c, 10, T);
+  assert.ok(result.deferredMaintenanceMultiplier > 1);
+  assert.ok(c.wear - before > 10, "ignoring a degraded panel costs more than servicing it");
 });
 
 test("panelStageIndex orders severity", () => {
@@ -104,5 +133,6 @@ test("engine stage effects escalate: thrust falls, misfire rises, failed kills t
 
 test("fresh state seeds an engine condition object", () => {
   const state = createGameState();
-  assert.deepEqual(state.components.engine.condition, { stage: "healthy", wear: 0 });
+  assert.deepEqual(state.components.engine.condition, createPanelCondition());
+  assert.deepEqual(state.components.hull.condition, createPanelCondition());
 });

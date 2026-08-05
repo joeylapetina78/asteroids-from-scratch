@@ -76,6 +76,7 @@ The ship position is world-space. The viewport camera follows the ship and conve
 | [src/systems/saveManager.js](../src/systems/saveManager.js) | Lightweight browser-local playtest save/load. |
 | [src/systems/audio.js](../src/systems/audio.js) | Procedural Atari-style sound effects using Web Audio. |
 | [docs/event-dictionary.md](event-dictionary.md) | Living list of ledger events, payloads, mission rule conditions, and mission actions. |
+| [docs/used-universe-roadmap.md](used-universe-roadmap.md) | Persistent component condition, lifetime degradation, repair, reliability, resale, and salvage migration plan. |
 | [docs/system-authoring-roadmap.md](system-authoring-roadmap.md) | Roadmap for moving toward reusable systems and future web-authored missions/contracts. |
 | [docs/lifeform-design.md](lifeform-design.md) | Ambient ecology notes: rockmoss, lantern herds, skitterwebs, threadwyrms, and rare horror encounters. |
 

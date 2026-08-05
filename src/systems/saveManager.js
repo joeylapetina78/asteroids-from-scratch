@@ -1,7 +1,7 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260804-1941-8cd7846";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260804-1941-8cd7846";
-import { ensureObligations } from "./obligations.js?v=fresh-20260804-1941-8cd7846";
-import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260804-1941-8cd7846";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260804-2029-b26c569";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260804-2029-b26c569";
+import { ensureObligations } from "./obligations.js?v=fresh-20260804-2029-b26c569";
+import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260804-2029-b26c569";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 
@@ -47,6 +47,7 @@ export function loadSavedProfile(state) {
     // Migration: older saves predate panel conditions. Guarantee the engine
     // carries a well-formed condition object (defaults to healthy).
     ensurePanelCondition(state.components.engine);
+    ensurePanelCondition(state.components.hull);
     delete state.components.account;
     delete state.components.merchant;
     delete state.components["component-shop"];

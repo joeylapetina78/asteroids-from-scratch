@@ -81,5 +81,7 @@ test("fresh state seeds a hull reserve tank and dormant condition", () => {
 
   assert.equal(hull.repairReserve, 0);
   assert.equal(hull.maxRepairReserve, 100);
-  assert.equal(hull.condition, "healthy", "condition field exists for the future wear system");
+  assert.equal(hull.condition.stage, "healthy", "hull participates in the shared component-condition system");
+  assert.equal(hull.condition.currentCondition, 100);
+  assert.equal(hull.condition.maxRecoverableCondition, 100);
 });

@@ -45,9 +45,19 @@ export function addToTank(current, amount, max) {
 // is the first caller; hull/scanner/processor/tractor reuse the same functions.
 
 export const PANEL_STAGES = ["healthy", "degraded", "emergency", "failed"];
+export const MIN_RECOVERABLE_CONDITION = 35;
+export const LIFETIME_DEGRADATION_PER_WEAR = 0.003;
+export const DEFERRED_MAINTENANCE_WEAR_MULTIPLIER = 0.15;
 
 export function createPanelCondition() {
-  return { stage: "healthy", wear: 0 };
+  return {
+    stage: "healthy",
+    wear: 0,
+    currentCondition: 100,
+    lifetimeDegradation: 0,
+    maxRecoverableCondition: 100,
+    serviceCount: 0,
+  };
 }
 
 // Guarantee a component carries a well-formed condition object. Tolerates old
@@ -67,6 +77,23 @@ export function ensurePanelCondition(component) {
   }
   if (typeof component.condition.wear !== "number" || component.condition.wear < 0) {
     component.condition.wear = 0;
+  }
+  if (typeof component.condition.lifetimeDegradation !== "number" || component.condition.lifetimeDegradation < 0) {
+    component.condition.lifetimeDegradation = 0;
+  }
+  component.condition.maxRecoverableCondition = Math.max(
+    MIN_RECOVERABLE_CONDITION,
+    100 - component.condition.lifetimeDegradation,
+  );
+  if (typeof component.condition.currentCondition !== "number") {
+    component.condition.currentCondition = component.condition.maxRecoverableCondition;
+  }
+  component.condition.currentCondition = Math.max(0, Math.min(
+    component.condition.maxRecoverableCondition,
+    component.condition.currentCondition,
+  ));
+  if (!Number.isInteger(component.condition.serviceCount) || component.condition.serviceCount < 0) {
+    component.condition.serviceCount = 0;
   }
   return component.condition;
 }
@@ -91,10 +118,17 @@ export function stageForWear(wear, thresholds) {
 // fault message, escalate audio, route a failure to distress, etc.
 export function accumulatePanelWear(condition, wearDelta, thresholds) {
   const previousStage = condition.stage;
-  condition.wear = Math.max(0, (condition.wear ?? 0) + (wearDelta ?? 0));
+  const deferredMaintenanceMultiplier = 1 + panelStageIndex(previousStage) * DEFERRED_MAINTENANCE_WEAR_MULTIPLIER;
+  const effectiveWearDelta = Math.max(0, wearDelta ?? 0) * deferredMaintenanceMultiplier;
+  condition.wear = Math.max(0, (condition.wear ?? 0) + effectiveWearDelta);
+  condition.lifetimeDegradation = Math.max(0,
+    (condition.lifetimeDegradation ?? 0) + effectiveWearDelta * LIFETIME_DEGRADATION_PER_WEAR);
+  condition.maxRecoverableCondition = Math.max(MIN_RECOVERABLE_CONDITION, 100 - condition.lifetimeDegradation);
+  const wearFraction = Math.min(1, condition.wear / Math.max(1, thresholds.failed));
+  condition.currentCondition = Math.max(0, condition.maxRecoverableCondition * (1 - wearFraction));
   const stage = stageForWear(condition.wear, thresholds);
   condition.stage = stage;
-  return { changed: stage !== previousStage, previousStage, stage };
+  return { changed: stage !== previousStage, previousStage, stage, effectiveWearDelta, deferredMaintenanceMultiplier };
 }
 
 // Shared service seam: any provider (dock repair now, material-based SPRC
@@ -106,6 +140,8 @@ export function repairPanelCondition(condition) {
   if (condition) {
     condition.wear = 0;
     condition.stage = "healthy";
+    condition.currentCondition = condition.maxRecoverableCondition ?? 100;
+    condition.serviceCount = (condition.serviceCount ?? 0) + 1;
   }
   return previousStage;
 }
