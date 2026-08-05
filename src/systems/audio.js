@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260804-1857-0735c8c";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260804-1903-50a9a01";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;
@@ -10,6 +10,7 @@ export function createGameAudio() {
   let isUnlocked = false;
   let nextChatterAt = 0;
   let nextThrustAt = 0;
+  let nextNpcMiningImpactAt = 0;
 
   function unlock() {
     if (isUnlocked) {
@@ -68,12 +69,25 @@ export function createGameAudio() {
     noiseBurst({ duration: 0.045, volume: 0.08 });
   }
 
-  function playRockBreak(tier = 1, volumeScale = 1) {
+  function playRockBreak(tier = 1, { volumeScale = 1, pitchScale = 1, isNpcMining = false } = {}) {
+    if (isNpcMining && isReady()) {
+      const now = context.currentTime;
+      if (now < nextNpcMiningImpactAt) {
+        return;
+      }
+      // A busy mining field reports as activity, not a stack of identical guns.
+      nextNpcMiningImpactAt = now + 0.22;
+    }
+
     const base = tier <= 1 ? 180 : 130;
     const scale = Math.min(1, Math.max(0, volumeScale));
+    const pitch = Math.min(1.15, Math.max(0.65, pitchScale));
 
-    tone({ frequency: base, endFrequency: 70, duration: 0.12, type: "square", volume: 0.08 * scale });
-    noiseBurst({ duration: 0.08 + Math.min(0.08, tier * 0.025), volume: 0.07 * scale });
+    tone({ frequency: base * pitch, endFrequency: 70 * pitch, duration: 0.12, type: "square", volume: 0.08 * scale });
+    noiseBurst({
+      duration: 0.08 + Math.min(0.08, tier * 0.025),
+      volume: 0.07 * scale * (0.35 + 0.65 * scale),
+    });
   }
 
   function playPickup(type = "fuel") {
