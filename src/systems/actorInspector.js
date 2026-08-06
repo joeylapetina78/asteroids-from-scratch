@@ -4,14 +4,14 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260804-2128-90ed81d";
-import { collectIntentions } from "./intentions.js?v=fresh-20260804-2128-90ed81d";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260804-2128-90ed81d";
-import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260804-2128-90ed81d";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-2128-90ed81d";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260804-2128-90ed81d";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260804-2128-90ed81d";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260804-2128-90ed81d";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260805-2142-0b6dcbe";
+import { collectIntentions } from "./intentions.js?v=fresh-20260805-2142-0b6dcbe";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260805-2142-0b6dcbe";
+import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260805-2142-0b6dcbe";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260805-2142-0b6dcbe";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260805-2142-0b6dcbe";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260805-2142-0b6dcbe";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260805-2142-0b6dcbe";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
@@ -302,6 +302,11 @@ function describeInstitution(state, institutionId) {
       })),
       needs: Object.values(sprc.needs ?? {}).filter((need) => need.status === "open").map((need) => ({
         id: need.id, itemId: need.itemId, missing: need.missingAmount, urgency: need.urgency, purpose: need.purpose,
+      })),
+      salvage: Object.values(state.wrecks?.records ?? {}).filter((wreck) => wreck.ownerInstitutionId === "sprc" || wreck.previousOwnerInstitutionId).map((wreck) => ({
+        id: wreck.id, shipName: wreck.shipName, previousOwnerInstitutionId: wreck.previousOwnerInstitutionId,
+        status: wreck.status, acquisitionPrice: wreck.acquisitionPrice, recoveryBudget: wreck.recoveryBudget,
+        dismantlingOrderId: wreck.dismantlingOrderId, plannedYield: wreck.plannedSalvageYield, recoveredYield: wreck.salvageYield,
       })),
       facilities: { berth: sprc.facilities?.berthTwo?.status, mill: sprc.facilities?.maw?.activeProductionOrderId ? "busy" : "idle" },
       costBasis: state.costBasis?.institutions?.sprc?.items ?? null,

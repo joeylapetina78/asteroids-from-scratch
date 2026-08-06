@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260804-2128-90ed81d" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260805-2142-0b6dcbe" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260804-2128-90ed81d</span>
+      <span class="build-tag">build: fresh-20260805-2142-0b6dcbe</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -321,7 +321,14 @@
               <button id="ship-power" class="power-button" type="button" aria-pressed="false">
                 Power Ship
               </button>
-              <div class="mode-toggle" role="group" aria-label="Thrust direction">
+              <label class="engine-model-picker" for="engine-model-select">
+                <span>Drive model</span>
+                <select id="engine-model-select" aria-label="Engine model">
+                  <option value="rook-standard-drive">Rook Standard Drive</option>
+                  <option value="vektor-reversing-drive">Vektor R/T Reversing Drive</option>
+                </select>
+              </label>
+              <div id="thrust-mode-toggle" class="mode-toggle" role="group" aria-label="Thrust direction">
                 <label><input type="radio" name="thrust-mode" value="forward" checked /> Forward</label>
                 <label><input type="radio" name="thrust-mode" value="reverse" /> Reverse</label>
               </div>
@@ -337,7 +344,7 @@
               <div class="component-hints">
                 <span>A/D rotate</span>
                 <span>W thrust</span>
-                <span>S brake</span>
+                <span id="engine-down-control-hint">S brake</span>
                 <span id="engine-strafe-hint" hidden>Q/E strafe</span>
                 <span id="engine-boost-hint" hidden>Shift boost</span>
               </div>
@@ -945,6 +952,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260804-2128-90ed81d"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260805-2142-0b6dcbe"></script>
   </body>
 </html>

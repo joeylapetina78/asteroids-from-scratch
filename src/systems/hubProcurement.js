@@ -25,16 +25,16 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-2128-90ed81d";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260804-2128-90ed81d";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260804-2128-90ed81d";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260804-2128-90ed81d";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260804-2128-90ed81d";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-2128-90ed81d";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260804-2128-90ed81d";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260804-2128-90ed81d";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260804-2128-90ed81d";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260804-2128-90ed81d";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260805-2142-0b6dcbe";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260805-2142-0b6dcbe";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260805-2142-0b6dcbe";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260805-2142-0b6dcbe";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260805-2142-0b6dcbe";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260805-2142-0b6dcbe";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260805-2142-0b6dcbe";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260805-2142-0b6dcbe";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260805-2142-0b6dcbe";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -60,7 +60,15 @@ const MAX_OUTSTANDING_SALE_UNITS = 12;
 // A buyer will not have more than this many purchases open on one family at
 // once. The gap it is ordering against does not close until goods actually
 // arrive, so without a cap it re-posts every single tick.
-const MAX_OPEN_ORDERS_PER_FAMILY = 2;
+const MAX_OPEN_ORDERS_PER_FAMILY = 1;
+// Opening freight is a route quote, not a percentage of the ore invoice.
+// Otherwise a cheap material on a long road can never pay the same ship that
+// would happily carry an expensive material over that identical road.
+const FREIGHT_BASE_OPERATING_COST_PER_DISTANCE = 0.004;
+const FREIGHT_BASE_WEAR_PER_DISTANCE = 0.00016;
+const FREIGHT_BASE_SERVICE_CYCLE_COST = 1800;
+const FREIGHT_BASE_SERVICE_CYCLE_WEAR = 6;
+const FREIGHT_BASE_MARGIN = 0.2;
 // After a refusal a buyer waits before asking again. Without this it re-posts
 // the same request every tick and is refused every tick.
 const RETRY_AFTER_REFUSAL_MS = 60 * 1000;
@@ -90,6 +98,14 @@ const CONCESSION_FIRM_STEP = 0.5;
 // half the sales it says it can carry, with nothing left to dig, is a hub that
 // could serve more business than it has.
 const SLACK_CAPACITY_FRACTION = 0.5;
+
+export function estimateOpeningFreightBudget(distance = 0) {
+  const routeDistance = Math.max(0, Number(distance) || 0);
+  const travel = routeDistance * FREIGHT_BASE_OPERATING_COST_PER_DISTANCE;
+  const maintenance = (routeDistance * FREIGHT_BASE_WEAR_PER_DISTANCE / FREIGHT_BASE_SERVICE_CYCLE_WEAR)
+    * FREIGHT_BASE_SERVICE_CYCLE_COST;
+  return Math.max(80, Math.ceil((travel + maintenance) * (1 + FREIGHT_BASE_MARGIN)));
+}
 
 // The settlements in this world are whichever institutions their archetype says
 // can buy and sell material. Nothing here enumerates them.
@@ -187,7 +203,7 @@ export function evaluateSupplierCandidates(state, {
         relationship,
         concession: getAskConcession(state, institutionId, definition.resourceId),
       }) : null;
-      const freightCost = route ? Math.max(40, Math.round(route.distance * 0.004)) : Infinity;
+      const freightCost = route ? estimateOpeningFreightBudget(route.distance) : Infinity;
       // Existing stock is preferable to promised future extraction, but the
       // penalty is deliberately modest: distance and price remain meaningful.
       const productionDelayCost = Math.max(0, units - availableUnits) * getResourceTradeValue(definition.resourceId) * 0.05;
@@ -517,7 +533,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
         const committedPayment = orderUnits * valuation.recommendedPrice;
         // Freight is budgeted separately from the goods, so a carrier is paid
         // for hauling and the supplier is paid for the material.
-        const freightBudget = Math.max(40, Math.round(committedPayment * 0.45));
+        const freightBudget = Math.max(80, Math.round(supplier.freightCost));
         if ((buyer.accounts.operating.balance ?? 0) < committedPayment + freightBudget + getActorProtectedCash(state, buyerInstitutionId)) return;
 
         const id = `HPO-${String(++procurement.counter).padStart(4, "0")}`;

@@ -2,8 +2,7 @@
 //
 // Event definitions declare how long they matter and at what detail, instead of
 // every event being treated alike. This module ships the CLASSIFICATION and the
-// helpers; actual pruning and aggregation are deliberately not implemented yet
-// (see `describeRetentionPolicy` for the intended policy per class).
+// helpers consumed by the event ledger's pruning and persistence policy.
 //
 // `visibility` is declared now and NOT enforced. It reserves room for the later
 // investigation/criminal systems, where an event may be known only partially,
@@ -41,7 +40,9 @@ const EXPLICIT_CLASSES = Object.freeze({
   "ship.moved": RETENTION_CLASS.EPHEMERAL,
   "weapon.fired": RETENTION_CLASS.EPHEMERAL,
   "scanner.activated": RETENTION_CLASS.EPHEMERAL,
-  "scanner.subjectScanned": RETENTION_CLASS.EPHEMERAL,
+  // A scan can become an inspection or enforcement fact; keep its detail long
+  // enough to reconstruct an encounter, but not forever like an adjudication.
+  "scanner.subjectScanned": RETENTION_CLASS.OPERATIONAL,
   "tractor.toggled": RETENTION_CLASS.EPHEMERAL,
   "resource.processed": RETENTION_CLASS.EPHEMERAL,
   "resource.collected": RETENTION_CLASS.EPHEMERAL,
@@ -99,18 +100,23 @@ const EXPLICIT_CLASSES = Object.freeze({
   "wreck.salvageAuthorized": RETENTION_CLASS.DURABLE,
   "wreck.salvagePosted": RETENTION_CLASS.DURABLE,
   "wreck.salvageDelivered": RETENTION_CLASS.DURABLE,
+  "wreck.salvageSold": RETENTION_CLASS.DURABLE,
+  "sprc.salvageDismantled": RETENTION_CLASS.DURABLE,
   "patrol.craftDestroyed": RETENTION_CLASS.DURABLE,
   "title.lienAttached": RETENTION_CLASS.DURABLE,
   "contract.paid": RETENTION_CLASS.DURABLE,
   // Money changing hands and goods leaving the world are both history.
-  "population.goodsPurchased": RETENTION_CLASS.DURABLE,
-  "population.goodsConsumed": RETENTION_CLASS.DURABLE,
-  "population.incomeReceived": RETENTION_CLASS.DURABLE,
+  "population.goodsPurchased": RETENTION_CLASS.OPERATIONAL,
+  "population.goodsConsumed": RETENTION_CLASS.OPERATIONAL,
+  "population.incomeReceived": RETENTION_CLASS.OPERATIONAL,
   "population.emergencyCreditDrawn": RETENTION_CLASS.DURABLE,
   "population.emergencyCreditRepaid": RETENTION_CLASS.DURABLE,
   "contract.expired": RETENTION_CLASS.DURABLE,
   "legal.zoneFlag": RETENTION_CLASS.DURABLE,
-  "institution.action": RETENTION_CLASS.DURABLE,
+  "institution.action": RETENTION_CLASS.OPERATIONAL,
+  "authority.gateBountyPaid": RETENTION_CLASS.DURABLE,
+  "carrier.repairPaid": RETENTION_CLASS.DURABLE,
+  "insurance.claimPaid": RETENTION_CLASS.DURABLE,
 });
 
 // Prefix fallbacks for families of events not listed individually.

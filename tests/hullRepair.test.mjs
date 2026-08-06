@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addToTank, applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_RATE } from "../src/systems/panelMaintenance.js";
+import { addToTank, applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE } from "../src/systems/panelMaintenance.js";
 import { getResourceProcessValue } from "../src/systems/resourceDefinitions.js";
 import { createGameState } from "../src/state/gameState.js";
+import { Game } from "../src/game.js";
 
 test("addToTank never exceeds the cap or falls below zero", () => {
   assert.equal(addToTank(180, 250, 200), 200, "overfill is clamped to the cap");
@@ -62,6 +63,56 @@ test("repair rate ramps from ten percent to full speed over an episode", () => {
   assert.equal(getHullRepairRateMultiplier(40, 40, 80), 0.1);
   assert.equal(getHullRepairRateMultiplier(60, 40, 80), 0.55);
   assert.equal(getHullRepairRateMultiplier(80, 40, 80), 1);
+});
+
+test("onboard reserve recovers a player ship from zero integrity", () => {
+  const state = createGameState();
+  state.components.hull.integrity = 0;
+  state.components.hull.repairReserve = 20;
+  state.components.engine.powered = false;
+  const game = {
+    state,
+    shipDestroyed: true,
+    hullRepairDelay: 0,
+    _hullIntegrityWatch: 0,
+    _hullRepairStartIntegrity: null,
+    _hullRepairTargetIntegrity: null,
+    hasRecordedStrandedEvent: true,
+    onHudChange() {},
+  };
+
+  Game.prototype.updateHullRepair.call(game, 0.5);
+
+  assert.ok(state.components.hull.integrity > 0, "reserve patches a zero-integrity hull");
+  assert.ok(state.components.hull.repairReserve < 20, "the recovery consumes real reserve");
+  assert.equal(game.shipDestroyed, false, "positive integrity releases the destroyed latch");
+  assert.equal(state.components.engine.powered, false, "recovery does not silently restart the engine");
+});
+
+test("a subsequent hit to zero delays but does not cancel reserve recovery", () => {
+  const state = createGameState();
+  state.components.hull.integrity = 0;
+  state.components.hull.repairReserve = 20;
+  const game = {
+    state,
+    shipDestroyed: true,
+    hullRepairDelay: 0,
+    _hullIntegrityWatch: 3,
+    _hullRepairStartIntegrity: 3,
+    _hullRepairTargetIntegrity: 23,
+    hasRecordedStrandedEvent: true,
+    onHudChange() {},
+  };
+
+  Game.prototype.updateHullRepair.call(game, 0.1);
+  assert.equal(state.components.hull.integrity, 0, "fresh damage still restarts the normal repair delay");
+  assert.ok(game.hullRepairDelay > 0, "the repair episode remains pending");
+
+  Game.prototype.updateHullRepair.call(game, HULL_REPAIR_DELAY_SECONDS);
+  Game.prototype.updateHullRepair.call(game, 0.5);
+
+  assert.ok(state.components.hull.integrity > 0, "reserve resumes after the delay instead of remaining destroyed");
+  assert.equal(game.shipDestroyed, false);
 });
 
 test("no patch occurs without stored reserve, and integrity never exceeds max", () => {

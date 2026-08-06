@@ -6,7 +6,7 @@
 // between events come only from explicit references or same-id structural
 // links; nothing is inferred from timestamps.
 
-import { classifyEvent, getRetentionClass, RETENTION_CLASS } from "./eventRetention.js?v=fresh-20260804-2128-90ed81d";
+import { classifyEvent, getRetentionClass, RETENTION_CLASS } from "./eventRetention.js?v=fresh-20260805-2142-0b6dcbe";
 
 export const REFERENCE_KIND = Object.freeze({
   ACTOR: "actor",
@@ -86,7 +86,7 @@ export function getEventVisibility(event) {
 }
 
 export function describeEventRetention(event) {
-  return getRetentionClass(event?.type);
+  return event?.retentionClass ?? getRetentionClass(event?.type);
 }
 
 // Normalized references for one event, deduplicated per kind.

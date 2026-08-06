@@ -4,6 +4,7 @@ export function advanceFlightBody(body, deltaSeconds, controls, flight = {}) {
   const rotationSpeed = flight.rotationSpeed ?? 2.6;
   const thrustPower = flight.thrustPower ?? 95;
   const reverseThrustMultiplier = flight.reverseThrustMultiplier ?? 0.2;
+  const reverseThrusterMultiplier = flight.reverseThrusterMultiplier ?? reverseThrustMultiplier;
   const lateralThrustMultiplier = flight.lateralThrustMultiplier ?? 0;
   const maxSpeed = flight.maxSpeed ?? 105;
   const boostThrustMultiplier = controls.boost ? (flight.boostThrustMultiplier ?? 1) : 1;
@@ -18,11 +19,16 @@ export function advanceFlightBody(body, deltaSeconds, controls, flight = {}) {
     body.angle += rotationSpeed * deltaSeconds;
   }
 
-  body.isThrusting = Boolean(controls.thrust || controls.strafe);
+  body.isThrusting = Boolean(controls.thrust || controls.reverseThrust || controls.strafe);
   if (controls.thrust) {
     const effectivePower = thrustPower * (controls.reverse ? reverseThrustMultiplier : 1) * boostThrustMultiplier;
     body.velocity.x += Math.cos(body.angle) * effectivePower * thrustDirection * deltaSeconds;
     body.velocity.y += Math.sin(body.angle) * effectivePower * thrustDirection * deltaSeconds;
+  }
+
+  if (controls.reverseThrust) {
+    body.velocity.x -= Math.cos(body.angle) * thrustPower * reverseThrusterMultiplier * deltaSeconds;
+    body.velocity.y -= Math.sin(body.angle) * thrustPower * reverseThrusterMultiplier * deltaSeconds;
   }
 
   if (controls.strafe && lateralThrustMultiplier > 0) {

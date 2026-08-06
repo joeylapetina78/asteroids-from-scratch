@@ -1,54 +1,55 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260804-2128-90ed81d";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260804-2128-90ed81d";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260804-2128-90ed81d";
-import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260804-2128-90ed81d";
-import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260804-2128-90ed81d";
-import { ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260804-2128-90ed81d";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260804-2128-90ed81d";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260804-2128-90ed81d";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260804-2128-90ed81d";
-import { Game } from "./game.js?v=fresh-20260804-2128-90ed81d";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260804-2128-90ed81d";
-import { createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260804-2128-90ed81d";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260804-2128-90ed81d";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260804-2128-90ed81d";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260804-2128-90ed81d";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260805-2142-0b6dcbe";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260805-2142-0b6dcbe";
+import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260805-2142-0b6dcbe";
+import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260805-2142-0b6dcbe";
+import { ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260805-2142-0b6dcbe";
+import { DEFAULT_ENGINE_MODEL_ID, getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260805-2142-0b6dcbe";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260805-2142-0b6dcbe";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260805-2142-0b6dcbe";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260805-2142-0b6dcbe";
+import { Game } from "./game.js?v=fresh-20260805-2142-0b6dcbe";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260805-2142-0b6dcbe";
+import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260805-2142-0b6dcbe";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260805-2142-0b6dcbe";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260805-2142-0b6dcbe";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260805-2142-0b6dcbe";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260804-2128-90ed81d";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260804-2128-90ed81d";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260804-2128-90ed81d";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260804-2128-90ed81d";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260804-2128-90ed81d";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260804-2128-90ed81d";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260804-2128-90ed81d";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260804-2128-90ed81d";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260804-2128-90ed81d";
-import { Processor } from "./systems/processor.js?v=fresh-20260804-2128-90ed81d";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260804-2128-90ed81d";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260804-2128-90ed81d";
-import { createGameState } from "./state/gameState.js?v=fresh-20260804-2128-90ed81d";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260804-2128-90ed81d";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260804-2128-90ed81d";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260804-2128-90ed81d";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260804-2128-90ed81d";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260804-2128-90ed81d";
-import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260804-2128-90ed81d";
-import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260804-2128-90ed81d";
-import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260804-2128-90ed81d";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260805-2142-0b6dcbe";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260805-2142-0b6dcbe";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260805-2142-0b6dcbe";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260805-2142-0b6dcbe";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260805-2142-0b6dcbe";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260805-2142-0b6dcbe";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260805-2142-0b6dcbe";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260805-2142-0b6dcbe";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260805-2142-0b6dcbe";
+import { Processor } from "./systems/processor.js?v=fresh-20260805-2142-0b6dcbe";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260805-2142-0b6dcbe";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260805-2142-0b6dcbe";
+import { createGameState } from "./state/gameState.js?v=fresh-20260805-2142-0b6dcbe";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260805-2142-0b6dcbe";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260805-2142-0b6dcbe";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260805-2142-0b6dcbe";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260805-2142-0b6dcbe";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260805-2142-0b6dcbe";
+import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260805-2142-0b6dcbe";
+import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260805-2142-0b6dcbe";
+import { createMiningOperation } from "./systems/miningOperation.js?v=fresh-20260805-2142-0b6dcbe";
 import { FLINT_MINING_SEED } from "./content/economy/miningInstitutions.js";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260804-2128-90ed81d";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260804-2128-90ed81d";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260804-2128-90ed81d";
-import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260804-2128-90ed81d";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260804-2128-90ed81d";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260804-2128-90ed81d";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260804-2128-90ed81d";
-import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260804-2128-90ed81d";
-import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260804-2128-90ed81d";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260805-2142-0b6dcbe";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260805-2142-0b6dcbe";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260805-2142-0b6dcbe";
+import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260805-2142-0b6dcbe";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260805-2142-0b6dcbe";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260805-2142-0b6dcbe";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260805-2142-0b6dcbe";
+import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260805-2142-0b6dcbe";
+import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260805-2142-0b6dcbe";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -283,6 +284,9 @@ const cloakButton = document.querySelector("#cloak-button");
 const cloakStatus = document.querySelector("#cloak-status");
 const engineStrafeHint = document.querySelector("#engine-strafe-hint");
 const engineBoostHint = document.querySelector("#engine-boost-hint");
+const engineModelSelect = document.querySelector("#engine-model-select");
+const engineDownControlHint = document.querySelector("#engine-down-control-hint");
+const thrustModeToggle = document.querySelector("#thrust-mode-toggle");
 const viewportRegion = document.querySelector("#viewport-region");
 const zoomInButton = document.querySelector("#zoom-in");
 const zoomOutButton = document.querySelector("#zoom-out");
@@ -815,19 +819,39 @@ logisticsManager.update();
 towServiceManager.update();
 fleetInsuranceManager.update();
 fleetProtectionManager.update();
-window.setInterval(() => sprcManager.update(), 1000);
-window.setInterval(() => populationManager.update(), 1000);
-window.setInterval(() => procurementManager.update(), 1000);
-window.setInterval(() => logisticsManager.update(), 1000);
-window.setInterval(() => {
+const simulationPerformance = { systems: {} };
+window.__asteroids.performance = simulationPerformance;
+function scheduleSimulationSystem(name, update, offsetMs) {
+  const run = () => {
+    const startedAt = performance.now();
+    update();
+    const elapsedMs = performance.now() - startedAt;
+    const metric = simulationPerformance.systems[name] ??= { runs: 0, totalMs: 0, lastMs: 0, maxMs: 0 };
+    metric.runs += 1;
+    metric.totalMs += elapsedMs;
+    metric.lastMs = elapsedMs;
+    metric.maxMs = Math.max(metric.maxMs, elapsedMs);
+    metric.averageMs = metric.totalMs / metric.runs;
+  };
+  window.setTimeout(() => {
+    run();
+    window.setInterval(run, 1000);
+  }, offsetMs);
+}
+
+scheduleSimulationSystem("sprc", () => sprcManager.update(), 0);
+scheduleSimulationSystem("population", () => populationManager.update(), 125);
+scheduleSimulationSystem("procurement", () => procurementManager.update(), 250);
+scheduleSimulationSystem("logistics", () => logisticsManager.update(), 375);
+scheduleSimulationSystem("mining", () => {
   miningManager.update();
   flintMiningManager.update();
-}, 1000);
-window.setInterval(() => towServiceManager.update(), 1000);
-window.setInterval(() => {
+}, 500);
+scheduleSimulationSystem("towing", () => towServiceManager.update(), 625);
+scheduleSimulationSystem("fleet-services", () => {
   fleetInsuranceManager.update();
   fleetProtectionManager.update();
-}, 1000);
+}, 750);
 registerStarterDeliveryShipRecords(state);
 clearOldPanelLayouts();
 setInitialPaperworkLocations();
@@ -883,6 +907,19 @@ new ResizeObserver(() => {
   }
 }).observe(canvas);
 window.addEventListener("beforeunload", () => saveNow());
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") saveNow();
+});
+
+engineModelSelect.addEventListener("change", () => {
+  state.components.engine.engineModelId = engineModelSelect.value || DEFAULT_ENGINE_MODEL_ID;
+  if (getEngineModel(state.components.engine).downControl === "reverse-thrust") {
+    state.components.engine.thrustMode = "forward";
+    const forward = document.querySelector("input[name='thrust-mode'][value='forward']");
+    if (forward) forward.checked = true;
+  }
+  updateHudDisplay();
+});
 
 function updateHudDisplay() {
   updateAttentionCallouts();
@@ -969,6 +1006,14 @@ function updateHudDisplay() {
   if (hasForwardBoost !== _hud.hasForwardBoost) {
     _hud.hasForwardBoost = hasForwardBoost;
     engineBoostHint.hidden = !hasForwardBoost;
+  }
+
+  const engineModel = getEngineModel(state.components.engine);
+  if (engineModel.id !== _hud.engineModelId) {
+    _hud.engineModelId = engineModel.id;
+    engineModelSelect.value = engineModel.id;
+    engineDownControlHint.textContent = engineModel.downControlLabel;
+    thrustModeToggle.hidden = engineModel.downControl === "reverse-thrust";
   }
 
   const towCableDisplay = game.getTowCableDisplay();
@@ -1175,8 +1220,12 @@ function scheduleSave() {
 
   saveTimer = window.setTimeout(() => {
     saveTimer = null;
-    saveNow();
-  }, 800);
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(() => saveNow(), { timeout: 2000 });
+    } else {
+      saveNow();
+    }
+  }, 15000);
 }
 
 function saveNow() {
@@ -6256,6 +6305,27 @@ function updateWreckSalvageOffers() {
   events.forEach((event) => {
     lastWreckContractEventId = Math.max(lastWreckContractEventId, event.id);
     if (event.type !== "wreck.created") return;
+    if (state.wrecks?.records?.[event.payload.wreckId]?.status !== "awaiting-owner-disposition") return;
+    const acquisition = acquireWreckForSprc(state, { wreckId: event.payload.wreckId });
+    if (!acquisition.acquired) {
+      state.ledger.recordEvent("sprc.salvageAcquisitionDeclined", {
+        wreckId: event.payload.wreckId,
+        previousOwnerInstitutionId: event.payload.ownerInstitutionId,
+        reason: acquisition.evaluation.reason,
+        available: acquisition.evaluation.available ?? 0,
+        totalCommitment: acquisition.evaluation.totalCommitment ?? 0,
+      }, { visible: true, message: `Sal declined ${event.payload.shipName ?? "a wreck"}: ${acquisition.evaluation.reason}.` });
+      return;
+    }
+    state.ledger.recordEvent("wreck.salvageSold", {
+      wreckId: event.payload.wreckId,
+      shipName: event.payload.shipName,
+      previousOwnerInstitutionId: acquisition.record.previousOwnerInstitutionId,
+      ownerInstitutionId: state.sprc.institution.id,
+      titleId: acquisition.record.titleId,
+      acquisitionPrice: acquisition.evaluation.acquisitionPrice,
+      expectedYield: acquisition.evaluation.expectedYield,
+    }, { visible: true, message: `${event.payload.shipName ?? "A wreck"}'s owner sold its salvage title to SPRC for ${acquisition.evaluation.acquisitionPrice} cr.` });
     const definition = createWreckSalvageContract(state, { wreckId: event.payload.wreckId });
     if (!definition) return;
     registerContractDefinition(definition);
@@ -6272,10 +6342,11 @@ function updateWreckSalvageOffers() {
     state.ledger.recordEvent("wreck.salvagePosted", {
       wreckId: event.payload.wreckId,
       contractId: definition.id,
-      ownerInstitutionId: event.payload.ownerInstitutionId,
+      ownerInstitutionId: state.sprc.institution.id,
+      previousOwnerInstitutionId: event.payload.ownerInstitutionId,
       destinationSiteId: SPRC.siteId,
       rewardCredits: definition.reward.credits,
-    }, { visible: true, message: `${event.payload.shipName ?? "A title holder"}'s owner posted authorized wreck recovery to Scrap Porch.` });
+    }, { visible: true, message: `SPRC posted recovery of its newly acquired ${event.payload.shipName ?? "wreck"} to Scrap Porch.` });
   });
 }
 
@@ -7426,7 +7497,7 @@ function readLedgerFilters() {
 // Developer view reads the whole stream, hidden events included.
 function getLedgerSourceEvents() {
   if (ledgerPaused && ledgerFrozenEvents) return ledgerFrozenEvents;
-  return state.ledger.getRecentEvents(6000, { includeHidden: true });
+  return state.ledger.getRetainedEvents({ includeHidden: true });
 }
 
 function setLedgerSelectOptions(select, options, placeholder) {
@@ -7481,7 +7552,13 @@ function renderLedgerBrowser({ force = false } = {}) {
   const page = matched.slice(0, LEDGER_PAGE_SIZE);
 
   if (ledgerCountLabel) {
-    ledgerCountLabel.textContent = `${matched.length} / ${sourceEvents.length}${matched.length > page.length ? ` (showing ${page.length})` : ""}${ledgerPaused ? " · paused" : ""}`;
+    const retention = state.ledger.getRetentionStats?.();
+    const retained = retention?.retainedByClass;
+    const pruned = retention?.prunedByClass;
+    const retentionSummary = retained
+      ? ` · retained E${retained.ephemeral}/O${retained.operational}/D${retained.durable} · summarized E${pruned.ephemeral}/O${pruned.operational}`
+      : "";
+    ledgerCountLabel.textContent = `${matched.length} / ${sourceEvents.length}${matched.length > page.length ? ` (showing ${page.length})` : ""}${retentionSummary}${ledgerPaused ? " · paused" : ""}`;
   }
 
   // Cheap identity check so we do not rebuild the table every tick.
@@ -7695,7 +7772,7 @@ function renderLedgerDetail(sourceEvents) {
 // unpausing shows everything that arrived meanwhile.
 ledgerPauseButton?.addEventListener("click", () => {
   ledgerPaused = !ledgerPaused;
-  ledgerFrozenEvents = ledgerPaused ? state.ledger.getRecentEvents(6000, { includeHidden: true }) : null;
+  ledgerFrozenEvents = ledgerPaused ? state.ledger.getRetainedEvents({ includeHidden: true }) : null;
   ledgerPauseButton.textContent = ledgerPaused ? "Resume" : "Pause";
   ledgerPauseButton.classList.toggle("is-active", ledgerPaused);
   renderLedgerBrowser({ force: true });
@@ -7717,7 +7794,7 @@ window.setInterval(() => renderLedgerBrowser(), 900);
 window.__asteroids.ledgerBrowser = {
   filters: readLedgerFilters,
   describe: (eventId) => {
-    const events = state.ledger.getRecentEvents(6000, { includeHidden: true });
+    const events = state.ledger.getRetainedEvents({ includeHidden: true });
     return describeEvent(events, events.find((event) => event.id === eventId));
   },
   select: (eventId) => { ledgerSelectedEventId = eventId; renderLedgerBrowser({ force: true }); },

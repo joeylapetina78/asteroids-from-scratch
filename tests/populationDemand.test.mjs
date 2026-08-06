@@ -366,9 +366,9 @@ test("hub administrations and populations resolve to their site's viewport posit
   assert.deepEqual(porch.position, { x: -1180, y: 860 });
 });
 
-test("purchases and consumption are durable history, demand is operational", () => {
-  assert.equal(getRetentionClass("population.goodsPurchased"), RETENTION_CLASS.DURABLE);
-  assert.equal(getRetentionClass("population.goodsConsumed"), RETENTION_CLASS.DURABLE);
+test("repeating population transactions and demand retain operational detail", () => {
+  assert.equal(getRetentionClass("population.goodsPurchased"), RETENTION_CLASS.OPERATIONAL);
+  assert.equal(getRetentionClass("population.goodsConsumed"), RETENTION_CLASS.OPERATIONAL);
   assert.equal(getRetentionClass("population.demandRaised"), RETENTION_CLASS.OPERATIONAL);
 });
 

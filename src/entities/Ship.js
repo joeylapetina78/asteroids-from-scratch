@@ -1,4 +1,5 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260804-2128-90ed81d";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260805-2142-0b6dcbe";
+import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260805-2142-0b6dcbe";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_THRUST_POWER = 95;
@@ -75,6 +76,7 @@ export class Ship {
     this.engine = engine;
     this.shipFrame = shipFrame;
     this.isThrusting = false;
+    this.thrustVisualDirection = "forward";
     this.isCloaked = false;
     this.cloakConfig = null;
     this.boostDurationRemaining = 0;
@@ -92,14 +94,18 @@ export class Ship {
 
   update(deltaSeconds, input) {
     this.boostCooldown = Math.max(0, this.boostCooldown - deltaSeconds);
+    const engineModel = getEngineModel(this.engine);
     const canThrust = this.engine.powered && input.isDown("KeyW") && this.engine.fuel > 0 && !this.conditionThrustBlocked;
+    const canReverseThrust = engineModel.downControl === "reverse-thrust"
+      && this.engine.powered && input.isDown("KeyS") && this.engine.fuel > 0 && !this.conditionThrustBlocked;
     const canStrafe = this.engine.powered && this.engine.fuel > 0 && this.hasLateralThrusters();
     const isBoosting = this.engine.powered && this.boostDurationRemaining > 0;
     const strafe = canStrafe ? (input.isDown("KeyQ") ? -1 : input.isDown("KeyE") ? 1 : 0) : 0;
     const boostDefaultsForward = isBoosting && !canThrust && strafe === 0;
-    if (canThrust || (canStrafe && (input.isDown("KeyQ") || input.isDown("KeyE")))) {
+    if (canThrust || canReverseThrust || (canStrafe && (input.isDown("KeyQ") || input.isDown("KeyE")))) {
       this.engine.fuel = Math.max(0, this.engine.fuel - this.getFuelBurnRate() * deltaSeconds);
     }
+    this.thrustVisualDirection = canReverseThrust ? "reverse" : (this.engine.thrustMode === "reverse" ? "reverse" : "forward");
 
     advanceFlightBody(
       this,
@@ -107,7 +113,8 @@ export class Ship {
       {
         turn: this.engine.powered ? (input.isDown("KeyA") ? -1 : input.isDown("KeyD") ? 1 : 0) : 0,
         thrust: canThrust || boostDefaultsForward,
-        brake: this.engine.powered && input.isDown("KeyS"),
+        brake: engineModel.downControl === "brake" && this.engine.powered && input.isDown("KeyS"),
+        reverseThrust: canReverseThrust,
         reverse: this.engine.thrustMode === "reverse",
         strafe,
         boost: isBoosting,
@@ -116,6 +123,7 @@ export class Ship {
         rotationSpeed: this.getRotationSpeed(),
         thrustPower: this.getThrustPower(),
         reverseThrustMultiplier: this.getReverseThrustMultiplier(),
+        reverseThrusterMultiplier: engineModel.reverseThrusterMultiplier ?? this.getReverseThrustMultiplier(),
         lateralThrustMultiplier: this.getLateralThrustMultiplier(),
         boostThrustMultiplier: this.getBoostThrustMultiplier(),
         boostMaxSpeedMultiplier: this.getBoostMaxSpeedMultiplier(),
@@ -306,7 +314,7 @@ export class Ship {
     const length = (visual.length ?? 15) * plumeScale;
     const width = (visual.width ?? 5) * plumeScale;
     const flicker = 1 - raggedness * Math.random() * 0.7;
-    const direction = this.engine.thrustMode === "reverse" ? 1 : -1;
+    const direction = this.thrustVisualDirection === "reverse" ? 1 : -1;
     const originX = direction > 0 ? 18 : -17;
     const tipX = originX + direction * (length * flicker + Math.random() * length * 0.55);
 

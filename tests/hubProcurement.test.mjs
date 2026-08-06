@@ -6,6 +6,7 @@ import test from "node:test";
 import {
   PROCUREMENT_STATUS,
   createHubProcurementOperation,
+  estimateOpeningFreightBudget,
   evaluateSupplierCandidates,
   getAskConcession,
   getCommittedSupply,
@@ -88,6 +89,31 @@ test("a hub posts a purchase order for a family it may not mine", () => {
     "and never from itself");
 });
 
+test("a buyer keeps one consolidated open purchase per material family", () => {
+  const { state, procurement } = createWorld();
+  for (let tick = 0; tick < 20; tick += 1) procurement.update();
+  const buyers = new Set(listOrders(state).map((order) => order.buyerInstitutionId));
+  buyers.forEach((buyerInstitutionId) => {
+    const open = listOrders(state, {
+      buyerInstitutionId,
+      status: [PROCUREMENT_STATUS.OFFERED, PROCUREMENT_STATUS.ACCEPTED, PROCUREMENT_STATUS.READY, PROCUREMENT_STATUS.SHIPPED],
+    });
+    const counts = new Map();
+    open.forEach((order) => counts.set(order.family, (counts.get(order.family) ?? 0) + 1));
+    counts.forEach((count, family) => assert.ok(count <= 1, `${buyerInstitutionId} has ${count} open ${family} orders`));
+  });
+});
+
+test("opening freight budget follows route cost rather than material invoice value", () => {
+  assert.equal(estimateOpeningFreightBudget(0), 80);
+  assert.ok(estimateOpeningFreightBudget(10_000) > estimateOpeningFreightBudget(1_000));
+  const { state } = createWorld();
+  listOrders(state).forEach((order) => {
+    const candidate = order.supplierCandidates.find((entry) => entry.id === order.supplierInstitutionId);
+    assert.equal(order.freightBudget, candidate.metrics.freightCost);
+  });
+});
+
 test("orders are directed at a legal producer rather than an authored supplier", () => {
   const { state } = createWorld();
   const volatileOrder = listOrders(state, { buyerInstitutionId: "yard-exchange" })
@@ -133,17 +159,17 @@ test("hub six creates a real industrial choice whose winner changes with operati
     new Set(opening.filter((candidate) => candidate.eligible).map((candidate) => candidate.institutionId)),
     new Set(["the-ledge", "kiln-crossing"]),
   );
-  assert.equal(opening[0].institutionId, "kiln-crossing", "stock on hand can overcome the longer route");
+  assert.equal(opening[0].institutionId, "the-ledge", "the route-and-wear quote makes the nearer supplier cheaper to deliver");
 
-  state.hubProcurement.orders["kiln-at-capacity"] = {
-    id: "kiln-at-capacity", buyerInstitutionId: "scrap-forge", supplierInstitutionId: "kiln-crossing",
+  state.hubProcurement.orders["ledge-at-capacity"] = {
+    id: "ledge-at-capacity", buyerInstitutionId: "scrap-forge", supplierInstitutionId: "the-ledge",
     family: "industrial", resourceId: "silicate", units: 12, deliveredUnits: 0, status: PROCUREMENT_STATUS.ACCEPTED,
   };
   const overflow = evaluateSupplierCandidates(state, {
     buyerInstitutionId: "yard-exchange", family: "industrial", units: 6,
   });
-  assert.equal(overflow[0].institutionId, "the-ledge", "the alternative wins when the opening supplier is committed");
-  assert.match(overflow.find((candidate) => candidate.institutionId === "kiln-crossing").reasons.join(" "), /capacity/);
+  assert.equal(overflow[0].institutionId, "kiln-crossing", "the alternative wins when the opening supplier is committed");
+  assert.match(overflow.find((candidate) => candidate.institutionId === "the-ledge").reasons.join(" "), /capacity/);
 });
 
 test("supplier discovery ranks every legal producer by delivered cost, independent of definition order", () => {
@@ -280,11 +306,10 @@ test("the raised target is what makes the supplier commission more mining", () =
   procurement.update();
   // A sale widens the gap the supplier mines against — but only up to what it
   // has agreed to, since it now refuses to owe more than it can dig.
-  const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })
-    .find((entry) => entry.family === "volatile");
-  assert.ok(order, "a volatile producer accepted business");
-  const position = getInventoryPosition(state, order.supplierInstitutionId, "volatile");
-  assert.ok(position.committedSales > 0, "the selected supplier owes volatile to somebody");
+  const order = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED })[0];
+  assert.ok(order, "a producer accepted business");
+  const position = getInventoryPosition(state, order.supplierInstitutionId, order.family);
+  assert.ok(position.committedSales > 0, `the selected supplier owes ${order.family} to somebody`);
   assert.equal(position.target, position.ownTarget + position.committedSales,
     "and mines against its own need plus what it sold");
   assert.ok(position.target > position.ownTarget);
@@ -392,13 +417,13 @@ test("freight is offered once the goods actually exist", () => {
 
 // ── The full chain, end to end ─────────────────────────────────────────────
 
-function createFullWorld() {
+function createFullWorld({ now = () => 1_000 } = {}) {
   const state = createGameState();
   state.logistics = createInitialLogisticsState(1_000);
   ["yard-exchange", "scrap-forge", "the-ledge"].forEach((id) => {
     state.logistics.institutions[id].accounts.operating.balance = 20_000;
   });
-  const procurement = createHubProcurementOperation({ state, now: () => 1_000 });
+  const procurement = createHubProcurementOperation({ state, now });
   const ships = Object.keys(state.logistics.haulers).map((id) => ({
     id, dockedSiteId: state.logistics.haulers[id].currentSiteId, wear: 0,
     operationalStatus: "seeking-work", activeShipmentId: null, assignment: null, transfers: [],
@@ -408,7 +433,7 @@ function createFullWorld() {
     clearShipment() { this.assignment = null; },
   }));
   const manager = createLogisticsManager({
-    state, ships, now: () => 1_000,
+    state, ships, now,
     onProcurementShipped: (orderId, shipmentId) => procurement.markShipped(orderId, shipmentId),
     onProcurementDelivered: (orderId, settlement) => procurement.completeOrder(orderId, settlement),
   });
@@ -523,6 +548,33 @@ test("a hauler can take a run from the far end when it has nothing local", () =>
     const ship = ships.find((entry) => entry.id === shipment.assigneeId);
     assert.ok(ship.assignment.route.length >= 2, "and was routed via the pickup");
   }
+});
+
+test("live carrier cost can lift an underpriced freight offer and clear it", () => {
+  let clock = 1_000;
+  const world = createFullWorld({ now: () => clock });
+  const { state, procurement, manager, hub } = world;
+  procurement.update();
+  listOrders(state, { status: [PROCUREMENT_STATUS.ACCEPTED, PROCUREMENT_STATUS.READY] }).forEach((order) => {
+    hub(order.supplierInstitutionId).inventories[order.resourceId] = order.units + 30;
+  });
+  procurement.update();
+  const offer = getProcurementFreightOffers(state)[0];
+  assert.ok(offer, "a titled cargo lot is awaiting transport");
+  listOrders(state, { status: PROCUREMENT_STATUS.READY })
+    .filter((order) => order.id !== offer.procurementOrderId)
+    .forEach((order) => { order.status = PROCUREMENT_STATUS.ACCEPTED; });
+  state.logistics.postedFreightRates = { [offer.id]: 1 };
+  manager.update();
+  assert.equal(Object.values(state.logistics.shipments).filter((entry) => entry.templateId === offer.id).length, 0,
+    "the carrier refuses the loss-making opening rate");
+
+  clock += 46_000;
+  manager.update();
+  const shipment = Object.values(state.logistics.shipments).find((entry) => entry.templateId === offer.id);
+  assert.ok(shipment, "the issuer moved to the live carrier ask and the work cleared");
+  assert.ok(shipment.payment > 1);
+  assert.equal(state.logistics.postedFreightRates[offer.id], shipment.payment);
 });
 
 // ── Repricing: the two sides converge instead of restating offers ──────────

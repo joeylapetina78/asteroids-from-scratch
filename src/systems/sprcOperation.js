@@ -1,16 +1,17 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260804-2128-90ed81d";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260804-2128-90ed81d";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260804-2128-90ed81d";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260804-2128-90ed81d";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260804-2128-90ed81d";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260804-2128-90ed81d";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260804-2128-90ed81d";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260804-2128-90ed81d";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260804-2128-90ed81d";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-2128-90ed81d";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2128-90ed81d";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260804-2128-90ed81d";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260804-2128-90ed81d";
+import { depositCredits } from "./accounts.js?v=fresh-20260805-2142-0b6dcbe";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260805-2142-0b6dcbe";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260805-2142-0b6dcbe";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260805-2142-0b6dcbe";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260805-2142-0b6dcbe";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260805-2142-0b6dcbe";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260805-2142-0b6dcbe";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260805-2142-0b6dcbe";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260805-2142-0b6dcbe";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260805-2142-0b6dcbe";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260805-2142-0b6dcbe";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260805-2142-0b6dcbe";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260805-2142-0b6dcbe";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -265,8 +266,37 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
         createServiceRepairOrder(event.payload);
       } else if (event.type === "logistics.maintenanceRequired" && sprc.serviceSubjects[event.payload.npcId]) {
         createServiceRepairOrder(createLegacyFreightRequest(event.payload));
+      } else if (event.type === "wreck.salvageDelivered") {
+        queueWreckDismantling(event.payload);
       }
     });
+  }
+
+  function queueWreckDismantling(payload) {
+    const wreck = state.wrecks?.records?.[payload.wreckId];
+    if (!wreck || wreck.status !== "delivered-for-dismantling") return null;
+    const existing = Object.values(sprc.productionOrders).find((order) => order.sourceWreckId === wreck.id && !["completed", "canceled"].includes(order.status));
+    if (existing) return existing;
+    const contract = state.contracts?.records?.[wreck.salvageContractId];
+    const recoveryFee = payload.fee ?? contract?.reward?.credits ?? wreck.recoveryBudget ?? 0;
+    if (payload.salvagerId === "player" && !wreck.recoveryPaidAt) {
+      sprc.account.balance -= recoveryFee;
+      sprc.account.committed = Math.max(0, (sprc.account.committed ?? 0) - recoveryFee);
+      wreck.recoveryPaidAt = now();
+    }
+    const id = nextId("production", "SPRC-SLV");
+    const order = sprc.productionOrders[id] = {
+      id, kind: "wreck-dismantling", sourceWreckId: wreck.id,
+      inputs: {}, output: { itemId: "salvage-bundle", amount: 1 },
+      salvageYield: wreck.plannedSalvageYield,
+      durationSeconds: 25, status: "queued", createdAt: now(),
+    };
+    wreck.status = "queued-for-dismantling";
+    wreck.dismantlingOrderId = id;
+    sprc.productionQueue.push(id);
+    appendHistory("salvage.queued", { productionOrderId: id, wreckId: wreck.id, shipName: wreck.shipName, salvageYield: order.salvageYield });
+    state.ledger.recordEvent("sprc.salvageQueued", { institutionId: sprc.institution.id, productionOrderId: id, wreckId: wreck.id, shipName: wreck.shipName, salvageYield: order.salvageYield }, { visible: true, message: `Sal queued ${wreck.shipName} for dismantling in The Maw.` });
+    return order;
   }
 
   function recordRouteCompletion(payload) {
@@ -640,6 +670,10 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   function completeDueProduction() {
     Object.values(sprc.productionOrders).forEach((order) => {
       if (order.status !== "running" || order.completesAt > now()) return;
+      if (order.kind === "wreck-dismantling") {
+        completeWreckDismantling(order);
+        return;
+      }
       addInventory("produced", order.output.itemId, order.output.amount);
       order.status = "completed";
       order.completedAt = now();
@@ -657,6 +691,34 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       appendHistory("production.completed", { productionOrderId: order.id, output: order.output, unitCost: Math.round(getUnitCost(state, sprc.institution.id, order.output.itemId) * 100) / 100 });
       state.ledger.recordEvent("sprc.productionCompleted", { productionOrderId: order.id, ...order.output }, { visible: true });
     });
+  }
+
+  function completeWreckDismantling(order) {
+    const wreck = state.wrecks?.records?.[order.sourceWreckId];
+    if (!wreck) return;
+    const yields = order.salvageYield ?? { produced: {}, raw: {} };
+    Object.entries(yields.produced ?? {}).forEach(([itemId, amount]) => addInventory("produced", itemId, amount));
+    Object.entries(yields.raw ?? {}).forEach(([itemId, amount]) => addInventory("raw", itemId, amount));
+    const recoveryFee = state.contracts?.records?.[wreck.salvageContractId]?.reward?.credits ?? wreck.recoveryBudget ?? 0;
+    const totalCost = (wreck.acquisitionPrice ?? 0) + recoveryFee + (wreck.dismantlingCost ?? 0);
+    const valued = [...Object.entries(yields.produced ?? {}), ...Object.entries(yields.raw ?? {})];
+    const totalReference = valued.reduce((sum, [itemId, amount]) => sum + (REFERENCE_UNIT_COSTS[itemId] ?? 20) * amount, 0);
+    valued.forEach(([itemId, amount]) => recordAcquisition(state, {
+      institutionId: sprc.institution.id, itemId, units: amount,
+      totalCost: totalReference > 0 ? totalCost * ((REFERENCE_UNIT_COSTS[itemId] ?? 20) * amount / totalReference) : 0,
+      source: "wreck-dismantling", at: now(),
+    }));
+    sprc.account.balance -= wreck.dismantlingCost ?? 0;
+    sprc.account.committed = Math.max(0, (sprc.account.committed ?? 0) - (wreck.dismantlingCost ?? 0));
+    order.status = "completed";
+    order.completedAt = now();
+    sprc.facilities.maw.activeProductionOrderId = null;
+    wreck.status = "salvaged";
+    wreck.titleStatus = "retired-after-salvage";
+    wreck.salvagedAt = now();
+    wreck.salvageYield = yields;
+    appendHistory("salvage.completed", { productionOrderId: order.id, wreckId: wreck.id, salvageYield: yields, totalCost });
+    state.ledger.recordEvent("sprc.salvageDismantled", { institutionId: sprc.institution.id, productionOrderId: order.id, wreckId: wreck.id, shipName: wreck.shipName, salvageYield: yields, totalCost }, { visible: true, message: `The Maw dismantled ${wreck.shipName}; recovered plates, parts, and reusable feedstock entered SPRC inventory.` });
   }
 
   // Does physical stock actually cover everything this order reserved? Within a
@@ -1424,7 +1486,8 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   }
 
   function appendHistory(type, payload = {}) {
-    sprc.history.push({ id: `sprc-history-${sprc.history.length + 1}`, type, at: now(), ...payload });
+    sprc.counters.history = (sprc.counters.history ?? sprc.history.length) + 1;
+    appendBoundedHistory(sprc.history, { id: `sprc-history-${sprc.counters.history}`, type, at: now(), ...payload });
     const message = getSalActionMessage(type, payload);
     if (message) {
       state.ledger.recordEvent("institution.action", {

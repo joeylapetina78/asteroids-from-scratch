@@ -21,6 +21,9 @@ import { inspectActor } from "../src/systems/actorInspector.js";
 import { collectIntentions } from "../src/systems/intentions.js";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
+import { CINDER_MINING_SEED } from "../src/content/economy/miningInstitutions.js";
+import { addCommitment, createCommitmentPortfolio, remainingCapacity, removeCommitment } from "../src/systems/commitmentPortfolio.js";
+import { MiningWorkerShip } from "../src/entities/MiningWorkerShip.js";
 
 function seededState() {
   const state = createGameState();
@@ -171,6 +174,67 @@ test("a worker is actually dispatched against an outside issuer's offer", () => 
   const allocation = Object.values(mining.getState().allocations).find((entry) => entry.orderId === "rich-offer");
   assert.ok(allocation, "and the commitment is recorded as an allocation like any other");
   assert.equal(allocation.status, "active");
+});
+
+test("a generic commitment portfolio reserves finite capacity without knowing the work domain", () => {
+  const portfolio = createCommitmentPortfolio({ capacity: 6 });
+  assert.equal(addCommitment(portfolio, { id: "first", reservedCapacity: 4 }), true);
+  assert.equal(remainingCapacity(portfolio), 2);
+  assert.equal(addCommitment(portfolio, { id: "too-large", reservedCapacity: 3 }), false);
+  assert.equal(addCommitment(portfolio, { id: "second", reservedCapacity: 2 }), true);
+  assert.equal(remainingCapacity(portfolio), 0);
+  removeCommitment(portfolio, "first");
+  assert.equal(remainingCapacity(portfolio), 4, "finishing work releases exactly its reservation");
+});
+
+test("one miner bundles compatible small orders into one capacity-bounded expedition", () => {
+  const state = seededState();
+  registerExtractionOfferSource(state, "bundle-test", () => [
+    createExtractionOffer({ id: "bundle-water", issuerInstitutionId: "test-buyer", siteId: "scrap-porch", resourceId: "water-ice", amount: 3, paymentPerUnit: 5_000 }),
+    createExtractionOffer({ id: "bundle-copper", issuerInstitutionId: "test-buyer", siteId: "scrap-porch", resourceId: "copper", amount: 2, paymentPerUnit: 4_900 }),
+    createExtractionOffer({ id: "wrong-destination", issuerInstitutionId: "test-buyer", siteId: "yard-exchange", resourceId: "silicate", amount: 1, paymentPerUnit: 4_800 }),
+  ]);
+  const seed = structuredClone(CINDER_MINING_SEED);
+  seed.stateKey = "portfolio-test";
+  seed.institution.id = "miner:portfolio-test";
+  seed.institution.controllerInstitutionId = "person:portfolio-test";
+  seed.controller.id = "person:portfolio-test";
+  seed.controller.controls = [seed.institution.id];
+  seed.workers = [{ ...seed.workers[0], id: "worker:portfolio-test", name: "Portfolio Test" }];
+  seed.expansionWorker = null;
+  seed.expansionProject = null;
+
+  const sprc = createSprcOperation({ state, now: () => 1_000 });
+  const mining = createMiningOperation({ state, game: { worldSites: WORLD_SITES, addWorkerShip: () => {} }, sprcOperation: sprc, now: () => 1_000, seed });
+  const worker = mining.worker;
+
+  assert.equal(worker.commitments.length, 2, "both compatible orders are held by the same craft");
+  assert.deepEqual(new Set(worker.commitments.map((entry) => entry.contractId)), new Set(["bundle-water", "bundle-copper"]));
+  assert.equal(worker.remainingCargoCapacity, 1);
+  assert.ok(!worker.commitments.some((entry) => entry.contractId === "wrong-destination"), "a detour is not silently bundled");
+  assert.equal(Object.values(mining.getState().allocations).filter((entry) => entry.status === "active").length, 2, "each promise remains independently inspectable");
+});
+
+test("bundled mining commitments settle independently and release their own capacity", () => {
+  const delivered = [];
+  const worker = new MiningWorkerShip({
+    id: "worker:bundle-settlement", name: "Bundle Settlement", institutionId: "miner:test",
+    controllerInstitutionId: "person:test", x: 0, y: 0,
+    onDelivery: (delivery) => { delivered.push(delivery.contractId); return { acceptedUnits: delivery.amount, paid: delivery.amount * 10 }; },
+  });
+  assert.equal(worker.assign({ allocationId: "a-water", contractId: "water-job", resourceId: "water-ice", quantity: 3, destinationSiteId: "scrap-porch", destination: { x: 0, y: 0 } }), true);
+  assert.equal(worker.assign({ allocationId: "a-copper", contractId: "copper-job", resourceId: "copper", quantity: 2, destinationSiteId: "scrap-porch", destination: { x: 0, y: 0 } }), true);
+  worker.cargo = { "water-ice": 3, copper: 2 };
+
+  worker.deliver();
+  assert.equal(worker.commitments.length, 1);
+  assert.equal(worker.remainingCargoCapacity, 4, "the remaining manifest keeps its own two slots reserved");
+  worker.deliver();
+
+  assert.deepEqual(delivered, ["water-job", "copper-job"]);
+  assert.equal(worker.commitments.length, 0);
+  assert.equal(worker.remainingCargoCapacity, 6);
+  assert.deepEqual(worker.cargo, { "water-ice": 0, copper: 0 });
 });
 
 test("an issuer that withdraws at the last moment is not dispatched against", () => {

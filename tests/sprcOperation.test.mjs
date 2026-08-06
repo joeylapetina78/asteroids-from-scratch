@@ -800,8 +800,10 @@ test("a combat-damaged hauler preserves loaded freight, then withdraws before ta
   harness.manager.update();
 
   assert.equal(harness.state.logistics.shipments[shipmentId].status, "delivered");
-  assert.equal(hauler.status, "returning-maintenance");
-  assert.ok(hauler.activeMovementId, "maintenance wins over another freight offer after unloading");
+  assert.ok(["returning-maintenance", "maintenance-required"].includes(hauler.status),
+    `maintenance wins over another freight offer after unloading (${hauler.status})`);
+  if (hauler.currentSiteId === "scrap-porch") assert.equal(hauler.maintenanceRequested, true, "a ship already at SPRC joins the queue directly");
+  else assert.ok(hauler.activeMovementId, "a remote ship starts its maintenance return");
 });
 
 test("player evergreen mining delivery enters the same freight inventory used by haulers", () => {
@@ -927,6 +929,31 @@ test("corridor infrastructure provides slipstream tuning and pushes debris off t
   ship.update(1 / 60, { isDown: () => false });
   assert.ok(Math.hypot(ship.velocity.x, ship.velocity.y) < 200);
   assert.ok(Math.hypot(ship.velocity.x, ship.velocity.y) > 126);
+});
+
+test("the reversing engine model lets S brake through zero and back up", () => {
+  const input = { isDown: (key) => key === "KeyS" };
+  const standardEngine = {
+    powered: true, fuel: 100, engineModelId: "rook-standard-drive", thrustMode: "forward",
+  };
+  const standard = new Ship(0, 0, standardEngine);
+  standard.angle = 0;
+  standard.velocity = { x: 20, y: 0 };
+  standard.update(1, input);
+  assert.ok(standard.velocity.x > 0, "the existing standard drive still uses S as a drag brake");
+  assert.equal(standardEngine.fuel, 100, "the legacy drag brake does not burn thrust fuel");
+
+  const reversingEngine = {
+    powered: true, fuel: 100, fuelBurnRate: 10,
+    engineModelId: "vektor-reversing-drive", thrustMode: "forward", thrustPower: 95,
+  };
+  const reversing = new Ship(0, 0, reversingEngine);
+  reversing.angle = 0;
+  reversing.velocity = { x: 20, y: 0 };
+  reversing.update(1, input);
+  assert.ok(reversing.velocity.x < 0, "reverse thrust carries momentum through zero into backward travel");
+  assert.equal(reversingEngine.fuel, 90, "powered reverse thrust burns fuel");
+  assert.equal(reversing.thrustVisualDirection, "reverse");
 });
 
 test("the same corridor archetype generates a deterministic outer freight road", () => {

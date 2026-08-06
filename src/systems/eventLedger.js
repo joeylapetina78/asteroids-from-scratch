@@ -1,3 +1,5 @@
+import { RETENTION_CLASS, describeRetentionPolicy, getRetentionClass } from "./eventRetention.js?v=fresh-20260805-2142-0b6dcbe";
+
 // The ledger is the world's historical record, not just a live feed: the
 // Observatory browses it to reconstruct sequences, and future investigation,
 // legal, and reputation systems will read the same history. A 250-event window
@@ -6,6 +8,11 @@
 // policy that will eventually summarize ephemeral chatter and keep durable
 // history indefinitely.
 const DEFAULT_HISTORY_LIMIT = 6000;
+const DEFAULT_CLASS_LIMITS = Object.freeze({
+  [RETENTION_CLASS.EPHEMERAL]: 300,
+  [RETENTION_CLASS.OPERATIONAL]: 3000,
+  [RETENTION_CLASS.DURABLE]: Infinity,
+});
 
 // Destruction events carry a `cause` naming who actually did it. Only these
 // causes belong to the controlled pilot; patrol/hub turrets and environmental
@@ -18,28 +25,36 @@ export const PLAYER_ATTRIBUTED_CAUSES = new Set(["weapon", "ramming-ship"]);
 // and ship logs can read the same event history and compact stats.
 export function createEventLedger(options = {}) {
   const historyLimit = options.historyLimit ?? DEFAULT_HISTORY_LIMIT;
+  const eagerPruning = options.historyLimit !== undefined || options.classLimits !== undefined;
+  const now = options.now ?? (() => Date.now());
+  const classLimits = options.classLimits ?? (options.historyLimit
+    ? { ...DEFAULT_CLASS_LIMITS, ephemeral: historyLimit, operational: historyLimit }
+    : DEFAULT_CLASS_LIMITS);
   const events = [];
   const stats = {};
   const lastSeen = {};
   const signals = {};
   let nextEventId = 1;
   let version = 0;
+  let lastPrunedAt = now();
+  const prunedByClass = { ephemeral: 0, operational: 0, durable: 0 };
 
   function recordEvent(type, payload = {}, options = {}) {
     const event = {
       id: nextEventId,
       type,
-      time: Date.now(),
+      time: now(),
       message: options.message ?? getDefaultMessage(type, payload),
       visible: options.visible ?? true,
+      retentionClass: getRetentionClass(type),
       payload,
     };
 
     nextEventId += 1;
     events.push(event);
 
-    if (events.length > historyLimit) {
-      events.splice(0, events.length - historyLimit);
+    if (eagerPruning || nextEventId % 100 === 0 || event.time - lastPrunedAt >= 5000) {
+      pruneRetainedEvents(event.time);
     }
 
     incrementStat("events.total");
@@ -54,6 +69,68 @@ export function createEventLedger(options = {}) {
     version += 1;
 
     return event;
+  }
+
+  function getEventRetentionClass(event) {
+    return event.retentionClass ?? getRetentionClass(event.type);
+  }
+
+  function pruneRetainedEvents(at = now()) {
+    const keptPerClass = { ephemeral: 0, operational: 0, durable: 0 };
+    const keep = new Array(events.length).fill(true);
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      const retentionClass = getEventRetentionClass(event);
+      const policy = describeRetentionPolicy(retentionClass);
+      const withinTime = policy.keepIndefinitely || at - event.time <= policy.detailWindowMs;
+      const withinLimit = keptPerClass[retentionClass] < (classLimits[retentionClass] ?? historyLimit);
+      if (withinTime && withinLimit) keptPerClass[retentionClass] += 1;
+      else {
+        keep[index] = false;
+        prunedByClass[retentionClass] += 1;
+      }
+    }
+    if (keep.includes(false)) {
+      const retained = events.filter((_, index) => keep[index]);
+      events.splice(0, events.length, ...retained);
+    }
+    lastPrunedAt = at;
+    return getRetentionStats();
+  }
+
+  function getRetentionStats() {
+    const retainedByClass = { ephemeral: 0, operational: 0, durable: 0 };
+    events.forEach((event) => { retainedByClass[getEventRetentionClass(event)] += 1; });
+    return { retainedByClass, prunedByClass: { ...prunedByClass }, totalRetained: events.length };
+  }
+
+  function getSaveSnapshot() {
+    pruneRetainedEvents(now());
+    return {
+      version: 1,
+      nextEventId,
+      events: events.filter((event) => getEventRetentionClass(event) !== RETENTION_CLASS.EPHEMERAL),
+      stats: { ...stats },
+      lastSeen: { ...lastSeen },
+      signals: { ...signals },
+      prunedByClass: { ...prunedByClass },
+    };
+  }
+
+  function loadSaveSnapshot(snapshot) {
+    if (!snapshot) return false;
+    events.splice(0, events.length, ...(snapshot.events ?? []).map((event) => ({
+      ...event,
+      retentionClass: event.retentionClass ?? getRetentionClass(event.type),
+    })).sort((a, b) => a.id - b.id));
+    Object.assign(stats, snapshot.stats ?? {});
+    Object.assign(lastSeen, snapshot.lastSeen ?? {});
+    Object.assign(signals, snapshot.signals ?? {});
+    Object.assign(prunedByClass, snapshot.prunedByClass ?? {});
+    nextEventId = Math.max(snapshot.nextEventId ?? 1, (events.at(-1)?.id ?? 0) + 1);
+    pruneRetainedEvents(now());
+    version += 1;
+    return true;
   }
 
   function incrementStat(key, amount = 1) {
@@ -136,8 +213,20 @@ export function createEventLedger(options = {}) {
 
   function getEventsAfterId(eventId = 0, options = {}) {
     const includeHidden = options.includeHidden ?? false;
+    let low = 0;
+    let high = events.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (events[middle].id <= eventId) low = middle + 1;
+      else high = middle;
+    }
+    const unread = events.slice(low);
+    return includeHidden ? unread : unread.filter((event) => event.visible);
+  }
 
-    return events.filter((event) => event.id > eventId && (includeHidden || event.visible));
+  function getRetainedEvents(options = {}) {
+    const includeHidden = options.includeHidden ?? false;
+    return (includeHidden ? events : events.filter((event) => event.visible)).slice();
   }
 
   function applyEventStats(event) {
@@ -457,8 +546,13 @@ export function createEventLedger(options = {}) {
     getLastSeen,
     hasSeen,
     getRecentEvents,
+    getRetainedEvents,
     getRecentEventGroups,
     getEventsAfterId,
+    pruneRetainedEvents,
+    getRetentionStats,
+    getSaveSnapshot,
+    loadSaveSnapshot,
     get historyLimit() {
       return historyLimit;
     },

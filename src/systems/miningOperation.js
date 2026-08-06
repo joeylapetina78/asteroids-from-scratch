@@ -1,20 +1,21 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260804-2128-90ed81d";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260804-2128-90ed81d";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260804-2128-90ed81d";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260804-2128-90ed81d";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260804-2128-90ed81d";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260804-2128-90ed81d";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260804-2128-90ed81d";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260804-2128-90ed81d";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260804-2128-90ed81d";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260804-2128-90ed81d";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260804-2128-90ed81d";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260804-2128-90ed81d";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260804-2128-90ed81d";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260804-2128-90ed81d";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260805-2142-0b6dcbe";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260805-2142-0b6dcbe";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260805-2142-0b6dcbe";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260805-2142-0b6dcbe";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260805-2142-0b6dcbe";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260805-2142-0b6dcbe";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260805-2142-0b6dcbe";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260805-2142-0b6dcbe";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260805-2142-0b6dcbe";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260805-2142-0b6dcbe";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260805-2142-0b6dcbe";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260805-2142-0b6dcbe";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260805-2142-0b6dcbe";
 import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260804-2128-90ed81d";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260804-2128-90ed81d";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260805-2142-0b6dcbe";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260805-2142-0b6dcbe";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260805-2142-0b6dcbe";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -392,6 +393,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       shipRecord.lastDecisionKey = null;
       worker.assign({
         allocationId: allocation.id, contractId: order.contractId ?? order.id, resourceId: order.resourceId, quantity: order.amount, destination,
+        destinationSiteId: order.siteId,
         harvestTargetQuantity: order.harvestTarget ?? order.amount,
         depositCandidates: getDepositCandidates(order.resourceId, worker.position),
       });
@@ -434,7 +436,70 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         reasons: won.reasons ?? [],
       }, { visible: false });
       record("mining.contractAccepted", `${operation.controller.name} dispatched ${worker.name} for ${order.amount} ${order.resourceName} at ${order.siteName}.`, { orderId: order.id, allocationId: allocation.id, siteId: order.siteId, resourceId: order.resourceId, quantity: order.amount, shipInstitutionId: worker.id, shipName: worker.name });
+      fillCompatiblePortfolio(worker, order.siteId);
     });
+  }
+
+  // Once a ship wins a trip, it may fill otherwise empty hold space with work
+  // going to the same destination. Each order remains an independent public
+  // allocation and settlement; this only consolidates the physical expedition.
+  function fillCompatiblePortfolio(worker, destinationSiteId) {
+    while (worker.remainingCargoCapacity > 0) {
+      const context = offerContext();
+      const candidate = filterUncommittedOffers(listExtractionOffers(state, context), context.allocations)
+        .filter((offer) => offer.siteId === destinationSiteId)
+        .filter((offer) => !worker.commitments.some((entry) => entry.resourceId === offer.resourceId))
+        .filter((offer) => (offer.harvestTarget ?? offer.amount) <= worker.remainingCargoCapacity)
+        .map((offer) => ({ offer, valuation: valueOrderForWorker(offer, worker.position) }))
+        .filter((entry) => entry.valuation.acceptable)
+        .sort((a, b) => b.valuation.metrics.netValue - a.valuation.metrics.netValue)[0];
+      if (!candidate) return;
+
+      const order = candidate.offer;
+      const destination = sites.get(order.siteId)?.position;
+      if (!destination) return;
+      if (order.reserve && !order.reserve({ minerInstitutionId: operation.institution.id, workerShipId: worker.id })) return;
+
+      const allocation = {
+        id: `allocation:${order.id}:${++operation.counter}`,
+        orderId: order.id,
+        orderKind: order.kind ?? "standing",
+        supplierInstitutionId: operation.institution.id,
+        workerShipId: worker.id,
+        amount: order.amount,
+        equivalentAmount: order.equivalentAmount ?? order.amount,
+        resourceId: order.resourceId,
+        destinationSiteName: order.siteName,
+        contractId: order.contractId ?? null,
+        status: "active",
+        acceptedAt: now(),
+        portfolioPosition: worker.commitments.length,
+      };
+      operation.allocations[allocation.id] = allocation;
+      const accepted = worker.assign({
+        allocationId: allocation.id,
+        contractId: order.contractId ?? order.id,
+        resourceId: order.resourceId,
+        quantity: order.amount,
+        destination,
+        destinationSiteId: order.siteId,
+        harvestTargetQuantity: order.harvestTarget ?? order.amount,
+        depositCandidates: getDepositCandidates(order.resourceId, worker.position),
+      });
+      if (!accepted) {
+        allocation.status = "released";
+        allocation.releasedAt = now();
+        allocation.outcomeReason = "portfolio-rejected";
+        return;
+      }
+      record("mining.contractBundled", `${worker.name} added ${order.amount} ${order.resourceName} for ${order.siteName} to the same expedition.`, {
+        orderId: order.id, allocationId: allocation.id, siteId: order.siteId,
+        resourceId: order.resourceId, quantity: order.amount,
+        shipInstitutionId: worker.id, shipName: worker.name,
+        portfolioSize: worker.commitments.length,
+        remainingCapacity: worker.remainingCargoCapacity,
+      });
+    }
   }
 
   // Compare every candidate job by EXPECTED NET VALUE — payout minus travel,
@@ -1167,7 +1232,8 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   }
 
   function record(type, message, payload = {}) {
-    operation.history.push({ id: `mining-history-${operation.history.length + 1}`, type, at: now(), ...payload });
+    operation.historyCounter = (operation.historyCounter ?? operation.history.length) + 1;
+    appendBoundedHistory(operation.history, { id: `mining-history-${operation.historyCounter}`, type, at: now(), ...payload });
     state.ledger.recordEvent(type, { institutionId: operation.institution.id, institutionName: operation.institution.name, actorInstitutionId: operation.controller.id, actorName: operation.controller.name, ...payload }, { visible: true, message });
   }
 

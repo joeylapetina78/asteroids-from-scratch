@@ -1,5 +1,6 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260804-2128-90ed81d";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260804-2128-90ed81d";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260805-2142-0b6dcbe";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
+import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
@@ -40,7 +41,7 @@ export class MiningWorkerShip {
     this.isAlive = true;
     this.isThrusting = false;
     this.state = "idle";
-    this.assignment = null;
+    this.commitmentPortfolio = createCommitmentPortfolio({ capacity: 6 });
     this.deliveryBlock = null;
     this.serviceReturn = null;
     this.miningDisabled = false;
@@ -72,11 +73,29 @@ export class MiningWorkerShip {
   installShield({ maxCharge = 72 } = {}) { this.shield = { installed: true, charge: maxCharge, maxCharge, absorbedDamage: this.shield?.absorbedDamage ?? 0 }; }
   rechargeShield(units) { if (!this.shield.installed) return 0; const before = this.shield.charge; this.shield.charge = Math.min(this.shield.maxCharge, this.shield.charge + Math.max(0, units)); return this.shield.charge - before; }
 
-  assign({ allocationId, contractId, resourceId, quantity, harvestTargetQuantity = quantity, destination, depositCandidates = [] }) {
-    if (this.assignment || quantity <= 0) return false;
-    this.assignment = { allocationId, contractId, resourceId: normalizeResourceType(resourceId), quantity, harvestTargetQuantity: Math.max(quantity, harvestTargetQuantity), destination, depositCandidates: [...depositCandidates] };
+  get assignment() { return this.commitmentPortfolio.entries[0] ?? null; }
+  set assignment(value) {
+    // Compatibility projection for older saves, fixtures, and inspection code.
+    this.commitmentPortfolio.entries = value ? [{ ...value, id: value.allocationId ?? value.contractId, reservedCapacity: value.harvestTargetQuantity ?? value.quantity ?? 0 }] : [];
+  }
+
+  get commitments() { return this.commitmentPortfolio.entries; }
+  get remainingCargoCapacity() { return remainingCapacity(this.commitmentPortfolio); }
+
+  assign({ allocationId, contractId, resourceId, quantity, harvestTargetQuantity = quantity, destination, destinationSiteId = null, depositCandidates = [] }) {
+    if (quantity <= 0) return false;
+    const commitment = {
+      id: allocationId ?? contractId,
+      allocationId, contractId, resourceId: normalizeResourceType(resourceId), quantity,
+      harvestTargetQuantity: Math.max(quantity, harvestTargetQuantity), destination, destinationSiteId,
+      depositCandidates: [...depositCandidates], reservedCapacity: Math.max(quantity, harvestTargetQuantity),
+    };
+    const accepted = addCommitment(this.commitmentPortfolio, commitment, {
+      compatible: (existing, candidate) => destinationsMatch(existing, candidate),
+    });
+    if (!accepted) return false;
     this.state = "prospecting";
-    this.onEvent("assignment.accepted", { contractId, resourceId: this.assignment.resourceId, quantity });
+    this.onEvent("assignment.accepted", { contractId, resourceId: commitment.resourceId, quantity, portfolioSize: this.commitments.length });
     return true;
   }
 
@@ -98,6 +117,13 @@ export class MiningWorkerShip {
     if (!this.assignment) return this.brake(deltaSeconds);
 
     if (this.cargoAmount() >= this.assignment.harvestTargetQuantity) {
+      const unfilled = this.commitments.find((entry) => (this.cargo[entry.resourceId] ?? 0) < entry.harvestTargetQuantity);
+      if (unfilled && unfilled.id !== this.assignment.id) {
+        moveCommitmentToFront(this.commitmentPortfolio, unfilled.id);
+        this.targetAsteroid = null;
+        this.state = "prospecting";
+        return;
+      }
       // Stay reported as blocked while waiting out a refusal, otherwise this
       // would flip back to "returning" every frame and hide the block from the
       // observatory and from anything else reading the state.
@@ -170,6 +196,14 @@ export class MiningWorkerShip {
 
   canRecoverPickup(pickup) {
     if (pickup.type === "rockmoss-crawler") return false;
+    if (this.totalCargoAmount() >= this.commitmentPortfolio.capacity) return false;
+    if (this.commitments.length > 0) {
+      const resourceId = normalizeResourceType(pickup.type);
+      const promised = this.commitments
+        .filter((entry) => entry.resourceId === resourceId)
+        .reduce((sum, entry) => sum + entry.harvestTargetQuantity, 0);
+      if (promised <= (this.cargo[resourceId] ?? 0)) return false;
+    }
     return pickup.producedByWorkerShipId === this.id || pickup.sourceClaimId == null;
   }
 
@@ -224,6 +258,7 @@ export class MiningWorkerShip {
 
   consumeShots() { const shots = this.pendingShots; this.pendingShots = []; return shots; }
   cargoAmount() { return this.cargo[this.assignment?.resourceId] ?? 0; }
+  totalCargoAmount() { return Object.values(this.cargo).reduce((sum, units) => sum + Math.max(0, units ?? 0), 0); }
 
   // Hand the assignment back but KEEP the cargo. The load stays aboard as
   // uncommitted material the worker can sell or re-target, rather than being
@@ -231,7 +266,7 @@ export class MiningWorkerShip {
   releaseAssignment(reason = "released") {
     const assignment = this.assignment;
     if (!assignment) return null;
-    this.assignment = null;
+    removeCommitment(this.commitmentPortfolio, assignment.id);
     this.deliveryBlock = null;
     this.state = "idle";
     return { ...assignment, reason };
@@ -257,8 +292,8 @@ export class MiningWorkerShip {
     this.deliveryBlock = null;
     const surplusSoldUnits = Math.min(amount - acceptedUnits, Math.max(0, result.surplusSoldUnits ?? 0));
     this.cargo[assignment.resourceId] = Math.max(0, amount - acceptedUnits - surplusSoldUnits);
-    this.assignment = null;
-    this.state = "idle";
+    removeCommitment(this.commitmentPortfolio, assignment.id);
+    this.state = this.assignment ? "returning" : "idle";
     this.onEvent("delivery.completed", { contractId: assignment.contractId, resourceId: assignment.resourceId, quantity: acceptedUnits, paid: result.paid ?? 0 });
   }
 
@@ -355,3 +390,8 @@ function nearest(items, position) {
 }
 
 function distance(first, second) { return Math.hypot(first.x - second.x, first.y - second.y); }
+
+function destinationsMatch(first, second) {
+  if (first.destinationSiteId || second.destinationSiteId) return first.destinationSiteId === second.destinationSiteId;
+  return Math.hypot((first.destination?.x ?? 0) - (second.destination?.x ?? 0), (first.destination?.y ?? 0) - (second.destination?.y ?? 0)) < 1;
+}

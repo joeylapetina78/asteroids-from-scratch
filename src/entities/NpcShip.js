@@ -1,6 +1,7 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260804-2128-90ed81d";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260804-2128-90ed81d";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260804-2128-90ed81d";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260805-2142-0b6dcbe";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260805-2142-0b6dcbe";
+import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260805-2142-0b6dcbe";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -25,6 +26,7 @@ const CARGO_PHYSICS_STEP = 1 / 120;
 const CARGO_PHYSICS_MAX_CATCHUP = 0.25;
 const HUB_TETHER_PADDING = 42;
 export const NPC_HAULER_MAX_HULL = 680;
+export const NPC_HAULER_CARGO_CAPACITY = 12;
 
 export class NpcShip {
   constructor({ id, name, route, x, y, seed = 1, laneOffset = 0, publicIdentity = null, maintenanceSiteId = null, palette = null }) {
@@ -75,7 +77,7 @@ export class NpcShip {
     };
     this.completedRouteLegs = 0;
     this.operationalStatus = "seeking-work";
-    this.activeShipmentId = null;
+    this.commitmentPortfolio = createCommitmentPortfolio({ capacity: NPC_HAULER_CARGO_CAPACITY });
     this.wear = 0;
     this.wearIssueCount = 0;
     this.carefulWearSinceIssue = 0;
@@ -207,12 +209,37 @@ export class NpcShip {
     return Array.isArray(route) && route.length >= 2 && route.every((site) => site?.id && site?.position);
   }
 
-  assignShipment({ shipmentId, destinationSiteId, route = this.route }) {
+  canAcceptShipment({ originSiteId = this.dockedSiteId, destinationSiteId, quantity = 1 } = {}) {
+    const required = Math.max(0, quantity);
+    if (required <= 0 || required > this.remainingCargoCapacity) return false;
+    return this.shipmentCommitments.every((existing) => existing.originSiteId === originSiteId
+      && existing.destinationSiteId === destinationSiteId);
+  }
+
+  get activeShipmentId() { return this.commitmentPortfolio.entries[0]?.shipmentId ?? null; }
+  set activeShipmentId(value) {
+    // Compatibility projection for old saves, fixtures, and systems that have
+    // not yet learned to inspect a portfolio.
+    this.commitmentPortfolio.entries = value ? [{ id: value, shipmentId: value, destinationSiteId: null, reservedCapacity: 1 }] : [];
+  }
+
+  get shipmentCommitments() { return this.commitmentPortfolio.entries; }
+  get remainingCargoCapacity() { return remainingCapacity(this.commitmentPortfolio); }
+
+  assignShipment({ shipmentId, destinationSiteId, originSiteId = this.dockedSiteId, quantity = 1, route = this.route }) {
     if (!this.canAcceptRoute(route)) return false;
-    this.route = route;
-    const destinationIndex = this.route.findIndex((site) => site.id === destinationSiteId);
+    if (!this.canAcceptShipment({ originSiteId, destinationSiteId, quantity })) return false;
+    const destinationIndex = route.findIndex((site) => site.id === destinationSiteId);
     if (destinationIndex < 0) return false;
-    this.activeShipmentId = shipmentId;
+    const accepted = addCommitment(this.commitmentPortfolio, {
+      id: shipmentId, shipmentId, originSiteId, destinationSiteId,
+      reservedCapacity: Math.max(0, quantity),
+    }, {
+      compatible: (existing, candidate) => existing.originSiteId === candidate.originSiteId
+        && existing.destinationSiteId === candidate.destinationSiteId,
+    });
+    if (!accepted) return false;
+    this.route = route;
     this.routeIndex = Math.min(1, destinationIndex);
     this.activeCorridorId = null;
     this.navigationMetrics = { distanceTraveled: 0, carefulDistance: 0, replanCount: 0, corridorEntries: 0 };
@@ -223,10 +250,11 @@ export class NpcShip {
     return true;
   }
 
-  clearShipment() {
-    this.activeShipmentId = null;
-    this.operationalStatus = "seeking-work";
-    this.cargoSegments.forEach((segment) => { segment.loaded = false; });
+  clearShipment(shipmentId = null) {
+    if (shipmentId) removeCommitment(this.commitmentPortfolio, shipmentId);
+    else this.commitmentPortfolio.entries = [];
+    this.operationalStatus = this.activeShipmentId ? "awaiting-assignment" : "seeking-work";
+    this.cargoSegments.forEach((segment) => { segment.loaded = Boolean(this.activeShipmentId); });
   }
 
   assignTow({ requestId, destinationSiteId, route = this.route }) {
@@ -268,7 +296,7 @@ export class NpcShip {
     this.carefulWearSinceIssue = 0;
     this.pendingWearIssue = { npcId: this.id, npcName: this.name, shipVin: this.publicIdentity?.shipVin, wear: this.wear, issueCount, issueType, causedByCarefulMode: issueType === "maneuvering-strain" };
     this.operationalStatus = "disabled";
-    this.pendingEvents.push({ type: "npc.assistanceRequired", payload: { ...this.pendingWearIssue, shipmentId: this.activeShipmentId, reason: issueType, x: Math.round(this.position.x), y: Math.round(this.position.y) } });
+    this.pendingEvents.push({ type: "npc.assistanceRequired", payload: { ...this.pendingWearIssue, shipmentId: this.activeShipmentId, shipmentIds: this.shipmentCommitments.map((entry) => entry.shipmentId), reason: issueType, x: Math.round(this.position.x), y: Math.round(this.position.y) } });
   }
 
   emitPendingWearIssueAt(site) {

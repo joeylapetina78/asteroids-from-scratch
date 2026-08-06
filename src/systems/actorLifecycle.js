@@ -1,4 +1,4 @@
-import { retireDiagnostic } from "./diagnostics.js?v=fresh-20260804-2128-90ed81d";
+import { retireDiagnostic } from "./diagnostics.js?v=fresh-20260805-2142-0b6dcbe";
 
 // Close every present-tense intention owned by a physical actor that no longer
 // exists. Destruction is shared lifecycle state; mining, freight, service and
@@ -37,6 +37,7 @@ export function terminateDestroyedActor(state, ship, { at = Date.now() } = {}) {
       result.movements += 1;
     }
     hauler.activeShipmentId = null;
+    hauler.activeShipmentIds = [];
     hauler.activeMovementId = null;
     hauler.status = "destroyed";
     const shipInstitution = logistics.institutions?.[hauler.shipInstitutionId];

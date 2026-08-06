@@ -1,7 +1,7 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260804-2128-90ed81d";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260804-2128-90ed81d";
-import { ensureObligations } from "./obligations.js?v=fresh-20260804-2128-90ed81d";
-import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260804-2128-90ed81d";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260805-2142-0b6dcbe";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260805-2142-0b6dcbe";
+import { ensureObligations } from "./obligations.js?v=fresh-20260805-2142-0b6dcbe";
+import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260805-2142-0b6dcbe";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 
@@ -35,6 +35,8 @@ export function loadSavedProfile(state) {
 
   try {
     const save = JSON.parse(rawSave);
+
+    state.ledger?.loadSaveSnapshot?.(save.ledger);
 
     state.credits = save.credits ?? save.components?.account?.credits ?? 0;
     mergePlainObject(state.accounts, save.accounts);
@@ -74,6 +76,7 @@ export function loadSavedProfile(state) {
     syncActiveHullFromComponents(state);
     mergePlainObject(state.ui, save.ui);
     mergePlainObject(state.worldRecords, save.worldRecords);
+    if (save.wrecks) state.wrecks = cloneJsonSafe(save.wrecks);
     mergePlainObject(state.sprc, save.sprc);
     mergePlainObject(state.logistics, save.logistics);
     mergePlainObject(state.towing, save.towing);
@@ -113,6 +116,8 @@ export function saveProfile({ state, game, cargoHold }) {
     ship: cloneJsonSafe(state.ship),
     ui: cloneJsonSafe(state.ui),
     worldRecords: cloneJsonSafe(state.worldRecords),
+    wrecks: cloneJsonSafe(state.wrecks),
+    ledger: state.ledger?.getSaveSnapshot?.() ?? null,
     sprc: cloneJsonSafe(state.sprc),
     logistics: cloneJsonSafe(state.logistics),
     towing: cloneJsonSafe(state.towing),
