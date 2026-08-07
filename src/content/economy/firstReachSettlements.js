@@ -154,8 +154,8 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
       id: "kiln-crossing", name: "Kiln Crossing", siteId: "kiln-crossing",
       archetypeId: "settlement", controllerInstitutionId: "person:kiln-crossing-factor",
       accounts: { operating: { balance: 16000, committed: 0 } },
-      inventories: { "iron-nickel": 0, silicate: 10, "water-ice": 0 },
-      renewableResources: ["silicate"],
+      inventories: { "iron-nickel": 0, silicate: 0, carbonaceous: 16, "water-ice": 0 },
+      renewableResources: ["carbonaceous"],
       protectionPolicy: { mode: "hybrid", protectedCash: 6000, jurisdictionRadius: 1900, responseThreshold: 0.32, contractSeverity: 0.7 },
     },
     controller: {
@@ -168,7 +168,7 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
       incomeAmount: 7200, incomeIntervalSeconds: 120, needIds: STANDARD_NEEDS,
     },
     extraction: {
-      id: "mine-kiln-silicate", resourceId: "silicate", resourceName: "Silicate",
+      id: "mine-kiln-carbonaceous", resourceId: "carbonaceous", resourceName: "Carbonaceous Material",
       miningFamilies: ["industrial"],
     },
   },

@@ -23,12 +23,12 @@
 //      system, it does not appear here. Where a total cannot be reconciled the
 //      residual is reported as a residual rather than smoothed away.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
-import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260805-2142-0b6dcbe";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260805-2142-0b6dcbe";
-import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260805-2142-0b6dcbe";
-import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260805-2142-0b6dcbe";
-import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260805-2142-0b6dcbe";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260806-2000-39c17e6";
+import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260806-2000-39c17e6";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260806-2000-39c17e6";
+import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260806-2000-39c17e6";
+import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260806-2000-39c17e6";
+import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260806-2000-39c17e6";
 
 // 5 s is fast enough to see a repricing (throttled to 60 s) as a step rather
 // than a jump, and slow enough that two hours of history is a few thousand
@@ -118,7 +118,7 @@ export function readEconomySnapshot(state, { now = Date.now() } = {}) {
       inventoryUnits += units;
       byResource[resourceId] = units;
       const family = getResourceFamily(resourceId);
-      if (byFamily[family] !== undefined) byFamily[family] += units;
+      if (byFamily[family] !== undefined) byFamily[family] += getEffectiveMaterialUnits(resourceId, units);
     });
 
     const finished = Object.values(institution.finishedGoods ?? {}).reduce((sum, units) => sum + units, 0);
@@ -228,9 +228,11 @@ export function readEconomySnapshot(state, { now = Date.now() } = {}) {
       sellerId: supplierId,
       sellerName: supplier.name,
       resourceId: definition.resourceId,
-      value: round(ask.ask),
-      floor: round(ask.marginalCost),
-      ceiling: round(ask.firmCost),
+      value: round(ask.ask / getResourceEffectiveYield(definition.resourceId)),
+      floor: round(ask.marginalCost / getResourceEffectiveYield(definition.resourceId)),
+      ceiling: round(ask.firmCost / getResourceEffectiveYield(definition.resourceId)),
+      physicalValue: round(ask.ask),
+      effectiveYield: getResourceEffectiveYield(definition.resourceId),
       concession: ask.concession,
     };
   });
@@ -242,7 +244,7 @@ export function readEconomySnapshot(state, { now = Date.now() } = {}) {
     if (orderCounts[order.status] !== undefined) orderCounts[order.status] += 1;
     if (!["offered", "accepted", "ready", "shipped"].includes(order.status)) return;
     const bucket = orderPriceAccumulator[order.resourceId] ??= { units: 0, value: 0, orders: 0 };
-    bucket.units += order.units ?? 0;
+    bucket.units += order.effectiveUnits ?? getEffectiveMaterialUnits(order.resourceId, order.units ?? 0);
     bucket.value += (order.pricePerUnit ?? 0) * (order.units ?? 0);
     bucket.orders += 1;
   });

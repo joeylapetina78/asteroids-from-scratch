@@ -1,6 +1,6 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260805-2142-0b6dcbe";
-import { ensurePatrolOperations } from "./patrolOperations.js?v=fresh-20260805-2142-0b6dcbe";
-import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js?v=fresh-20260805-2142-0b6dcbe";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260806-2000-39c17e6";
+import { ensurePatrolOperations } from "./patrolOperations.js?v=fresh-20260806-2000-39c17e6";
+import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js?v=fresh-20260806-2000-39c17e6";
 
 export const PROTECTION_REQUEST_STATUS = Object.freeze({
   INTERNAL: "covered-internally",
@@ -224,4 +224,30 @@ export function closeProtectionRequestsForThreat(state, threatId, now = Date.now
 
 export function listProtectionRequests(state) {
   return Object.values(state.protectionPlanning?.requests ?? {});
+}
+
+export function getPlayerProtectionJobsForSite(state, siteId, issuer = null) {
+  return listProtectionRequests(state)
+    .filter((request) => request.status === PROTECTION_REQUEST_STATUS.OFFERED && request.siteId === siteId && request.maximumPayment > 0)
+    .map((request) => ({
+      id: `player-${request.id}`,
+      opportunityId: request.id,
+      acceptanceSiteId: request.siteId,
+      type: "protection-response",
+      group: "standing-protection",
+      jobKind: "protection",
+      repeatable: false,
+      jobTier: "standing",
+      jobTierLabel: "Live Protection Request",
+      title: `Protect ${issuer ?? request.siteId}`,
+      issuer: issuer ?? request.issuerInstitutionId,
+      summary: `Respond to the active ${request.threatType} threatening ${request.siteId}.`,
+      terms: {
+        protectionRequestId: request.id, threatId: request.threatId,
+        acceptanceSiteId: request.siteId, destinationSiteId: request.siteId,
+        requiredCapabilities: [...request.requiredCapabilities],
+      },
+      reward: { credits: request.maximumPayment },
+      clauses: ["Accept locally before another provider takes the request.", "Payment is reserved by the threatened institution.", "Destroy the named threat to complete the response."],
+    }));
 }

@@ -12,6 +12,7 @@ import {
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { STANDING_MINING_ORDERS } from "../src/systems/miningOperation.js";
 import { POPULATION_PROFILES } from "../src/systems/populationDemand.js";
+import { getResourceFamily } from "../src/systems/resourceDefinitions.js";
 import { INSTITUTION_MINING_RIGHTS } from "../src/systems/authoritySeeds.js";
 import { getHubServices } from "../src/systems/hubServices.js";
 
@@ -82,7 +83,9 @@ test("hub six is an asymmetric industrial competitor rather than a copied Ledge"
   const ledge = FIRST_REACH_SETTLEMENTS.find((seed) => seed.institution.id === "the-ledge");
   assert.ok(kiln, "Kiln Crossing is seeded as hub six");
   assert.deepEqual(kiln.extraction.miningFamilies, ["industrial"]);
-  assert.equal(kiln.extraction.resourceId, ledge.extraction.resourceId, "it competes in the same real resource market");
+  assert.notEqual(kiln.extraction.resourceId, ledge.extraction.resourceId, "it offers a distinct grade of ore");
+  assert.equal(getResourceFamily(kiln.extraction.resourceId), getResourceFamily(ledge.extraction.resourceId),
+    "both ores compete to satisfy the same industrial demand");
   assert.ok(kiln.institution.accounts.operating.balance < ledge.institution.accounts.operating.balance, "its treasury is thinner");
   assert.ok(kiln.population.size > ledge.population.size, "it carries more local demand");
   assert.notDeepEqual(kiln.controller.traits, ledge.controller.traits, "its commercial policy belongs to a different operator");

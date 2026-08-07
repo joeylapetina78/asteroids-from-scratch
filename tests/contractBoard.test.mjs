@@ -242,6 +242,15 @@ test("a freight run reports its lane, its carrier, and both payments separately"
   assert.equal(run.remainingUnits, 6, "still in flight");
 });
 
+test("the standing gate bounty is a visible local bearer opportunity", () => {
+  const state = createGameState();
+  const bounty = listContracts(state).find((contract) => contract.kind === CONTRACT_KIND.BOUNTY);
+  assert.equal(bounty.state, CONTRACT_STATE.AVAILABLE);
+  assert.equal(bounty.acceptanceSiteId, "yard-exchange");
+  assert.equal(bounty.eligibility, "any-bearer");
+  assert.equal(bounty.reservationMode, "evergreen");
+});
+
 test("a locally accepted wreck job is globally visible without changing where it can be accepted", () => {
   const { state } = createWorld();
   state.logistics.institutions["miner:flint-prospecting"] = {

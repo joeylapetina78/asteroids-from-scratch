@@ -10,9 +10,9 @@
 // draws from a family and substitutes freely within it. A hub does not need
 // iron-nickel specifically; it needs structural material.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
-import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260805-2142-0b6dcbe";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260805-2142-0b6dcbe";
+import { getEffectiveMaterialUnits, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260806-2000-39c17e6";
+import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260806-2000-39c17e6";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260806-2000-39c17e6";
 
 // How many seconds of consumption a hub tries to keep on the shelf. Higher
 // means fatter buffers and less frequent, larger orders.
@@ -57,7 +57,7 @@ export function getFamilyTargets(hubInstitutionId, coverageSeconds = TARGET_COVE
 export function getFamilyOnHand(hub, family) {
   return Object.entries(hub?.inventories ?? {})
     .filter(([resourceId, units]) => units > 0 && getResourceFamily(resourceId) === family)
-    .reduce((sum, [, units]) => sum + units, 0);
+    .reduce((sum, [resourceId, units]) => sum + getEffectiveMaterialUnits(resourceId, units), 0);
 }
 
 // Material of this family already promised to the hub: ore a miner is carrying
@@ -70,14 +70,16 @@ export function getFamilyIncoming(state, hubInstitutionId, family) {
   const fromMining = allocations.reduce((sum, allocation) => {
     const order = miningOperations.map((operation) => operation?.postedOrders?.[allocation.orderId]).find(Boolean);
     if (!order || order.buyerInstitutionId !== hubInstitutionId) return sum;
-    return getResourceFamily(order.resourceId) === family ? sum + (allocation.amount ?? 0) : sum;
+    return getResourceFamily(order.resourceId) === family
+      ? sum + getEffectiveMaterialUnits(order.resourceId, allocation.amount ?? 0)
+      : sum;
   }, 0);
 
   const fromFreight = Object.values(state.logistics?.shipments ?? {})
     .filter((shipment) => ["assigned", "loaded"].includes(shipment.status)
       && shipment.destinationInstitutionId === hubInstitutionId
       && getResourceFamily(shipment.commodity) === family)
-    .reduce((sum, shipment) => sum + (shipment.quantity ?? 0), 0);
+    .reduce((sum, shipment) => sum + getEffectiveMaterialUnits(shipment.commodity, shipment.quantity ?? 0), 0);
 
   return fromMining + fromFreight;
 }
@@ -93,7 +95,10 @@ export function getCommittedSales(state, hubInstitutionId, family) {
     .filter((order) => order.supplierInstitutionId === hubInstitutionId
       && order.family === family
       && ["accepted", "ready"].includes(order.status))
-    .reduce((sum, order) => sum + Math.max(0, (order.units ?? 0) - (order.deliveredUnits ?? 0)), 0);
+    .reduce((sum, order) => {
+      const physicalRemaining = Math.max(0, (order.units ?? 0) - (order.deliveredUnits ?? 0));
+      return sum + getEffectiveMaterialUnits(order.resourceId, physicalRemaining);
+    }, 0);
 }
 
 // The full picture for one hub and one family: what it holds, what is coming,

@@ -6,6 +6,7 @@ import {
   ensureGateBounty,
   getGateBountyOffer,
   redeemGateTrophy,
+  redeemGateTrophyForBearer,
 } from "../src/systems/gateBounty.js";
 
 const trophy = (tradeValue) => ({ type: "rift-trophy", tradeValue, quantity: 1 });
@@ -64,4 +65,18 @@ test("a higher-level gate is worth more, whoever turns its token in", () => {
   const small = redeemGateTrophy(state, { siteId: AUTHORITY_OFFICE_SITE_ID, unit: trophy(200) });
   const big = redeemGateTrophy(state, { siteId: AUTHORITY_OFFICE_SITE_ID, unit: trophy(1_200) });
   assert.ok(big.total > small.total, "the token from the bigger rift pays more");
+});
+
+test("an institutional bearer settles through the same bounty account transfer", () => {
+  const state = createGameState();
+  const account = { balance: 100, transactions: [] };
+  const fundBefore = ensureGateBounty(state).fund;
+  const result = redeemGateTrophyForBearer(state, {
+    siteId: AUTHORITY_OFFICE_SITE_ID, unit: trophy(750),
+    bearerId: "miner:test", account, now: 42,
+  });
+  assert.equal(result.redeemed, true);
+  assert.equal(account.balance, 850);
+  assert.equal(account.transactions[0].amount, 750);
+  assert.equal(ensureGateBounty(state).fund, fundBefore - 750);
 });

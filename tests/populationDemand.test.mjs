@@ -114,6 +114,22 @@ test("a hub produces a Settlement Supply Unit by consuming structural or industr
   assert.equal(forNeed("population.goodsConsumed").length, 1);
 });
 
+test("low-grade material consumes more physical cargo for the same manufactured result", () => {
+  const world = createWorld({ stock: { carbonaceous: 10 } });
+  const need = POPULATION_NEEDS["settlement-supply-unit"];
+
+  world.advance(need.demandIntervalSeconds);
+  world.population.update();
+
+  const started = world.events("population.productionStarted")
+    .find((entry) => entry.payload.needId === need.id);
+  assert.ok(started, "carbonaceous material is a valid industrial substitute");
+  assert.deepEqual(started.payload.inputs, { carbonaceous: 4 },
+    "0.65 yield requires four physical units to cover two effective units");
+  assert.ok(world.hub.inventories.carbonaceous <= 6,
+    "the production draw and any other due civilian needs consume real stock");
+});
+
 test("credits move from the population to the hub, and the goods are consumed", () => {
   const world = createWorld({ stock: FULL_STOCK });
   const need = POPULATION_NEEDS["settlement-supply-unit"];

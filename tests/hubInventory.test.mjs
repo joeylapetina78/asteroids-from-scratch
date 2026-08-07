@@ -52,12 +52,13 @@ test("a hub with no population has nothing to stock for", () => {
   assert.ok(Object.values(rates).every((rate) => rate === 0));
 });
 
-test("on-hand counts every material in the family, not one named ore", () => {
+test("on-hand counts the effective yield of every material in the family", () => {
   const { hub } = createWorld();
   const yard = hub("yard-exchange");
   yard.inventories = { "iron-nickel": 2, aluminum: 3, titanium: 1, "water-ice": 9 };
   assert.equal(getResourceFamily("aluminum"), "structural");
-  assert.equal(getFamilyOnHand(yard, "structural"), 6, "iron-nickel + aluminum + titanium");
+  assert.equal(getFamilyOnHand(yard, "structural"), 7.5,
+    "two baseline iron + three higher-yield aluminum + one default titanium");
   assert.equal(getFamilyOnHand(yard, "volatile"), 9);
 });
 
@@ -211,6 +212,7 @@ function createCarrierWorld() {
   Object.values(state.logistics.institutions).forEach((institution) => {
     if (institution.accounts?.operating) institution.accounts.operating.balance = 20_000;
   });
+  state.hubProcurement = { counter: 1, asks: {}, unavailable: {}, orders: {} };
   const ships = Object.keys(state.logistics.haulers).map((id) => ({
     id, dockedSiteId: state.logistics.haulers[id].currentSiteId, wear: 0,
     operationalStatus: "seeking-work", activeShipmentId: null, assignment: null, transfers: [],
@@ -229,11 +231,25 @@ function createCarrierWorld() {
   return { state, manager, ships, commissioned, advance: (seconds) => { clock += seconds * 1000; } };
 }
 
+function addReadyFreight(state) {
+  // Fleet growth is demand-led: seed one real, prepaid, loadable purchase
+  // rather than treating occupied ships alone as a reason to buy another.
+  state.hubProcurement.orders["TEST-READY"] = {
+    id: "TEST-READY", status: "ready", buyerInstitutionId: "scrap-forge",
+    supplierInstitutionId: "yard-exchange", resourceId: "iron-nickel",
+    family: "structural", units: 2, deliveredUnits: 0, freightBudget: 500,
+  };
+  state.logistics.institutions["yard-exchange"].awaitingPickup = {
+    "TEST-READY": { units: 2, resourceId: "iron-nickel", ownerInstitutionId: "scrap-forge" },
+  };
+}
+
 const busy = (state) => Object.values(state.logistics.haulers).forEach((hauler) => { hauler.activeShipmentId = "SHIP-BUSY"; });
 const idle = (state) => Object.values(state.logistics.haulers).forEach((hauler) => { hauler.activeShipmentId = null; hauler.activeMovementId = null; });
 
 test("a carrier puts another ship into service when its own are all committed", () => {
   const world = createCarrierWorld();
+  addReadyFreight(world.state);
   const before = Object.keys(world.state.logistics.haulers).length;
   busy(world.state);
   world.manager.update();
@@ -249,6 +265,7 @@ test("a carrier puts another ship into service when its own are all committed", 
 
 test("a moment of everyone being busy does not buy a ship", () => {
   const world = createCarrierWorld();
+  addReadyFreight(world.state);
   const before = Object.keys(world.state.logistics.haulers).length;
   busy(world.state);
   world.manager.update();
@@ -263,6 +280,7 @@ test("a moment of everyone being busy does not buy a ship", () => {
 
 test("a carrier that cannot pay does not commission a ship", () => {
   const world = createCarrierWorld();
+  addReadyFreight(world.state);
   const before = Object.keys(world.state.logistics.haulers).length;
   Object.values(world.state.logistics.institutions).forEach((institution) => {
     if (institution.accounts?.operating) institution.accounts.operating.balance = 5;
@@ -288,6 +306,18 @@ test("a carrier lays up a ship with nothing to carry", () => {
   assert.ok(laidUp.length > 0);
   assert.ok(laidUp[0].payload.idleSeconds >= 120, "and says how long it sat");
   assert.equal(getDiagnostic(world.state, laidUp[0].payload.haulerId)?.state, DIAGNOSTIC_STATE.RETIRED, "its current diagnostic is retired");
+});
+
+test("busy ships without a waiting freight backlog do not create speculative capacity", () => {
+  const world = createCarrierWorld();
+  const before = Object.keys(world.state.logistics.haulers).length;
+  busy(world.state);
+  world.manager.update();
+  world.advance(121);
+  busy(world.state);
+  world.manager.update();
+  assert.equal(Object.keys(world.state.logistics.haulers).length, before);
+  assert.equal(world.commissioned.length, 0);
 });
 
 test("the region never runs out of haulers", () => {

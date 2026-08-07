@@ -44,6 +44,15 @@ test("a second mining institution enters the same extraction market from data", 
     "the companies compete for shared work instead of double-booking it");
 });
 
+test("an extraction offer declares its physical acceptance and reservation semantics", () => {
+  const offer = createExtractionOffer({
+    id: "remote-test-order", issuerInstitutionId: "blue-lantern", siteId: "blue-lantern",
+    resourceId: "iron-nickel", amount: 1, paymentPerUnit: 100,
+  });
+  assert.equal(offer.acceptanceSiteId, "blue-lantern");
+  assert.equal(offer.reservationMode, "exclusive");
+});
+
 // Both companies start over with every ship free, so the next tick is a real
 // contest rather than whatever the construction pass happened to leave behind.
 function freeEveryShip(...operations) {

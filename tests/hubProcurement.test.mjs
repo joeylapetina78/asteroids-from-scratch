@@ -20,6 +20,8 @@ import { getInventoryPosition } from "../src/systems/hubInventory.js";
 import { getPostedMiningOrders } from "../src/systems/miningOperation.js";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState, createLogisticsManager } from "../src/systems/logistics.js";
+import { NpcShip } from "../src/entities/NpcShip.js";
+import { getWorldSites } from "../src/systems/worldSites.js";
 
 function createWorld({ cash = 20_000 } = {}) {
   const state = createGameState();
@@ -522,7 +524,7 @@ test("the whole chain is on the ledger, in order", () => {
     "posted before delivered");
 });
 
-test("a hauler can take a run from the far end when it has nothing local", () => {
+test("a hauler travels to a remote market before accepting work posted there", () => {
   const { state, procurement, manager, ships, hub } = createFullWorld();
   procurement.update();
   const order = listOrders(state, { status: [PROCUREMENT_STATUS.ACCEPTED, PROCUREMENT_STATUS.READY] })
@@ -535,19 +537,120 @@ test("a hauler can take a run from the far end when it has nothing local", () =>
     }
   });
   procurement.update();
+  const traveler = Object.entries(state.logistics.haulers)
+    .find(([, hauler]) => hauler.currentSiteId !== order.supplierInstitutionId);
+  assert.ok(traveler, "the test has a carrier outside the posting market");
+  Object.keys(state.logistics.haulers).filter((id) => id !== traveler[0])
+    .forEach((id) => { delete state.logistics.haulers[id]; });
+  Object.entries(state.logistics.institutions).forEach(([id, institution]) => {
+    if (id !== order.supplierInstitutionId) institution.awaitingPickup = {};
+  });
   // A long lane opens under-priced and relies on the buyer's repricing loop to
   // raise it. Post a rate that clears the deadhead so this stays a test of
   // whether a hauler CAN work the far end, not of the opening rate.
   state.logistics.postedFreightRates = { [`procurement-${order.id}`]: 900 };
   manager.update();
 
-  const shipment = Object.values(state.logistics.shipments)[0];
-  assert.ok(shipment, "a hauler took work that was not on its doorstep");
-  if (shipment.repositionedFrom) {
-    assert.notEqual(shipment.repositionedFrom, shipment.originSiteId);
-    const ship = ships.find((entry) => entry.id === shipment.assigneeId);
-    assert.ok(ship.assignment.route.length >= 2, "and was routed via the pickup");
-  }
+  assert.equal(Object.values(state.logistics.shipments).length, 0,
+    "remote work is visible but is not accepted or reserved from afar");
+  const movement = Object.values(state.logistics.movements)
+    .find((entry) => entry.type === "market-reposition" && entry.destinationSiteId === order.supplierInstitutionId);
+  assert.ok(movement, "a hauler may still travel empty to the market where it saw work");
+  const ship = ships.find((entry) => entry.id === movement.shipId);
+  ship.dockedSiteId = movement.destinationSiteId;
+  state.ledger.recordEvent("npc.routeCompleted", {
+    npcId: movement.shipId, shipmentId: movement.id, siteId: movement.destinationSiteId,
+  }, { visible: false });
+  manager.update();
+
+  const shipment = Object.values(state.logistics.shipments).find((entry) => entry.assigneeId === movement.shipId);
+  assert.ok(shipment, "the docked hauler can now compete for and accept the local posting");
+  assert.equal(shipment.originSiteId, movement.destinationSiteId);
+  assert.equal(shipment.repositionedFrom, null, "market travel is not disguised as contract performance");
+});
+
+test("supplier comparisons price physical ore by delivered effective yield", () => {
+  const { state } = createWorld();
+  state.hubProcurement.orders = {};
+  const candidates = evaluateSupplierCandidates(state, {
+    buyerInstitutionId: "yard-exchange", family: "industrial", units: 6,
+  });
+  const ledge = candidates.find((candidate) => candidate.institutionId === "the-ledge");
+  const kiln = candidates.find((candidate) => candidate.institutionId === "kiln-crossing");
+
+  assert.equal(ledge.resourceId, "silicate");
+  assert.equal(ledge.physicalUnits, 6);
+  assert.equal(ledge.effectiveUnits, 6);
+  assert.equal(kiln.resourceId, "carbonaceous");
+  assert.equal(kiln.physicalUnits, 6, "a low-grade order remains one freight-sized physical lot");
+  assert.ok(Math.abs(kiln.effectiveUnits - 3.9) < 0.0001, "that lot covers less industrial demand");
+  assert.ok(Number.isFinite(kiln.deliveredCostPerEffectiveUnit));
+  assert.equal(candidates[0].institutionId, "the-ledge",
+    "the cheap-looking substitute does not win unless its delivered yield is actually cheaper");
+});
+
+test("low-grade institutional feedstock is cheap per crate but bulky per useful unit", () => {
+  const world = createWorld();
+  const candidates = evaluateSupplierCandidates(world.state, {
+    buyerInstitutionId: "scrap-forge", family: "industrial", units: 6,
+  });
+  const silicate = candidates.find((candidate) => candidate.resourceId === "silicate");
+  const carbonaceous = candidates.find((candidate) => candidate.resourceId === "carbonaceous");
+  assert.ok(carbonaceous.goodsAsk / carbonaceous.physicalUnits < silicate.goodsAsk / silicate.physicalUnits,
+    "the low-grade ore is cheaper to buy by physical crate");
+  assert.ok(carbonaceous.physicalUnits >= silicate.physicalUnits,
+    "but satisfying the same production need consumes at least as much cargo capacity");
+});
+
+test("one docked hauler bundles different destinations and dispatches only to its first real stop", () => {
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(1_000);
+  Object.values(state.logistics.institutions).forEach((institution) => {
+    if (institution.accounts?.operating) institution.accounts.operating.balance = 50_000;
+  });
+  const keepId = "hauler-yard-scrap";
+  Object.keys(state.logistics.haulers).filter((id) => id !== keepId).forEach((id) => { delete state.logistics.haulers[id]; });
+  const sites = getWorldSites();
+  const yard = sites.find((site) => site.id === "yard-exchange");
+  const porch = sites.find((site) => site.id === "scrap-porch");
+  const ship = new NpcShip({ id: keepId, name: "Yard Hauler", route: [yard, porch], x: yard.position.x, y: yard.position.y });
+  const procurement = createHubProcurementOperation({ state, now: () => 1_000 });
+  procurement.update();
+  listOrders(state, { status: [PROCUREMENT_STATUS.ACCEPTED, PROCUREMENT_STATUS.READY] }).forEach((order) => {
+    state.logistics.institutions[order.supplierInstitutionId].inventories[order.resourceId] = order.units + 30;
+  });
+  procurement.update();
+  const localOffers = getProcurementFreightOffers(state).filter((offer) => offer.originSiteId === yard.id);
+  assert.ok(new Set(localOffers.map((offer) => offer.destinationSiteId)).size >= 2, "the live economy provides a real multi-destination test");
+  state.logistics.postedFreightRates = Object.fromEntries(getProcurementFreightOffers(state).map((offer) => [offer.id, 2_000]));
+  const manager = createLogisticsManager({
+    state, ships: [ship], destinations: sites, now: () => 1_000,
+    onProcurementShipped: (orderId, shipmentId) => procurement.markShipped(orderId, shipmentId),
+    onProcurementDelivered: (orderId, settlement) => procurement.completeOrder(orderId, settlement),
+  });
+  manager.update();
+
+  const hauler = state.logistics.haulers[keepId];
+  const shipments = hauler.activeShipmentIds.map((id) => state.logistics.shipments[id]);
+  assert.ok(new Set(shipments.map((shipment) => shipment.destinationSiteId)).size >= 2);
+  assert.equal(ship.route.at(-1).id, shipments
+    .map((shipment) => shipment.destinationSiteId)
+    .find((destinationId) => destinationId === ship.route.at(-1).id), "the physical leg ends at one of the real delivery stops");
+  assert.equal(ship.operationalStatus, "loading");
+
+  const firstStopId = ship.route.at(-1).id;
+  const deliveredIds = shipments.filter((shipment) => shipment.destinationSiteId === firstStopId).map((shipment) => shipment.id);
+  assert.ok(deliveredIds.length > 0);
+  assert.ok(getProcurementFreightOffers(state).some((offer) => offer.originSiteId === firstStopId), "the stop also has local work to pick up");
+  ship.dockedSiteId = firstStopId;
+  ship.operationalStatus = "awaiting-assignment";
+  state.ledger.recordEvent("npc.routeCompleted", { npcId: keepId, shipmentId: ship.activeShipmentId, siteId: firstStopId }, { visible: false });
+  manager.update();
+
+  deliveredIds.forEach((id) => assert.equal(state.logistics.shipments[id].status, "delivered"));
+  const continuing = hauler.activeShipmentIds.map((id) => state.logistics.shipments[id]);
+  assert.ok(continuing.some((shipment) => shipment.originSiteId === firstStopId), "freed capacity is used for a real pickup at the stop");
+  assert.notEqual(ship.route.at(-1).id, firstStopId, "the next physical leg leaves for another real delivery");
 });
 
 test("live carrier cost can lift an underpriced freight offer and clear it", () => {
@@ -571,7 +674,20 @@ test("live carrier cost can lift an underpriced freight offer and clear it", () 
 
   clock += 46_000;
   manager.update();
-  const shipment = Object.values(state.logistics.shipments).find((entry) => entry.templateId === offer.id);
+  assert.ok(state.logistics.postedFreightRates[offer.id] > 1, "the issuer moved to the live carrier ask");
+  let shipment = Object.values(state.logistics.shipments).find((entry) => entry.templateId === offer.id);
+  if (!shipment) {
+    const movement = Object.values(state.logistics.movements)
+      .find((entry) => entry.type === "market-reposition" && entry.destinationSiteId === offer.originSiteId);
+    assert.ok(movement, "a remote carrier travels to the posting market without reserving its work");
+    const ship = world.ships.find((entry) => entry.id === movement.shipId);
+    ship.dockedSiteId = movement.destinationSiteId;
+    state.ledger.recordEvent("npc.routeCompleted", {
+      npcId: movement.shipId, shipmentId: movement.id, siteId: movement.destinationSiteId,
+    }, { visible: false });
+    manager.update();
+    shipment = Object.values(state.logistics.shipments).find((entry) => entry.templateId === offer.id);
+  }
   assert.ok(shipment, "the issuer moved to the live carrier ask and the work cleared");
   assert.ok(shipment.payment > 1);
   assert.equal(state.logistics.postedFreightRates[offer.id], shipment.payment);

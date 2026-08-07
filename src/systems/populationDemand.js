@@ -23,11 +23,11 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260805-2142-0b6dcbe";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260805-2142-0b6dcbe";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260805-2142-0b6dcbe";
-import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260805-2142-0b6dcbe";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260806-2000-39c17e6";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260806-2000-39c17e6";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260806-2000-39c17e6";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260806-2000-39c17e6";
+import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260806-2000-39c17e6";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -233,8 +233,10 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
         units,
         family: getResourceFamily(resourceId),
         unitCost: getUnitCost(state, hub.id, resourceId) || 0,
+        effectiveYield: getResourceEffectiveYield(resourceId),
       }))
-      .sort((first, second) => first.unitCost - second.unitCost || second.units - first.units);
+      .sort((first, second) => (first.unitCost / first.effectiveYield) - (second.unitCost / second.effectiveYield)
+        || second.effectiveYield - first.effectiveYield || second.units - first.units);
   }
 
   // Draw `units` of material spread across whatever eligible stock exists.
@@ -244,9 +246,9 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
     let remaining = units;
     for (const candidate of eligibleMaterials(hub, need)) {
       if (remaining <= 0) break;
-      const take = Math.min(candidate.units, remaining);
+      const take = Math.min(candidate.units, Math.ceil(remaining / candidate.effectiveYield));
       draw[candidate.resourceId] = (draw[candidate.resourceId] ?? 0) + take;
-      remaining -= take;
+      remaining -= take * candidate.effectiveYield;
     }
     return remaining > 0 ? null : draw;
   }

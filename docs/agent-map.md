@@ -1,6 +1,6 @@
 # Agent Map
 
-This is the short re-entry map for future coding passes. Read [HANDOFF.md](HANDOFF.md) first for the July 2026 checkpoint, then use this file before broad code archaeology.
+This is the short re-entry map for future coding passes. Read [HANDOFF.md](HANDOFF.md) first for the August 2026 six-hub checkpoint, then use this file before broad code archaeology.
 
 ## Current North Star
 
@@ -20,6 +20,7 @@ Asteroids RPG is a world-centric institutional space sim. The player controls on
 - `docs/comms-attention-roadmap.md` is the source of truth for Journey, viewport chatter, target arrows, and visual attention. Read it before adding a prompt, highlight, or UI callout.
 - `docs/tag-registry.md` defines the world-tag vocabulary and its live system readers. Read it before adding or repurposing a zone or region tag.
 - `docs/HANDOFF.md` records the current economy, institution, mining, freight, recovery, corridor, known-risk, and recommended-next-step state.
+- `docs/session-2026-08-06.md` records the completed week of six-hub, public-contract, patrol, wear, salvage, observability, substitution, and carrier-capacity work.
 
 ## Important Invariants
 

@@ -1,21 +1,21 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260805-2142-0b6dcbe";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260805-2142-0b6dcbe";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260805-2142-0b6dcbe";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260805-2142-0b6dcbe";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260805-2142-0b6dcbe";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260805-2142-0b6dcbe";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260805-2142-0b6dcbe";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260805-2142-0b6dcbe";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260805-2142-0b6dcbe";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260805-2142-0b6dcbe";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260805-2142-0b6dcbe";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260805-2142-0b6dcbe";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260805-2142-0b6dcbe";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260806-2000-39c17e6";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260806-2000-39c17e6";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260806-2000-39c17e6";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260806-2000-39c17e6";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260806-2000-39c17e6";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260806-2000-39c17e6";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260806-2000-39c17e6";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260806-2000-39c17e6";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260806-2000-39c17e6";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260806-2000-39c17e6";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260806-2000-39c17e6";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260806-2000-39c17e6";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260806-2000-39c17e6";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260806-2000-39c17e6";
 import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260805-2142-0b6dcbe";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260805-2142-0b6dcbe";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260805-2142-0b6dcbe";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260806-2000-39c17e6";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260806-2000-39c17e6";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260806-2000-39c17e6";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -82,8 +82,8 @@ export function getPostedMiningOrders(state, at = Date.now()) {
     if (!buyer) return;
     const valuation = evaluateProcurement({
       itemId: definition.resourceId,
-      baseUnitPrice: getResourceTradeValue(definition.resourceId),
-      marketUnitValue: getResourceTradeValue(definition.resourceId),
+      baseUnitPrice: getInstitutionalFeedstockTradeValue(definition.resourceId),
+      marketUnitValue: getInstitutionalFeedstockTradeValue(definition.resourceId),
       urgency: urgencyFromCoverage(position),
       inventory: position,
       requestedUnits: Math.min(position.gap, MAX_ORDER_UNITS),
@@ -167,6 +167,8 @@ export function getStandingMiningJobsForSite(siteId, issuer = null, state = null
 function getStandingMiningJobsFrom(orders, siteId, issuer = null) {
   return orders.filter((order) => order.siteId === siteId).map((order) => ({
     id: `player-${order.id}`,
+    opportunityId: order.id,
+    acceptanceSiteId: order.siteId,
     type: "resource-delivery",
     group: "standing-mining",
     jobKind: "mining",
@@ -176,7 +178,7 @@ function getStandingMiningJobsFrom(orders, siteId, issuer = null) {
     title: `${order.resourceName} for ${order.siteName}`,
     issuer: issuer ?? order.siteName,
     summary: `${order.siteName} maintains an evergreen local purchase order for ${order.amount} units of ${order.resourceName}.`,
-    terms: { resourceType: order.resourceId, resourceName: order.resourceName, amount: order.amount, destinationSiteId: order.siteId, destinationName: order.siteName, standingMiningOrderId: order.id },
+    terms: { resourceType: order.resourceId, resourceName: order.resourceName, amount: order.amount, destinationSiteId: order.siteId, destinationName: order.siteName, acceptanceSiteId: order.siteId, opportunityId: order.id, standingMiningOrderId: order.id },
     reward: { credits: order.amount * order.paymentPerUnit },
     clauses: ["This order is shared with licensed independent and institutional miners.", "Only real collected material is accepted.", `Deliver at ${order.siteName}; another contractor may fill later allocations.`],
   }));
@@ -322,7 +324,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       if (shipRecord.maintenanceStatus !== "available") return;
       // Non-preemptive by design: a worker keeps its commitment until the
       // delivery completes. Only idle workers reconsider.
-      if (worker.assignment) return;
+      if (worker.assignment || worker.marketVisit) return;
       const won = round.assignments[worker.id] ?? null;
       const order = won?.offer ?? null;
       if (!order) { publishIdleDecision(shipRecord, round); return; }
@@ -338,6 +340,22 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
           wakeOn: ["order-posted"],
           at: now(),
         }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+        return;
+      }
+      const acceptanceSiteId = order.acceptanceSiteId ?? order.siteId;
+      if (shipRecord.currentSiteId !== acceptanceSiteId
+        || Math.hypot(worker.position.x - destination.x, worker.position.y - destination.y) > 150) {
+        if (worker.visitMarket({ destination, destinationSiteId: acceptanceSiteId, offerId: order.id })) {
+          shipRecord.status = "market-reposition";
+          recordDiagnostic(state, worker.id, {
+            actorName: worker.name, actorKind: "ship", controllerId: operation.institution.id,
+            state: DIAGNOSTIC_STATE.WORKING,
+            summary: `Travelling to ${order.siteName} to accept ${order.id}`,
+            locationSiteId: shipRecord.currentSiteId,
+            position: { x: Math.round(worker.position.x), y: Math.round(worker.position.y) },
+            refs: { contractIds: [], targetIds: [acceptanceSiteId], dependencyIds: [order.id] },
+          }, now());
+        }
         return;
       }
       const allocation = {
@@ -628,7 +646,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       .filter((worker) => {
         const shipRecord = operation.ships[worker.id];
         if (!shipRecord || shipRecord.maintenanceStatus !== "available") return false;
-        if (worker.assignment) { shipRecord.waitingSince = null; return false; }
+        if (worker.assignment || worker.marketVisit) { shipRecord.waitingSince = null; return false; }
         // How long this ship has been available with nothing to do — the tie
         // break when two bids are worth exactly the same.
         shipRecord.waitingSince ??= now();
@@ -714,7 +732,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     // remainder into local supply, that surplus is what keeps a short order
     // worth taking. An offer that forbids it simply earns no surplus.
     const surplusUnits = order.sellsSurplus ? Math.max(0, (order.harvestTarget ?? order.amount) - order.amount) : 0;
-    const surplusPayout = surplusUnits * Math.max(1, Math.floor(getResourceTradeValue(order.resourceId) * 0.7));
+    const surplusPayout = surplusUnits * Math.max(1, Math.floor(getInstitutionalFeedstockTradeValue(order.resourceId) * 0.7));
     const payout = contractPayout + surplusPayout;
 
     return evaluateMiningJob({
@@ -820,7 +838,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     if (serviceable.length === 0) { policy.allBusySince = null; return; }
 
     // ── hiring ────────────────────────────────────────────────────────────
-    const allBusy = serviceable.every((worker) => worker.assignment);
+    const allBusy = serviceable.every((worker) => worker.assignment || worker.marketVisit);
     if (!allBusy) policy.allBusySince = null;
     else policy.allBusySince ??= now();
 
@@ -1022,7 +1040,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     if (surplus <= 0) return 0;
     const buyerInstitutionId = siteId === "scrap-porch" ? "scrap-forge" : siteId;
     const buyer = state.logistics?.institutions?.[buyerInstitutionId];
-    const unitPrice = Math.max(1, Math.floor(getResourceTradeValue(resourceId) * 0.7));
+    const unitPrice = Math.max(1, Math.floor(getInstitutionalFeedstockTradeValue(resourceId) * 0.7));
     const affordableUnits = Math.min(surplus, Math.floor((buyer?.accounts?.operating?.balance ?? 0) / unitPrice));
     if (!buyer || affordableUnits <= 0) return 0;
     const payment = affordableUnits * unitPrice;
@@ -1206,6 +1224,9 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       "prospect.selected": `${shipRecord.name} selected a real ${payload.resourceId} rock and is approaching it.`,
       "resource.collected": `${shipRecord.name} collected ${payload.quantity} ${payload.resourceId}.`,
       "delivery.completed": `${shipRecord.name} completed its physical delivery.`,
+      "market.arrived": payload.destinationSiteId
+        ? `${shipRecord.name} reached ${siteName(payload.destinationSiteId)} to seek local work.`
+        : `${shipRecord.name} reached a market to seek local work.`,
       "service.arrived": payload.issueType ? `${shipRecord.name} arrived at Scrap Porch and requested service for ${payload.issueType.replaceAll("-", " ")}.` : `${shipRecord.name} arrived at Scrap Porch for service.`,
     };
     if (actionType === "prospect.selected") {
@@ -1214,6 +1235,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       deposit.confidence = Math.min(1, deposit.confidence + 0.05);
       deposit.successfulSelections += 1;
       deposit.lastObservedAt = now();
+    }
+    if (actionType === "market.arrived") {
+      shipRecord.currentSiteId = payload.destinationSiteId;
+      shipRecord.status = "idle";
     }
     record(`worker.${actionType}`, messages[actionType] ?? `${shipRecord.name}: ${actionType}`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, ...payload });
     if (actionType === "service.arrived") {

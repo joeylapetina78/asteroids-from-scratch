@@ -2,9 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
-import { evaluateProtectionThreat, closeProtectionRequestsForThreat, reviewProtectionRequests, PROTECTION_REQUEST_STATUS } from "../src/systems/protectionPlanning.js";
+import { evaluateProtectionThreat, closeProtectionRequestsForThreat, getPlayerProtectionJobsForSite, reviewProtectionRequests, PROTECTION_REQUEST_STATUS } from "../src/systems/protectionPlanning.js";
 import { CONTRACT_KIND, CONTRACT_STATE, listContracts } from "../src/systems/contractBoard.js";
-import { completeProtectionContract, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "../src/systems/protectionProviders.js";
+import { acceptPlayerProtectionRequest, completePlayerProtectionRequest, completeProtectionContract, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "../src/systems/protectionProviders.js";
+import { createContractManager, registerContractDefinition } from "../src/systems/contractManager.js";
 import { completeInternalProtectionResponse, createInitialPatrolOperations, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, servicePatrolCraft, startInternalProtectionResponse } from "../src/systems/patrolOperations.js";
 import { listInspectableActors } from "../src/systems/actorInspector.js";
 
@@ -119,6 +120,58 @@ test("one mercenary craft cannot accept two simultaneous contracts", () => {
   assert.equal(second.providerInstitutionId, null);
   assert.equal(second.bids[0].eligible, false);
   assert.match(second.bids[0].reasons.at(-1), /committed/);
+});
+
+test("the player locally accepts and settles the same protection request record", () => {
+  const value = state();
+  value.protectionPlanning = { nextRequestId: 2, requests: {
+    "protection:1": {
+      id: "protection:1", kind: "threat-response", status: PROTECTION_REQUEST_STATUS.OFFERED,
+      issuerInstitutionId: "the-ledge", siteId: "the-ledge", threatId: "rift:player",
+      threatType: "incursion", requiredCapabilities: ["interdict-threat", "defend-shipping"],
+      maximumPayment: 900, createdAt: 10,
+    },
+  } };
+  const buyer = value.logistics.institutions["the-ledge"].accounts.operating;
+  const balanceBefore = buyer.balance;
+  const committedBefore = buyer.committed ?? 0;
+  const [job] = getPlayerProtectionJobsForSite(value, "the-ledge", "The Ledge");
+  assert.equal(job.terms.protectionRequestId, "protection:1");
+  assert.equal(job.acceptanceSiteId, "the-ledge");
+
+  const accepted = acceptPlayerProtectionRequest(value, "protection:1", {
+    siteId: "the-ledge", playerInstitutionId: "person:test-pilot", craftId: "ship:test", now: 20,
+  });
+  assert.equal(accepted.status, PROTECTION_REQUEST_STATUS.ACTIVE);
+  assert.equal(buyer.committed, committedBefore + 900);
+
+  const completed = completePlayerProtectionRequest(value, "rift:player", { now: 30 });
+  assert.equal(completed.status, PROTECTION_REQUEST_STATUS.FULFILLED);
+  assert.equal(buyer.committed, committedBefore);
+  assert.equal(buyer.balance, balanceBefore - 900);
+});
+
+test("player protection completion fulfills the portable contract and pays only on collection", () => {
+  const value = state();
+  value.protectionPlanning = { nextRequestId: 2, requests: {
+    "protection:pay": {
+      id: "protection:pay", status: PROTECTION_REQUEST_STATUS.OFFERED,
+      issuerInstitutionId: "the-ledge", siteId: "the-ledge", threatId: "rift:pay",
+      threatType: "incursion", requiredCapabilities: ["interdict-threat"], maximumPayment: 700,
+    },
+  } };
+  const definition = getPlayerProtectionJobsForSite(value, "the-ledge", "The Ledge")[0];
+  registerContractDefinition(definition);
+  const manager = createContractManager({ state: value });
+  manager.offerContract(definition.id, { type: "hub-service", siteId: "the-ledge" });
+  assert.equal(manager.acceptContract(definition.id), true);
+  acceptPlayerProtectionRequest(value, "protection:pay", { siteId: "the-ledge", now: 20 });
+  completePlayerProtectionRequest(value, "rift:pay", { now: 30 });
+  manager.update();
+  assert.equal(value.contracts.records[definition.id].status, "fulfilled");
+  const creditsBefore = value.credits;
+  assert.equal(manager.collectPayment(definition.id), true);
+  assert.equal(value.credits, creditsBefore + 700);
 });
 
 test("acceptance reserves hub funds and threat closure releases both cash and craft", () => {

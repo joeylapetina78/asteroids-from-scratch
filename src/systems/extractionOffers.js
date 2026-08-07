@@ -72,6 +72,8 @@ export function createExtractionOffer({
 } = {}) {
   return {
     id, issuerInstitutionId, siteId, siteName: siteName ?? siteId,
+    acceptanceSiteId: siteId,
+    reservationMode: concurrent ? "concurrent" : "exclusive",
     resourceId, resourceName: resourceName ?? String(resourceId ?? "").replaceAll("-", " "),
     amount, paymentPerUnit, contractId,
     equivalentAmount, pricePerEquivalent,

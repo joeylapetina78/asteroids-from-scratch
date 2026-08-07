@@ -25,16 +25,16 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260805-2142-0b6dcbe";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260805-2142-0b6dcbe";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260805-2142-0b6dcbe";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260805-2142-0b6dcbe";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260805-2142-0b6dcbe";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260805-2142-0b6dcbe";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260805-2142-0b6dcbe";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260805-2142-0b6dcbe";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260805-2142-0b6dcbe";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260806-2000-39c17e6";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260806-2000-39c17e6";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260806-2000-39c17e6";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260806-2000-39c17e6";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260806-2000-39c17e6";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260806-2000-39c17e6";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260806-2000-39c17e6";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260806-2000-39c17e6";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260806-2000-39c17e6";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260806-2000-39c17e6";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -148,7 +148,7 @@ export function getAskConcession(state, supplierInstitutionId, resourceId) {
 // closure, so anything wanting to READ the current ask — an inspector, a chart,
 // a test — had to re-derive it and would silently drift from the real rule.
 export function getSupplierAskPrice(state, supplierInstitutionId, resourceId) {
-  const marginalCost = getResourceTradeValue(resourceId);
+  const marginalCost = getInstitutionalFeedstockTradeValue(resourceId);
   const bookCost = getUnitCost(state, supplierInstitutionId, resourceId) || 0;
   const firmCost = Math.max(bookCost, marginalCost);
   const concession = getAskConcession(state, supplierInstitutionId, resourceId);
@@ -195,10 +195,15 @@ export function evaluateSupplierCandidates(state, {
       const capacityRemaining = Math.max(0, MAX_OUTSTANDING_SALE_UNITS - committed);
       const availableUnits = supplier?.inventories?.[definition.resourceId] ?? 0;
       const relationship = getRelationshipProjection(state, { fromId: buyerInstitutionId, toId: institutionId });
-      const unitCost = Math.max(getUnitCost(state, institutionId, definition.resourceId) || 0, getResourceTradeValue(definition.resourceId));
+      // The shortage is expressed in effective units, while the ship, title,
+      // and supplier book remain physical. Keep each purchase inside the
+      // ordinary six-crate freight lot even for bulky low-yield material.
+      const physicalUnits = Math.min(MAX_ORDER_UNITS, getPhysicalUnitsForEffective(definition.resourceId, units));
+      const effectiveUnits = getEffectiveMaterialUnits(definition.resourceId, physicalUnits);
+      const unitCost = Math.max(getUnitCost(state, institutionId, definition.resourceId) || 0, getInstitutionalFeedstockTradeValue(definition.resourceId));
       const quote = supplier ? evaluateSupplierAsk({
-        workId: `supply ${units} ${definition.resourceId}`,
-        costComponents: { other: unitCost * units },
+        workId: `supply ${physicalUnits} ${definition.resourceId}`,
+        costComponents: { other: unitCost * physicalUnits },
         traits: getActorTraits(state, institutionId, UNRUN_HUB_TRAITS),
         relationship,
         concession: getAskConcession(state, institutionId, definition.resourceId),
@@ -206,29 +211,33 @@ export function evaluateSupplierCandidates(state, {
       const freightCost = route ? estimateOpeningFreightBudget(route.distance) : Infinity;
       // Existing stock is preferable to promised future extraction, but the
       // penalty is deliberately modest: distance and price remain meaningful.
-      const productionDelayCost = Math.max(0, units - availableUnits) * getResourceTradeValue(definition.resourceId) * 0.05;
+      const productionDelayCost = Math.max(0, physicalUnits - availableUnits) * getInstitutionalFeedstockTradeValue(definition.resourceId) * 0.05;
       const deliveredCost = quote ? quote.recommendedPrice + freightCost + productionDelayCost : Infinity;
+      const deliveredCostPerEffectiveUnit = deliveredCost / Math.max(0.01, effectiveUnits);
 
       if (!supplier) reasons.push("supplier institution is not present");
       if (institutionId === buyerInstitutionId) reasons.push("buyer cannot supply itself through import procurement");
       if (!legal) reasons.push(`supplier holds no ${family} mining right`);
       if (!route) reasons.push("no transportation route reaches the buyer");
-      if (capacityRemaining < units) reasons.push(`only ${capacityRemaining} units of sale capacity remain`);
+      if (capacityRemaining < physicalUnits) reasons.push(`only ${capacityRemaining} physical units of sale capacity remain`);
       if (quote) reasons.push(...quote.reasons);
       if (route) reasons.push(`Delivery route is ${route.distance}u; estimated freight cost ${freightCost} cr.`);
-      if (productionDelayCost > 0) reasons.push(`${Math.max(0, units - availableUnits)} units require production before pickup.`);
+      if (productionDelayCost > 0) reasons.push(`${Math.max(0, physicalUnits - availableUnits)} physical units require production before pickup.`);
 
       const eligible = Boolean(supplier)
         && institutionId !== buyerInstitutionId
         && legal
         && Boolean(route)
-        && capacityRemaining >= units;
+        && capacityRemaining >= physicalUnits;
       return {
         institutionId,
         resourceId: definition.resourceId,
+        physicalUnits,
+        effectiveUnits,
         eligible,
-        score: eligible ? -deliveredCost : -Infinity,
+        score: eligible ? -deliveredCostPerEffectiveUnit : -Infinity,
         deliveredCost,
+        deliveredCostPerEffectiveUnit,
         goodsAsk: quote?.recommendedPrice ?? Infinity,
         freightCost,
         productionDelayCost,
@@ -285,7 +294,10 @@ export function getCommittedSupply(state, supplierInstitutionId, family) {
 export function getIncomingProcurement(state, buyerInstitutionId, family) {
   return listOrders(state, { buyerInstitutionId, status: OPEN_STATUSES })
     .filter((order) => order.family === family)
-    .reduce((sum, order) => sum + Math.max(0, order.units - order.deliveredUnits), 0);
+    .reduce((sum, order) => sum + getEffectiveMaterialUnits(
+      order.resourceId,
+      Math.max(0, order.units - order.deliveredUnits),
+    ), 0);
 }
 
 // Freight offers derived from orders whose goods actually exist. Shaped like a
@@ -458,14 +470,19 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
           score: Number.isFinite(candidate.score) ? Math.round(candidate.score) : null,
           accepted: candidate.eligible && candidate.institutionId === supplier?.institutionId,
           reason: candidate.eligible
-            ? `estimated delivered cost ${Math.round(candidate.deliveredCost)} cr`
+            ? `estimated delivered cost ${Math.round(candidate.deliveredCost)} cr (${Math.round(candidate.deliveredCostPerEffectiveUnit)} per effective unit)`
             : candidate.reasons.filter((reason) => !/^supply .* costs /i.test(reason) && !/^asking /i.test(reason)).join("; "),
           metrics: {
             deliveredCost: Number.isFinite(candidate.deliveredCost) ? Math.round(candidate.deliveredCost) : null,
+            deliveredCostPerEffectiveUnit: Number.isFinite(candidate.deliveredCostPerEffectiveUnit)
+              ? Math.round(candidate.deliveredCostPerEffectiveUnit)
+              : null,
             goodsAsk: Number.isFinite(candidate.goodsAsk) ? candidate.goodsAsk : null,
             freightCost: Number.isFinite(candidate.freightCost) ? candidate.freightCost : null,
             routeDistance: candidate.routeDistance,
             availableUnits: candidate.availableUnits,
+            physicalUnits: candidate.physicalUnits,
+            effectiveUnits: candidate.effectiveUnits,
             capacityRemaining: candidate.capacityRemaining,
           },
         }));
@@ -503,13 +520,14 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
         }
         delete procurement.unavailable[`${buyerInstitutionId}|${position.family}`];
 
+        const physicalUnits = supplier.physicalUnits;
         const valuation = evaluateProcurement({
           itemId: supplier.resourceId,
-          baseUnitPrice: getResourceTradeValue(supplier.resourceId),
-          marketUnitValue: getResourceTradeValue(supplier.resourceId),
+          baseUnitPrice: getInstitutionalFeedstockTradeValue(supplier.resourceId),
+          marketUnitValue: getInstitutionalFeedstockTradeValue(supplier.resourceId),
           urgency: urgencyFromCoverage(position),
           inventory: { onHand: position.onHand, incoming: position.incoming + onOrder, target: position.target },
-          requestedUnits: units,
+          requestedUnits: physicalUnits,
           account: buyer.accounts?.operating ?? {},
           policy: { protectedCash: getActorProtectedCash(state, buyerInstitutionId) },
           traits: getActorTraits(state, buyerInstitutionId, UNRUN_HUB_TRAITS),
@@ -530,6 +548,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
         }
 
         const orderUnits = valuation.metrics.units;
+        const effectiveUnits = getEffectiveMaterialUnits(supplier.resourceId, orderUnits);
         const committedPayment = orderUnits * valuation.recommendedPrice;
         // Freight is budgeted separately from the goods, so a carrier is paid
         // for hauling and the supplier is paid for the material.
@@ -542,6 +561,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
           buyerInstitutionId, supplierInstitutionId: supplier.institutionId,
           family: position.family, resourceId: supplier.resourceId,
           units: orderUnits, pricePerUnit: valuation.recommendedPrice,
+          effectiveUnits,
           // The ceiling is anchored to what this buyer first judged the goods
           // worth, captured at creation. Capturing it at the first reprice
           // instead would let a bad opening price become the baseline.
@@ -567,7 +587,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
 
         emit("procurement.orderPosted", `${hubName(buyerInstitutionId)} offered ${hubName(supplier.institutionId)} ${valuation.recommendedPrice} cr per unit for ${orderUnits} ${order2Label(supplier.resourceId)}, because it cannot mine ${position.family} itself.`, {
           procurementOrderId: id, buyerId: buyerInstitutionId, sellerId: supplier.institutionId,
-          family: position.family, resourceId: supplier.resourceId, units: orderUnits,
+          family: position.family, resourceId: supplier.resourceId, units: orderUnits, effectiveUnits,
           pricePerUnit: valuation.recommendedPrice, committedPayment, freightBudget,
           gap: position.gap, target: position.target, onHand: position.onHand,
           reasons: valuation.reasons,

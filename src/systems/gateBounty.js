@@ -73,3 +73,23 @@ export function redeemGateTrophy(state, { siteId, unit, quantity = 1, now = Date
   }, { visible: true, message: `${bounty.authorityName} paid ${total} cr for turning in a rift trophy.` });
   return { redeemed: true, reason: null, payout: offer.payout, total, fund: bounty.fund, officeSiteId: bounty.officeSiteId };
 }
+
+// The bearer can be the player or an institution. Settlement does not care
+// which UI or AI delivered the token; it only requires a credit account.
+export function redeemGateTrophyForBearer(state, { siteId, unit, quantity = 1, bearerId = null, account, now = Date.now() } = {}) {
+  if (!account || !Number.isFinite(account.balance)) {
+    return { redeemed: false, reason: "missing-bearer-account", payout: 0, total: 0 };
+  }
+  const result = redeemGateTrophy(state, { siteId, unit, quantity, now });
+  if (!result.redeemed) return result;
+  account.balance += result.total;
+  account.transactions?.push({
+    id: `GATE-BOUNTY-${now}-${bearerId ?? "bearer"}`,
+    at: now,
+    type: "gate-bounty-income",
+    amount: result.total,
+    balance: account.balance,
+    referenceId: "authority:gate-bounty",
+  });
+  return { ...result, bearerId, balance: account.balance };
+}

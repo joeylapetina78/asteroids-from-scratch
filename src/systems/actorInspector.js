@@ -4,14 +4,14 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260805-2142-0b6dcbe";
-import { collectIntentions } from "./intentions.js?v=fresh-20260805-2142-0b6dcbe";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260805-2142-0b6dcbe";
-import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260805-2142-0b6dcbe";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260805-2142-0b6dcbe";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260805-2142-0b6dcbe";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260805-2142-0b6dcbe";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260805-2142-0b6dcbe";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260806-2000-39c17e6";
+import { collectIntentions } from "./intentions.js?v=fresh-20260806-2000-39c17e6";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260806-2000-39c17e6";
+import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260806-2000-39c17e6";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260806-2000-39c17e6";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260806-2000-39c17e6";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260806-2000-39c17e6";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260806-2000-39c17e6";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
@@ -42,6 +42,7 @@ export function inspectActor(state, actorId, { game = null } = {}) {
     refs: diagnostic?.refs ?? { contractIds: [], targetIds: [], dependencyIds: [] },
     detail: diagnostic?.detail ?? null,
     cargo: null,
+    freightPortfolio: null,
     cash: null,
     condition: null,
     beaconAccess: null,
@@ -60,6 +61,31 @@ export function inspectActor(state, actorId, { game = null } = {}) {
       committedUnits,
       // With no assignment nothing is promised, so everything aboard is free.
       uncommitted: worker.assignment ? null : { ...(worker.cargo ?? {}) },
+    };
+  } else if (logisticsHauler) {
+    const npc = (game?.npcShips ?? []).find((entry) => entry.id === actorId) ?? null;
+    const shipments = (logisticsHauler.activeShipmentIds ?? [logisticsHauler.activeShipmentId].filter(Boolean))
+      .map((shipmentId) => state.logistics?.shipments?.[shipmentId])
+      .filter(Boolean);
+    view.cargo = {
+      held: shipments.reduce((held, shipment) => {
+        held[shipment.commodity] = (held[shipment.commodity] ?? 0) + (shipment.quantity ?? 0);
+        return held;
+      }, {}),
+      committedTo: shipments.map((shipment) => shipment.id).join(", ") || null,
+      committedUnits: shipments.reduce((sum, shipment) => sum + (shipment.quantity ?? 0), 0),
+      uncommitted: null,
+    };
+    view.freightPortfolio = {
+      capacity: npc?.commitmentPortfolio?.capacity ?? null,
+      remainingCapacity: npc?.remainingCargoCapacity ?? null,
+      nextStopId: npc?.route?.at(-1)?.id ?? null,
+      plannedStops: Array.from(new Set(shipments.map((shipment) => shipment.destinationSiteId).filter(Boolean))),
+      shipments: shipments.map((shipment) => ({
+        id: shipment.id, commodity: shipment.commodity, quantity: shipment.quantity,
+        ownerInstitutionId: state.logistics?.containers?.[shipment.containerId]?.ownerInstitutionId ?? null,
+        destinationSiteId: shipment.destinationSiteId, status: shipment.status,
+      })),
     };
   }
 

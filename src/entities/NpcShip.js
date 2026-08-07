@@ -1,7 +1,7 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260805-2142-0b6dcbe";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260805-2142-0b6dcbe";
-import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260805-2142-0b6dcbe";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260806-2000-39c17e6";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260806-2000-39c17e6";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260806-2000-39c17e6";
+import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260806-2000-39c17e6";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -211,9 +211,7 @@ export class NpcShip {
 
   canAcceptShipment({ originSiteId = this.dockedSiteId, destinationSiteId, quantity = 1 } = {}) {
     const required = Math.max(0, quantity);
-    if (required <= 0 || required > this.remainingCargoCapacity) return false;
-    return this.shipmentCommitments.every((existing) => existing.originSiteId === originSiteId
-      && existing.destinationSiteId === destinationSiteId);
+    return Boolean(originSiteId && destinationSiteId && required > 0 && required <= this.remainingCargoCapacity);
   }
 
   get activeShipmentId() { return this.commitmentPortfolio.entries[0]?.shipmentId ?? null; }
@@ -234,9 +232,6 @@ export class NpcShip {
     const accepted = addCommitment(this.commitmentPortfolio, {
       id: shipmentId, shipmentId, originSiteId, destinationSiteId,
       reservedCapacity: Math.max(0, quantity),
-    }, {
-      compatible: (existing, candidate) => existing.originSiteId === candidate.originSiteId
-        && existing.destinationSiteId === candidate.destinationSiteId,
     });
     if (!accepted) return false;
     this.route = route;
@@ -246,6 +241,23 @@ export class NpcShip {
     this.departureTimer = 1.1;
     this.operationalStatus = "loading";
     this.cargoSegments.forEach((segment) => { segment.loaded = true; });
+    this.lastWaypointDistance = distance(this.position, this.getWaypoint());
+    return true;
+  }
+
+  // Replace only the physical itinerary. Cargo commitments remain independent
+  // records, allowing one craft to unload at several hubs without pretending
+  // they are one shipment. Itineraries are rebuilt while docked, never in
+  // flight, so the craft cannot oscillate between newly posted work.
+  assignItinerary(route) {
+    if (!this.canAcceptRoute(route)) return false;
+    this.route = route;
+    this.routeIndex = 1;
+    this.activeCorridorId = null;
+    this.navigationMetrics = { distanceTraveled: 0, carefulDistance: 0, replanCount: 0, corridorEntries: 0 };
+    this.departureTimer = 1.1;
+    this.operationalStatus = "loading";
+    this.cargoSegments.forEach((segment) => { segment.loaded = Boolean(this.activeShipmentId); });
     this.lastWaypointDistance = distance(this.position, this.getWaypoint());
     return true;
   }

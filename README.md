@@ -81,7 +81,7 @@ The mission system runs on authored **beats** — discrete story units each with
 
 The event ledger records meaningful career and world events. Contracts, legal records, ship state, and hub services all read from the same ledger rather than each building their own state.
 
-Scrap Porch now hosts the first bounded living economy. SPRC repairs compatible freight haulers and Cinder mining craft through public capability matching; Sal plans reserves, protects cash, publishes causal procurement, buys local wholesale inventory, produces parts, and schedules ready work. Cinder's physical miners prioritize critical SPRC demand, mine multiple rocks per trip, sell surplus into real hub inventory, develop work-based wear, pay for service, and return to operation. Named haulers and the player draw freight from that same conserved inventory. See [docs/HANDOFF.md](docs/HANDOFF.md), [docs/sprc-operation.md](docs/sprc-operation.md), and [docs/real-logistics-slice.md](docs/real-logistics-slice.md).
+The prototype now runs a six-hub institutional economy. Populations create demand; hubs produce, discover competing suppliers, buy physical material, hire freight, and expose prices and blockers; Cinder and Flint compete for extraction; several carriers move purchase-backed manifests and can expand from sustained demand; SPRC repairs compatible craft from conserved inputs; patrol offices and independent providers answer real incursion threats. The player increasingly accepts the same procedural mining, freight, bounty, salvage, and protection work through the same underlying records. See [docs/HANDOFF.md](docs/HANDOFF.md), [docs/session-2026-08-06.md](docs/session-2026-08-06.md), and [docs/multi-actor-economy-expansion-audit.md](docs/multi-actor-economy-expansion-audit.md).
 
 The Yard Exchange-The Ledge route is also a reusable procedural freight corridor: an authored connection produces a deterministic curved centerline, navigable shoulders, NPC waypoints, debris-clearing pressure, and bidirectional kinetic speed pads. Institutional recovery uses the same transportation network when a carrier cannot finish under its own power.
 
@@ -99,9 +99,9 @@ The save system is browser-local and for playtesting only. Save keys may be inte
 
 ## What's Next
 
-The recommended immediate milestone is observation and balancing, not another large intelligence layer. Measure a normal 20-30 minute economy run: material and credit flows, waiting time, expiries, maintenance downtime, and whether Cinder expansion relieves or floods supply. Tune payouts, quantities, wear, reserves, and deadlines from those results.
+The immediate milestone is long-run validation of the six-hub economy: watch effective material prices, supplier capacity, freight waiting time, carrier capitalization, settlement production, repair queues, protection losses, and retained-record growth. Use the new `carrier.hireDeferred` ledger events to decide whether ordinary fleet growth should rely on retained earnings, loans, leases, or hub guarantees.
 
-The next larger system should extend the public wear/service/salvage lifecycle to one non-economic craft class, probably an incursion ship, while preserving real repair matching and conserved wreck material. The older authority and mission-editor tracks below remain valuable parallel work, but [docs/HANDOFF.md](docs/HANDOFF.md) is the current priority source.
+The next larger system should complete public maintenance for patrol and recovery craft and use a second provider to prove that repair/recovery are truly configurable. Merchant ownership and brokerage, manufacturing, used parts, criminality, piracy, and higher authority rights remain the larger progression described in [docs/HANDOFF.md](docs/HANDOFF.md).
 
 The near-term track is building out the document/authority framework so that pilot licenses, ship titles, registrations, loan liens, mining permits, and hub access passes share structure instead of being isolated systems. That foundation enables inspections, zone enforcement, document forgery, debt mechanics, repo events, and new professions without rewriting the core player systems.
 

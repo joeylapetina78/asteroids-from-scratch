@@ -1,5 +1,5 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260805-2142-0b6dcbe";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260806-2000-39c17e6";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260806-2000-39c17e6";
 import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
@@ -44,6 +44,7 @@ export class MiningWorkerShip {
     this.commitmentPortfolio = createCommitmentPortfolio({ capacity: 6 });
     this.deliveryBlock = null;
     this.serviceReturn = null;
+    this.marketVisit = null;
     this.miningDisabled = false;
     this.targetAsteroid = null;
     this.cargo = {};
@@ -110,6 +111,16 @@ export class MiningWorkerShip {
         this.serviceReturn = null;
         this.state = "awaiting-service";
         this.onEvent("service.arrived", { issueType: request.issueType, destinationSiteId: request.destinationSiteId });
+      });
+    }
+    if (this.marketVisit) {
+      this.state = "market-reposition";
+      this.targetAsteroid = null;
+      return this.flyTo(deltaSeconds, this.marketVisit.destination, HOME_RANGE, () => {
+        const visit = this.marketVisit;
+        this.marketVisit = null;
+        this.state = "idle";
+        this.onEvent("market.arrived", { destinationSiteId: visit.destinationSiteId, offerId: visit.offerId });
       });
     }
     if (this.miningDisabled) return this.brake(deltaSeconds);
@@ -213,6 +224,13 @@ export class MiningWorkerShip {
     this.targetAsteroid = null;
     this.tractorActive = false;
     this.tractorTargets = [];
+    return true;
+  }
+
+  visitMarket({ destination, destinationSiteId, offerId }) {
+    if (this.assignment || this.serviceReturn || this.miningDisabled) return false;
+    this.marketVisit = { destination, destinationSiteId, offerId };
+    this.targetAsteroid = null;
     return true;
   }
 

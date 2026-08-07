@@ -343,6 +343,16 @@ test("Cinder prioritizes and fulfills SPRC procurement through the public contra
   sprc.update();
   const order = Object.values(state.sprc.procurementOrders).find((entry) => entry.procurementItemId === "structural-feedstock");
   const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => 1_000 });
+  mining.workers.filter((worker) => worker.marketVisit).forEach((worker) => {
+    worker.position = { ...worker.marketVisit.destination };
+    worker.update(0, {});
+  });
+  mining.update();
+  mining.workers.filter((worker) => worker.marketVisit).forEach((worker) => {
+    worker.position = { ...worker.marketVisit.destination };
+    worker.update(0, {});
+  });
+  mining.update();
   assert.ok(mining.workers.some((entry) => entry.assignment?.contractId === order.contractId),
     "at least one Cinder ship took Sal's order on net value");
   const minerCashBefore = mining.getState().institution.accounts.operating.balance;
@@ -394,6 +404,15 @@ test("sustained critical demand lets Cinder fund and commission a fourth worker"
   state.logistics.institutions["scrap-forge"].inventories["iron-nickel"] = 0;
   state.logistics.institutions["scrap-forge"].inventories.silicate = 0;
   const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => clock });
+  mining.workers.filter((worker) => worker.marketVisit).forEach((worker) => {
+    worker.position = { ...worker.marketVisit.destination };
+    worker.update(0, {});
+  });
+  mining.update();
+  mining.workers.filter((worker) => worker.marketVisit).forEach((worker) => {
+    worker.position = { ...worker.marketVisit.destination };
+    worker.update(0, {});
+  });
   mining.update();
   clock += 6_000;
   mining.getState().institution.accounts.operating.balance = 6000;
@@ -1290,7 +1309,9 @@ test("player standing freight uses the same container, custody, inventory, and p
   const template = getProcurementFreightOffers(harness.state)[0];
   assert.ok(template, "procurement produced a run the player can take");
   const contract = createStandingFreightJob(template, "Yard Exchange Freight Desk");
-  const shipment = harness.manager.acceptPlayerContract(contract, "person:test-pilot");
+  assert.equal(harness.manager.acceptPlayerContract(contract, "person:test-pilot", "somewhere-else"), null,
+    "the player cannot accept a remotely observed freight posting");
+  const shipment = harness.manager.acceptPlayerContract(contract, "person:test-pilot", template.originSiteId);
   assert.equal(shipment.status, "assigned");
   assert.equal(harness.manager.loadPlayerContract(contract.id), true);
   assert.equal(shipment.status, "loaded");

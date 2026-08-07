@@ -22,8 +22,8 @@ export const FAMILIES = {
 // shade within their lane; keep new materials inside their role's lane.
 export const FAMILY_MEMBERS = {
   volatile: [
-    { id: "water-ice",   color: "#b8eaff", weight: 3, value: 30, processOutputs: { fuel: 250, "hull-repair": 4 } },
-    { id: "methane-ice", color: "#7cd9e8", weight: 2, value: 50, processOutputs: { fuel: 320, "hull-repair": 4 } },
+    { id: "water-ice",   color: "#b8eaff", weight: 3, value: 30, institutionalFeedstockValue: 30, effectiveYield: 1, processOutputs: { fuel: 250, "hull-repair": 4 } },
+    { id: "methane-ice", color: "#7cd9e8", weight: 2, value: 50, institutionalFeedstockValue: 38, effectiveYield: 1.25, processOutputs: { fuel: 320, "hull-repair": 4 } },
     { id: "hydrogen",    color: "#6fb5ff", weight: 1, value: 80, processOutputs: { fuel: 400, "hull-repair": 4 } },
   ],
   // Structural is the efficient hull-patch material, and hull-repair yields keep
@@ -32,13 +32,13 @@ export const FAMILY_MEMBERS = {
   // Absolute yields are 4x the original tuning: ~5 iron-nickel now fills the
   // 100-point reserve instead of ~20, making a patch far cheaper in material.
   structural: [
-    { id: "iron-nickel", color: "#ff7452", weight: 3, value: 20, processOutputs: { ammo: 250, "hull-repair": 20 } },
-    { id: "aluminum",    color: "#f0b46a", weight: 2, value: 35, processOutputs: { ammo: 300, "hull-repair": 40 } },
+    { id: "iron-nickel", color: "#ff7452", weight: 3, value: 20, institutionalFeedstockValue: 20, effectiveYield: 1, processOutputs: { ammo: 250, "hull-repair": 20 } },
+    { id: "aluminum",    color: "#f0b46a", weight: 2, value: 35, institutionalFeedstockValue: 30, effectiveYield: 1.5, processOutputs: { ammo: 300, "hull-repair": 40 } },
     { id: "titanium",    color: "#c07840", weight: 1, value: 60, processOutputs: { ammo: 400, "hull-repair": 60 } },
   ],
   industrial: [
-    { id: "silicate",     color: "#d4b896", weight: 3, value: 15, processOutputs: { ammo: 180, "hull-repair": 8 } },
-    { id: "carbonaceous", color: "#8a7060", weight: 2, value: 25, processOutputs: { ammo: 220, fuel: 100, "hull-repair": 12 } },
+    { id: "silicate",     color: "#d4b896", weight: 3, value: 15, institutionalFeedstockValue: 15, effectiveYield: 1, processOutputs: { ammo: 180, "hull-repair": 8 } },
+    { id: "carbonaceous", color: "#8a7060", weight: 2, value: 25, institutionalFeedstockValue: 8, effectiveYield: 0.65, processOutputs: { ammo: 220, fuel: 100, "hull-repair": 12 } },
   ],
   conductor: [
     { id: "copper", color: "#a066ff", weight: 3, value: 50, processOutputs: { scanergy: 250, "hull-repair": 4 } },
@@ -104,6 +104,21 @@ export function getResourceDefinition(resourceId) {
   return RESOURCE_DEFINITIONS[normalizeResourceType(resourceId)] ?? null;
 }
 
+// Physical units remain the unit of cargo, mining, and title. Institutional
+// planning uses effective units so two materials in one family can provide
+// different manufacturing value without becoming different need types.
+export function getResourceEffectiveYield(resourceId) {
+  return Math.max(0.01, getResourceDefinition(resourceId)?.effectiveYield ?? 1);
+}
+
+export function getEffectiveMaterialUnits(resourceId, physicalUnits = 0) {
+  return Math.max(0, physicalUnits) * getResourceEffectiveYield(resourceId);
+}
+
+export function getPhysicalUnitsForEffective(resourceId, effectiveUnits = 0) {
+  return Math.ceil(Math.max(0, effectiveUnits) / getResourceEffectiveYield(resourceId));
+}
+
 // The institutional economy is denominated ten times larger than the raw
 // material table, so procedurally generated work sits on the same scale as the
 // authored missions rather than an order of magnitude below them. Applied here
@@ -116,6 +131,15 @@ export const ECONOMY_SCALE = 10;
 
 export function getResourceTradeValue(resourceId) {
   return (getResourceDefinition(resourceId)?.value ?? 0) * ECONOMY_SCALE;
+}
+
+// Institutions value ore by what it contributes to their production recipes.
+// Player processing and shops retain `value`; separating the two prevents a
+// deliberately bulky low-grade substitute from becoming inexplicably dearer
+// than the high-grade material it replaces.
+export function getInstitutionalFeedstockTradeValue(resourceId) {
+  const definition = getResourceDefinition(resourceId);
+  return (definition?.institutionalFeedstockValue ?? definition?.value ?? 0) * ECONOMY_SCALE;
 }
 
 // The unscaled table value, for anything that must stay in raw-material terms.

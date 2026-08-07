@@ -77,6 +77,11 @@ test("full loop: purchase material at a valued price, then sell a repair priced 
   const order = Object.values(state.sprc.procurementOrders).find((entry) => entry.procurementItemId === "structural-feedstock");
   const unitPrice = order.pricePerEquivalent;
   const mining = createMiningOperation({ state, game, sprcOperation: sprc, now: () => 1_000 });
+  mining.workers.filter((worker) => worker.marketVisit).forEach((worker) => {
+    worker.position = { ...worker.marketVisit.destination };
+    worker.update(0, {});
+  });
+  mining.update();
 
   // 1. A miner chose Sal's order on net value — no hidden priority constant.
   const suppliers = mining.workers.filter((worker) => worker.assignment?.contractId === order.contractId);

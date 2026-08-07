@@ -1,8 +1,8 @@
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260805-2142-0b6dcbe";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260805-2142-0b6dcbe";
-import { evaluateSupplierAsk, getSpendable } from "./valuation.js?v=fresh-20260805-2142-0b6dcbe";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260805-2142-0b6dcbe";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260805-2142-0b6dcbe";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260806-2000-39c17e6";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260806-2000-39c17e6";
+import { evaluateSupplierAsk, getSpendable } from "./valuation.js?v=fresh-20260806-2000-39c17e6";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260806-2000-39c17e6";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260806-2000-39c17e6";
 
 const PROVIDER_SEEDS = Object.freeze([
   {
@@ -252,6 +252,51 @@ export function completeProtectionContract(state, requestId, { hull = null, now 
     requestId, institutionId: request.issuerInstitutionId, providerInstitutionId: request.providerInstitutionId,
     craftId: request.craftId, siteId: request.siteId, threatId: request.threatId, payment,
   }, { visible: true });
+  return request;
+}
+
+export function acceptPlayerProtectionRequest(state, requestId, {
+  siteId, playerInstitutionId = "person:player", craftId = "player-ship", now = Date.now(),
+} = {}) {
+  const request = state.protectionPlanning?.requests?.[requestId];
+  const buyer = request && state.logistics?.institutions?.[request.issuerInstitutionId];
+  const payment = Math.max(0, request?.maximumPayment ?? 0);
+  if (!request || request.status !== "offered" || request.siteId !== siteId || payment <= 0 || !buyer?.accounts?.operating) return null;
+  const account = buyer.accounts.operating;
+  if ((account.balance ?? 0) - (account.committed ?? 0) < payment) return null;
+  request.status = "active";
+  request.providerInstitutionId = playerInstitutionId;
+  request.craftId = craftId;
+  request.agreedPayment = payment;
+  request.acceptedAt = now;
+  request.dispatchedAt = now;
+  request.playerProvided = true;
+  account.committed = (account.committed ?? 0) + payment;
+  state.ledger?.recordEvent("protection.contractAccepted", {
+    requestId, institutionId: request.issuerInstitutionId,
+    providerInstitutionId: playerInstitutionId, craftId,
+    siteId: request.siteId, threatId: request.threatId, agreedPayment: payment,
+  }, { visible: true, message: `${playerInstitutionId} accepted ${payment} cr protection work at ${request.siteId}.` });
+  return request;
+}
+
+export function completePlayerProtectionRequest(state, threatId, { now = Date.now() } = {}) {
+  const request = Object.values(state.protectionPlanning?.requests ?? {}).find((candidate) =>
+    candidate.threatId === threatId && candidate.status === "active" && candidate.playerProvided,
+  );
+  const buyer = request && state.logistics?.institutions?.[request.issuerInstitutionId];
+  if (!request || !buyer?.accounts?.operating) return null;
+  const payment = Math.max(0, request.agreedPayment ?? 0);
+  buyer.accounts.operating.committed = Math.max(0, (buyer.accounts.operating.committed ?? 0) - payment);
+  buyer.accounts.operating.balance = Math.max(0, (buyer.accounts.operating.balance ?? 0) - payment);
+  request.status = "fulfilled";
+  request.paidAmount = payment;
+  request.settledAt = now;
+  state.ledger?.recordEvent("protection.playerContractCompleted", {
+    requestId: request.id, institutionId: request.issuerInstitutionId,
+    providerInstitutionId: request.providerInstitutionId, craftId: request.craftId,
+    siteId: request.siteId, threatId, payment,
+  }, { visible: true, message: `${request.providerInstitutionId} cleared the contracted threat at ${request.siteId}; ${payment} cr is ready for collection.` });
   return request;
 }
 

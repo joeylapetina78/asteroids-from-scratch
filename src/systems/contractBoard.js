@@ -15,11 +15,12 @@
 //   WHO IS DOING IT   supplier — null while it is still up for grabs
 //   WHERE IS IT       one of available / taken / done / blocked
 
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260805-2142-0b6dcbe";
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260805-2142-0b6dcbe";
-import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260805-2142-0b6dcbe";
-import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260805-2142-0b6dcbe";
-import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js?v=fresh-20260805-2142-0b6dcbe";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260806-2000-39c17e6";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260806-2000-39c17e6";
+import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260806-2000-39c17e6";
+import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260806-2000-39c17e6";
+import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js?v=fresh-20260806-2000-39c17e6";
+import { ensureGateBounty } from "./gateBounty.js?v=fresh-20260806-2000-39c17e6";
 
 export const CONTRACT_STATE = Object.freeze({
   AVAILABLE: "available",   // posted, nobody has taken it
@@ -36,6 +37,7 @@ export const CONTRACT_KIND = Object.freeze({
   REPAIR: "repair",             // Sal selling a repair
   PROTECTION: "protection",     // a place hiring defense against a real threat
   SALVAGE: "salvage",           // recovering titled wreckage for its owner
+  BOUNTY: "bounty",             // evergreen bearer-token redemption
 });
 
 // What to call a party, and where it sits — both read off the record it
@@ -69,9 +71,10 @@ function entry(state, fields) {
   return {
     id: null, kind: null, state: null, title: null,
     issuerId: null, buyerId: null, sellerId: null, supplierId: null,
-    originSiteId: null, siteId: null,
+    originSiteId: null, siteId: null, acceptanceSiteId: null,
+    eligibility: null, reservationMode: null, settlementMode: null,
     resourceId: null, family: null,
-    units: null, remainingUnits: null, unitPrice: null, value: null,
+    units: null, effectiveUnits: null, remainingUnits: null, unitPrice: null, effectiveUnitPrice: null, value: null,
     goodsPayment: null, servicePayment: null,
     createdAt: null, closedAt: null,
     detail: null, note: null, at: null,
@@ -108,19 +111,25 @@ function collectExtraction(state) {
       // not recorded on the order.
       originSiteId: null,
       siteId: order.siteId,
+      acceptanceSiteId: order.siteId,
+      eligibility: "licensed-miner",
+      reservationMode: "allocation",
+      settlementMode: "delivery",
       resourceId: order.resourceId,
       family: getResourceFamily(order.resourceId),
       units: order.amount,
       // Standing extraction records no partial fill, so remaining is unknown
       // rather than assumed equal to the order size.
+      effectiveUnits: getEffectiveMaterialUnits(order.resourceId, order.amount),
       remainingUnits: null,
       unitPrice: order.paymentPerUnit ?? null,
+      effectiveUnitPrice: order.paymentPerUnit != null ? order.paymentPerUnit / getResourceEffectiveYield(order.resourceId) : null,
       value: order.amount && order.paymentPerUnit ? order.amount * order.paymentPerUnit : null,
       goodsPayment: order.amount && order.paymentPerUnit ? order.amount * order.paymentPerUnit : null,
       createdAt: order.at ?? null,
       note: blocked
         ? `withheld: ${order.withheld}`
-        : `${order.inventory?.onHand ?? 0} on hand vs target ${order.inventory?.target ?? 0}`,
+        : `${formatMaterial(order.inventory?.onHand ?? 0)} effective on hand vs target ${formatMaterial(order.inventory?.target ?? 0)}`,
       at: order.at ?? null,
       detail: order.valuation?.reasons ?? null,
     }));
@@ -173,8 +182,10 @@ function collectPurchases(state) {
     resourceId: order.resourceId,
     family: order.family,
     units: order.units,
+    effectiveUnits: order.effectiveUnits ?? getEffectiveMaterialUnits(order.resourceId, order.units),
     remainingUnits: Math.max(0, (order.units ?? 0) - (order.deliveredUnits ?? 0)),
     unitPrice: order.pricePerUnit,
+    effectiveUnitPrice: order.pricePerUnit / getResourceEffectiveYield(order.resourceId),
     value: order.committedPayment,
     goodsPayment: order.committedPayment ?? null,
     servicePayment: order.freightBudget ?? null,
@@ -205,6 +216,7 @@ function collectFreight(state) {
     resourceId: shipment.commodity,
     family: getResourceFamily(shipment.commodity),
     units: shipment.quantity,
+    effectiveUnits: getEffectiveMaterialUnits(shipment.commodity, shipment.quantity),
     remainingUnits: shipment.status === "delivered" ? 0 : shipment.quantity,
     value: shipment.payment,
     goodsPayment: shipment.goodsPayment ?? null,
@@ -233,6 +245,7 @@ function collectFreight(state) {
         resourceId: order.resourceId,
         family: order.family,
         units: order.units,
+        effectiveUnits: order.effectiveUnits ?? getEffectiveMaterialUnits(order.resourceId, order.units),
         remainingUnits: order.units,
         value: order.freightBudget,
         servicePayment: order.freightBudget ?? null,
@@ -242,6 +255,11 @@ function collectFreight(state) {
       }));
     });
   return rows;
+}
+
+function formatMaterial(value) {
+  const rounded = Math.round((Number(value) || 0) * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
 // ── Sal: buying feedstock and selling repairs ──────────────────────────────
@@ -315,6 +333,10 @@ function collectProtection(state) {
     sellerId: request.providerInstitutionId,
     supplierId: request.providerInstitutionId,
     siteId: request.siteId,
+    acceptanceSiteId: request.siteId,
+    eligibility: request.requiredCapabilities,
+    reservationMode: "exclusive",
+    settlementMode: "threat-cleared",
     units: 1,
     remainingUnits: request.status === PROTECTION_REQUEST_STATUS.CLOSED ? 0 : 1,
     value: request.agreedPayment ?? request.maximumPayment,
@@ -366,6 +388,30 @@ function collectWreckSalvage(state) {
     });
 }
 
+function collectGateBounty(state) {
+  const bounty = ensureGateBounty(state);
+  return [entry(state, {
+    id: "authority:gate-bounty",
+    kind: CONTRACT_KIND.BOUNTY,
+    state: bounty.fund > 0 ? CONTRACT_STATE.AVAILABLE : CONTRACT_STATE.BLOCKED,
+    title: "Frontier Regional Authority gate bounty",
+    issuerId: bounty.authorityId,
+    buyerId: bounty.authorityId,
+    siteId: bounty.officeSiteId,
+    acceptanceSiteId: bounty.officeSiteId,
+    resourceId: "rift-trophy",
+    value: null,
+    remainingUnits: null,
+    eligibility: "any-bearer",
+    reservationMode: "evergreen",
+    settlementMode: "bearer-token-redemption",
+    createdAt: null,
+    note: bounty.fund > 0 ? `${Math.round(bounty.fund)} cr remains in the standing fund` : "authority fund depleted",
+    detail: ["Bring a rift trophy to the authority office; payment is the value recorded on the token."],
+    at: null,
+  })];
+}
+
 // Every agreement in the world, newest first within each state.
 export function listContracts(state) {
   return [
@@ -375,6 +421,7 @@ export function listContracts(state) {
     ...collectSprc(state),
     ...collectProtection(state),
     ...collectWreckSalvage(state),
+    ...collectGateBounty(state),
   ].sort((first, second) => (second.at ?? 0) - (first.at ?? 0));
 }
 
