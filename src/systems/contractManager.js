@@ -1,15 +1,15 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260806-2000-39c17e6";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260806-2000-39c17e6";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260806-2000-39c17e6";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260806-2000-39c17e6";
-import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260806-2000-39c17e6";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260806-2000-39c17e6";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260806-2000-39c17e6";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260806-2000-39c17e6";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260806-2000-39c17e6";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260806-2000-39c17e6";
-import { canFundStandingMiningOrder, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260806-2000-39c17e6";
-import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260806-2000-39c17e6";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260808-2152-9eba91f";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260808-2152-9eba91f";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260808-2152-9eba91f";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260808-2152-9eba91f";
+import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260808-2152-9eba91f";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260808-2152-9eba91f";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260808-2152-9eba91f";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260808-2152-9eba91f";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260808-2152-9eba91f";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260808-2152-9eba91f";
+import { getStandingMiningOrderAvailability, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260808-2152-9eba91f";
+import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260808-2152-9eba91f";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -363,9 +363,17 @@ export function createContractManager({ state, onChange = () => {} }) {
       return false;
     }
 
-    if (contract.terms.standingMiningOrderId && !canFundStandingMiningOrder({ state, orderId: contract.terms.standingMiningOrderId, amount: contract.terms.amount })) {
-      state.ledger.recordEvent("contract.resourceRejected", { contractId: contract.id, contractTitle: contract.title, resourceType: normalizeResourceType(resourceType), reason: "buyer-cannot-fund" }, { visible: true, message: `${contract.issuer} cannot currently fund this purchase order; cargo remains aboard.` });
-      return false;
+    if (contract.terms.standingMiningOrderId) {
+      const availability = getStandingMiningOrderAvailability({ state, orderId: contract.terms.standingMiningOrderId, amount: contract.terms.amount });
+      if (!availability.available) {
+        const reason = availability.reason ?? "buyer-cannot-fund";
+        const resourceLabel = contract.terms.resourceName ?? normalizeResourceType(resourceType).replaceAll("-", " ");
+        const message = reason === "buyer-cannot-fund"
+          ? `${contract.issuer} can't fund this purchase right now; your ${resourceLabel} stays aboard.`
+          : `${contract.issuer} has enough ${resourceLabel} for now and isn't buying; your cargo stays aboard.`;
+        state.ledger.recordEvent("contract.resourceRejected", { contractId: contract.id, contractTitle: contract.title, resourceType: normalizeResourceType(resourceType), reason }, { visible: true, message });
+        return false;
+      }
     }
 
     const requiredAmount = contract.terms.amount ?? 0;

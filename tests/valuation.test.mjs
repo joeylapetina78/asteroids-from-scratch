@@ -108,6 +108,20 @@ test("recurring mining expenses lower net value and the minimum viable bid", () 
   assert.ok(withOverhead.reasons.some((reason) => /crew and consumables/i.test(reason)));
 });
 
+test("the mining-rights royalty raises the floor and can turn a viable run down", () => {
+  // A run that clears its own costs with a slim margin...
+  const withoutRoyalty = evaluateMiningJob({ jobId: "marginal", payout: 120, travelDistance: 1_000, fixedOperatingCost: 90 });
+  assert.equal(withoutRoyalty.acceptable, true);
+  // ...no longer clears them once the royalty owed to the population is counted.
+  const withRoyalty = evaluateMiningJob({ jobId: "marginal", payout: 120, travelDistance: 1_000, fixedOperatingCost: 90, royaltyCost: 40 });
+  assert.equal(withoutRoyalty.metrics.netValue - withRoyalty.metrics.netValue, 40);
+  assert.equal(withRoyalty.metrics.royaltyCost, 40);
+  assert.equal(withRoyalty.acceptable, false, "the royalty pushed the run below cost, so the miner declines it");
+  assert.ok(withRoyalty.minAcceptablePrice >= withoutRoyalty.minAcceptablePrice + 40,
+    "the royalty is part of the minimum the miner must be paid — the price a hub must post to be served");
+  assert.ok(withRoyalty.reasons.some((reason) => /royalty/i.test(reason)));
+});
+
 // ── Cost basis + service pricing (cost propagation) ────────────────────────
 
 test("cost basis tracks weighted average and last paid", () => {

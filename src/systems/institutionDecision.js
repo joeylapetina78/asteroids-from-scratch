@@ -1,3 +1,5 @@
+import { getSpendable } from "./valuation.js?v=fresh-20260808-2152-9eba91f";
+
 export function createNeedRecord({ id, kind, subject, target = null, current = null, shortage = 0, urgency = "routine", purpose = null, context = {}, createdAt = Date.now() }) {
   return { id, recordType: "need", kind, subject, target, current, shortage, urgency, purpose, context, status: "open", responseIds: [], createdAt };
 }
@@ -32,7 +34,7 @@ export function resolveInstitutionPolicy({ archetypePolicy = {}, institutionPoli
 }
 
 export function evaluateAffordability({ account, policy, cost, allowPartial = false }) {
-  const spendable = Math.max(0, (account?.balance ?? 0) - (account?.committed ?? 0) - (policy?.protectedCash ?? 0));
+  const spendable = getSpendable(account, policy);
   const affordableAmount = Math.min(spendable, Math.max(0, cost));
   return {
     affordable: cost <= spendable,

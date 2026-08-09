@@ -23,11 +23,11 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260806-2000-39c17e6";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260806-2000-39c17e6";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260806-2000-39c17e6";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260806-2000-39c17e6";
-import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260806-2000-39c17e6";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260808-2152-9eba91f";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260808-2152-9eba91f";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260808-2152-9eba91f";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260808-2152-9eba91f";
+import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260808-2152-9eba91f";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -263,7 +263,6 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
     const dueAt = populationRecord.lastIncomeAt + populationRecord.incomeIntervalSeconds * 1000;
     if (now() < dueAt) return;
     populationRecord.lastIncomeAt = now();
-    const before = populationRecord.householdCash;
     let income = populationRecord.incomeAmount;
     const policy = populationRecord.distressPolicy;
     const hub = getHub(populationRecord);
@@ -279,8 +278,14 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
         remainingDebt: populationRecord.emergencyDebt, hubBalance: hub.accounts.operating.balance,
       });
     }
-    populationRecord.householdCash = Math.min(populationRecord.householdCashCap, populationRecord.householdCash + income);
-    const received = populationRecord.householdCash - before;
+    // Credit income additively up to the cap, and never claw an already-earned
+    // balance back DOWN to it. A population can now hold more than the cap from
+    // mining royalties — a real transfer of earned money — and the cap is a valve
+    // on the income FAUCET, not a ceiling on wealth. Clamping to the cap here (as
+    // this once did) destroyed royalty surplus the next time the faucet ticked.
+    const room = Math.max(0, populationRecord.householdCashCap - populationRecord.householdCash);
+    const received = Math.min(income, room);
+    populationRecord.householdCash += received;
     const discarded = income - received;
     const created = received + repayment;
     populationRecord.totalIncome += created;

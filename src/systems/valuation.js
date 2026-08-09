@@ -192,6 +192,7 @@ export function evaluateMiningJob({
   wearPerDistance = 0.00004,
   wearCostPerPoint = 220,           // what a service visit costs
   fixedOperatingCost = 0,           // crew, charges, tractor consumables per completed run
+  royaltyCost = 0,                  // mining-rights royalty owed to the site's population
   risk = 0,
   traits = {},
   policy = {},
@@ -201,10 +202,15 @@ export function evaluateMiningJob({
   const travelCost = travelDistance * operatingCostPerDistance;
   const wearCost = travelDistance * wearPerDistance * wearCostPerPoint;
   const riskCost = payout * risk * (0.3 + (traits.caution ?? 0.5) * 0.7);
-  const netValue = payout - travelCost - wearCost - riskCost - fixedOperatingCost;
+  const netValue = payout - travelCost - wearCost - riskCost - fixedOperatingCost - royaltyCost;
 
   reasons.push(`${jobId ?? "job"}: pays ${round(payout)} for ${units} units; travel ${Math.round(travelDistance)}u costs ${round(travelCost)} plus ${round(wearCost)} in wear.`);
   if (fixedOperatingCost > 0) reasons.push(`Recurring crew and consumables cost ${round(fixedOperatingCost)}.`);
+  // The royalty is a real cost the miner carries into every job, so a run that
+  // only clears its travel and wear but not the rights owed to the community is
+  // correctly declined. This is what pushes a repair-driven cost rise — and the
+  // royalty itself — through into the price a hub must post to be served.
+  if (royaltyCost > 0) reasons.push(`Mining-rights royalty to the local population costs ${round(royaltyCost)}.`);
   if (riskCost > 0) reasons.push(`Risk discount ${round(riskCost)}.`);
 
   const acceptable = netValue > 0;
@@ -216,11 +222,11 @@ export function evaluateMiningJob({
     acceptable,
     affordable: true,
     recommendedPrice: Math.round(payout),
-    minAcceptablePrice: Math.round(travelCost + wearCost + riskCost + fixedOperatingCost),
+    minAcceptablePrice: Math.round(travelCost + wearCost + riskCost + fixedOperatingCost + royaltyCost),
     maxAcceptablePrice: Math.round(payout),
     decision: acceptable && beatsAlternative ? VALUATION_DECISION.PROCEED : VALUATION_DECISION.DECLINE,
     reasons,
-    metrics: { netValue, travelCost, wearCost, riskCost, fixedOperatingCost, payout, units },
+    metrics: { netValue, travelCost, wearCost, riskCost, fixedOperatingCost, royaltyCost, payout, units },
   });
 }
 

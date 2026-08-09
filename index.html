@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260806-2000-39c17e6" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260808-2152-9eba91f" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260806-2000-39c17e6</span>
+      <span class="build-tag">build: fresh-20260808-2152-9eba91f</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -847,6 +847,10 @@
               <span>Credits</span>
               <strong id="license-credits">0 cr</strong>
             </div>
+            <div class="license-card-row license-toggle-row">
+              <span>Rights overlay</span>
+              <button id="rights-overlay-toggle" type="button" class="rights-overlay-toggle" aria-pressed="true" title="Outline space you are not cleared to work">On</button>
+            </div>
           </div>
         </div>
 
@@ -955,6 +959,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260806-2000-39c17e6"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260808-2152-9eba91f"></script>
   </body>
 </html>

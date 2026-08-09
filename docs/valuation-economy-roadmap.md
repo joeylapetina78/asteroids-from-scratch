@@ -151,7 +151,7 @@ learn skills, hire, train, borrow, or acquire holdings. Relationship-gated
 ## Known follow-ups
 
 - **Scarcity is near-maximal whenever a restock order fires** (an empty shelf is what triggers it), so routine orders carry a standing ~1.48× markup over the authored reference. Defensible, but worth tuning if routine restocking feels expensive.
-- `getSpendable` in valuation and `getProcurementAffordability` in sprcOperation both compute spendable cash; consolidate when convenient.
+- ~~`getSpendable` in valuation and `getProcurementAffordability` in sprcOperation both compute spendable cash; consolidate when convenient.~~ **DONE.** `evaluateAffordability` (institutionDecision.js) now delegates its spendable computation to `getSpendable` (valuation.js) — the single primitive. `getProcurementAffordability`/`getSpendableCash` in sprcOperation already route through `evaluateAffordability`, so the formula lives in exactly one place.
 - Hauler freight pricing is the third link of cost pass-through and is not yet wired.
 
 ---
@@ -339,5 +339,45 @@ absorbed every increase because their revenue was hand-set.
 
 ## Still open
 
-- Standing **mining** order prices (42–70/unit) remain authored; only freight rates and SPRC procurement float. Hub-side mining repricing is the symmetric next step.
 - The player-facing freight board (`createStandingFreightJob`) still shows `template.payment`, not the posted rate — the player does not yet see raised rates.
+
+---
+
+# Slice 3: hub-side mining repricing + population royalty (2026-08-08)
+
+Closes the mining side of the cost-pass-through chain, and adds the first cost a
+miner owes the world for the right to dig it up.
+
+## What was already true (correcting the older note)
+
+Standing mining order prices are **not** authored constants any more. `getPostedMiningOrders`
+derives `paymentPerUnit` from the real inventory gap via `evaluateProcurement`
+(urgency × scarcity × affordability), and `evaluateMiningJob` already declines a
+run whose `netValue ≤ 0`, pricing wear against the **live** service cost. So the
+buyer price floated on the hub's own urgency. What was missing was the *symmetric*
+signal — a hub learning that its price is below what extraction actually COSTS.
+
+## Population royalty (miner → population, per unit)
+
+- **`MINING_ROYALTY_RATE = 0.12`** of the ore's institutional value, `miningRoyaltyPerUnit(resourceId)` (miningOperation.js). A severance owed to the population whose territory is mined.
+- Threaded into the miner's valuation as `royaltyCost` in `evaluateMiningJob` (raises the floor / lowers net value / shows in reasons), so a run that clears travel + wear but not the rights owed is correctly declined. **This is what pushes both the royalty and any repair-cost rise into the price a hub must post.**
+- Paid on delivery in `settleStandingMiningOrder` → `payMiningRoyalty`: a pure transfer from the miner's account to the site population's household cash. Emitted as `population.miningRoyaltyPaid` with both balances. **Conservation holds** — both treasuries are counted by `listAccountHolders`/`readEconomySnapshot`, so the world total is unchanged.
+- **Scope:** institutional miners only (where `supplierAccount` is present). The player path (`contractManager.fulfillContract`, no supplier account) crosses into untracked player cash, so player royalty is a deliberate follow-up once the player treasury is in the reconciliation model.
+- **Faucet fix (populationDemand `accrueIncome`):** income is now credited *additively up to the cap* and never claws an above-cap balance back down. Royalties are real earned money that can carry a population above the faucet cap; the cap is a valve on credit CREATION, not a wealth ceiling. A royalty-rich population also draws less faucet income — the intended tightening.
+
+## Hub-side reprice (symmetric to `repriceUnclaimedFreight`)
+
+- `state.miningOrderRates[orderId] = { rate, repricedAt }` — a per-order override, mirroring `logistics.postedFreightRates`. `getPostedMiningOrders` posts `max(urgencyPrice, override)`, still clamped to spendable cash.
+- `repriceUnfilledMiningOrders(round)` on the mining tick: for a posted order **unclaimed this round** that **every idle miner refuses** (unanimous — one willing miner means it will be taken), raise toward `cheapestFloor/units × 1.15`, bounded by `2.5 × base value`, throttled 45 s, affordability-gated. Logged `institution.miningOrderRepriced` (visible) / `institution.miningOrderRepriceDeferred` (hidden). Only ever raises; sticky like freight (decay is a possible later refinement).
+- Cross-operation is handled by the throttle: whichever operation reprices an order first sets `repricedAt`, and a cheaper miner from another operation simply accepts the raised price before it climbs further.
+
+## Tests
+
+- `valuation.test.mjs` — royalty raises the floor and can flip a viable run to declined.
+- `populationDemand.test.mjs` — the faucet preserves an above-cap (royalty) balance.
+- `sprcOperation.test.mjs` — delivery conserves payment **and** royalty into household cash; a hub raises an order no idle miner will extract, bounded and reasoned.
+
+## Still open here
+
+- Player royalty (needs the player treasury inside the reconciliation model).
+- Override decay when extraction costs fall (currently sticky-high, like freight).

@@ -4,9 +4,9 @@
     {
       "name": "start",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8123"],
-      "port": 8123,
-      "autoPort": false
+      "runtimeArgs": ["-m", "http.server", "8124"],
+      "port": 8124,
+      "autoPort": true
     }
   ]
 }

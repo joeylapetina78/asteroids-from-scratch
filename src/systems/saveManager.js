@@ -1,7 +1,7 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260806-2000-39c17e6";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260806-2000-39c17e6";
-import { ensureObligations } from "./obligations.js?v=fresh-20260806-2000-39c17e6";
-import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260806-2000-39c17e6";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260808-2152-9eba91f";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260808-2152-9eba91f";
+import { ensureObligations } from "./obligations.js?v=fresh-20260808-2152-9eba91f";
+import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260808-2152-9eba91f";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 
@@ -155,5 +155,10 @@ function mergePlainObject(target, source) {
 }
 
 function cloneJsonSafe(value) {
+  // Some state slices are created lazily by their subsystem (e.g. state.wrecks
+  // only exists once the wreck registry first runs). A save that fires before
+  // that must not crash on `JSON.parse(JSON.stringify(undefined))` — a missing
+  // optional slice is simply absent, restored as its subsystem re-initializes it.
+  if (value === undefined) return null;
   return JSON.parse(JSON.stringify(value));
 }

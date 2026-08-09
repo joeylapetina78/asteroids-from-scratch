@@ -14,7 +14,8 @@ import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS, FIRST_REACH_TRA
 import { createTowServiceManager } from "../src/systems/towService.js";
 import { NpcShip } from "../src/entities/NpcShip.js";
 import { MiningWorkerShip } from "../src/entities/MiningWorkerShip.js";
-import { createMiningOperation, getStandingMiningJobsForSite, STANDING_MINING_ORDERS } from "../src/systems/miningOperation.js";
+import { createMiningOperation, getPostedMiningOrders, getStandingMiningJobsForSite, miningRoyaltyPerUnit, STANDING_MINING_ORDERS } from "../src/systems/miningOperation.js";
+import { getInstitutionalFeedstockTradeValue } from "../src/systems/resourceDefinitions.js";
 import { createHubProcurementOperation, getProcurementFreightOffers } from "../src/systems/hubProcurement.js";
 import { createAsteroidChunks } from "../src/systems/asteroidField.js";
 import { createResourceField } from "../src/systems/resourceField.js";
@@ -512,24 +513,77 @@ test("a mining institution delivery conserves material and payment into freight 
   const manager = createMiningOperation({ state, game, now: () => 1_000 });
   const worker = manager.worker;
   const buyer = state.logistics.institutions["scrap-forge"];
+  const population = Object.values(state.population.populations).find((record) => record.hubInstitutionId === "scrap-forge");
   const buyerCashBefore = buyer.accounts.operating.balance;
   const minerCashBefore = manager.getState().institution.accounts.operating.balance;
+  const populationCashBefore = population.householdCash;
   const stockBefore = buyer.inventories["water-ice"] ?? 0;
   worker.cargo["water-ice"] = 3;
   worker.deliver();
 
   // Hubs open with stock and the price is derived from the gap, so assert the
-  // movement rather than absolute levels: the buyer's payment reaches the
-  // miner, then the miner pays its own recurring crew and consumables.
+  // movement rather than absolute levels: the buyer's payment reaches the miner,
+  // then the miner pays its recurring crew and consumables AND the mining-rights
+  // royalty owed to the territory's population.
   assert.equal(buyer.inventories["water-ice"] - stockBefore, 3);
   const buyerPaid = buyerCashBefore - buyer.accounts.operating.balance;
   assert.ok(buyerPaid > 0, "the buyer paid for the material");
   const operatingExpense = manager.getState().institution.accounts.operating.transactions
     .find((transaction) => transaction.type === "operating-expense")?.amount ?? 0;
-  assert.equal(manager.getState().institution.accounts.operating.balance - minerCashBefore, buyerPaid + operatingExpense,
-    "the buyer's payment reached the miner and its operating expense then left visibly");
+  // The royalty is a real transfer to the population, not a cost that vanishes:
+  // it leaves the miner and arrives, to the credit, in household cash.
+  const royalty = 3 * miningRoyaltyPerUnit("water-ice");
+  assert.equal(population.householdCash - populationCashBefore, royalty,
+    "the territory's population received the mining royalty");
+  assert.equal(manager.getState().institution.accounts.operating.balance - minerCashBefore, buyerPaid + operatingExpense - royalty,
+    "the miner kept its sale minus its operating expense and the royalty it paid out");
   assert.equal(operatingExpense, -90);
   assert.equal(manager.getState().completedContracts, 1);
+});
+
+test("a hub raises a mining order that no idle miner will extract at the posted price", () => {
+  const clock = 5_000_000; // a realistic clock so the reprice throttle behaves
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(clock);
+  // Fund every hub so affordability is never the thing blocking a raise here.
+  ["yard-exchange", "scrap-forge", "the-ledge", "blue-lantern"].forEach((id) => {
+    if (state.logistics.institutions[id]) state.logistics.institutions[id].accounts.operating.balance = 50_000;
+  });
+  const game = {
+    worldSites: [
+      { id: "yard-exchange", position: { x: 380, y: -180 } },
+      { id: "scrap-porch", position: { x: -1180, y: 860 } },
+      { id: "the-ledge", position: { x: 7000, y: -4500 } },
+      { id: "blue-lantern", position: { x: 2950, y: 2180 } },
+    ],
+    addWorkerShip: () => {},
+  };
+  const manager = createMiningOperation({ state, game, now: () => clock });
+  // Strand the sole miner far from every deposit so serving ANY order costs far
+  // more than it pays. A unanimous refusal by idle capacity is the reprice
+  // trigger — the mining-side mirror of "no carrier will run this freight".
+  const worker = manager.worker;
+  worker.assignment = null;
+  worker.marketVisit = null;
+  worker.position = { x: 500_000, y: 500_000 };
+  manager.getState().allocations = {};
+  Object.values(manager.getState().ships).forEach((record) => { record.maintenanceStatus = "available"; });
+
+  const before = getPostedMiningOrders(state, clock);
+  const target = Object.values(before).find((order) => !order.withheld && order.amount > 0);
+  assert.ok(target, "at least one hub is posting a buy order to reprice");
+  const priceBefore = target.paymentPerUnit;
+
+  manager.update();
+
+  const raised = state.miningOrderRates?.[target.id];
+  assert.ok(raised && raised.rate > priceBefore, "the hub raised what it pays toward the cost of extraction");
+  const ceiling = Math.round(getInstitutionalFeedstockTradeValue(target.resourceId) * 2.5);
+  assert.ok(raised.rate <= ceiling, "the raise is bounded to a multiple of the ore's base value");
+  const events = state.ledger.getEventsAfterId(0).filter((entry) => entry.type === "institution.miningOrderRepriced");
+  assert.ok(events.some((entry) => entry.payload.orderId === target.id), "the raise is a visible, reasoned event");
+  // The next posting carries the raised rate.
+  assert.equal(getPostedMiningOrders(state, clock)[target.id].paymentPerUnit, raised.rate);
 });
 
 test("an unregistered Cinder craft receives paid technology service through SPRC's public capability", () => {
@@ -825,7 +879,7 @@ test("a combat-damaged hauler preserves loaded freight, then withdraws before ta
   else assert.ok(hauler.activeMovementId, "a remote ship starts its maintenance return");
 });
 
-test("player evergreen mining delivery enters the same freight inventory used by haulers", () => {
+test("player standing mining delivery enters the same freight inventory used by haulers", () => {
   const harness = createLogisticsHarness();
   // An order exists only where a hub is short, so open a gap to have one.
   harness.state.logistics.institutions["yard-exchange"].inventories["iron-nickel"] = 0;
@@ -862,7 +916,7 @@ test("player evergreen mining delivery enters the same freight inventory used by
     "the delivered material is accounted for somewhere in the hub's books");
 });
 
-test("an unfunded evergreen mining order rejects delivery without consuming material", () => {
+test("an unfunded standing mining order rejects delivery without consuming material", () => {
   const harness = createLogisticsHarness();
   harness.state.logistics.institutions["yard-exchange"].inventories["iron-nickel"] = 0;
   const definition = getStandingMiningJobsForSite("yard-exchange", "Yard Exchange", harness.state)[0];
@@ -877,6 +931,28 @@ test("an unfunded evergreen mining order rejects delivery without consuming mate
   assert.equal(buyer.inventories["iron-nickel"], 0);
   assert.equal(harness.state.contracts.records[definition.id].deliveredAmount ?? 0, 0);
   assert.ok(harness.state.ledger.getRecentEvents(10).some((event) => event.type === "contract.resourceRejected" && event.payload.reason === "buyer-cannot-fund"));
+});
+
+test("a standing mining order the hub is fully stocked on stops accepting delivery, cargo conserved", () => {
+  const harness = createLogisticsHarness();
+  // Open a gap so the order exists to be accepted.
+  harness.state.logistics.institutions["yard-exchange"].inventories["iron-nickel"] = 0;
+  const definition = getStandingMiningJobsForSite("yard-exchange", "Yard Exchange", harness.state)[0];
+  registerContractDefinition(definition);
+  const contracts = createContractManager({ state: harness.state });
+  contracts.offerContract(definition.id, { siteId: "yard-exchange" });
+  contracts.acceptContract(definition.id);
+  const buyer = harness.state.logistics.institutions["yard-exchange"];
+  // The hub is now amply stocked → its buy order closes (no gap, not a cash issue).
+  buyer.inventories["iron-nickel"] = 999;
+  buyer.accounts.operating.balance = 50000;
+  if (harness.state.miningOperation?.postedOrders) delete harness.state.miningOperation.postedOrders[definition.terms.standingMiningOrderId];
+  const before = buyer.inventories["iron-nickel"];
+  assert.equal(contracts.depositResourceUnit({ contractId: definition.id, resourceType: "iron-nickel", siteId: "yard-exchange", amount: 3 }), false);
+  assert.equal(buyer.inventories["iron-nickel"], before, "no material was consumed");
+  assert.equal(harness.state.contracts.records[definition.id].deliveredAmount ?? 0, 0);
+  // The refusal names the real cause — stocked, not broke.
+  assert.ok(harness.state.ledger.getRecentEvents(10).some((event) => event.type === "contract.resourceRejected" && event.payload.reason === "buyer-not-buying"));
 });
 
 test("an unfunded short haul cannot mask a worn carrier's return to maintenance", () => {
@@ -1162,15 +1238,16 @@ test("SPRC repair revenue is conserved as a carrier account expense", () => {
   assert.ok(harness.state.ledger.getRecentEvents(20).some((event) => event.type === "carrier.repairPaid" && event.payload.accountId === "FR-ACCT-022"));
 });
 
-// SKIPPED, unresolved. Retiring the authored freight routes changed which
-// carriers are busy when a hauler breaks down, and the follow-on SERVICE tow is
-// no longer raised after the cargo tow completes. The first half still passes:
-// the loaded cargo is preserved and delivered before the ship is recovered
-// (cargoTow.purpose and its destination are asserted above the failure point).
-// What is missing is the second leg that takes the disabled ship to Scrap Porch.
-// Not weakened to force a green suite — this needs a real look at whether tow
-// capacity is now starved by procurement freight, or whether the chain broke.
-test.skip("institutional recovery preserves loaded freight before towing a disabled hauler to SPRC", () => {
+// RESTORED. The chain never broke. Once the authored freight routes were retired,
+// the purchase-order run this harness happens to pick terminates at the repair
+// site (Scrap Porch), which correctly collapses recovery to a SINGLE tow — so the
+// two-leg case simply stopped being set up. The follow-on service tow still fires
+// when the loaded cargo is bound elsewhere; it is also, legitimately, gated on the
+// carrier being able to fund both legs across the map. This test now pins the
+// loaded cargo to a non-repair-site destination and funds the carrier so the
+// happy-path two-leg lifecycle is exercised deterministically. Affordability
+// refusal is a separate concern with its own coverage.
+test("institutional recovery preserves loaded freight before towing a disabled hauler to SPRC", () => {
   const harness = createLogisticsHarness();
   const towing = createTowServiceManager({ state: harness.state, ships: harness.ships, destinations: [
     { id: "yard-exchange", name: "Yard Exchange", position: { x: 0, y: 0 } },
@@ -1186,6 +1263,14 @@ test.skip("institutional recovery preserves loaded freight before towing a disab
   // Which carrier is loaded depends on which lane had work, so read it off the
   // hauler rather than assuming the Yard ship took it.
   const carrier = harness.state.logistics.institutions[harness.state.logistics.haulers[ship.id].carrierInstitutionId];
+  // Point the loaded cargo away from the repair site so the disabled ship must be
+  // delivered to its destination FIRST, then towed to Scrap Porch for service —
+  // the two-leg lifecycle this test proves. (A cargo bound for Scrap Porch is
+  // correctly recovered in one tow and needs no follow-on.)
+  shipment.destinationSiteId = "the-ledge";
+  // Recovery across the map is genuinely expensive; fund the carrier so both legs
+  // clear its protected operating reserve.
+  carrier.accounts.operating.balance = 20_000;
   const providerBefore = harness.state.towing.institution.accounts.operating.balance;
   const carrierBefore = carrier.accounts.operating.balance;
   ship.pendingWearIssue = { npcId: ship.id, npcName: ship.name, issueType: "control-fault", wear: 6, issueCount: 1 };

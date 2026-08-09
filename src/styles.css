@@ -2821,6 +2821,35 @@ body {
   color: #ffd36b;
 }
 
+.license-toggle-row {
+  align-items: center;
+}
+
+.rights-overlay-toggle {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #ffb0a0;
+  background: rgba(255, 92, 108, 0.12);
+  border: 1px solid rgba(255, 92, 108, 0.5);
+  border-radius: 5px;
+  padding: 2px 12px;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+
+.rights-overlay-toggle:hover,
+.rights-overlay-toggle:focus-visible {
+  background: rgba(255, 92, 108, 0.22);
+  color: #ffd6cf;
+}
+
+.rights-overlay-toggle.is-off {
+  color: #6b7386;
+  background: rgba(107, 115, 134, 0.1);
+  border-color: rgba(107, 115, 134, 0.4);
+}
+
 /* ── Fullscreen background viewport layout ────────────────────────────────── */
 
 body.is-viewport-fullscreen {

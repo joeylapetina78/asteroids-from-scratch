@@ -9,7 +9,7 @@ This is the authoritative re-entry note for Claude, Codex, or another future mai
 - Browser build: `fresh-20260806-2000-39c17e6`
 - Local server: `python -m http.server 8123`
 - Recommended fresh test URL: `http://127.0.0.1:8123/?resetSave=1&devStart=explorer&build=2000`
-- Verification: `npm test` reports 502 passing, 1 intentional skip, 0 failures (503 total); `npm run validate:content` passes.
+- Verification: `npm test` reports 513 passing, 0 skips, 0 failures; `npm run validate:content` passes.
 - Browser-facing changes require `npm run bump:cache` before final testing.
 
 ## Product direction and invariants
@@ -94,7 +94,7 @@ Important seams: `actorConfig.js`, `institutionDecision.js`, `extractionMarket.j
 - Market knowledge is still broader than the eventual beacon, communications, relationship and rights model should permit.
 - Population demand uses a bounded income faucet and abstract final consumption. Manufacturing is limited to settlement supplies and repair inputs.
 - Bankruptcy, liquidation, repossession, replacement markets and institutional death are incomplete.
-- The loaded-freight recovery integration test remains skipped and should be restored before deepening failure chains.
+- The loaded-freight recovery integration test is restored (was skipped). The chain never broke: purchase-order freight now routes to the repair site, correctly collapsing recovery to one tow, so the two-leg case simply stopped being set up; the second leg is also legitimately capital-gated. The test now pins cargo to a non-repair destination and funds the carrier to exercise the two-leg lifecycle deterministically.
 - `main.js` and `game.js` remain oversized. Extract only around demonstrated ownership seams.
 - Browser saves are playtest data; always reproduce architecture issues with `resetSave=1`.
 
@@ -103,7 +103,7 @@ Important seams: `actorConfig.js`, `institutionDecision.js`, `extractionMarket.j
 1. Run the fresh build for 20–30 minutes and inspect Economy, Blockers, Contracts and Ledger. Confirm the six-hub economy maintains production, clears reservations, and does not accumulate unbounded records.
 2. Decide carrier capital policy from observed `carrier.hireDeferred` events: retained earnings only, growth loans, leases, or hub-backed guarantees. Do not spawn free ships.
 3. Finish ordinary public maintenance matching for patrol and recovery craft, then use a second repair provider to extract only the seams actually needed.
-4. Close the loaded-freight recovery test and the remaining salvage/manufacturing handoff.
+4. Close the remaining salvage/manufacturing handoff (the loaded-freight recovery test is now restored).
 5. Introduce a minimal merchant institution only when comparing ownership/spread versus hired carriage is the actual next experiment.
 6. Continue the used-universe chain: used parts, fabrication, resale, reliability, debt, repossession and ownerless hostile salvage.
 7. Extend authority upward only through concrete rights: mining, transit, patrol, salvage, trade and settlement charters with issuers, scope, inspection and revocation.

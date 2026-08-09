@@ -50,6 +50,24 @@ test("the population profile and its needs are data, not hardcoded behaviour", (
   assert.equal(Object.keys(POPULATION_NEEDS).length, 4);
 });
 
+test("mining royalty can carry a population above its income cap without the faucet clawing it back", () => {
+  // Empty hub stock means nothing can be bought, so household cash only moves
+  // through the income faucet — exactly what this case is about.
+  const world = createWorld();
+  const record = world.record();
+  // Stand in for accumulated royalty income: a balance the population genuinely
+  // earned, sitting above the faucet cap.
+  const above = record.householdCashCap + 1_000;
+  record.householdCash = above;
+  const discardedBefore = record.totalDiscarded ?? 0;
+
+  world.advance(record.incomeIntervalSeconds + 1);
+  world.population.update();
+
+  assert.equal(world.record().householdCash, above, "the earned surplus above the cap is not destroyed by the faucet");
+  assert.ok((world.record().totalDiscarded ?? 0) > discardedBefore, "the faucet correctly created no new income while already over cap");
+});
+
 test("each need pulls on the resource families it is meant to", () => {
   assert.deepEqual(POPULATION_NEEDS["settlement-supply-unit"].families, ["structural", "industrial"]);
   assert.deepEqual(POPULATION_NEEDS["life-support-pack"].families, ["volatile"]);

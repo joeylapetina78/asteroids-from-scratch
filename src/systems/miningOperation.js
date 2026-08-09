@@ -1,21 +1,21 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260806-2000-39c17e6";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260806-2000-39c17e6";
-import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260806-2000-39c17e6";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260806-2000-39c17e6";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260806-2000-39c17e6";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260806-2000-39c17e6";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260806-2000-39c17e6";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260806-2000-39c17e6";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260806-2000-39c17e6";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260806-2000-39c17e6";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260806-2000-39c17e6";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260806-2000-39c17e6";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260806-2000-39c17e6";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260806-2000-39c17e6";
-import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260806-2000-39c17e6";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260806-2000-39c17e6";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260806-2000-39c17e6";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260808-2152-9eba91f";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260808-2152-9eba91f";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260808-2152-9eba91f";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260808-2152-9eba91f";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260808-2152-9eba91f";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260808-2152-9eba91f";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260808-2152-9eba91f";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260808-2152-9eba91f";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260808-2152-9eba91f";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260808-2152-9eba91f";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260808-2152-9eba91f";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260808-2152-9eba91f";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260808-2152-9eba91f";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260808-2152-9eba91f";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260808-2152-9eba91f";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260808-2152-9eba91f";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260808-2152-9eba91f";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260808-2152-9eba91f";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -58,6 +58,27 @@ const MINING_COMPONENT_DEFINITIONS = Object.freeze([
 ]);
 const MINING_SERVICE_PRICE = 2200;
 
+// A severance royalty the miner owes the population whose territory it digs, for
+// the mining rights that territory provides. Priced as a fraction of the ore's
+// own institutional value so it scales with what is being taken rather than
+// taxing a cheap crate the same as a valuable one. It is a real cost the miner
+// carries into every valuation (raising its floor) and a real transfer paid to
+// the site's population on delivery — never created or destroyed money.
+export const MINING_ROYALTY_RATE = 0.12;
+export function miningRoyaltyPerUnit(resourceId) {
+  return Math.max(1, Math.round(getInstitutionalFeedstockTradeValue(resourceId) * MINING_ROYALTY_RATE));
+}
+
+// Hub-side repricing, the symmetric mirror of the freight repricer. When a hub
+// posts a buy order that every idle miner refuses because it does not cover the
+// cost of extracting it, the hub raises what it pays toward the cheapest miner's
+// cost plus a slim margin — bounded, throttled, and gated on the hub actually
+// being able to fund it. Without this, only the buyer's own inventory urgency
+// pushed the price up; now a rise in what mining COSTS reaches the price too.
+const MINING_REPRICE_INTERVAL_MS = 45 * 1000;
+const MINING_REPRICE_MAX_MULTIPLE = 2.5;   // never above this × the ore's base value
+const MINING_REPRICE_MARGIN = 0.15;        // a reason for the miner to take it, not just break even
+
 // Largest single order a hub will place, so a big gap becomes several runs
 // rather than one impossible haul.
 const MAX_ORDER_UNITS = 6;
@@ -97,10 +118,24 @@ export function getPostedMiningOrders(state, at = Date.now()) {
       posted[definition.id] = { ...definition, amount: 0, withheld: "buyer-cannot-fund", valuation, inventory: position, at };
       return;
     }
+    const units = valuation.metrics.units;
+    // A prior round of "no miner will extract this at that price" may have raised
+    // the standing buy price toward the miners' cost — the symmetric mirror of
+    // the freight repricer. It lives as a per-order rate the hub carries, so the
+    // posted price is the higher of what urgency alone recommends and what the
+    // market has already had to clear at. It still cannot exceed spendable cash:
+    // if the world has moved against a stale override, fall back to the price the
+    // hub can actually honour.
+    const override = state.miningOrderRates?.[definition.id]?.rate ?? 0;
+    let paymentPerUnit = Math.max(valuation.recommendedPrice, override);
+    if (paymentPerUnit > valuation.recommendedPrice) {
+      const spendable = (buyer.accounts?.operating?.balance ?? 0) - getActorProtectedCash(state, definition.buyerInstitutionId);
+      if (units * paymentPerUnit > spendable) paymentPerUnit = valuation.recommendedPrice;
+    }
     posted[definition.id] = {
       ...definition,
-      amount: valuation.metrics.units,
-      paymentPerUnit: valuation.recommendedPrice,
+      amount: units,
+      paymentPerUnit,
       valuation, inventory: position, withheld: null, at,
     };
   });
@@ -177,10 +212,10 @@ function getStandingMiningJobsFrom(orders, siteId, issuer = null) {
     jobTierLabel: "Open Extraction",
     title: `${order.resourceName} for ${order.siteName}`,
     issuer: issuer ?? order.siteName,
-    summary: `${order.siteName} maintains an evergreen local purchase order for ${order.amount} units of ${order.resourceName}.`,
+    summary: `${order.siteName} is buying ${order.amount} units of ${order.resourceName} right now. The order closes when its stores are full or it cannot fund the buy.`,
     terms: { resourceType: order.resourceId, resourceName: order.resourceName, amount: order.amount, destinationSiteId: order.siteId, destinationName: order.siteName, acceptanceSiteId: order.siteId, opportunityId: order.id, standingMiningOrderId: order.id },
     reward: { credits: order.amount * order.paymentPerUnit },
-    clauses: ["This order is shared with licensed independent and institutional miners.", "Only real collected material is accepted.", `Deliver at ${order.siteName}; another contractor may fill later allocations.`],
+    clauses: ["This order is shared with licensed independent and institutional miners.", "Only real collected material is accepted.", `Deliver at ${order.siteName} while the order is open; it may pause when the hub is stocked or short of cash.`],
   }));
 }
 
@@ -218,21 +253,75 @@ export function settleStandingMiningOrder({ state, orderId, resourceId, amount, 
     institutionId: buyer.id, itemId: resourceId, units: delivered,
     totalCost: payment, source: "standing-mining-order", at: now,
   });
+  let royalty = 0;
   if (supplierAccount) {
     supplierAccount.balance += payment;
     supplierAccount.transactions?.push({ id: `MIN-TX-${referenceId ?? now}`, at: now, type: "mining-income", amount: payment, balance: supplierAccount.balance, referenceId });
+    // The rights royalty is only real when there is both an institutional miner
+    // to owe it and a population to receive it — otherwise nothing is debited,
+    // so no money is ever created or lost by settling a delivery.
+    royalty = payMiningRoyalty(state, { order, delivered, supplierAccount, referenceId, now });
   }
-  return { order, buyer, delivered, payment, unitPrice };
+  return { order, buyer, delivered, payment, unitPrice, royalty };
+}
+
+// The severance transfer: the institutional miner pays the site's population for
+// the mining rights its territory provides. A pure transfer between two tracked
+// treasuries — the miner's account and the population's household cash — so the
+// world's money total is unchanged. It is deliberately NOT capped by the
+// population's income cap: that cap is a valve on credit CREATION (the faucet),
+// not a ceiling on wealth a population has genuinely earned.
+function payMiningRoyalty(state, { order, delivered, supplierAccount, referenceId, now }) {
+  const population = Object.values(state.population?.populations ?? {})
+    .find((record) => record.hubInstitutionId === order.buyerInstitutionId || record.siteId === order.siteId);
+  if (!population) return 0;
+  const royalty = delivered * miningRoyaltyPerUnit(order.resourceId);
+  if (royalty <= 0) return 0;
+
+  const minerBefore = supplierAccount.balance;
+  const populationBefore = population.householdCash;
+  supplierAccount.balance -= royalty;
+  population.householdCash += royalty;
+  population.totalRoyaltyReceived = (population.totalRoyaltyReceived ?? 0) + royalty;
+  supplierAccount.transactions?.push({ id: `ROY-TX-${referenceId ?? now}`, at: now, type: "mining-royalty", amount: -royalty, balance: supplierAccount.balance, referenceId });
+
+  state.ledger.recordEvent("population.miningRoyaltyPaid", {
+    populationId: population.id, populationName: population.name,
+    payerInstitutionId: order.buyerInstitutionId, siteId: order.siteId,
+    resourceId: order.resourceId, units: delivered, amount: royalty,
+    minerCashBefore: Math.round(minerBefore), minerCashAfter: Math.round(supplierAccount.balance),
+    populationCashBefore: Math.round(populationBefore), populationCashAfter: Math.round(population.householdCash),
+    totalRoyaltyReceived: Math.round(population.totalRoyaltyReceived),
+  }, { visible: true, message: `${population.name} received ${royalty} cr in mining royalties for ${delivered} ${order.resourceName} taken from its territory.` });
+  return royalty;
+}
+
+// Whether a standing order will accept a delivery right now, and if not, why.
+// Two distinct causes are collapsed into a single `available` elsewhere, but a
+// hub that is simply full ("buyer-not-buying") is not the same as one that wants
+// the material and cannot pay ("buyer-cannot-fund"). Callers surface the reason
+// so the player is told the truth instead of a blanket "cannot fund".
+export function getStandingMiningOrderAvailability({ state, orderId, amount = null }) {
+  const order = STANDING_MINING_ORDERS.find((candidate) => candidate.id === orderId);
+  const buyer = state.logistics?.institutions?.[order?.buyerInstitutionId];
+  if (!order || !buyer) return { available: false, reason: "order-missing" };
+  const posted = resolvePostedOrder(state, orderId);
+  // No posted order at all means the hub's inventory gap has closed — it is
+  // stocked, not broke, so it has simply stopped buying.
+  if (!posted) return { available: false, reason: "buyer-not-buying" };
+  // An unaffordable order IS posted, but withheld with amount 0. Name the cash
+  // shortfall before falling through to the stocked case.
+  if (posted.withheld) return { available: false, reason: "buyer-cannot-fund" };
+  if ((posted.amount ?? 0) <= 0) return { available: false, reason: "buyer-not-buying" };
+  const units = Math.min(Math.max(0, amount ?? posted.amount), posted.amount);
+  if ((buyer.accounts.operating.balance ?? 0) < units * posted.paymentPerUnit) {
+    return { available: false, reason: "buyer-cannot-fund" };
+  }
+  return { available: true, reason: null };
 }
 
 export function canFundStandingMiningOrder({ state, orderId, amount = null }) {
-  const order = STANDING_MINING_ORDERS.find((candidate) => candidate.id === orderId);
-  const buyer = state.logistics?.institutions?.[order?.buyerInstitutionId];
-  if (!order || !buyer) return false;
-  const posted = resolvePostedOrder(state, orderId);
-  if (!posted || posted.withheld) return false;
-  const units = Math.min(Math.max(0, amount ?? posted.amount), posted.amount);
-  return (buyer.accounts.operating.balance ?? 0) >= units * posted.paymentPerUnit;
+  return getStandingMiningOrderAvailability({ state, orderId, amount }).available;
 }
 
 export function createMiningOperation({ state, game, sprcOperation = null, now = () => Date.now(), seed = CINDER_MINING_SEED }) {
@@ -456,6 +545,68 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       record("mining.contractAccepted", `${operation.controller.name} dispatched ${worker.name} for ${order.amount} ${order.resourceName} at ${order.siteName}.`, { orderId: order.id, allocationId: allocation.id, siteId: order.siteId, resourceId: order.resourceId, quantity: order.amount, shipInstitutionId: worker.id, shipName: worker.name });
       fillCompatiblePortfolio(worker, order.siteId);
     });
+    repriceUnfilledMiningOrders(round);
+  }
+
+  // Symmetric to the freight repricer. After the market has cleared, any posted
+  // order that this operation's idle miners ALL refuse — because it does not
+  // cover the cost of extracting it — is a hub underpaying for work nobody will
+  // take. Raise what it offers toward the cheapest refusing miner's cost plus a
+  // slim margin: bounded, throttled, and only when the hub can fund it. This is
+  // the missing half of cost pass-through on the mining side — before it, only
+  // the buyer's own inventory urgency could lift the price, never a rise in what
+  // extraction actually costs.
+  function repriceUnfilledMiningOrders(round) {
+    state.miningOrderRates ??= {};
+    const idleWorkers = workers.filter((worker) => {
+      const shipRecord = operation.ships[worker.id];
+      return shipRecord?.maintenanceStatus === "available" && !worker.assignment && !worker.marketVisit;
+    });
+    // With no idle capacity here, an unfilled order says nothing about price —
+    // these miners are simply busy. Leave repricing to whoever has a free ship.
+    if (idleWorkers.length === 0) return;
+    const claimed = new Set(Object.values(round.assignments).map((entry) => entry.offer?.id).filter(Boolean));
+
+    Object.values(operation.postedOrders).forEach((order) => {
+      if (order.withheld || !(order.amount > 0) || claimed.has(order.id)) return;
+      const valuations = idleWorkers.map((worker) => valueOrderForWorker(order, worker.position));
+      // One idle miner willing to take it means it is not underpriced — it will
+      // be taken. Only a unanimous refusal is evidence the price is too low.
+      if (valuations.some((valuation) => valuation.acceptable)) return;
+      const minFloor = Math.min(...valuations.map((valuation) => valuation.minAcceptablePrice));
+      raiseMiningOrder(order, minFloor);
+    });
+  }
+
+  function raiseMiningOrder(order, minerCostFloor) {
+    // `repricedAt: null` means "never repriced" and is always eligible, so a
+    // fresh order can be raised at once regardless of the clock's magnitude —
+    // rather than depending on now() being a real wall-clock timestamp.
+    const entry = state.miningOrderRates[order.id] ??= { rate: 0, repricedAt: null };
+    if (entry.repricedAt != null && now() - entry.repricedAt < MINING_REPRICE_INTERVAL_MS) return;
+    entry.repricedAt = now();
+    const current = order.paymentPerUnit;
+    const ceiling = Math.round(getInstitutionalFeedstockTradeValue(order.resourceId) * MINING_REPRICE_MAX_MULTIPLE);
+    // The miner's cost spread over the load, plus a margin so taking the run
+    // beats sitting idle. Capped so a hub never chases an impossible cost to ruin.
+    const target = Math.min(ceiling, Math.ceil((minerCostFloor / order.amount) * (1 + MINING_REPRICE_MARGIN)));
+    if (target <= current) return;   // only ever raise, and never a no-op
+    const buyer = state.logistics?.institutions?.[order.buyerInstitutionId];
+    const spendable = (buyer?.accounts?.operating?.balance ?? 0) - getActorProtectedCash(state, order.buyerInstitutionId);
+    if (order.amount * target > spendable) {
+      state.ledger.recordEvent("institution.miningOrderRepriceDeferred", {
+        institutionId: order.buyerInstitutionId, orderId: order.id, siteId: order.siteId,
+        resourceId: order.resourceId, wantedUnitPrice: target, previousUnitPrice: current, spendable: Math.round(spendable),
+      }, { visible: false });
+      return;
+    }
+    entry.rate = target;
+    state.ledger.recordEvent("institution.miningOrderRepriced", {
+      institutionId: order.buyerInstitutionId, orderId: order.id, siteId: order.siteId,
+      resourceId: order.resourceId, resourceName: order.resourceName,
+      previousUnitPrice: current, unitPrice: target, minerCostFloor: Math.round(minerCostFloor),
+      reasons: [`No idle miner would extract ${order.resourceName} for ${siteName(order.siteId)} at ${current} cr/unit; serving it costs about ${Math.round(minerCostFloor)} cr for ${order.amount} units.`],
+    }, { visible: true, message: `${siteName(order.siteId)} raises ${order.resourceName} to ${target} cr/unit — no miner will extract it at ${current}.` });
   }
 
   // Once a ship wins a trip, it may fill otherwise empty hold space with work
@@ -745,6 +896,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       wearCostPerPoint: getServiceCost(state, operation.institution.id, "maintenance", MINING_SERVICE_PRICE),
       fixedOperatingCost: (seed.operatingCosts?.crewPayPerContract ?? 0)
         + (seed.operatingCosts?.consumablesPerContract ?? 0),
+      // The rights royalty owed on everything this run would extract. Included
+      // as a cost so a miner will not take a run that cannot cover it — which is
+      // exactly what forces a hub short of that ore to post a higher price.
+      royaltyCost: order.amount * miningRoyaltyPerUnit(order.resourceId),
       risk: 0,
       traits: operation.controller?.traits ?? {},
       policy: {},
@@ -1022,12 +1177,13 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     if (!order) return refusePermanently(allocation, ship, "order-missing");
     const settlement = settleStandingMiningOrder({ state, orderId: contractId, resourceId, amount: Math.min(amount, allocation.amount), supplierAccount: operation.institution.accounts.operating, referenceId: allocation.id, now: now() });
     if (!settlement) {
-      // A standing order only fails to settle when the buyer cannot fund it or
-      // the material does not match. Funding can recover; a mismatch cannot.
-      const mismatched = order.resourceId !== resourceId;
-      return mismatched
-        ? refusePermanently(allocation, ship, "resource-mismatch")
-        : refuseForNow("buyer-cannot-fund");
+      // A standing order fails to settle when the material does not match (a
+      // mismatch cannot recover), or when the buyer has stopped buying — either
+      // because it is stocked or because it cannot fund the buy. Both of the
+      // latter can recover, but they are different facts, so name them honestly.
+      if (order.resourceId !== resourceId) return refusePermanently(allocation, ship, "resource-mismatch");
+      const availability = getStandingMiningOrderAvailability({ state, orderId: contractId, amount: Math.min(amount, allocation.amount) });
+      return refuseForNow(availability.reason ?? "buyer-cannot-fund");
     }
     const { delivered, payment } = settlement;
     finishDelivery({ allocation, ship, siteId: order.siteId, resourceId, delivered, payment, orderLabel: order.id });
