@@ -3,36 +3,41 @@
 //
 // This is the READ side of the rights model. It grants nothing and enforces
 // nothing — it answers "may I mine / fly here?" so the viewport can show where
-// the pilot is clear and where they are not, and so a future patrol and a future
-// hub can ask the same question instead of hardcoding player state.
+// the pilot is clear and where they are not.
 //
-// A plot only requires a right when its region's status for that action is a
-// charter/claim/lease/permit — i.e. some authority controls that ground. Open or
-// unassigned frontier needs no right and is never flagged. The pilot holds a set
-// of authorities per action (Rook's sponsoring mining permit and a Yard Exchange
-// flight registration to begin with); an active source-limited contract
-// additionally grants its own specific claims — but only for WORK, not transit.
+// Two DIFFERENT rights, because the world enforces them differently today:
 //
-// Not a `player.canMine` flag: the pilot's rights are a set of authorities, each
-// plot carries its own controlling authority per action, and access is the
-// intersection.
+//   FLIGHT is scoped by ZONE, on the pilot license. The license lists the named
+//   zones the pilot may enter; a hub inspection flags any visit to a zone outside
+//   that list (`getUnauthorizedVisitedZones`). So the no-fly overlay is driven by
+//   exactly that rule — red means "enter here and the next hub check flags you".
+//
+//   MINING is scoped by AUTHORITY, on a per-region charter/claim/lease/permit.
+//   The pilot holds a set of mining authorities (Rook's sponsoring permit to
+//   start); an active source-limited contract grants its own specific claims for
+//   WORK. This is advisory until enforcement lands, but it is the shape the
+//   mining economy already uses.
+//
+// Not a `player.canMine` flag: rights are sets the pilot holds (zones, authorities)
+// checked against what each plot carries.
 
 const RIGHT_REQUIRING_STATUS = /required|restricted/i;
+// The zone influence at which the ship is considered to have ENTERED a zone —
+// the same threshold Game.updateZoneTitle uses before it logs a zone entry, so
+// the overlay shades exactly the ground a visit would be recorded from.
+const ZONE_ENTRY_INFLUENCE = 0.55;
 
-// The right a physical action is checked against on a plot/region.
-const ACTION_RIGHT_KEY = { mine: "mining", fly: "transit" };
+// ── Mining (authority-scoped permit) ─────────────────────────────────────────
 
-export function rightRequires(right) {
-  return Boolean(right?.status) && RIGHT_REQUIRING_STATUS.test(right.status);
+export function miningRequiresRight(miningRight) {
+  return Boolean(miningRight?.status) && RIGHT_REQUIRING_STATUS.test(miningRight.status);
 }
 
-export function getPlayerAuthorities(state, rightKey) {
-  return state?.legal?.operatingRights?.[rightKey]?.authorityIds ?? [];
+export function getPlayerMiningAuthorities(state) {
+  return state?.legal?.operatingRights?.mining?.authorityIds ?? [];
 }
 
-// The specific claims any active source-limited contract grants the pilot. An
-// Ore Ridge run, for instance, makes its charter plots legal to WORK for as long
-// as the contract is active, without changing the pilot's standing rights.
+// The specific claims any active source-limited contract grants the pilot to WORK.
 export function getContractGrantedClaimIds(state) {
   const ids = new Set();
   Object.values(state?.contracts?.records ?? {}).forEach((contract) => {
@@ -42,63 +47,67 @@ export function getContractGrantedClaimIds(state) {
   return ids;
 }
 
-// Resolve the pilot's access to one plot for one action ("mine" or "fly").
-//   { controlled: false, allowed: true }                    — open ground
-//   { controlled: true,  allowed: true,  via: "held-right" } — pilot's own right
-//   { controlled: true,  allowed: true,  via: "contract" }  — granted by a job (mining only)
-//   { controlled: true,  allowed: false, authorityId }      — off-limits
-export function evaluatePlotAccess(state, plot, action = "mine", grantedClaimIds = null) {
-  const rightKey = ACTION_RIGHT_KEY[action] ?? action;
-  const right = plot?.rights?.[rightKey];
-  if (!rightRequires(right)) {
+export function evaluatePlotMiningAccess(state, plot, grantedClaimIds = null) {
+  const miningRight = plot?.rights?.mining;
+  if (!miningRequiresRight(miningRight)) {
     return { controlled: false, allowed: true };
   }
-  const authorityId = right.authorityId ?? null;
-  if (authorityId && getPlayerAuthorities(state, rightKey).includes(authorityId)) {
+  const authorityId = miningRight.authorityId ?? null;
+  if (authorityId && getPlayerMiningAuthorities(state).includes(authorityId)) {
     return { controlled: true, allowed: true, authorityId, via: "held-right" };
   }
-  // A job grants the right to WORK its claims, not the right to be in the region:
-  // flight clearance is never conferred by a mining contract.
-  if (action === "mine") {
-    const granted = grantedClaimIds ?? getContractGrantedClaimIds(state);
-    if (granted.has(plot.id) || (plot.sourceClaimId && granted.has(plot.sourceClaimId))) {
-      return { controlled: true, allowed: true, authorityId, via: "contract" };
-    }
+  const granted = grantedClaimIds ?? getContractGrantedClaimIds(state);
+  if (granted.has(plot.id) || (plot.sourceClaimId && granted.has(plot.sourceClaimId))) {
+    return { controlled: true, allowed: true, authorityId, via: "contract" };
   }
   return { controlled: true, allowed: false, authorityId };
 }
 
-// What the viewport draws: the pilot's restriction on a plot, or null if clear.
-// Flight is the stronger restriction — if you may not be here at all, that is
-// what the label leads with; a mining-only restriction means fly through but do
-// not dig.
+// ── Flight (zone-scoped pilot license — the rule the hub actually enforces) ───
+
+export function getPlayerAuthorizedZones(state) {
+  return state?.legal?.pilotLicense?.authorizedZones ?? [];
+}
+
+// A plot is a no-fly when it sits firmly inside a named zone the license does not
+// authorize. Open space and weak zone fringes are never a violation.
+export function evaluateFlightAccess(state, plot) {
+  const zoneId = plot?.strongestZoneId ?? null;
+  const influence = plot?.zoneInfluence ?? 0;
+  if (!zoneId || zoneId === "open-space" || influence < ZONE_ENTRY_INFLUENCE) {
+    return { controlled: false, allowed: true };
+  }
+  if (getPlayerAuthorizedZones(state).includes(zoneId)) {
+    return { controlled: true, allowed: true, via: "held-right" };
+  }
+  return { controlled: true, allowed: false, zoneId, zoneName: plot.strongestZoneName ?? zoneId };
+}
+
+// ── Combined ─────────────────────────────────────────────────────────────────
+
+export function evaluatePlotAccess(state, plot, action = "mine", grantedClaimIds = null) {
+  return action === "fly"
+    ? evaluateFlightAccess(state, plot)
+    : evaluatePlotMiningAccess(state, plot, grantedClaimIds);
+}
+
+// What the viewport draws for a plot, or null if it is clear. Flight is the
+// harder restriction — you may not even be here — so it leads the label; a
+// mining-only restriction means fly through but do not dig.
 export function getPlotRestriction(state, plot, grantedClaimIds = null) {
-  const mine = evaluatePlotAccess(state, plot, "mine", grantedClaimIds);
-  const fly = evaluatePlotAccess(state, plot, "fly", grantedClaimIds);
+  const mine = evaluatePlotMiningAccess(state, plot, grantedClaimIds);
+  const fly = evaluateFlightAccess(state, plot);
   const noMine = mine.controlled && !mine.allowed;
   const noFly = fly.controlled && !fly.allowed;
   if (!noMine && !noFly) return null;
-  return {
-    noMine,
-    noFly,
-    label: noFly ? "NO FLIGHT RIGHTS" : "NO MINING RIGHTS",
-    authorityId: (noFly ? fly.authorityId : mine.authorityId) ?? null,
-  };
+  if (noFly) {
+    return { noMine, noFly, label: "NO FLIGHT CLEARANCE", sublabel: fly.zoneName ?? "" };
+  }
+  return { noMine, noFly, label: "NO MINING RIGHTS", sublabel: humanizeAuthorityId(mine.authorityId) };
 }
 
 export function isPlotRestrictedForPlayer(state, plot, grantedClaimIds = null) {
   return getPlotRestriction(state, plot, grantedClaimIds) !== null;
-}
-
-// ── Back-compat mining-only helpers (kept: existing callers and tests) ────────
-export function miningRequiresRight(miningRight) {
-  return rightRequires(miningRight);
-}
-export function getPlayerMiningAuthorities(state) {
-  return getPlayerAuthorities(state, "mining");
-}
-export function evaluatePlotMiningAccess(state, plot, grantedClaimIds = null) {
-  return evaluatePlotAccess(state, plot, "mine", grantedClaimIds);
 }
 
 // "copperline-prospectors" -> "Copperline Prospectors", for labels.

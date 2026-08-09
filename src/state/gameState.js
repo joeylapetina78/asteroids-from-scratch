@@ -1,15 +1,15 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260808-2152-9eba91f";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260808-2152-9eba91f";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260808-2152-9eba91f";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260808-2152-9eba91f";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260808-2152-9eba91f";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260808-2152-9eba91f";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260808-2152-9eba91f";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260808-2152-9eba91f";
-import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260808-2152-9eba91f";
-import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260808-2152-9eba91f";
-import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260808-2152-9eba91f";
-import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260808-2152-9eba91f";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260808-2209-d56d3b0";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260808-2209-d56d3b0";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260808-2209-d56d3b0";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260808-2209-d56d3b0";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260808-2209-d56d3b0";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260808-2209-d56d3b0";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260808-2209-d56d3b0";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260808-2209-d56d3b0";
+import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260808-2209-d56d3b0";
+import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260808-2209-d56d3b0";
+import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260808-2209-d56d3b0";
+import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260808-2209-d56d3b0";
 
 export function createGameState() {
   const state = {
@@ -121,12 +121,11 @@ export function createGameState() {
       // ground under any other claims office reads as off-limits until the pilot
       // buys or is granted the right. Not a `player.canMine` flag — a set of
       // authorities checked against each plot's own mining right.
+      //
+      // Flight rights are NOT here: they are the pilot license's `authorizedZones`
+      // above, which is the rule hub inspections actually enforce.
       operatingRights: {
         mining: { authorityIds: ["rook-industries"] },
-        // Flight clearance follows the pilot's temporary registration, issued
-        // under Yard Exchange authority. Controlled transit under any other
-        // office (a locked-down patrol region) reads as no-entry.
-        transit: { authorityIds: ["yard-exchange-authority"] },
       },
     },
     ship: {

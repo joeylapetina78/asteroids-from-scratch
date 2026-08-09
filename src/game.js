@@ -1,54 +1,54 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260808-2152-9eba91f";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260808-2152-9eba91f";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260808-2152-9eba91f";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260808-2152-9eba91f";
-import { Ship } from "./entities/Ship.js?v=fresh-20260808-2152-9eba91f";
-import { ShipWreck } from "./entities/ShipWreck.js?v=fresh-20260808-2152-9eba91f";
-import { completeWreckSalvage, registerOwnedWreck } from "./systems/wreckRegistry.js?v=fresh-20260808-2152-9eba91f";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260808-2152-9eba91f";
-import { applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260808-2152-9eba91f";
-import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260808-2152-9eba91f";
-import { createCamera } from "./systems/camera.js?v=fresh-20260808-2152-9eba91f";
-import { createInput } from "./systems/input.js?v=fresh-20260808-2152-9eba91f";
-import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260808-2152-9eba91f";
-import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260808-2152-9eba91f";
-import { HAULER_PALETTES, RELIEF_HAULER_PALETTE, createNpcRouteShips, createRouteShip } from "./systems/npcRoutes.js?v=fresh-20260808-2152-9eba91f";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260808-2152-9eba91f";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260808-2152-9eba91f";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260808-2152-9eba91f";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260808-2152-9eba91f";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260808-2152-9eba91f";
-import { completeInternalProtectionResponse, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, getAvailablePatrolCraft, markPatrolCraftStatus, servicePatrolCraft, startInternalProtectionResponse } from "./systems/patrolOperations.js?v=fresh-20260808-2152-9eba91f";
-import { createPatrolRuntimeActor } from "./systems/patrolRuntime.js?v=fresh-20260808-2152-9eba91f";
-import { listPendingPatrolResponses } from "./systems/patrolDispatch.js?v=fresh-20260808-2152-9eba91f";
-import { closeProtectionRequestsForThreat, evaluateProtectionThreat, getPlayerProtectionJobsForSite, reviewProtectionRequests } from "./systems/protectionPlanning.js?v=fresh-20260808-2152-9eba91f";
-import { completePlayerProtectionRequest, completeProtectionContract, ensureProtectionProviders, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "./systems/protectionProviders.js?v=fresh-20260808-2152-9eba91f";
-import { fileAttackReport, nearestActiveReport, resolveAttackReport } from "./systems/securityReports.js?v=fresh-20260808-2152-9eba91f";
-import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260808-2152-9eba91f";
-import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260808-2152-9eba91f";
-import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260808-2152-9eba91f";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260808-2152-9eba91f";
-import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260808-2152-9eba91f";
-import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260808-2152-9eba91f";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260808-2152-9eba91f";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260808-2152-9eba91f";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260808-2152-9eba91f";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260808-2152-9eba91f";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260808-2152-9eba91f";
-import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260808-2152-9eba91f";
-import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260808-2152-9eba91f";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260808-2152-9eba91f";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260808-2152-9eba91f";
-import { createCommercialCraftPublicIdentity, createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260808-2152-9eba91f";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260808-2152-9eba91f";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260808-2152-9eba91f";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260808-2152-9eba91f";
-import { getContractGrantedClaimIds, getPlotRestriction, humanizeAuthorityId } from "./systems/operatingRights.js?v=fresh-20260808-2152-9eba91f";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260808-2152-9eba91f";
-import { createGameState } from "./state/gameState.js?v=fresh-20260808-2152-9eba91f";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260808-2152-9eba91f";
-import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260808-2152-9eba91f";
-import { terminateDestroyedActor } from "./systems/actorLifecycle.js?v=fresh-20260808-2152-9eba91f";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260808-2209-d56d3b0";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260808-2209-d56d3b0";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260808-2209-d56d3b0";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260808-2209-d56d3b0";
+import { Ship } from "./entities/Ship.js?v=fresh-20260808-2209-d56d3b0";
+import { ShipWreck } from "./entities/ShipWreck.js?v=fresh-20260808-2209-d56d3b0";
+import { completeWreckSalvage, registerOwnedWreck } from "./systems/wreckRegistry.js?v=fresh-20260808-2209-d56d3b0";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260808-2209-d56d3b0";
+import { applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260808-2209-d56d3b0";
+import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260808-2209-d56d3b0";
+import { createCamera } from "./systems/camera.js?v=fresh-20260808-2209-d56d3b0";
+import { createInput } from "./systems/input.js?v=fresh-20260808-2209-d56d3b0";
+import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260808-2209-d56d3b0";
+import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260808-2209-d56d3b0";
+import { HAULER_PALETTES, RELIEF_HAULER_PALETTE, createNpcRouteShips, createRouteShip } from "./systems/npcRoutes.js?v=fresh-20260808-2209-d56d3b0";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260808-2209-d56d3b0";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260808-2209-d56d3b0";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260808-2209-d56d3b0";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260808-2209-d56d3b0";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260808-2209-d56d3b0";
+import { completeInternalProtectionResponse, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, getAvailablePatrolCraft, markPatrolCraftStatus, servicePatrolCraft, startInternalProtectionResponse } from "./systems/patrolOperations.js?v=fresh-20260808-2209-d56d3b0";
+import { createPatrolRuntimeActor } from "./systems/patrolRuntime.js?v=fresh-20260808-2209-d56d3b0";
+import { listPendingPatrolResponses } from "./systems/patrolDispatch.js?v=fresh-20260808-2209-d56d3b0";
+import { closeProtectionRequestsForThreat, evaluateProtectionThreat, getPlayerProtectionJobsForSite, reviewProtectionRequests } from "./systems/protectionPlanning.js?v=fresh-20260808-2209-d56d3b0";
+import { completePlayerProtectionRequest, completeProtectionContract, ensureProtectionProviders, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "./systems/protectionProviders.js?v=fresh-20260808-2209-d56d3b0";
+import { fileAttackReport, nearestActiveReport, resolveAttackReport } from "./systems/securityReports.js?v=fresh-20260808-2209-d56d3b0";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260808-2209-d56d3b0";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260808-2209-d56d3b0";
+import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260808-2209-d56d3b0";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260808-2209-d56d3b0";
+import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260808-2209-d56d3b0";
+import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260808-2209-d56d3b0";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260808-2209-d56d3b0";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260808-2209-d56d3b0";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260808-2209-d56d3b0";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260808-2209-d56d3b0";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260808-2209-d56d3b0";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260808-2209-d56d3b0";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260808-2209-d56d3b0";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260808-2209-d56d3b0";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260808-2209-d56d3b0";
+import { createCommercialCraftPublicIdentity, createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260808-2209-d56d3b0";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260808-2209-d56d3b0";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260808-2209-d56d3b0";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260808-2209-d56d3b0";
+import { getContractGrantedClaimIds, getPlotRestriction } from "./systems/operatingRights.js?v=fresh-20260808-2209-d56d3b0";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260808-2209-d56d3b0";
+import { createGameState } from "./state/gameState.js?v=fresh-20260808-2209-d56d3b0";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260808-2209-d56d3b0";
+import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260808-2209-d56d3b0";
+import { terminateDestroyedActor } from "./systems/actorLifecycle.js?v=fresh-20260808-2209-d56d3b0";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -6968,14 +6968,23 @@ export class Game {
     const network = this.claimField.getPlotNetwork(bounds);
     const grantedClaimIds = getContractGrantedClaimIds(this.state);
 
-    // getPlotNetwork returns bare hex geometry (id/center/vertices). The mining
-    // right lives on the claim beneath each plot, so enrich before asking.
+    // getPlotNetwork returns bare hex geometry (id/center/vertices). Mining right
+    // lives on the claim beneath each plot; flight clearance is decided by the
+    // zone at the plot — enrich with both before asking.
     const plotsById = new Map();
     const restricted = new Set();
     const restrictionById = new Map();
     network.plots.forEach((plot) => {
       const claim = this.claimField.getClaimAt(plot.center.x, plot.center.y);
-      const enriched = { ...plot, rights: claim.rights, sourceClaimId: claim.id };
+      const zone = getZoneProfile(plot.center.x, plot.center.y);
+      const enriched = {
+        ...plot,
+        rights: claim.rights,
+        sourceClaimId: claim.id,
+        strongestZoneId: zone.strongestZoneId,
+        strongestZoneName: zone.strongestZoneName,
+        zoneInfluence: zone.influence,
+      };
       plotsById.set(plot.id, enriched);
       const restriction = getPlotRestriction(this.state, enriched, grantedClaimIds);
       if (restriction) {
@@ -7041,11 +7050,11 @@ export class Game {
       ctx.fillStyle = `rgba(255, 214, 150, ${(0.82 + pulse * 0.18).toFixed(3)})`;
       ctx.textAlign = "center";
       ctx.font = "600 13px system-ui, sans-serif";
-      ctx.fillText(restriction?.label ?? "NO MINING RIGHTS", lx, ly - 4);
-      if (restriction?.authorityId) {
+      ctx.fillText(restriction?.label ?? "RESTRICTED", lx, ly - 4);
+      if (restriction?.sublabel) {
         ctx.font = "11px system-ui, sans-serif";
         ctx.fillStyle = `rgba(255, 214, 150, ${(0.6 + pulse * 0.14).toFixed(3)})`;
-        ctx.fillText(humanizeAuthorityId(restriction.authorityId), lx, ly + 12);
+        ctx.fillText(restriction.sublabel, lx, ly + 12);
       }
     });
 

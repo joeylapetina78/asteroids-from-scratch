@@ -156,7 +156,7 @@ export const WORLD_REGIONS = [
     dominantFamilies: ["volatile", "industrial"],
     rights: {
       ...DEFAULT_RIGHTS,
-      transit: { status: "permit-required", authorityId: "coldreach-patrol-office" },
+      transit: { status: "open-emergency", authorityId: "coldreach-patrol-office" },
       mining: { status: "permit-required", authorityId: "coldreach-patrol-office" },
       patrol: { status: "reserved", authorityId: "coldreach-patrol-office" },
       salvage: { status: "restricted", authorityId: "coldreach-patrol-office" },
