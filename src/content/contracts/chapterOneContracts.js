@@ -1,4 +1,4 @@
-import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260808-2209-d56d3b0";
+import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260809-2057-53180b2";
 
 const RESOURCE_CONTRACTS = [
   {
@@ -236,6 +236,46 @@ export const chapterOneContracts = [
       "800 credits, paid immediately from the cash account tied to your provisional ID.",
       "Pre-clears your VIN and pilot license with The Ledge traffic registry — no identity check on first arrival.",
       "Adds The Ledge to Beacon Navigation.",
+    ],
+  },
+  {
+    id: "yard-exchange-work-pass",
+    type: "permit",
+    title: "Yard Exchange Work Pass",
+    issuer: "Yard Exchange Authority",
+    summary: "Full operating clearance for Yard Exchange's home territory — fly, mine, and haul across the Copper Wake belt.",
+    terms: {
+      cost: 800,
+      permitType: "work-pass",
+      authorityId: "yard-exchange-authority",
+      grantZones: ["copper-drift"],
+      grantMiningAuthorities: ["copperline-prospectors"],
+    },
+    reward: {},
+    clauses: [
+      "800 credits to the Yard Exchange Authority, paid from your provisional account.",
+      "Flight clearance for Copper Drift, added to your authorized zones permanently.",
+      "Mining rights across Yard Exchange's Copperline claims (the Copper Wake belt).",
+      "Covers hauling within the territory. It does not extend past what Yard Exchange controls — Cold Reach and the deep frontier answer to other offices.",
+    ],
+  },
+  {
+    id: "yard-copper-wake-mining-lease",
+    type: "permit",
+    title: "Copper Wake Mining Lease",
+    issuer: "Yard Exchange Authority",
+    summary: "Copperline (Copper Wake) mining rights on their own, without the full work pass.",
+    terms: {
+      cost: 500,
+      permitType: "mining-rights",
+      authorityId: "yard-exchange-authority",
+      grantMiningAuthorities: ["copperline-prospectors"],
+    },
+    reward: {},
+    clauses: [
+      "500 credits to the Yard Exchange Authority.",
+      "Clears you to mine the Copperline claims across the Copper Wake belt.",
+      "Flight clearance for the zone is arranged separately if you do not already hold it.",
     ],
   },
 ];

@@ -1,15 +1,16 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260808-2209-d56d3b0";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260808-2209-d56d3b0";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260808-2209-d56d3b0";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260808-2209-d56d3b0";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260808-2209-d56d3b0";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260808-2209-d56d3b0";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260808-2209-d56d3b0";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260808-2209-d56d3b0";
-import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260808-2209-d56d3b0";
-import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260808-2209-d56d3b0";
-import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260808-2209-d56d3b0";
-import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260808-2209-d56d3b0";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260809-2057-53180b2";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260809-2057-53180b2";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260809-2057-53180b2";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260809-2057-53180b2";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260809-2057-53180b2";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260809-2057-53180b2";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260809-2057-53180b2";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260809-2057-53180b2";
+import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260809-2057-53180b2";
+import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260809-2057-53180b2";
+import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260809-2057-53180b2";
+import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260809-2057-53180b2";
+import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260809-2057-53180b2";
 
 export function createGameState() {
   const state = {
@@ -53,6 +54,10 @@ export function createGameState() {
       jobBoards: {},
     },
     worldRecords: createEmptyWorldRecords(),
+    // Rights-issuing authorities (the capital that sells work passes/permits).
+    // Their treasuries are intentionally NOT part of the tracked institutional
+    // economy yet — see rightsAuthority.js.
+    authorities: createInitialRightsAuthorities(),
     sprc: createInitialSprcState(),
     logistics: createInitialLogisticsState(),
     population: createInitialPopulationState(),
@@ -170,6 +175,14 @@ export function createGameState() {
         armed: false,
         ammo: 100,
         maxAmmo: 2000,
+        // Second panel on the shared wear/condition machine (minerCondition.js).
+        // Wears from firing; symptoms are slower/heavier charge, sputtering
+        // misfires, and aim drifting off the reticle. Seeded even while
+        // uninstalled so the record exists the moment the laser is fitted.
+        condition: {
+          stage: "healthy", wear: 0, currentCondition: 100,
+          lifetimeDegradation: 0, maxRecoverableCondition: 100, serviceCount: 0,
+        },
       },
       beaconLocator: {
         installed: false,
@@ -224,6 +237,13 @@ export function createGameState() {
       collector: {
         installed: false,
         isActive: false,
+        // Third panel on the shared wear/condition machine (collectorCondition.js).
+        // Wears from holding the field active; symptoms shrink its reach, weaken
+        // its pull, flicker its grip, swirl objects, and at worst shove them away.
+        condition: {
+          stage: "healthy", wear: 0, currentCondition: 100,
+          lifetimeDegradation: 0, maxRecoverableCondition: 100, serviceCount: 0,
+        },
       },
       shield: {
         installed: false,

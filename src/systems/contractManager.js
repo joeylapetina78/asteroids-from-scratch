@@ -1,15 +1,16 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260808-2209-d56d3b0";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260808-2209-d56d3b0";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260808-2209-d56d3b0";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260808-2209-d56d3b0";
-import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260808-2209-d56d3b0";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260808-2209-d56d3b0";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260808-2209-d56d3b0";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260808-2209-d56d3b0";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260808-2209-d56d3b0";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260808-2209-d56d3b0";
-import { getStandingMiningOrderAvailability, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260808-2209-d56d3b0";
-import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260808-2209-d56d3b0";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260809-2057-53180b2";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260809-2057-53180b2";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260809-2057-53180b2";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260809-2057-53180b2";
+import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260809-2057-53180b2";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260809-2057-53180b2";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260809-2057-53180b2";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260809-2057-53180b2";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260809-2057-53180b2";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260809-2057-53180b2";
+import { getStandingMiningOrderAvailability, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260809-2057-53180b2";
+import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260809-2057-53180b2";
+import { recordAuthorityRevenue } from "./rightsAuthority.js?v=fresh-20260809-2057-53180b2";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -150,6 +151,12 @@ export function createContractManager({ state, onChange = () => {} }) {
     contract.status = "paid";
     contract.acceptedAt = Date.now();
     contract.paidAt = Date.now();
+    // The fee leaves the player and accrues to the issuing authority (the capital
+    // that controls the territory), rather than simply vanishing.
+    recordAuthorityRevenue(state, {
+      authorityId: contract.terms.authorityId ?? "yard-exchange-authority",
+      amount: cost, referenceId: contract.id, description: contract.title,
+    });
     applyPermitGrant(contract);
 
     state.ledger.recordEvent(
@@ -190,16 +197,25 @@ export function createContractManager({ state, onChange = () => {} }) {
   }
 
   function applyPermitGrant(contract) {
-    const { permitType, zoneId, siteId } = contract.terms;
+    const { permitType, zoneId, siteId, grantZones, grantMiningAuthorities } = contract.terms;
+    const license = getPilotLicense(state);
 
-    if (permitType === "zone-flight" && zoneId) {
-      const license = getPilotLicense(state);
+    // Flight clearance: a single legacy zoneId and/or a bundled set of zones (a
+    // work pass clears the whole home territory at once).
+    const zonesToGrant = [...(zoneId ? [zoneId] : []), ...(grantZones ?? [])];
+    zonesToGrant.forEach((zone) => {
+      if (!license.authorizedZones.includes(zone)) license.authorizedZones.push(zone);
+    });
 
-      if (!license.authorizedZones.includes(zoneId)) {
-        license.authorizedZones.push(zoneId);
-      }
-
-      return;
+    // Mining clearance: a work pass or mining permit opens ground under the
+    // subsidiary claims offices it names, added to the pilot's held authorities.
+    if (grantMiningAuthorities?.length) {
+      state.legal.operatingRights ??= { mining: { authorityIds: [] } };
+      state.legal.operatingRights.mining ??= { authorityIds: [] };
+      const held = state.legal.operatingRights.mining.authorityIds;
+      grantMiningAuthorities.forEach((authorityId) => {
+        if (!held.includes(authorityId)) held.push(authorityId);
+      });
     }
 
     if (permitType === "hub-docking" && siteId) {

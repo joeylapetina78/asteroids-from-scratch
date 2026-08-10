@@ -3,14 +3,17 @@ const BULLET_LIFETIME = 1.4;
 const BULLET_RADIUS = 1.25;
 
 export class Bullet {
-  constructor(ship) {
+  // `launchAngle` lets a worn mining laser fire off the ship's heading (aim
+  // drift). Defaults to the ship's angle, so ordinary fire is unchanged.
+  constructor(ship, launchAngle = null) {
+    const angle = launchAngle ?? ship.angle;
     this.position = {
-      x: ship.position.x + Math.cos(ship.angle) * 24,
-      y: ship.position.y + Math.sin(ship.angle) * 24,
+      x: ship.position.x + Math.cos(angle) * 24,
+      y: ship.position.y + Math.sin(angle) * 24,
     };
     this.velocity = {
-      x: ship.velocity.x + Math.cos(ship.angle) * BULLET_SPEED,
-      y: ship.velocity.y + Math.sin(ship.angle) * BULLET_SPEED,
+      x: ship.velocity.x + Math.cos(angle) * BULLET_SPEED,
+      y: ship.velocity.y + Math.sin(angle) * BULLET_SPEED,
     };
     this.age = 0;
     this.radius = BULLET_RADIUS;

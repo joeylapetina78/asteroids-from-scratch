@@ -1,54 +1,56 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260808-2209-d56d3b0";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260808-2209-d56d3b0";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260808-2209-d56d3b0";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260808-2209-d56d3b0";
-import { Ship } from "./entities/Ship.js?v=fresh-20260808-2209-d56d3b0";
-import { ShipWreck } from "./entities/ShipWreck.js?v=fresh-20260808-2209-d56d3b0";
-import { completeWreckSalvage, registerOwnedWreck } from "./systems/wreckRegistry.js?v=fresh-20260808-2209-d56d3b0";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260808-2209-d56d3b0";
-import { applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260808-2209-d56d3b0";
-import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260808-2209-d56d3b0";
-import { createCamera } from "./systems/camera.js?v=fresh-20260808-2209-d56d3b0";
-import { createInput } from "./systems/input.js?v=fresh-20260808-2209-d56d3b0";
-import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260808-2209-d56d3b0";
-import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260808-2209-d56d3b0";
-import { HAULER_PALETTES, RELIEF_HAULER_PALETTE, createNpcRouteShips, createRouteShip } from "./systems/npcRoutes.js?v=fresh-20260808-2209-d56d3b0";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260808-2209-d56d3b0";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260808-2209-d56d3b0";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260808-2209-d56d3b0";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260808-2209-d56d3b0";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260808-2209-d56d3b0";
-import { completeInternalProtectionResponse, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, getAvailablePatrolCraft, markPatrolCraftStatus, servicePatrolCraft, startInternalProtectionResponse } from "./systems/patrolOperations.js?v=fresh-20260808-2209-d56d3b0";
-import { createPatrolRuntimeActor } from "./systems/patrolRuntime.js?v=fresh-20260808-2209-d56d3b0";
-import { listPendingPatrolResponses } from "./systems/patrolDispatch.js?v=fresh-20260808-2209-d56d3b0";
-import { closeProtectionRequestsForThreat, evaluateProtectionThreat, getPlayerProtectionJobsForSite, reviewProtectionRequests } from "./systems/protectionPlanning.js?v=fresh-20260808-2209-d56d3b0";
-import { completePlayerProtectionRequest, completeProtectionContract, ensureProtectionProviders, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "./systems/protectionProviders.js?v=fresh-20260808-2209-d56d3b0";
-import { fileAttackReport, nearestActiveReport, resolveAttackReport } from "./systems/securityReports.js?v=fresh-20260808-2209-d56d3b0";
-import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260808-2209-d56d3b0";
-import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260808-2209-d56d3b0";
-import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260808-2209-d56d3b0";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260808-2209-d56d3b0";
-import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260808-2209-d56d3b0";
-import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260808-2209-d56d3b0";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260808-2209-d56d3b0";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260808-2209-d56d3b0";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260808-2209-d56d3b0";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260808-2209-d56d3b0";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260808-2209-d56d3b0";
-import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260808-2209-d56d3b0";
-import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260808-2209-d56d3b0";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260808-2209-d56d3b0";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260808-2209-d56d3b0";
-import { createCommercialCraftPublicIdentity, createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260808-2209-d56d3b0";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260808-2209-d56d3b0";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260808-2209-d56d3b0";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260808-2209-d56d3b0";
-import { getContractGrantedClaimIds, getPlotRestriction } from "./systems/operatingRights.js?v=fresh-20260808-2209-d56d3b0";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260808-2209-d56d3b0";
-import { createGameState } from "./state/gameState.js?v=fresh-20260808-2209-d56d3b0";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260808-2209-d56d3b0";
-import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260808-2209-d56d3b0";
-import { terminateDestroyedActor } from "./systems/actorLifecycle.js?v=fresh-20260808-2209-d56d3b0";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260809-2057-53180b2";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260809-2057-53180b2";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260809-2057-53180b2";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260809-2057-53180b2";
+import { Ship } from "./entities/Ship.js?v=fresh-20260809-2057-53180b2";
+import { ShipWreck } from "./entities/ShipWreck.js?v=fresh-20260809-2057-53180b2";
+import { completeWreckSalvage, registerOwnedWreck } from "./systems/wreckRegistry.js?v=fresh-20260809-2057-53180b2";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260809-2057-53180b2";
+import { applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260809-2057-53180b2";
+import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260809-2057-53180b2";
+import { MINER_CONDITION_CONFIG, computeMinerWearPerShot, getMinerStageEffects } from "./systems/minerCondition.js?v=fresh-20260809-2057-53180b2";
+import { COLLECTOR_CONDITION_CONFIG, computeCollectorWearPerSecond, getCollectorStageEffects } from "./systems/collectorCondition.js?v=fresh-20260809-2057-53180b2";
+import { createCamera } from "./systems/camera.js?v=fresh-20260809-2057-53180b2";
+import { createInput } from "./systems/input.js?v=fresh-20260809-2057-53180b2";
+import { createAmbientLifeBatch, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260809-2057-53180b2";
+import { ROCKMOSS_STRAINS } from "./systems/rockmossStrains.js?v=fresh-20260809-2057-53180b2";
+import { HAULER_PALETTES, RELIEF_HAULER_PALETTE, createNpcRouteShips, createRouteShip } from "./systems/npcRoutes.js?v=fresh-20260809-2057-53180b2";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260809-2057-53180b2";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260809-2057-53180b2";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260809-2057-53180b2";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260809-2057-53180b2";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260809-2057-53180b2";
+import { completeInternalProtectionResponse, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, getAvailablePatrolCraft, markPatrolCraftStatus, servicePatrolCraft, startInternalProtectionResponse } from "./systems/patrolOperations.js?v=fresh-20260809-2057-53180b2";
+import { createPatrolRuntimeActor } from "./systems/patrolRuntime.js?v=fresh-20260809-2057-53180b2";
+import { listPendingPatrolResponses } from "./systems/patrolDispatch.js?v=fresh-20260809-2057-53180b2";
+import { closeProtectionRequestsForThreat, evaluateProtectionThreat, getPlayerProtectionJobsForSite, reviewProtectionRequests } from "./systems/protectionPlanning.js?v=fresh-20260809-2057-53180b2";
+import { completePlayerProtectionRequest, completeProtectionContract, ensureProtectionProviders, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "./systems/protectionProviders.js?v=fresh-20260809-2057-53180b2";
+import { fileAttackReport, nearestActiveReport, resolveAttackReport } from "./systems/securityReports.js?v=fresh-20260809-2057-53180b2";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260809-2057-53180b2";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260809-2057-53180b2";
+import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260809-2057-53180b2";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260809-2057-53180b2";
+import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260809-2057-53180b2";
+import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260809-2057-53180b2";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260809-2057-53180b2";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260809-2057-53180b2";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260809-2057-53180b2";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260809-2057-53180b2";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260809-2057-53180b2";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260809-2057-53180b2";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260809-2057-53180b2";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260809-2057-53180b2";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260809-2057-53180b2";
+import { createCommercialCraftPublicIdentity, createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260809-2057-53180b2";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260809-2057-53180b2";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260809-2057-53180b2";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260809-2057-53180b2";
+import { getContractGrantedClaimIds, getPlotRestriction } from "./systems/operatingRights.js?v=fresh-20260809-2057-53180b2";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260809-2057-53180b2";
+import { createGameState } from "./state/gameState.js?v=fresh-20260809-2057-53180b2";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260809-2057-53180b2";
+import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260809-2057-53180b2";
+import { terminateDestroyedActor } from "./systems/actorLifecycle.js?v=fresh-20260809-2057-53180b2";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -86,6 +88,8 @@ const REPAIR_CREDITS_PER_HULL = 2;
 // cheaper — the incentive to fix it before it worsens. Interim pricing; the
 // next slice moves this to material-conserving SPRC service via the same seam.
 const ENGINE_CONDITION_REPAIR_COST = { healthy: 0, degraded: 45, emergency: 110, failed: 200 };
+const MINER_CONDITION_REPAIR_COST = { healthy: 0, degraded: 40, emergency: 95, failed: 170 };
+const COLLECTOR_CONDITION_REPAIR_COST = { healthy: 0, degraded: 35, emergency: 85, failed: 150 };
 const DAMAGE_FLASH_DECAY_PER_SECOND = 2.9;
 const MAX_DAMAGE_FLASH_ALPHA = 0.42;
 const MAX_IMPACT_SHAKE_PIXELS = 28;
@@ -342,6 +346,9 @@ export class Game {
     this.conditionDebugScale = 1; // dev accelerator; see setConditionDebugScale
     this.engineMisfireRemaining = 0;
     this.engineSteerBias = 0;
+    this.minerAimBias = 0; // slow-wandering aim offset from mining-laser wear
+    this.collectorDropoutRemaining = 0; // tractor-field grip flicker window
+    this.collectorPushRemaining = 0; // malfunctioning field shove-away pulse window
     this.viewportTitle = null;
     this.viewportTitleTimer = 0;
     this.discoveredSiteIds = new Set();
@@ -1057,6 +1064,9 @@ export class Game {
     // Set this frame's engine-condition modifiers (thrust scale, misfire block,
     // steering pull) BEFORE the ship consumes them.
     this.applyEngineConditionEffects(deltaSeconds);
+    // Slowly wander the mining laser's aim bias so a worn emitter drifts off the
+    // reticle (the player compensates); firing reads this bias.
+    this.applyMinerConditionEffects(deltaSeconds);
     this.ship.update(deltaSeconds, this.input);
     // Accrue wear from what the ship actually did this frame, then react to any
     // stage change.
@@ -2852,6 +2862,8 @@ export class Game {
     // the same shared repair seam SPRC will use next slice — not a second
     // repair architecture. Onboard hull reserve stays integrity-only.
     this.serviceEnginePanel();
+    this.serviceMinerPanel();
+    this.serviceCollectorPanel();
     this.state.ledger.recordEvent("ship.repaired", {
       siteId: site.id,
       siteName: site.name,
@@ -2897,8 +2909,14 @@ export class Game {
     const hullCost = Math.ceil(missingHull * REPAIR_CREDITS_PER_HULL);
     const engineStage = this.state.components.engine?.condition?.stage ?? "healthy";
     const engineCost = ENGINE_CONDITION_REPAIR_COST[engineStage] ?? 0;
+    const minerStage = this.state.components.miner?.installed
+      ? (this.state.components.miner?.condition?.stage ?? "healthy") : "healthy";
+    const minerCost = MINER_CONDITION_REPAIR_COST[minerStage] ?? 0;
+    const collectorStage = this.state.components.collector?.installed
+      ? (this.state.components.collector?.condition?.stage ?? "healthy") : "healthy";
+    const collectorCost = COLLECTOR_CONDITION_REPAIR_COST[collectorStage] ?? 0;
 
-    return hullCost + engineCost;
+    return hullCost + engineCost + minerCost + collectorCost;
   }
 
   updateLowFuelEvent(previousFuel) {
@@ -3857,26 +3875,135 @@ export class Game {
       }
     }
 
-    if (this.shipDestroyed || !this.state.components.engine.powered || !miner.installed || !miner.armed || !wantsToFire || this.fireCooldown > 0 || miner.ammo < AMMO_PER_SHOT) {
+    // Wear symptoms: a worn laser charges slower, spends more per shot, sputters,
+    // and drifts off the reticle. All read from the shared condition machine.
+    const condition = ensurePanelCondition(miner);
+    const effects = getMinerStageEffects(condition.stage);
+    const shotAmmo = Math.max(1, Math.ceil(AMMO_PER_SHOT * effects.ammoScale));
+
+    if (this.shipDestroyed || !this.state.components.engine.powered || !miner.installed || !miner.armed || !wantsToFire || this.fireCooldown > 0 || miner.ammo < shotAmmo) {
       return;
     }
 
     this.unarmedFireAttempts = 0;
     this.setCloakActive(false);
-    miner.ammo -= AMMO_PER_SHOT;
+
+    // Misfire: the charge sputters and no bolt leaves the emitter. It costs a beat
+    // of cooldown but no charge, so a worn laser fires erratically rather than
+    // silently doing nothing.
+    if (effects.misfireChance > 0 && Math.random() < effects.misfireChance) {
+      this.fireCooldown = FIRE_COOLDOWN_SECONDS * effects.cooldownScale * 0.6;
+      this.audio?.playMinerFault(condition.stage);
+      this.state.ledger.recordEvent("weapon.misfired", { weaponType: "miner", stage: condition.stage }, { visible: false });
+      return;
+    }
+
+    miner.ammo -= shotAmmo;
     this.state.ledger.recordEvent(
       "weapon.fired",
       {
         weaponType: "miner",
-        ammoSpent: AMMO_PER_SHOT,
+        ammoSpent: shotAmmo,
       },
       { visible: false },
     );
     this.onHudChange(this.state);
-    this.bullets.push(new Bullet(this.ship));
+    this.bullets.push(new Bullet(this.ship, this.ship.angle + this.minerAimBias));
     this.addLifeDisturbance("weapon", this.ship.position, LIFE_DISTURBANCE_WEAPON_RADIUS, 1);
     this.audio?.playMiningShot();
-    this.fireCooldown = FIRE_COOLDOWN_SECONDS;
+    this.fireCooldown = FIRE_COOLDOWN_SECONDS * effects.cooldownScale;
+    this.accrueMinerWear();
+  }
+
+  // Slowly wander the aim bias within the current stage's drift envelope so the
+  // emitter reads as consistently-off-then-slowly-changing (learnable "Kentucky
+  // windage") rather than random jitter. Relaxes toward centre when not firing.
+  applyMinerConditionEffects(deltaSeconds) {
+    const miner = this.state.components.miner;
+    if (!miner?.installed) {
+      this.minerAimBias = 0;
+      return;
+    }
+    const effects = getMinerStageEffects(ensurePanelCondition(miner).stage);
+    if (effects.aimDrift > 0 && miner.armed && this.state.components.engine.powered && !this.shipDestroyed) {
+      // A slow swing across the drift envelope (~40s period) rather than fast
+      // random jitter: at any moment the aim is off by a consistent, learnable
+      // amount the player compensates for, and it wanders gradually.
+      this.minerAimPhase = (this.minerAimPhase ?? 0) + deltaSeconds * 0.16;
+      this.minerAimBias = effects.aimDrift * Math.sin(this.minerAimPhase);
+    } else {
+      this.minerAimBias *= Math.max(0, 1 - deltaSeconds * 3);
+    }
+  }
+
+  accrueMinerWear() {
+    const miner = this.state.components.miner;
+    const condition = ensurePanelCondition(miner);
+    const wearDelta = computeMinerWearPerShot() * this.conditionDebugScale;
+    const { changed, previousStage, stage } = accumulatePanelWear(condition, wearDelta, MINER_CONDITION_CONFIG.thresholds);
+    if (changed) {
+      this.onMinerPanelStageChanged(previousStage, stage);
+    }
+  }
+
+  onMinerPanelStageChanged(previousStage, stage) {
+    const worsening = panelStageIndex(stage) > panelStageIndex(previousStage);
+
+    this.state.ledger.recordEvent("ship.panelConditionChanged", {
+      panel: "miner",
+      from: previousStage,
+      to: stage,
+      worsening,
+    });
+
+    if (worsening) {
+      this.audio?.playMinerFault(stage);
+      const messages = {
+        degraded: { title: "Mining Laser Strain", hint: "Emitter is drifting and sputtering — schedule service soon." },
+        emergency: { title: "Mining Laser Fault", hint: "Aim is off and the charge is unreliable — reach a repair facility." },
+        failed: { title: "Mining Laser Failing", hint: "Badly misaligned and misfiring; it barely cuts rock." },
+      };
+      const message = messages[stage];
+      if (message) {
+        this.showViewportTitle(message.title, message.hint, "hazard", VIEWPORT_TITLE_SECONDS, "left");
+      }
+    }
+
+    this.onHudChange(this.state);
+  }
+
+  // Restore the mining laser to healthy via the shared service seam and clear the
+  // runtime aim drift the wear left behind.
+  serviceMinerPanel() {
+    const miner = this.state.components.miner;
+    if (!miner?.installed) {
+      return "healthy";
+    }
+    const condition = ensurePanelCondition(miner);
+    const previousStage = repairPanelCondition(condition);
+    this.minerAimBias = 0;
+    if (previousStage !== "healthy") {
+      this.onHudChange(this.state);
+    }
+    return previousStage;
+  }
+
+  debugSetMinerPanelStage(stage) {
+    const miner = this.state.components.miner;
+    const condition = ensurePanelCondition(miner);
+    const thresholds = MINER_CONDITION_CONFIG.thresholds;
+    const wearForStage = { healthy: 0, degraded: thresholds.degraded, emergency: thresholds.emergency, failed: thresholds.failed };
+    const previousStage = condition.stage;
+
+    condition.wear = wearForStage[stage] ?? 0;
+    condition.stage = stage in wearForStage ? stage : "healthy";
+    condition.currentCondition = Math.max(0,
+      condition.maxRecoverableCondition * (1 - condition.wear / thresholds.failed));
+    if (condition.stage !== previousStage) {
+      this.onMinerPanelStageChanged(previousStage, condition.stage);
+    }
+    this.onHudChange(this.state);
+    return condition;
   }
 
   updateCollector(deltaSeconds) {
@@ -3894,6 +4021,30 @@ export class Game {
       return;
     }
 
+    // The field is genuinely running now, so it earns wear.
+    this.accrueCollectorWear(deltaSeconds);
+
+    const condition = ensurePanelCondition(collector);
+    const effects = getCollectorStageEffects(condition.stage);
+
+    // Grip flicker: the field cuts out for a beat, gripping nothing that frame.
+    this.collectorDropoutRemaining = Math.max(0, this.collectorDropoutRemaining - deltaSeconds);
+    if (this.collectorDropoutRemaining <= 0 && effects.dropoutChance > 0 && Math.random() < effects.dropoutChance * deltaSeconds) {
+      this.collectorDropoutRemaining = effects.dropoutDuration;
+      this.audio?.playCollectorFault(condition.stage);
+    }
+    if (this.collectorDropoutRemaining > 0) {
+      return;
+    }
+
+    // Shove pulse: a malfunctioning field briefly reverses, pushing objects away.
+    this.collectorPushRemaining = Math.max(0, this.collectorPushRemaining - deltaSeconds);
+    if (this.collectorPushRemaining <= 0 && effects.pushChance > 0 && Math.random() < effects.pushChance * deltaSeconds) {
+      this.collectorPushRemaining = 0.5;
+      this.audio?.playCollectorFault(condition.stage);
+    }
+    const radialSign = this.collectorPushRemaining > 0 ? -1 : 1;
+
     const radius = this.getCollectorRadius();
     const radiusSquared = radius * radius;
 
@@ -3907,11 +4058,91 @@ export class Game {
       }
 
       const distance = Math.sqrt(distanceSquared);
-      const pullStrength = Math.max(0.45, 1 - distance / radius) * 1.35;
+      const pullStrength = Math.max(0.45, 1 - distance / radius) * 1.35 * effects.strengthScale;
+      const force = COLLECTOR_PULL_FORCE * pullStrength * deltaSeconds;
+      const nx = distanceX / distance;
+      const ny = distanceY / distance;
 
-      pickup.velocity.x += (distanceX / distance) * COLLECTOR_PULL_FORCE * pullStrength * deltaSeconds;
-      pickup.velocity.y += (distanceY / distance) * COLLECTOR_PULL_FORCE * pullStrength * deltaSeconds;
+      // Radial component (inward, or outward during a shove pulse).
+      pickup.velocity.x += nx * force * radialSign;
+      pickup.velocity.y += ny * force * radialSign;
+
+      // Swirl: a tangential nudge so a worn field makes objects orbit and wobble
+      // instead of coming straight in.
+      if (effects.swirl > 0) {
+        pickup.velocity.x += -ny * force * effects.swirl;
+        pickup.velocity.y += nx * force * effects.swirl;
+      }
     });
+  }
+
+  accrueCollectorWear(deltaSeconds) {
+    const collector = this.state.components.collector;
+    const condition = ensurePanelCondition(collector);
+    const wearDelta = computeCollectorWearPerSecond() * deltaSeconds * this.conditionDebugScale;
+    const { changed, previousStage, stage } = accumulatePanelWear(condition, wearDelta, COLLECTOR_CONDITION_CONFIG.thresholds);
+    if (changed) {
+      this.onCollectorPanelStageChanged(previousStage, stage);
+    }
+  }
+
+  onCollectorPanelStageChanged(previousStage, stage) {
+    const worsening = panelStageIndex(stage) > panelStageIndex(previousStage);
+
+    this.state.ledger.recordEvent("ship.panelConditionChanged", {
+      panel: "collector",
+      from: previousStage,
+      to: stage,
+      worsening,
+    });
+
+    if (worsening) {
+      this.audio?.playCollectorFault(stage);
+      const messages = {
+        degraded: { title: "Tractor Field Strain", hint: "Grip is weakening and flickering — schedule service soon." },
+        emergency: { title: "Tractor Field Fault", hint: "Short reach, weak pull, and objects swirl instead of coming in." },
+        failed: { title: "Tractor Field Failing", hint: "Barely grips; it flickers out and sometimes shoves cargo away." },
+      };
+      const message = messages[stage];
+      if (message) {
+        this.showViewportTitle(message.title, message.hint, "hazard", VIEWPORT_TITLE_SECONDS, "left");
+      }
+    }
+
+    this.onHudChange(this.state);
+  }
+
+  serviceCollectorPanel() {
+    const collector = this.state.components.collector;
+    if (!collector?.installed) {
+      return "healthy";
+    }
+    const condition = ensurePanelCondition(collector);
+    const previousStage = repairPanelCondition(condition);
+    this.collectorDropoutRemaining = 0;
+    this.collectorPushRemaining = 0;
+    if (previousStage !== "healthy") {
+      this.onHudChange(this.state);
+    }
+    return previousStage;
+  }
+
+  debugSetCollectorPanelStage(stage) {
+    const collector = this.state.components.collector;
+    const condition = ensurePanelCondition(collector);
+    const thresholds = COLLECTOR_CONDITION_CONFIG.thresholds;
+    const wearForStage = { healthy: 0, degraded: thresholds.degraded, emergency: thresholds.emergency, failed: thresholds.failed };
+    const previousStage = condition.stage;
+
+    condition.wear = wearForStage[stage] ?? 0;
+    condition.stage = stage in wearForStage ? stage : "healthy";
+    condition.currentCondition = Math.max(0,
+      condition.maxRecoverableCondition * (1 - condition.wear / thresholds.failed));
+    if (condition.stage !== previousStage) {
+      this.onCollectorPanelStageChanged(previousStage, condition.stage);
+    }
+    this.onHudChange(this.state);
+    return condition;
   }
 
   updateAsteroidHits() {
@@ -7716,7 +7947,14 @@ export class Game {
   }
 
   getCollectorRadius() {
-    return Math.min(this.canvas.width, this.canvas.height) * 0.48;
+    const base = Math.min(this.canvas.width, this.canvas.height) * 0.48;
+    const collector = this.state.components.collector;
+    if (!collector?.installed) {
+      return base;
+    }
+    // Wear shrinks the field's reach — the drawn ring uses this same value, so
+    // the smaller grab radius is visible, not just felt.
+    return base * getCollectorStageEffects(ensurePanelCondition(collector).stage).radiusScale;
   }
 }
 

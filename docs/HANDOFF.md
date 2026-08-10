@@ -9,7 +9,7 @@ This is the authoritative re-entry note for Claude, Codex, or another future mai
 - Browser build: `fresh-20260806-2000-39c17e6`
 - Local server: `python -m http.server 8123`
 - Recommended fresh test URL: `http://127.0.0.1:8123/?resetSave=1&devStart=explorer&build=2000`
-- Verification: `npm test` reports 513 passing, 0 skips, 0 failures; `npm run validate:content` passes.
+- Verification: `npm test` reports 527 passing, 0 skips, 0 failures; `npm run validate:content` passes.
 - Browser-facing changes require `npm run bump:cache` before final testing.
 
 ## Product direction and invariants

@@ -9,8 +9,8 @@ Three slices, built in order because each depends on the last:
 
 1. **Foundation + viewport visuals** — the pilot's rights become real, and they can
    see where the lines are. **BUILT 2026-08-08.**
-2. **Rights marketplace** — the Authority sells rights (individual + working
-   packages, plus patrolling rights), scoped to hubs / clusters / plots.
+2. **Rights marketplace** — the capital Authority sells rights (a bundled work
+   pass + individual permits), scoped to what it controls. **BUILT 2026-08-09.**
 3. **Enforcement + fine/tow** — a funded patrol catches a ship operating without
    rights, stops it, and tows it to a hub to pay a fine or buy the missing right.
 
@@ -78,13 +78,35 @@ grants its claims and reverts when it ends.
 
 ---
 
-## Slice 2 — rights marketplace (planned)
+## Slice 2 — rights marketplace (BUILT 2026-08-09)
 
-The Authority sells rights at a hub service window: individual (flight / mining /
-hauling) and **working packages** (flight+mining, flight+hauling), scoped to a hub,
-a cluster of nearby plots, or a specific claim. Purchase adds an authority id (or a
-claim set) to `state.legal.operatingRights`, which the slice-1 overlay immediately
-reflects. Qualification-gated **patrolling rights** for a pilot who meets the bar.
+The capital **Yard Exchange Authority** sells the rights to operate in the territory
+it controls, at the Travel Authority window. Built on the permit system that already
+existed (`contractManager.purchasePermit` / `applyPermitGrant`).
+
+- **Grant types.** `applyPermitGrant` now applies a bundle: `grantZones` (adds to the
+  license's `authorizedZones` — flight) and `grantMiningAuthorities` (adds to
+  `operatingRights.mining.authorityIds`), alongside the legacy single `zoneId` and
+  `hub-docking`. The slice-1 overlay reflects both the instant they land.
+- **What sells.** A **Yard Exchange Work Pass** (800 cr) bundles flight for Copper
+  Drift + mining under the Copperline subsidiary — the whole home belt at once — plus
+  a standalone **Copper Wake Mining Lease** (500 cr) and the pre-existing single
+  flight/docking permits, all at the one window.
+- **Bounded control.** The pass grants only what Yard Exchange controls (rook-frontier
+  / red-vein-belt / copper-wake). **Ore Ridge** stays its own frontier permit and
+  **Cold Reach** (Coldreach Patrol Office) stays outside entirely — verified live.
+- **Funds → the authority.** `src/systems/rightsAuthority.js` seeds a
+  `yard-exchange-authority` institution (`state.authorities`); permit fees accrue to
+  its account via `recordAuthorityRevenue`. Its treasury is deliberately **outside**
+  the tracked institutional economy (not in `listAccountHolders`), so buying a pass
+  cannot distort the money reconciliation before the authority is a real spender.
+- **Tests.** `tests/rightsMarket.test.mjs` — the pass grants flight + mining and pays
+  the authority; the lease grants mining only; a single flight permit is not mining;
+  a pass can't be bought without the credits and grants nothing.
+
+Still open: the pass mentions hauling, but there is no haul-rights gate yet (hauling
+is a carrier activity, not a player-gated one) — it is flavor until that exists.
+Patrolling rights for a qualifying pilot remain a later addition.
 
 ## Slice 3 — enforcement + fine/tow (planned)
 

@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260808-2209-d56d3b0";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260808-2209-d56d3b0";
+import { getNpcName } from "../npcs.js?v=fresh-20260809-2057-53180b2";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260809-2057-53180b2";
 
 const COMMON_FRONTIER_ORE_VALUES = Object.freeze({
   "water-ice": 30,
@@ -126,16 +126,18 @@ export const hubServiceDefinitions = {
       organization: "Reach Transit Commission",
       serviceType: "permits",
       label: "Travel Authority",
-      description: "Zone flight rights and hub docking permits.",
+      description: "Flight clearances, mining leases, and the Yard Exchange work pass.",
       contractIds: [
+        "yard-exchange-work-pass",
         "rtc-copper-drift-flight-permit",
         "rtc-ore-ridge-flight-permit",
+        "yard-copper-wake-mining-lease",
         "rtc-the-ledge-docking-permit",
       ],
       offersAllContracts: true,
       defaultUnlocked: true,
       greeting:
-        "Reach Transit Commission, Outer Operations. An operator can put you to work, but only this office can clear you to fly the territory. What do you need cleared?",
+        "Reach Transit Commission, Outer Operations — and the Yard Exchange Authority window besides. An operator can put you to work, but only this office clears you to fly and dig the territory. A work pass covers the whole home belt at once, or take the permits piecemeal. What do you need cleared?",
     },
     {
       id: yardExchangeServices.supply,

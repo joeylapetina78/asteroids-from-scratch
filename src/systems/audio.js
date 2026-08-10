@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260808-2209-d56d3b0";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260809-2057-53180b2";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;
@@ -67,6 +67,20 @@ export function createGameAudio() {
   function playMiningShot() {
     tone({ frequency: 160, endFrequency: 90, duration: 0.07, type: "square", volume: 0.12 });
     noiseBurst({ duration: 0.045, volume: 0.08 });
+  }
+
+  // The dud a worn mining laser makes when the charge sputters instead of firing.
+  function playMinerFault(stage = "degraded") {
+    const intensity = stage === "failed" ? 1 : stage === "emergency" ? 0.7 : 0.45;
+    tone({ frequency: 120, endFrequency: 55, duration: 0.09, type: "sawtooth", volume: 0.09 * intensity });
+    noiseBurst({ duration: 0.06, volume: 0.06 * intensity });
+  }
+
+  // The warble a tractor field makes as its grip flickers.
+  function playCollectorFault(stage = "degraded") {
+    const intensity = stage === "failed" ? 1 : stage === "emergency" ? 0.7 : 0.45;
+    tone({ frequency: 340, endFrequency: 180, duration: 0.12, type: "triangle", volume: 0.07 * intensity });
+    tone({ frequency: 190, endFrequency: 300, duration: 0.1, delay: 0.05, type: "sine", volume: 0.05 * intensity });
   }
 
   function playRockBreak(tier = 1, { volumeScale = 1, pitchScale = 1, isNpcMining = false } = {}) {
@@ -279,6 +293,8 @@ export function createGameAudio() {
     playDock,
     playHullHit,
     playMiningShot,
+    playMinerFault,
+    playCollectorFault,
     playPanelDrop,
     playPanelReveal,
     playPickup,
