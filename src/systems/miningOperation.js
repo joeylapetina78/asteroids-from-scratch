@@ -1,22 +1,23 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260810-2011-9cca1b6";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260810-2011-9cca1b6";
-import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260810-2011-9cca1b6";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260810-2011-9cca1b6";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260810-2011-9cca1b6";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260810-2011-9cca1b6";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260810-2011-9cca1b6";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260810-2011-9cca1b6";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260810-2011-9cca1b6";
-import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260810-2011-9cca1b6";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260810-2011-9cca1b6";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260810-2011-9cca1b6";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260810-2011-9cca1b6";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260810-2011-9cca1b6";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260810-2011-9cca1b6";
-import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260810-2011-9cca1b6";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260810-2011-9cca1b6";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260810-2011-9cca1b6";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260810-2011-9cca1b6";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260810-2024-1d54855";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260810-2024-1d54855";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260810-2024-1d54855";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260810-2024-1d54855";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260810-2024-1d54855";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260810-2024-1d54855";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260810-2024-1d54855";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260810-2024-1d54855";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260810-2024-1d54855";
+import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260810-2024-1d54855";
+import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260810-2024-1d54855";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260810-2024-1d54855";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260810-2024-1d54855";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260810-2024-1d54855";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260810-2024-1d54855";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260810-2024-1d54855";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260810-2024-1d54855";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260810-2024-1d54855";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260810-2024-1d54855";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260810-2024-1d54855";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -1036,7 +1037,6 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     const project = seed.expansionProject ? operation.projects[seed.expansionProject.id] : null;
 
     const plan = planFleetCapacity({
-      state,
       institution: operation.institution,
       controller: operation.controller,
       fleet: buildFleetView(serviceable, project),
@@ -1292,7 +1292,28 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     operation.completedContracts += 1;
     operation.wear = Object.values(operation.ships).reduce((sum, record) => sum + (record.wear ?? 0), 0) / Object.keys(operation.ships).length;
     record("mining.contractFulfilled", `${ship.name} delivered ${delivered} ${resourceId.replaceAll("-", " ")} to ${siteName(siteId)}, earned ${payment} cr, and completed ${orderLabel}. Wear is now ${shipRecord.wear.toFixed(2)}.`, { orderId: allocation.orderId, siteId, resourceId, quantity: delivered, payment, accountBalance: operation.institution.accounts.operating.balance, wear: operation.wear, shipWear: shipRecord.wear, shipInstitutionId: ship.id, shipName: ship.name });
-    if (componentUse.worst?.condition.stage === "failed" && shipRecord.maintenanceStatus === "available") beginMaintenance(shipRecord, ship);
+    assessCraftService(shipRecord, ship);
+  }
+
+  // Whether this delivery's wear is enough to take the craft off work. The
+  // threshold is the operator's, not this module's — a cautious prospector
+  // pulls a worker while it still runs, a bolder contractor takes the outage.
+  function assessCraftService(shipRecord, ship) {
+    if (shipRecord.maintenanceStatus !== "available") return;
+    const plan = planCraftService({
+      institution: operation.institution,
+      controller: operation.controller,
+      craft: shipRecord,
+      policy: resolveServicePolicy(state, operation.institution.id),
+      account: operation.institution.accounts.operating,
+      now: now(),
+      capabilities: [
+        createWithdrawForServiceCapability({
+          execute: ({ preventive } = {}) => beginMaintenance(shipRecord, ship, null, preventive ? "preventive" : "work-wear"),
+        }),
+      ],
+    });
+    plan.selected.forEach((response) => response.execute?.(response.subject));
   }
 
   function siteName(siteId) {
@@ -1328,7 +1349,13 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         requiredCapabilities: issue.requiredCapabilities, wear: shipRecord.wear },
       at: now(),
     }), { state: DIAGNOSTIC_STATE.DISABLED, at: now() });
-    record("mining.maintenanceRequired", `${shipRecord.name}'s ${worstComponent?.label ?? "equipment"} developed ${issue.issueType.replaceAll("-", " ")} ${cause === "combat-damage" ? "after combat damage" : "after mining work"} and is returning to Scrap Porch.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, issueType: issue.issueType, componentId: shipRecord.pendingComponentId, wear: shipRecord.wear, requiredCapabilities: issue.requiredCapabilities, cause });
+    const because = cause === "combat-damage" ? "after combat damage"
+      // A preventive pull is the operator's judgement, not the machine's, and
+      // the log should say so — otherwise a craft leaving work in good order
+      // reads as an unexplained outage.
+      : cause === "preventive" ? "and was pulled before it could fail"
+      : "after mining work";
+    record("mining.maintenanceRequired", `${shipRecord.name}'s ${worstComponent?.label ?? "equipment"} developed ${issue.issueType.replaceAll("-", " ")} ${because} and is returning to Scrap Porch.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, issueType: issue.issueType, componentId: shipRecord.pendingComponentId, wear: shipRecord.wear, requiredCapabilities: issue.requiredCapabilities, cause });
   }
 
   function consumeMaintenanceEvents() {

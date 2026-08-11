@@ -1,4 +1,4 @@
-import { getSpendable } from "./valuation.js?v=fresh-20260810-2011-9cca1b6";
+import { getSpendable } from "./valuation.js?v=fresh-20260810-2024-1d54855";
 
 export function createNeedRecord({ id, kind, subject, target = null, current = null, shortage = 0, urgency = "routine", purpose = null, context = {}, createdAt = Date.now() }) {
   return { id, recordType: "need", kind, subject, target, current, shortage, urgency, purpose, context, status: "open", responseIds: [], createdAt };
@@ -82,6 +82,77 @@ export function generateCapabilityResponses({ institution, controller = null, ne
 
 export function shouldReconsiderResponse(response, events = []) {
   return response?.status === "blocked" && events.some((event) => response.reconsiderWhen?.includes(event.type));
+}
+
+// Rank every capability's answer to every open need, then split the ranking on
+// what can actually be paid for. The whole decision, in one call.
+//
+// THIS IS THE ENGINE'S JOB, not each domain's. `fleetCapacity` grew this loop
+// first and a second domain wanting it would have copied it — which is how this
+// codebase ended up with four separate implementations of "sort the candidates
+// and take the best one". A domain supplies its needs and its capabilities;
+// everything about choosing between them lives here.
+//
+// Three rules that are easy to get wrong and expensive to get wrong:
+//
+//   ONE NEED, ONE ANSWER. Two capabilities that can both answer a need must not
+//   both act on it, or a reserve sized for one commitment funds two.
+//
+//   SPEND AGAINST A RUNNING BALANCE. Affordability is tested against what is
+//   left after the selections already made this pass, not against the opening
+//   balance — otherwise three proposals that are individually affordable are
+//   all selected and the account goes negative.
+//
+//   UNAFFORDABLE IS NOT UNINTERESTING. A proposal that cannot be funded is
+//   returned as `blocked`, never dropped. "Wanted it, could not pay for it" is
+//   the half of the story a reader most needs, and it is what the diagnostics
+//   layer turns into a blocker with a why-chain.
+export function planResponses({
+  institution,
+  controller = null,
+  needs = [],
+  problems = [],
+  capabilities = [],
+  policy,
+  account = null,
+  context = {},
+}) {
+  const proposals = generateCapabilityResponses({ institution, controller, needs, problems, capabilities, policy, context });
+
+  const selected = [];
+  const blocked = [];
+  const answered = new Set();
+  let projectedBalance = account?.balance ?? 0;
+
+  const keyFor = (proposal) => proposal.needId ?? proposal.problemId ?? proposal.capabilityId;
+  const subjectFor = (proposal) => needs.find((entry) => entry.id === proposal.needId)
+    ?? problems.find((entry) => entry.id === proposal.problemId)
+    ?? null;
+
+  proposals.forEach((proposal) => {
+    if (answered.has(keyFor(proposal))) return;
+    const affordability = evaluateAffordability({
+      account: { ...account, balance: projectedBalance },
+      policy,
+      cost: proposal.estimatedCost ?? 0,
+    });
+    if (!affordability.affordable) {
+      blocked.push({ ...proposal, affordability, need: subjectFor(proposal) });
+      return;
+    }
+    answered.add(keyFor(proposal));
+    projectedBalance -= proposal.estimatedCost ?? 0;
+    selected.push({ ...proposal, affordability, need: subjectFor(proposal) });
+  });
+
+  return {
+    needs,
+    problems,
+    proposals,
+    selected,
+    // A need something affordable already answered is not also blocked.
+    blocked: blocked.filter((entry) => !answered.has(keyFor(entry))),
+  };
 }
 
 export function deriveInventoryNeeds({ targets = {}, quantities = {}, incoming = {}, makeId, now = Date.now() }) {

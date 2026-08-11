@@ -1,5 +1,5 @@
-import { createNeedRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260810-2011-9cca1b6";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260810-2011-9cca1b6";
+import { createNeedRecord, planResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260810-2024-1d54855";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260810-2024-1d54855";
 
 // How an operator decides how much fleet to carry.
 //
@@ -239,40 +239,18 @@ export function createCommissionCapability({ execute }) {
 
 // ── The plan ────────────────────────────────────────────────────────────────
 
-// Rank every capability's answer to every open need, then split the ranking on
-// what can actually be paid for. A proposal that cannot be funded is NOT
-// dropped — it is returned as blocked, because "Cinder wanted a ship and could
-// not afford one" is the interesting half of the story and the old code already
-// knew to say so.
-//
-// One capacity need is answered ONCE per assessment. Without that, a fleet that
-// is both fully committed and holds an approved project would hire and
-// commission in the same tick against a reserve sized for one.
-export function planFleetCapacity({ state, institution, controller = null, fleet, policy, capabilities = [], account, now }) {
-  const needs = deriveFleetNeeds({ fleet, policy, now });
-  const proposals = generateCapabilityResponses({ institution, controller, needs, problems: [], capabilities, policy, context: { fleet } });
-
-  const selected = [];
-  const blocked = [];
-  const answered = new Set();
-  let projectedBalance = account?.balance ?? 0;
-
-  proposals.forEach((proposal) => {
-    if (answered.has(proposal.needId)) return;
-    const affordability = evaluateAffordability({
-      account: { ...account, balance: projectedBalance },
-      policy,
-      cost: proposal.estimatedCost ?? 0,
-    });
-    if (!affordability.affordable) {
-      blocked.push({ ...proposal, affordability, need: needs.find((entry) => entry.id === proposal.needId) ?? null });
-      return;
-    }
-    answered.add(proposal.needId);
-    projectedBalance -= proposal.estimatedCost ?? 0;
-    selected.push({ ...proposal, affordability, need: needs.find((entry) => entry.id === proposal.needId) ?? null });
+// Derive what this fleet needs, then let the engine choose. The ranking, the
+// one-answer-per-need rule and the running-balance affordability test all live
+// in `institutionDecision.planResponses`, because they are true of every
+// domain's decisions and not of fleets in particular.
+export function planFleetCapacity({ institution, controller = null, fleet, policy, capabilities = [], account, now }) {
+  return planResponses({
+    institution,
+    controller,
+    needs: deriveFleetNeeds({ fleet, policy, now }),
+    capabilities,
+    policy,
+    account,
+    context: { fleet },
   });
-
-  // A need that something affordable already answered is not also blocked.
-  return { needs, proposals, selected, blocked: blocked.filter((entry) => !answered.has(entry.needId)) };
 }
