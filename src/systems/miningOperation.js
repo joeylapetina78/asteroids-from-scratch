@@ -1,23 +1,24 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260810-2024-1d54855";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260810-2024-1d54855";
-import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260810-2024-1d54855";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260810-2024-1d54855";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260810-2024-1d54855";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260810-2024-1d54855";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260810-2024-1d54855";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260810-2024-1d54855";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260810-2024-1d54855";
-import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260810-2024-1d54855";
-import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260810-2024-1d54855";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260810-2024-1d54855";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260810-2024-1d54855";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260810-2024-1d54855";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260810-2024-1d54855";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260810-2024-1d54855";
-import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260810-2024-1d54855";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260810-2024-1d54855";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260810-2024-1d54855";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260810-2024-1d54855";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260810-2036-26fcabd";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260810-2036-26fcabd";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260810-2036-26fcabd";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260810-2036-26fcabd";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260810-2036-26fcabd";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260810-2036-26fcabd";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260810-2036-26fcabd";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260810-2036-26fcabd";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260810-2036-26fcabd";
+import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260810-2036-26fcabd";
+import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260810-2036-26fcabd";
+import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260810-2036-26fcabd";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260810-2036-26fcabd";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260810-2036-26fcabd";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260810-2036-26fcabd";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260810-2036-26fcabd";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260810-2036-26fcabd";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260810-2036-26fcabd";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260810-2036-26fcabd";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260810-2036-26fcabd";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260810-2036-26fcabd";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -42,7 +43,6 @@ const EXPANSION_DEMAND_SECONDS = 12;
 // not how eager somebody is to buy one.
 const HIRE_COST = FLEET_CAPACITY_DEFAULTS.hireCost;
 const CREW_NAMES = ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
-const DEPOSIT_SURVEY_RADIUS = 12000;
 
 const MINING_ISSUES = Object.freeze([
   { issueType: "structural-fatigue", requiredCapabilities: ["structural-repair", "mechanical-repair"] },
@@ -960,27 +960,31 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     record("mining.waitingForFundedWork", `${shipRecord.name} is idle: available mining orders are already allocated or their buyers cannot fund the posted price.`, { shipInstitutionId: shipRecord.id, shipName: shipRecord.name, reasons });
   }
 
+  // How far this company looks, what it trusts, and what it goes to — all of it
+  // resolved from whoever runs the company. See `depositKnowledge`.
+  function prospectingPolicy() {
+    return resolveProspectingPolicy(state, operation.institution.id);
+  }
+
   function seedDepositKnowledge() {
     if (Object.keys(operation.depositKnowledge).length > 0 || !game.resourceField) return;
     const chunkSize = game.canvas?.width ?? 1200;
+    const policy = prospectingPolicy();
     sites.forEach((site) => {
-      getOreClusterSeedsInRadius(site.position.x, site.position.y, DEPOSIT_SURVEY_RADIUS, chunkSize, game.resourceField).forEach((seed) => {
-        const id = `deposit:${Math.round(seed.x)}:${Math.round(seed.y)}:${seed.resourceId}`;
-        operation.depositKnowledge[id] ??= { id, resourceId: seed.resourceId, x: seed.x, y: seed.y, source: "regional-survey", confidence: 0.65, successfulSelections: 0 };
+      getOreClusterSeedsInRadius(site.position.x, site.position.y, policy.surveyRadius, chunkSize, game.resourceField).forEach((seed) => {
+        const deposit = createSurveyedDeposit({ x: seed.x, y: seed.y, resourceId: seed.resourceId, policy, at: now() });
+        operation.depositKnowledge[deposit.id] ??= deposit;
       });
     });
   }
 
   function getDepositCandidates(resourceId, position) {
-    return Object.values(operation.depositKnowledge)
-      .filter((deposit) => deposit.resourceId === resourceId)
-      .sort((a, b) => {
-        const aScore = (a.confidence + a.successfulSelections * 0.15) / Math.max(500, Math.hypot(a.x - position.x, a.y - position.y));
-        const bScore = (b.confidence + b.successfulSelections * 0.15) / Math.max(500, Math.hypot(b.x - position.x, b.y - position.y));
-        return bScore - aScore;
-      })
-      .slice(0, 12)
-      .map((deposit) => ({ id: deposit.id, x: deposit.x, y: deposit.y }));
+    return rankDepositCandidates({
+      knowledge: operation.depositKnowledge,
+      resourceId,
+      position,
+      policy: prospectingPolicy(),
+    });
   }
 
   // Hire when work is being turned away, let a ship go when it plainly is not
@@ -1462,11 +1466,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       "service.arrived": payload.issueType ? `${shipRecord.name} arrived at Scrap Porch and requested service for ${payload.issueType.replaceAll("-", " ")}.` : `${shipRecord.name} arrived at Scrap Porch for service.`,
     };
     if (actionType === "prospect.selected") {
-      const id = `deposit:${payload.x}:${payload.y}:${payload.resourceId}`;
-      const deposit = operation.depositKnowledge[id] ??= { id, resourceId: payload.resourceId, x: payload.x, y: payload.y, source: "worker-observation", confidence: 0.85, successfulSelections: 0 };
-      deposit.confidence = Math.min(1, deposit.confidence + 0.05);
-      deposit.successfulSelections += 1;
-      deposit.lastObservedAt = now();
+      recordDepositObservation(operation.depositKnowledge, {
+        x: payload.x, y: payload.y, resourceId: payload.resourceId,
+        policy: prospectingPolicy(), at: now(),
+      });
     }
     if (actionType === "market.arrived") {
       shipRecord.currentSiteId = payload.destinationSiteId;
