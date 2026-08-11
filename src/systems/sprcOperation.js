@@ -1,17 +1,18 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260810-2036-26fcabd";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260810-2036-26fcabd";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260810-2036-26fcabd";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260810-2036-26fcabd";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260810-2036-26fcabd";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260810-2036-26fcabd";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260810-2036-26fcabd";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260810-2036-26fcabd";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260810-2036-26fcabd";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260810-2036-26fcabd";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260810-2036-26fcabd";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260810-2036-26fcabd";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260810-2036-26fcabd";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260810-2036-26fcabd";
+import { depositCredits } from "./accounts.js?v=fresh-20260810-2043-f726093";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260810-2043-f726093";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260810-2043-f726093";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260810-2043-f726093";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260810-2043-f726093";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260810-2043-f726093";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260810-2043-f726093";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260810-2043-f726093";
+import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260810-2043-f726093";
+import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260810-2043-f726093";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260810-2043-f726093";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260810-2043-f726093";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260810-2043-f726093";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260810-2043-f726093";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260810-2043-f726093";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -757,11 +758,28 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     }, { visible: false });
   }
 
+  // What the berth takes next. Severity is everybody's baseline; how long a job
+  // has sat, what it pays and who it is for are weighted by whoever runs the
+  // shop. See `workQueue` — Sal's `urgencyBias: 0.8` was inert here.
+  function readyRepairWorkItems() {
+    return sprc.repairQueue.map((id) => sprc.repairOrders[id])
+      .filter((entry) => entry?.status === "ready")
+      .map((entry) => ({
+        id: entry.id,
+        severity: entry.priority ?? 0,
+        createdAt: entry.createdAt ?? 0,
+        revenue: entry.servicePrice ?? 0,
+        goodwill: getGoodwill(getRelationshipProjection(state, { fromId: sprc.institution.id, toId: entry.payerInstitutionId })),
+      }));
+  }
+
   function startNextRepair() {
     if (sprc.facilities.berthTwo.activeRepairOrderId) return;
-    const order = sprc.repairQueue.map((id) => sprc.repairOrders[id])
-      .filter((entry) => entry?.status === "ready")
-      .sort((first, second) => (second.priority ?? 0) - (first.priority ?? 0) || (first.createdAt ?? 0) - (second.createdAt ?? 0))[0];
+    const next = orderWorkQueue(readyRepairWorkItems(), {
+      policy: resolveWorkQueuePolicy(state, sprc.institution.id),
+      now: now(),
+    })[0];
+    const order = next ? sprc.repairOrders[next.id] : null;
     if (!order) return;
     if (!repairReservationIsBacked(order)) {
       reconcileRepairReservation(order);
@@ -1340,7 +1358,14 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     const missing = openRepair ? getRepairMissing(openRepair) : { items: {}, total: 0 };
     const activeNeed = Object.values(sprc.needs).find((need) => need.status === "open") ?? null;
     const activeResponse = activeNeed?.responseIds?.map((id) => sprc.responses[id]).find((response) => response?.status === "active") ?? null;
-    return { sprc, openRepair, missing, activeNeed, activeResponse };
+    // The berth order with the numbers behind it. A queue is the most visible
+    // thing a service business does, so its position must be readable rather
+    // than inferred — the same reason `extractionMarket` reports who outbid you.
+    const queue = explainWorkQueue(readyRepairWorkItems(), {
+      policy: resolveWorkQueuePolicy(state, sprc.institution.id),
+      now: now(),
+    });
+    return { sprc, openRepair, missing, activeNeed, activeResponse, queue };
   }
 
   function restoreContractDefinitions() {

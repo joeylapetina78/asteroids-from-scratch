@@ -1,4 +1,4 @@
-import { filterUncommittedOffers, listExtractionOffers } from "./extractionOffers.js?v=fresh-20260810-2036-26fcabd";
+import { filterUncommittedOffers, listExtractionOffers } from "./extractionOffers.js?v=fresh-20260810-2043-f726093";
 
 // One clearing for every miner's idle ships against every open offer.
 //
