@@ -1,4 +1,4 @@
-import { RETENTION_CLASS, describeRetentionPolicy, getRetentionClass } from "./eventRetention.js?v=fresh-20260809-2057-53180b2";
+import { RETENTION_CLASS, describeRetentionPolicy, getRetentionClass } from "./eventRetention.js?v=fresh-20260810-1926-e4ff78f";
 
 // The ledger is the world's historical record, not just a live feed: the
 // Observatory browses it to reconstruct sequences, and future investigation,

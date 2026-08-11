@@ -1,17 +1,17 @@
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260809-2057-53180b2";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260810-1926-e4ff78f";
+import { getActorRecord } from "./actorRegistry.js?v=fresh-20260810-1926-e4ff78f";
 // One place to ask what an actor is and what it has.
-//
-// Actor records are spread across seven state shapes that grew separately —
-// `logistics.institutions`, `miningOperation.{institution,controller,ships}`,
-// `sprc.{institution,controller}`, `population.populations`,
-// `towing.{institution,controller,vehicle}` and `farm.{institution,controller}`.
-// Every caller that wanted a trait, a controller or a balance was hand-rolling
-// its own lookup chain, and the read side had already started special-casing
-// named institutions to find one.
 //
 // This module OWNS NOTHING. It resolves an id to the records that already
 // exist, so behaviour comes from an actor's configuration rather than from a
 // constant chosen by whichever system happens to be asking.
+//
+// WHERE the records live is `actorRegistry`'s problem, not this module's. It
+// used to be this module's problem, in the form of a hand-written walk over the
+// seven state shapes different domains had invented — which answered "given an
+// id, find the record" and left "who is in this world?" unanswerable. Ask
+// `actorRegistry.listActors` for the second question; everything below is the
+// first, plus what an actor's configuration then MEANS.
 //
 // The rule for traits: an institution decides through whoever runs it, so an
 // institution's traits are its CONTROLLER's. A person carries their own. That
@@ -20,44 +20,9 @@ import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArche
 
 const DEFAULT_TRAITS = Object.freeze({ caution: 0.5, growthBias: 0.3, urgencyBias: 0.5 });
 
-// Every place an actor record can live, cheapest lookup first.
 export function findActorRecord(state, actorId) {
   if (!actorId) return null;
-
-  const logistics = state.logistics?.institutions?.[actorId];
-  if (logistics) return logistics;
-
-  const miningOperations = Object.values(state.miningOperations ?? (state.miningOperation ? { legacy: state.miningOperation } : {}));
-  for (const mining of miningOperations) {
-    if (mining?.institution?.id === actorId) return mining.institution;
-    if (mining?.controller?.id === actorId) return mining.controller;
-    if (mining?.ships?.[actorId]) return mining.ships[actorId];
-  }
-
-  const sprc = state.sprc;
-  if (sprc?.institution?.id === actorId) return sprc.institution;
-  if (sprc?.controller?.id === actorId) return sprc.controller;
-
-  const population = state.population?.populations?.[actorId];
-  if (population) return population;
-
-  // `towing`, not `towService` — the module is named one thing and its state
-  // key another. Getting this wrong did not fail; it silently handed back the
-  // framework default traits, which is exactly how a misconfigured actor hides.
-  // The coverage test below `every seeded actor resolves` is what catches it.
-  const tow = state.towing;
-  if (tow?.institution?.id === actorId) return tow.institution;
-  if (tow?.controller?.id === actorId) return tow.controller;
-  if (tow?.vehicle?.id === actorId) return tow.vehicle;
-
-  const insurance = state.fleetInsurance;
-  if (insurance?.institution?.id === actorId) return insurance.institution;
-
-  const farm = state.farm;
-  if (farm?.institution?.id === actorId) return farm.institution;
-  if (farm?.controller?.id === actorId) return farm.controller;
-
-  return null;
+  return getActorRecord(state, actorId);
 }
 
 // Who decides for this actor. A person controls themselves.
