@@ -1,25 +1,25 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260812-1719-c76abb5";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260812-1719-c76abb5";
-import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260812-1719-c76abb5";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260812-1719-c76abb5";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260812-1719-c76abb5";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260812-1719-c76abb5";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260812-1719-c76abb5";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260812-1719-c76abb5";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260812-1719-c76abb5";
-import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260812-1719-c76abb5";
-import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260812-1719-c76abb5";
-import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260812-1719-c76abb5";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260812-1719-c76abb5";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260812-1719-c76abb5";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260812-1719-c76abb5";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260812-1719-c76abb5";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260812-1719-c76abb5";
-import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260812-1719-c76abb5";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260812-1719-c76abb5";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260812-1719-c76abb5";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260812-1719-c76abb5";
-import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260812-1719-c76abb5";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260812-1801-94af5ff";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260812-1801-94af5ff";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260812-1801-94af5ff";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260812-1801-94af5ff";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260812-1801-94af5ff";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260812-1801-94af5ff";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260812-1801-94af5ff";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260812-1801-94af5ff";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260812-1801-94af5ff";
+import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260812-1801-94af5ff";
+import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260812-1801-94af5ff";
+import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260812-1801-94af5ff";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260812-1801-94af5ff";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260812-1801-94af5ff";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260812-1801-94af5ff";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260812-1801-94af5ff";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260812-1801-94af5ff";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260812-1801-94af5ff";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260812-1801-94af5ff";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260812-1801-94af5ff";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260812-1801-94af5ff";
+import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260812-1801-94af5ff";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -395,11 +395,23 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     return worker;
   }
 
-  function update() {
-    // Recompute what each hub is asking for before any worker reads the board,
-    // so an order reflects this tick's inventory rather than last tick's.
+  // ── The tick, in phases ─────────────────────────────────────────────────
+  //
+  // Every step keeps the exact position it held before. See `worldClock`.
+
+  // What has become true since last tick: what the hubs are asking for, and
+  // which of this company's craft came back from service or took damage.
+  //
+  // The refresh is redundant on the clock path — `mining-orders` already fills
+  // the book in OBSERVE, ahead of both companies — and it stays here anyway,
+  // because a bare `update()` has to remain a complete tick and that is how
+  // every test drives this module. It costs about a third of a millisecond.
+  function observe() {
     refreshPostedOrders();
     consumeMaintenanceEvents();
+  }
+
+  function decide() {
     assessExpansion();
     assessFleetCapacity();
     publishFleetDiagnostic();
@@ -553,6 +565,13 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       fillCompatiblePortfolio(worker, order.siteId);
     });
     repriceUnfilledMiningOrders(round);
+  }
+
+  // One whole tick. The clock drives the phases separately; every test and the
+  // boot sequence drives this.
+  function update() {
+    observe();
+    decide();
   }
 
   // Symmetric to the freight repricer. After the market has cleared, any posted
@@ -1518,7 +1537,11 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   // `chooseOrder` is exposed because selection is a question the shared layer
   // will want to ask without committing an actor to the answer: what would this
   // miner take right now, and why. It only records the reasoning.
-  return { update, getState: () => operation, chooseOrder, listOffers: () => listExtractionOffers(state, offerContext()), worker: workers[0], workers };
+  // No `settle`: dispatch is recorded as it happens, and the fleet diagnostic
+  // is published inside `decide` against the pre-dispatch fleet — moving it
+  // after the world's decisions would change what it reports, which is a
+  // reporting decision rather than a phase one.
+  return { update, observe, decide, getState: () => operation, chooseOrder, listOffers: () => listExtractionOffers(state, offerContext()), worker: workers[0], workers };
 }
 
 // Exported under the same name every other system uses for its seed, so an
