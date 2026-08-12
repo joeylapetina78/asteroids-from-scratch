@@ -1,5 +1,6 @@
 // The contract board: one view of every agreement in the world.
 
+import { getMiningOrderBook } from "../src/systems/miningOrderBook.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
@@ -99,7 +100,7 @@ test("a declined purchase reads as stuck and keeps its reason", () => {
 
 test("a withheld extraction order is stuck rather than on offer", () => {
   const { state } = createWorld();
-  const posted = state.miningOperation.postedOrders;
+  const posted = getMiningOrderBook(state);
   const first = Object.values(posted)[0];
   first.withheld = "buyer-cannot-fund";
   first.amount = 0;
@@ -156,14 +157,14 @@ test("the board reads state without changing it", () => {
   const before = JSON.stringify({
     orders: state.hubProcurement.orders,
     allocations: state.miningOperation.allocations,
-    posted: state.miningOperation.postedOrders,
+    posted: getMiningOrderBook(state),
   });
   listContracts(state);
   listContractParties(listContracts(state));
   assert.equal(JSON.stringify({
     orders: state.hubProcurement.orders,
     allocations: state.miningOperation.allocations,
-    posted: state.miningOperation.postedOrders,
+    posted: getMiningOrderBook(state),
   }), before, "a projection must not mutate the records it reads");
 });
 

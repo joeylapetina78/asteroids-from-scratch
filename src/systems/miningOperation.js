@@ -1,24 +1,25 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260810-2052-657af59";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260810-2052-657af59";
-import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260810-2052-657af59";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260810-2052-657af59";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260810-2052-657af59";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260810-2052-657af59";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260810-2052-657af59";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260810-2052-657af59";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260810-2052-657af59";
-import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260810-2052-657af59";
-import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260810-2052-657af59";
-import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260810-2052-657af59";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260810-2052-657af59";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260810-2052-657af59";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260810-2052-657af59";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260810-2052-657af59";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260810-2052-657af59";
-import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260810-2052-657af59";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260810-2052-657af59";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260810-2052-657af59";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260810-2052-657af59";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260811-1947-54d67b4";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260811-1947-54d67b4";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260811-1947-54d67b4";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260811-1947-54d67b4";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260811-1947-54d67b4";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260811-1947-54d67b4";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260811-1947-54d67b4";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260811-1947-54d67b4";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260811-1947-54d67b4";
+import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260811-1947-54d67b4";
+import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260811-1947-54d67b4";
+import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260811-1947-54d67b4";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260811-1947-54d67b4";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260811-1947-54d67b4";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260811-1947-54d67b4";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260811-1947-54d67b4";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260811-1947-54d67b4";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260811-1947-54d67b4";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260811-1947-54d67b4";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260811-1947-54d67b4";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260811-1947-54d67b4";
+import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260811-1947-54d67b4";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -219,13 +220,19 @@ function getStandingMiningJobsFrom(orders, siteId, issuer = null) {
   }));
 }
 
-// The live board, preferring the cache the operation refreshes each tick but
-// falling back to computing it. Without the fallback, settling a delivery would
-// silently depend on a mining operation having been constructed first.
+// Bring the world's order book up to date. The OBSERVE step of the mining
+// tick: the clock runs it once for everybody before any company decides, so
+// every reader — the job board, hub inventory, both companies — sees the same
+// board. See `miningOrderBook` for why the store lives in its own module.
+export function refreshMiningOrderBook(state, at = Date.now()) {
+  return setMiningOrderBook(state, getPostedMiningOrders(state, at), at);
+}
+
+// The live board, preferring the book but falling back to computing it. Without
+// the fallback, settling a delivery would silently depend on the observe step
+// having run first.
 function resolvePostedOrder(state, orderId) {
-  const cached = state.miningOperation?.postedOrders?.[orderId];
-  if (cached) return cached;
-  return getPostedMiningOrders(state)[orderId] ?? null;
+  return getPostedMiningOrder(state, orderId) ?? getPostedMiningOrders(state)[orderId] ?? null;
 }
 
 export function settleStandingMiningOrder({ state, orderId, resourceId, amount, supplierAccount = null, referenceId = null, now = Date.now() }) {
@@ -336,7 +343,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   operation.lastMaintenanceEventId ??= 0;
   operation.depositKnowledge ??= {};
   operation.rightsDenied ??= {};
-  operation.postedOrders ??= {};
+  ensureMiningOrderBook(state);
   // The settlements' demand becomes visible on the board because this operation
   // exists to serve it, not because the board knows what a settlement is.
   registerExtractionOfferSource(state, "hub-standing-orders", hubStandingOfferSource);
@@ -567,7 +574,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     if (idleWorkers.length === 0) return;
     const claimed = new Set(Object.values(round.assignments).map((entry) => entry.offer?.id).filter(Boolean));
 
-    Object.values(operation.postedOrders).forEach((order) => {
+    Object.values(getMiningOrderBook(state)).forEach((order) => {
       if (order.withheld || !(order.amount > 0) || claimed.has(order.id)) return;
       const valuations = idleWorkers.map((worker) => valueOrderForWorker(order, worker.position));
       // One idle miner willing to take it means it is not underpriced — it will
@@ -759,14 +766,24 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     }, now());
   }
 
-  // Publish the live board onto state so other systems (and the inventory
-  // module's incoming calculation) can read it without importing this one.
+  // Bring the world's order book up to date before this company decides.
+  //
+  // The clock also runs this in OBSERVE, once, ahead of everybody — but that is
+  // not a reason to drop it here. The board genuinely CHANGES as work is
+  // claimed: an allocation counts as incoming against the buying hub's gap, so
+  // an order Cinder has just taken should not still be on the board when Flint
+  // looks. Re-observing after the previous company has committed is what keeps
+  // the second one from bidding on work that no longer exists.
+  //
+  // What the OBSERVE pass buys is a coherent board for READERS — the public job
+  // board, hub inventory, diagnostics — at the top of every tick, rather than
+  // whatever the last company to update happened to leave behind. One board,
+  // not one derivation.
+  //
+  // It also keeps a bare `update()` a complete tick, which is how every test
+  // drives this module.
   function refreshPostedOrders() {
-    const posted = getPostedMiningOrders(state, now());
-    Object.keys(operation.postedOrders).forEach((orderId) => {
-      if (!posted[orderId]) delete operation.postedOrders[orderId];
-    });
-    Object.entries(posted).forEach(([orderId, order]) => { operation.postedOrders[orderId] = order; });
+    refreshMiningOrderBook(state, now());
   }
 
   // What this operation needs to hand an offer source so it can decide what is

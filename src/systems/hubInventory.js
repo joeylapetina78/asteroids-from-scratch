@@ -10,9 +10,12 @@
 // draws from a family and substitutes freely within it. A hub does not need
 // iron-nickel specifically; it needs structural material.
 
-import { getEffectiveMaterialUnits, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260810-2052-657af59";
-import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260810-2052-657af59";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260810-2052-657af59";
+import { getEffectiveMaterialUnits, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260811-1947-54d67b4";
+import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260811-1947-54d67b4";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260811-1947-54d67b4";
+// The store only — deliberately not `miningOperation`, which imports THIS
+// module. See `miningOrderBook` for why the derivation lives elsewhere.
+import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260811-1947-54d67b4";
 
 // How many seconds of consumption a hub tries to keep on the shelf. Higher
 // means fatter buffers and less frequent, larger orders.
@@ -67,8 +70,11 @@ export function getFamilyIncoming(state, hubInstitutionId, family) {
   const miningOperations = Object.values(state.miningOperations ?? (state.miningOperation ? { legacy: state.miningOperation } : {}));
   const allocations = miningOperations.flatMap((operation) => Object.values(operation?.allocations ?? {}))
     .filter((allocation) => allocation.status === "active");
+  const book = getMiningOrderBook(state);
   const fromMining = allocations.reduce((sum, allocation) => {
-    const order = miningOperations.map((operation) => operation?.postedOrders?.[allocation.orderId]).find(Boolean);
+    // One book for the world. This used to search every operation's private
+    // copy for the first one that happened to hold the order.
+    const order = book[allocation.orderId];
     if (!order || order.buyerInstitutionId !== hubInstitutionId) return sum;
     return getResourceFamily(order.resourceId) === family
       ? sum + getEffectiveMaterialUnits(order.resourceId, allocation.amount ?? 0)

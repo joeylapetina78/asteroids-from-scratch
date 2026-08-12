@@ -1,3 +1,4 @@
+import { getMiningOrderBook } from "../src/systems/miningOrderBook.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createGameState } from "../src/state/gameState.js";
@@ -893,7 +894,7 @@ test("player standing mining delivery enters the same freight inventory used by 
   harness.state.logistics.haulers["hauler-scrap-yard"].currentSiteId = "yard-exchange";
   harness.ships[1].dockedSiteId = "yard-exchange";
   const balanceBefore = buyer.accounts.operating.balance;
-  const postedRate = harness.state.miningOperation?.postedOrders?.["mine-yard-iron"]?.paymentPerUnit
+  const postedRate = getMiningOrderBook(harness.state)["mine-yard-iron"]?.paymentPerUnit
     ?? definition.reward.credits / definition.terms.amount;
   // The contract is for whatever the hub is currently asking, not a fixed 3.
   const wanted = definition.terms.amount;
@@ -946,7 +947,7 @@ test("a standing mining order the hub is fully stocked on stops accepting delive
   // The hub is now amply stocked → its buy order closes (no gap, not a cash issue).
   buyer.inventories["iron-nickel"] = 999;
   buyer.accounts.operating.balance = 50000;
-  if (harness.state.miningOperation?.postedOrders) delete harness.state.miningOperation.postedOrders[definition.terms.standingMiningOrderId];
+  delete getMiningOrderBook(harness.state)[definition.terms.standingMiningOrderId];
   const before = buyer.inventories["iron-nickel"];
   assert.equal(contracts.depositResourceUnit({ contractId: definition.id, resourceType: "iron-nickel", siteId: "yard-exchange", amount: 3 }), false);
   assert.equal(buyer.inventories["iron-nickel"], before, "no material was consumed");

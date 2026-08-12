@@ -15,12 +15,13 @@
 //   WHO IS DOING IT   supplier — null while it is still up for grabs
 //   WHERE IS IT       one of available / taken / done / blocked
 
-import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260810-2052-657af59";
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260810-2052-657af59";
-import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260810-2052-657af59";
-import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260810-2052-657af59";
-import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js?v=fresh-20260810-2052-657af59";
-import { ensureGateBounty } from "./gateBounty.js?v=fresh-20260810-2052-657af59";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260811-1947-54d67b4";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260811-1947-54d67b4";
+import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260811-1947-54d67b4";
+import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260811-1947-54d67b4";
+import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260811-1947-54d67b4";
+import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js?v=fresh-20260811-1947-54d67b4";
+import { ensureGateBounty } from "./gateBounty.js?v=fresh-20260811-1947-54d67b4";
 
 export const CONTRACT_STATE = Object.freeze({
   AVAILABLE: "available",   // posted, nobody has taken it
@@ -88,9 +89,11 @@ function entry(state, fields) {
 
 // ── Extraction: what hubs are paying to have dug up ────────────────────────
 function collectExtraction(state) {
-  const posted = state.miningOperation?.postedOrders && Object.keys(state.miningOperation.postedOrders).length > 0
-    ? state.miningOperation.postedOrders
-    : getPostedMiningOrders(state);
+  // The world's order book, not one company's copy of it. This used to read
+  // `state.miningOperation.postedOrders` — Cinder's private snapshot — so the
+  // public job board showed whatever Cinder happened to know.
+  const book = getMiningOrderBook(state);
+  const posted = Object.keys(book).length > 0 ? book : getPostedMiningOrders(state);
   const allocations = Object.values(state.miningOperations ?? (state.miningOperation ? { legacy: state.miningOperation } : {}))
     .flatMap((operation) => Object.values(operation?.allocations ?? {}));
   const rows = [];
