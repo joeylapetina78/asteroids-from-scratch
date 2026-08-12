@@ -1,18 +1,18 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260811-1947-54d67b4";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260811-1947-54d67b4";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260811-1947-54d67b4";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260811-1947-54d67b4";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260811-1947-54d67b4";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260811-1947-54d67b4";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260811-1947-54d67b4";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260811-1947-54d67b4";
-import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260811-1947-54d67b4";
-import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260811-1947-54d67b4";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260811-1947-54d67b4";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260811-1947-54d67b4";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260811-1947-54d67b4";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260811-1947-54d67b4";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260811-1947-54d67b4";
+import { depositCredits } from "./accounts.js?v=fresh-20260811-1955-f86ece3";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260811-1955-f86ece3";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260811-1955-f86ece3";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260811-1955-f86ece3";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260811-1955-f86ece3";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260811-1955-f86ece3";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260811-1955-f86ece3";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260811-1955-f86ece3";
+import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260811-1955-f86ece3";
+import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260811-1955-f86ece3";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260811-1955-f86ece3";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260811-1955-f86ece3";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260811-1955-f86ece3";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260811-1955-f86ece3";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260811-1955-f86ece3";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -240,21 +240,62 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   // A miner weighs them on price alone and has no idea who Sal is.
   registerExtractionOfferSource(state, "sprc-procurement", sprcProcurementOfferSource);
 
-  function update() {
+  // ── The tick, in three phases ───────────────────────────────────────────
+  //
+  // Sal's work splits cleanly along the clock's phases, and 13 of these 14
+  // steps keep the exact relative order they ran in before. See `worldClock`
+  // for why the phases exist at all.
+  //
+  // The passage of time belongs in OBSERVE, not SETTLE. A repair whose clock
+  // has run out IS finished — nobody decided that, it simply became true — and
+  // it has to be known before anyone works out what to do next. Putting
+  // completions after the decisions instead would leave the berth occupied by
+  // finished work for a whole tick, so every repair would cost an extra second
+  // of idle berth. Phase names are not worth a throughput regression.
+
+  // What has become true since last tick: events other systems recorded, orders
+  // whose deadlines passed, work whose clock ran out.
+  function observe() {
     sprc.account.protectedReserve = sprc.operatingPlan.protectedCashReserve;
     consumeLedgerEvents();
-    retryDeferredServiceRequests();
     expireProcurementOrders();
     completeDueProduction();
     completeDueRepairs();
+  }
+
+  // What Sal does about it.
+  //
+  // `retryDeferredServiceRequests` is the ONE step that changes position — it
+  // used to run first, ahead of the observations above. Reconsidering a deferred
+  // admission is a decision, so it belongs here. Verified safe to move: nothing
+  // between its old and new position touches an account (`completeDueRepairs`
+  // frees the berth and records an event; the payer settles later, when mining
+  // consumes `sprc.repairCompleted`), so the balance it re-reads is unchanged.
+  // The one effect is that a subject whose repair just completed is no longer
+  // blocked by its own finished order, so it can be re-admitted a tick sooner.
+  function decide() {
+    retryDeferredServiceRequests();
     startNextProduction();
     startNextRepair();
     assessOpenRepairs();
     assessOperatingPlan();
     repriceOpenProcurement();
+  }
+
+  // Publish the result. Nothing here changes what Sal is doing; it reports what
+  // he decided, so it must run after every decision in the world, not just his.
+  function settle() {
     publishInstitutionDiagnostic();
     restoreContractDefinitions();
     onChange(getSnapshot());
+  }
+
+  // One whole tick. The clock drives the three phases separately; everything
+  // else — every test, and the boot sequence — drives this.
+  function update() {
+    observe();
+    decide();
+    settle();
   }
 
   function consumeLedgerEvents() {
@@ -1526,7 +1567,9 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     }
   }
 
-  return { update, acceptProcurement, reserveProcurementAllocation, deliverMaterial, getSnapshot, createProvisionalRepairOrder };
+  // `update` runs a whole tick; `observe`/`decide`/`settle` let the clock place
+  // each phase against every other system's matching phase.
+  return { update, observe, decide, settle, acceptProcurement, reserveProcurementAllocation, deliverMaterial, getSnapshot, createProvisionalRepairOrder };
 }
 
 function getSalActionMessage(type, payload) {
