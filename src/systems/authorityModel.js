@@ -1,4 +1,4 @@
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260811-2000-0c0fe4d";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260811-2005-d6bdaee";
 
 export const POWER_TYPES = Object.freeze({
   DEFINE_PLACE: "define-place",

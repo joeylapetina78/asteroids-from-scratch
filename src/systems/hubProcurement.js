@@ -25,16 +25,16 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260811-2000-0c0fe4d";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260811-2000-0c0fe4d";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260811-2000-0c0fe4d";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260811-2000-0c0fe4d";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260811-2000-0c0fe4d";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260811-2000-0c0fe4d";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260811-2000-0c0fe4d";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260811-2000-0c0fe4d";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260811-2000-0c0fe4d";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260811-2000-0c0fe4d";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260811-2005-d6bdaee";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260811-2005-d6bdaee";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260811-2005-d6bdaee";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260811-2005-d6bdaee";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260811-2005-d6bdaee";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260811-2005-d6bdaee";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260811-2005-d6bdaee";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260811-2005-d6bdaee";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260811-2005-d6bdaee";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260811-2005-d6bdaee";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -961,8 +961,18 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     });
   }
 
-  function update() {
+  // ── The tick, in phases ─────────────────────────────────────────────────
+  //
+  // Every step keeps the exact position it held before. See `worldClock`.
+
+  // Clear out refusals that have aged out, so the board being read below is the
+  // current one. This has to precede `postNeeds`, which consults declined
+  // orders to decide whether a family was turned down too recently to ask again.
+  function observe() {
     pruneDeclinedOrders();
+  }
+
+  function decide() {
     postNeeds();
     // Sellers move first, so a buyer never bids up against an ask that has
     // already come down to meet it.
@@ -976,13 +986,34 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     // Mined ore lands in the seller's own stock; move what is owed into the
     // contract reserve before anything else can consume it, then settle any
     // reserve that is now whole.
+    //
+    // These two look like settling — they resolve commitments — and they stay
+    // in DECIDE anyway. Moving them after every decider would change WHO GETS
+    // CONTESTED STOCK FIRST: population consumes hub inventory earlier in this
+    // same phase, and mining delivers ore later in it. Reserving before or
+    // after those is a real economic decision about whose claim ranks, and it
+    // deserves to be made deliberately in its own change rather than as a side
+    // effect of tidying phase labels.
     fillReservations();
     completeSalesWhenReserved();
+  }
+
+  // Reporting only — nothing here changes what anybody is doing, so it runs
+  // after every decision in the world rather than just this system's.
+  function settle() {
     reportOutstandingReservations();
   }
 
+  // One whole tick. The clock drives the phases separately; every test and the
+  // boot sequence drives this.
+  function update() {
+    observe();
+    decide();
+    settle();
+  }
+
   update();
-  return { update, getState: () => procurement, completeOrder, markShipped, listOrders: (filter) => listOrders(state, filter) };
+  return { update, observe, decide, settle, getState: () => procurement, completeOrder, markShipped, listOrders: (filter) => listOrders(state, filter) };
 }
 
 function order2Label(resourceId) {
