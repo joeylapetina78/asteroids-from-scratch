@@ -1,5 +1,5 @@
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260811-1955-f86ece3";
-import { getActorRecord } from "./actorRegistry.js?v=fresh-20260811-1955-f86ece3";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260811-2000-0c0fe4d";
+import { getActorRecord } from "./actorRegistry.js?v=fresh-20260811-2000-0c0fe4d";
 // One place to ask what an actor is and what it has.
 //
 // This module OWNS NOTHING. It resolves an id to the records that already

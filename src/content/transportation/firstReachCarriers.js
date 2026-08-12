@@ -1,4 +1,4 @@
-import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS } from "./firstReachNetwork.js?v=fresh-20260811-1955-f86ece3";
+import { FIRST_REACH_CARRIER_POLICY, FIRST_REACH_REPAIR_OPTIONS } from "./firstReachNetwork.js?v=fresh-20260811-2000-0c0fe4d";
 
 export const FIRST_REACH_CARRIERS = Object.freeze([
   Object.freeze({

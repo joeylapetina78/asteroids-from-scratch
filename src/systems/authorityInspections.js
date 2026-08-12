@@ -1,6 +1,6 @@
-import { createShipPaperworkInspectionReport } from "./paperworkInspections.js?v=fresh-20260811-1955-f86ece3";
-import { getRegistryEntityIdForSite, hasRegistryStatus } from "./entityRegistry.js?v=fresh-20260811-1955-f86ece3";
-import { PUBLIC_IDENTITY_KIND } from "./publicIdentity.js?v=fresh-20260811-1955-f86ece3";
+import { createShipPaperworkInspectionReport } from "./paperworkInspections.js?v=fresh-20260811-2000-0c0fe4d";
+import { getRegistryEntityIdForSite, hasRegistryStatus } from "./entityRegistry.js?v=fresh-20260811-2000-0c0fe4d";
+import { PUBLIC_IDENTITY_KIND } from "./publicIdentity.js?v=fresh-20260811-2000-0c0fe4d";
 
 export function inspectPublicIdentity(state, { identity, inspector = null, site = null } = {}) {
   if (!identity) {

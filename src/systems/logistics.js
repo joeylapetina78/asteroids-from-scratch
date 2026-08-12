@@ -1,19 +1,19 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260811-1955-f86ece3";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260811-1955-f86ece3";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260811-1955-f86ece3";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260811-1955-f86ece3";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260811-1955-f86ece3";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260811-1955-f86ece3";
-import { adaptShipment } from "./intentions.js?v=fresh-20260811-1955-f86ece3";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260811-1955-f86ece3";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260811-1955-f86ece3";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260811-1955-f86ece3";
-import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260811-1955-f86ece3";
-import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260811-1955-f86ece3";
-import { rankCarrierBids } from "./carrierSelection.js?v=fresh-20260811-1955-f86ece3";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260811-1955-f86ece3";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260811-1955-f86ece3";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260811-1955-f86ece3";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260811-2000-0c0fe4d";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260811-2000-0c0fe4d";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260811-2000-0c0fe4d";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260811-2000-0c0fe4d";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260811-2000-0c0fe4d";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260811-2000-0c0fe4d";
+import { adaptShipment } from "./intentions.js?v=fresh-20260811-2000-0c0fe4d";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260811-2000-0c0fe4d";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260811-2000-0c0fe4d";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260811-2000-0c0fe4d";
+import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260811-2000-0c0fe4d";
+import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260811-2000-0c0fe4d";
+import { rankCarrierBids } from "./carrierSelection.js?v=fresh-20260811-2000-0c0fe4d";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260811-2000-0c0fe4d";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260811-2000-0c0fe4d";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260811-2000-0c0fe4d";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -248,9 +248,29 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     }
   }
 
-  function update() {
+  // ── The tick, in phases ─────────────────────────────────────────────────
+  //
+  // Every step keeps the exact position it held before; the split only states
+  // the structure that was already there. See `worldClock`.
+  //
+  // There is deliberately NO settle phase. A delivery lands as a
+  // `npc.routeCompleted` event raised by the ship movement running in the game
+  // loop, so logistics learns about arrivals by OBSERVING them like any other
+  // outside fact — not by settling its own decisions. Inventing an empty settle
+  // step to make the set look complete would be a label with nothing behind it.
+
+  // What has become true since last tick: shipments delivered, wear reported,
+  // damage taken, repairs finished.
+  //
+  // Pruning stays ahead of the event drain, as it always has. A shipment
+  // delivered this tick must survive to be consumed; trimming after the drain
+  // would let a just-finished run be discarded before anything read it.
+  function observe() {
     pruneCompletedOperations();
     consumeEvents();
+  }
+
+  function decide() {
     assessCarrierFleet();
     // Price against bids made from the current fleet state, not whichever ask
     // happened to be recorded on a previous assignment pass. If the issuer
@@ -290,6 +310,13 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
         else if (!assignNpcShipment(shipId, freightWinners)) assignMaintenanceAction(shipId);
       }
     });
+  }
+
+  // One whole tick. The clock drives the phases separately; every test and the
+  // boot sequence drives this.
+  function update() {
+    observe();
+    decide();
   }
 
   function pruneCompletedOperations() {
@@ -1485,7 +1512,10 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     logistics.counters.history = (logistics.counters.history ?? logistics.history.length) + 1;
     appendBoundedHistory(logistics.history, { id: `log-history-${logistics.counters.history}`, type, at: now(), ...payload });
   }
-  return { update, assignNpcShipment, acceptPlayerContract, loadPlayerContract, deliverPlayerContract, getState: () => logistics };
+  // `update` runs a whole tick; `observe`/`decide` let the clock place each
+  // phase against every other system's matching phase. There is no `settle` —
+  // see the note above `observe`.
+  return { update, observe, decide, assignNpcShipment, acceptPlayerContract, loadPlayerContract, deliverPlayerContract, getState: () => logistics };
 }
 
 export function createStandingFreightJob(template, issuer = null, postedRate = null) {

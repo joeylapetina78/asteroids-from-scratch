@@ -1,16 +1,16 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260811-1955-f86ece3";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260811-1955-f86ece3";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260811-1955-f86ece3";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260811-1955-f86ece3";
-import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260811-1955-f86ece3";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260811-1955-f86ece3";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260811-1955-f86ece3";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260811-1955-f86ece3";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260811-1955-f86ece3";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260811-1955-f86ece3";
-import { getStandingMiningOrderAvailability, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260811-1955-f86ece3";
-import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260811-1955-f86ece3";
-import { recordAuthorityRevenue } from "./rightsAuthority.js?v=fresh-20260811-1955-f86ece3";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260811-2000-0c0fe4d";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260811-2000-0c0fe4d";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260811-2000-0c0fe4d";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260811-2000-0c0fe4d";
+import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260811-2000-0c0fe4d";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260811-2000-0c0fe4d";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260811-2000-0c0fe4d";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260811-2000-0c0fe4d";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260811-2000-0c0fe4d";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260811-2000-0c0fe4d";
+import { getStandingMiningOrderAvailability, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260811-2000-0c0fe4d";
+import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260811-2000-0c0fe4d";
+import { recordAuthorityRevenue } from "./rightsAuthority.js?v=fresh-20260811-2000-0c0fe4d";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
