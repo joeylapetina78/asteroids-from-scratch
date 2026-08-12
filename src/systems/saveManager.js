@@ -1,7 +1,7 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260811-2005-d6bdaee";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260811-2005-d6bdaee";
-import { ensureObligations } from "./obligations.js?v=fresh-20260811-2005-d6bdaee";
-import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260811-2005-d6bdaee";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260811-2011-f514a3d";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260811-2011-f514a3d";
+import { ensureObligations } from "./obligations.js?v=fresh-20260811-2011-f514a3d";
+import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260811-2011-f514a3d";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 

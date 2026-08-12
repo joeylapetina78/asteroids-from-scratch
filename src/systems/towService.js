@@ -1,14 +1,14 @@
-import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260811-2005-d6bdaee";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260811-2005-d6bdaee";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260811-2005-d6bdaee";
-import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260811-2005-d6bdaee";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260811-2005-d6bdaee";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260811-2005-d6bdaee";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260811-2005-d6bdaee";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260811-2005-d6bdaee";
-import { authorizeWreckSalvage, completeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260811-2005-d6bdaee";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent } from "./componentCondition.js?v=fresh-20260811-2005-d6bdaee";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260811-2005-d6bdaee";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260811-2011-f514a3d";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260811-2011-f514a3d";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260811-2011-f514a3d";
+import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260811-2011-f514a3d";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260811-2011-f514a3d";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260811-2011-f514a3d";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260811-2011-f514a3d";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260811-2011-f514a3d";
+import { authorizeWreckSalvage, completeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260811-2011-f514a3d";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent } from "./componentCondition.js?v=fresh-20260811-2011-f514a3d";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260811-2011-f514a3d";
 
 const REPAIR_SITE_ID = "scrap-porch";
 const RECOVERY_COMPONENTS = Object.freeze([
@@ -116,9 +116,23 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
   const shipById = new Map(ships.map((ship) => [ship.id, ship]));
   const network = createTransportationNetwork({ destinations, connections: FIRST_REACH_TRANSPORT_CONNECTIONS });
 
-  function update() {
+  // ── The tick, in phases ─────────────────────────────────────────────────
+  //
+  // Every step keeps the exact position it held before. See `worldClock`.
+
+  // News from elsewhere, and salvage whose clock has run out.
+  //
+  // `advanceSalvageWork` is the same shape as SPRC's repair berth: finishing a
+  // job returns the vehicle to `available`, and that has to be known before
+  // `claimNextSalvageJob` works out what to take next. Filing it after the
+  // decisions instead would leave the vehicle held by finished work for a whole
+  // tick, so every recovery would cost an extra second of idle vehicle.
+  function observe() {
     consumeEvents();
     advanceSalvageWork();
+  }
+
+  function decide() {
     claimNextSalvageJob();
     Object.values(towing.requests)
       .filter((request) => request.status === "delivered-cargo" && !request.followupRequestId)
@@ -128,6 +142,13 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
         const followup = dispatchRequest({ ...request.issue, npcId: request.haulerId, shipmentId: null }, { destinationSiteId: REPAIR_SITE_ID, purpose: "service-return", parentRequestId: request.id });
         if (followup) request.followupRequestId = followup.id;
       });
+  }
+
+  // One whole tick. The clock drives the phases separately; every test and the
+  // boot sequence drives this.
+  function update() {
+    observe();
+    decide();
   }
 
   function claimNextSalvageJob() {
@@ -324,5 +345,7 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
     state.ledger.recordEvent(type, { institutionId: towing.institution.id, institutionName: towing.institution.name, actorInstitutionId: towing.controller.id, actorName: towing.controller.name, vehicleId: towing.vehicle.id, vehicleName: towing.vehicle.name, requestId: request.id, haulerId: request.haulerId, carrierInstitutionId: request.carrierInstitutionId, destinationSiteId: request.destinationSiteId, fee: request.fee, purpose: request.purpose }, { visible: true, message });
   }
 
-  return { update, dispatchRequest, getState: () => towing };
+  // No `settle`: this system's outcomes land as ledger events other systems
+  // observe, so it has nothing of its own left to report after deciding.
+  return { update, observe, decide, dispatchRequest, getState: () => towing };
 }

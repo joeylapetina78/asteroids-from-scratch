@@ -23,11 +23,11 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260811-2005-d6bdaee";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260811-2005-d6bdaee";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260811-2005-d6bdaee";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260811-2005-d6bdaee";
-import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260811-2005-d6bdaee";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260811-2011-f514a3d";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260811-2011-f514a3d";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260811-2011-f514a3d";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260811-2011-f514a3d";
+import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260811-2011-f514a3d";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -638,8 +638,26 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
     }
   }
 
-  function update() {
+  // ── The tick, in phases ─────────────────────────────────────────────────
+  //
+  // Every step keeps the exact position it held before. See `worldClock`.
+
+  // Production whose clock has run out. The passage of time is something that
+  // became true, not something anybody decided, and finished goods have to be
+  // on the shelf before any population tries to buy them.
+  function observe() {
     completeDueProduction();
+  }
+
+  // Income, distress, demand and buying, one population at a time.
+  //
+  // This loop is NOT split further, deliberately. Accruing and generating
+  // demand look observational, but populations sharing a hub buy from the same
+  // shelf — so hoisting every population's demand ahead of every population's
+  // purchases would change which of them reaches scarce stock first. That is
+  // the same contested-claim question `hubProcurement` leaves alone, and it is
+  // an economic decision rather than a tidying one.
+  function decide() {
     Object.values(population.populations).forEach((populationRecord) => {
       const hub = getHub(populationRecord);
       if (!hub) return;
@@ -677,8 +695,18 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
     });
   }
 
+  // One whole tick. The clock drives the phases separately; every test and the
+  // boot sequence drives this.
+  function update() {
+    observe();
+    decide();
+  }
+
   update();
-  return { update, getState: () => population };
+  // No `settle`: the diagnostics this system publishes are written inside the
+  // loop, against the hub each population actually bought from, so there is
+  // nothing left to report afterwards.
+  return { update, observe, decide, getState: () => population };
 }
 
 function describeDraw(draw) {

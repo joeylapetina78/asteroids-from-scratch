@@ -1,8 +1,8 @@
-import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260811-2005-d6bdaee";
-import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260811-2005-d6bdaee";
-import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260811-2005-d6bdaee";
-import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260811-2005-d6bdaee";
-import { settlementMiningRights, settlementPlaces } from "../content/economy/firstReachSettlements.js?v=fresh-20260811-2005-d6bdaee";
+import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260811-2011-f514a3d";
+import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260811-2011-f514a3d";
+import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260811-2011-f514a3d";
+import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260811-2011-f514a3d";
+import { settlementMiningRights, settlementPlaces } from "../content/economy/firstReachSettlements.js?v=fresh-20260811-2011-f514a3d";
 
 const RIGHT_TO_POWER = Object.freeze({
   [RIGHT_TYPES.TRANSIT]: POWER_TYPES.AUTHORIZE_WORK,
