@@ -31,13 +31,31 @@ export function ensureFleetInsuranceState(state, now = Date.now()) {
 export function createFleetInsuranceManager({ state, now = () => Date.now() }) {
   const insurance = ensureFleetInsuranceState(state, now());
 
-  function update() {
+  // ── The tick ────────────────────────────────────────────────────────────
+  //
+  // THIS SYSTEM MAKES NO DECISIONS. It has no `decide` phase because it never
+  // chooses anything: cover is bound to whoever is eligible, premiums are
+  // collected from deliveries that already happened, and claims settle against
+  // wrecks that already exist. It is pure reaction, so the whole of it is
+  // OBSERVE. Giving it an empty `decide` to look like its neighbours would be a
+  // label with nothing behind it.
+  //
+  // Binding cover sits alongside the event drain rather than after it: a newly
+  // eligible institution must hold a policy before its first delivery is read,
+  // or that delivery collects no premium and the miss is permanent. Same
+  // category as `pruneDeclinedOrders` and `pruneCompletedOperations` — bringing
+  // the books in line with the world before reading it.
+  function observe() {
     ensureEligiblePolicies();
     for (const event of state.ledger.getEventsAfterId(insurance.lastLedgerEventId, { includeHidden: true })) {
       insurance.lastLedgerEventId = Math.max(insurance.lastLedgerEventId, event.id);
       if (["carrier.contractFulfilled", "mining.deliveryCompleted"].includes(event.type)) collectPremium(event);
       if (event.type === "wreck.created") settleHullClaim(event);
     }
+  }
+
+  function update() {
+    observe();
   }
 
   function ensureEligiblePolicies() {
@@ -120,5 +138,6 @@ export function createFleetInsuranceManager({ state, now = () => Date.now() }) {
     destination.transactions.push({ id: `${id}-IN`, at: now(), type, amount, balance: destination.balance, referenceId });
   }
 
-  return { update, getState: () => insurance };
+  // No `decide` and no `settle` — see the note above `observe`.
+  return { update, observe, getState: () => insurance };
 }

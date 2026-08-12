@@ -7,16 +7,31 @@ export function createFleetProtectionManager({ state, ships = [], getShips = () 
   state.fleetProtection ??= { installations: {}, transactions: [], counter: 0, lastLedgerEventId: 0 };
   const protection = state.fleetProtection;
 
-  function update() {
+  // ── The tick, in phases ─────────────────────────────────────────────────
+  //
+  // Every step keeps the exact position it held before. See `worldClock`.
+
+  // Stops made, deliveries completed, claims settled elsewhere. A fleet marked
+  // high-risk by a settled claim must be known before anybody is offered
+  // hardware on the strength of it.
+  function observe() {
     for (const event of state.ledger.getEventsAfterId(protection.lastLedgerEventId, { includeHidden: true })) {
       protection.lastLedgerEventId = Math.max(protection.lastLedgerEventId, event.id);
       if (event.type === "npc.routeCompleted") serviceAtStop(event.payload.npcId, event.payload.siteId);
       if (event.type === "mining.deliveryCompleted") serviceAtStop(event.payload.workerShipId ?? event.payload.shipId, event.payload.siteId);
       if (event.type === "insurance.claimSettled") markFleetHighRisk(event.payload.holderInstitutionId);
     }
-    // Sal offers the first installations to craft physically at Scrap Porch.
+  }
+
+  // Sal offers the first installations to craft physically at Scrap Porch.
+  function decide() {
     getShips().filter((ship) => ship.isAlive && (ship.dockedSiteId === "scrap-porch" || ship.state === "awaiting-service"))
       .forEach((ship) => maybeInstall(ship));
+  }
+
+  function update() {
+    observe();
+    decide();
   }
 
   function ownerFor(ship) {
@@ -77,5 +92,7 @@ export function createFleetProtectionManager({ state, ships = [], getShips = () 
     return true;
   }
 
-  return { update, getState: () => protection };
+  // No `settle`: an installation is recorded as it happens, so there is nothing
+  // left to report once the world has finished deciding.
+  return { update, observe, decide, getState: () => protection };
 }
