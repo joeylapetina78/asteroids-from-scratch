@@ -25,16 +25,17 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260812-2045-3ff3331";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260812-2045-3ff3331";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260812-2045-3ff3331";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260812-2045-3ff3331";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260812-2045-3ff3331";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260812-2045-3ff3331";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260812-2045-3ff3331";
-import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260812-2045-3ff3331";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260812-2045-3ff3331";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260812-2045-3ff3331";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260812-2142-5cc0c24";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260812-2142-5cc0c24";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260812-2142-5cc0c24";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260812-2142-5cc0c24";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260812-2142-5cc0c24";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260812-2142-5cc0c24";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260812-2142-5cc0c24";
+import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260812-2142-5cc0c24";
+import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260812-2142-5cc0c24";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260812-2142-5cc0c24";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260812-2142-5cc0c24";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -69,35 +70,33 @@ const FREIGHT_BASE_WEAR_PER_DISTANCE = 0.00016;
 const FREIGHT_BASE_SERVICE_CYCLE_COST = 1800;
 const FREIGHT_BASE_SERVICE_CYCLE_WEAR = 6;
 const FREIGHT_BASE_MARGIN = 0.2;
-// After a refusal a buyer waits before asking again. Without this it re-posts
-// the same request every tick and is refused every tick.
-const RETRY_AFTER_REFUSAL_MS = 60 * 1000;
 // Refused orders are kept long enough to read, then cleared so the board stays
 // legible instead of accumulating thousands of dead rows.
 const DECLINED_RETENTION_MS = 5 * 60 * 1000;
-// Repricing, mirroring how Sal reprices an unfilled purchase order: bounded so
-// a hub cannot bid itself into ruin, throttled so it does not thrash, and
-// logged with the reason it moved.
-const REPRICE_INTERVAL_MS = 60 * 1000;
-const REPRICE_MAX_MULTIPLE = 2;
 // Fallback only. A hub decides through whoever runs it, so both its buying and
 // its selling read that person's traits — the same hub, two roles, one
 // temperament. These constants apply only to a settlement with nobody in
 // charge, which no seeded hub is.
 const UNRUN_HUB_TRAITS = Object.freeze({ urgencyBias: 0.5, caution: 0.5, growthBias: 0.3 });
-// The other half of the negotiation, and the only downward force on price.
-// Every repricing path above is a BUYER bidding up, so without this a price that
-// has risen can never come back. A supplier with capacity it is not selling
-// comes down toward what the next unit actually costs it to dig.
-const CONCESSION_INTERVAL_MS = 60 * 1000;
-const CONCESSION_STEP = 0.2;
-// Firmed back up faster than it was given away: the moment there is business
-// again, there is no reason to keep working at cost.
-const CONCESSION_FIRM_STEP = 0.5;
-// How empty the order book has to be before a supplier counts as slack. Under
-// half the sales it says it can carry, with nothing left to dig, is a hub that
-// could serve more business than it has.
-const SLACK_CAPACITY_FRACTION = 0.5;
+//
+// HOW A HUB HAGGLES NOW LIVES IN `negotiation`.
+//
+// Seven constants used to sit here and decide the entire negotiation for
+// everybody: how long a buyer waited before raising, how far it would ever go,
+// how long a refused buyer sat out, how often a seller revisited its ask, how
+// deep it cut, how fast it firmed back up, and how quiet its book had to be
+// before it discounted at all. Six authored temperaments met those seven
+// numbers and haggled identically.
+//
+// They are policy now, resolved per hub from whoever runs it — tempo from
+// urgencyBias, reach from growthBias, margin from caution. A hub with neutral
+// traits still gets exactly the numbers that were here, so the baseline did not
+// move; only the spread around it appeared.
+//
+// The one downward force on price still works the same way: every repricing
+// path is a BUYER bidding up, so without a seller conceding, a price that has
+// risen could never come back. What changed is that a seller now comes down at
+// its own pace rather than everyone's.
 
 export function estimateOpeningFreightBudget(distance = 0) {
   const routeDistance = Math.max(0, Number(distance) || 0);
@@ -453,7 +452,8 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
         // Asking again immediately after being turned down just produces the
         // same refusal, so wait before trying this family again.
         const refusedRecently = listOrders(state, { buyerInstitutionId, status: PROCUREMENT_STATUS.DECLINED })
-          .some((entry) => entry.family === position.family && now() - (entry.declinedAt ?? 0) < RETRY_AFTER_REFUSAL_MS);
+          .some((entry) => entry.family === position.family
+            && now() - (entry.declinedAt ?? 0) < negotiationPolicy(buyerInstitutionId).retryAfterRefusalMs);
         if (refusedRecently) return;
 
         if (outstanding < MIN_ORDER_UNITS) return;
@@ -652,9 +652,19 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   // Deliberately NOT "owes nobody anything". A supplier with a trickle of
   // business is still mostly unsold, and requiring an empty book would mean a
   // price that has risen only ever comes back down in a dead economy.
+  // How this hub bargains — tempo, reach and margin, resolved from whoever runs
+  // it. See `negotiation`; these were seven module constants applied to every
+  // settlement alike.
+  function negotiationPolicy(institutionId) {
+    return resolveNegotiationPolicy(state, institutionId);
+  }
+
   function isSupplierIdle(supplierInstitutionId, resourceId) {
     const position = getInventoryPosition(state, supplierInstitutionId, getResourceFamily(resourceId));
-    return position.committedSales < MAX_OUTSTANDING_SALE_UNITS * SLACK_CAPACITY_FRACTION
+    // How quiet the book must be before this seller counts it as quiet. A
+    // careful one wants it clearly empty; an eager one calls it early.
+    const slack = negotiationPolicy(supplierInstitutionId).slackCapacityFraction;
+    return position.committedSales < MAX_OUTSTANDING_SALE_UNITS * slack
       && position.gap <= 0;
   }
 
@@ -663,15 +673,19 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
       const supplierInstitutionId = definition.buyerInstitutionId;
       if (!institution(supplierInstitutionId)) return;
       const record = askRecord(supplierInstitutionId, definition.resourceId);
-      if (now() - (record.lastMovedAt ?? 0) < CONCESSION_INTERVAL_MS) return;
+      const policy = negotiationPolicy(supplierInstitutionId);
+      if (now() - (record.lastMovedAt ?? 0) < policy.concessionIntervalMs) return;
       record.lastMovedAt = now();
 
       const idle = isSupplierIdle(supplierInstitutionId, definition.resourceId);
       const previous = record.concession ?? 0;
+      // How far it moves in one step, each direction its own instinct: appetite
+      // for business decides how deep it cuts, care for its margin decides how
+      // fast it comes back up.
       // Rounded so repeated steps stay readable numbers rather than float dust.
       const concession = Math.round(100 * (idle
-        ? Math.min(1, previous + CONCESSION_STEP)
-        : Math.max(0, previous - CONCESSION_FIRM_STEP))) / 100;
+        ? Math.min(1, previous + policy.concessionStep)
+        : Math.max(0, previous - policy.concessionFirmStep))) / 100;
       if (concession === previous) return;
       record.concession = concession;
 
@@ -979,13 +993,16 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
       //
       // Still bounded by the same ceiling and the same throttle as any other
       // raise, so this cannot become a bidding war.
+      const policy = negotiationPolicy(order.buyerInstitutionId);
       const lastPricedAt = order.lastRepricedAt ?? order.createdAt ?? 0;
-      if (now() - lastPricedAt < REPRICE_INTERVAL_MS) return;
+      if (now() - lastPricedAt < policy.repriceIntervalMs) return;
 
       const buyer = institution(order.buyerInstitutionId);
       if (!buyer) return;
       order.originalPricePerUnit ??= order.pricePerUnit;
-      const ceiling = Math.round(order.originalPricePerUnit * REPRICE_MAX_MULTIPLE);
+      // What this buyer will pay AT MOST, as a multiple of its own opening
+      // judgement. A hub set on growing chases further than a conservative one.
+      const ceiling = Math.round(order.originalPricePerUnit * policy.repriceMaxMultiple);
       // Move to what the seller said it needs, capped by what this buyer is
       // willing to go to at all.
       // The supplier quotes for the whole lot, so convert to a per-unit price

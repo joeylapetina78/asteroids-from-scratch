@@ -1,6 +1,7 @@
 // Hub-to-hub procurement: a hub buys what it may not mine, and a freight run
 // exists only because a real purchase order caused it.
 
+import { resolveNegotiationPolicy } from "../src/systems/negotiation.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
@@ -957,8 +958,13 @@ test("a seller that has come down takes an offer it already refused, without the
   // give. Pinning only one is not enough — its unpinned neighbour simply bids
   // up, wins the ore, and fills the seller's book, which correctly ends the
   // discount and proves nothing about who moved.
+  // Each buyer's ceiling is its OWN multiple of its opening judgement now, not
+  // a shared 2x, so pinning has to ask each hub what it would ever pay.
   const pinEveryBuyer = () => listOrders(state, { supplierInstitutionId: "scrap-forge", status: PROCUREMENT_STATUS.DECLINED })
-    .forEach((entry) => { entry.originalPricePerUnit = Math.floor(entry.pricePerUnit / 2); });
+    .forEach((entry) => {
+      const { repriceMaxMultiple } = resolveNegotiationPolicy(state, entry.buyerInstitutionId);
+      entry.originalPricePerUnit = Math.floor(entry.pricePerUnit / repriceMaxMultiple);
+    });
 
   world.tick(1);
   pinEveryBuyer();
