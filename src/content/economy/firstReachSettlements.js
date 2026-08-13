@@ -172,6 +172,105 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
       miningFamilies: ["industrial"],
     },
   },
+
+  // ── The far stations ──────────────────────────────────────────────────────
+  //
+  // Three hubs that already existed as PLACES — positions, names, beacons, a
+  // repair bay — and had no economy at all. They sat 46,000 to 89,000 units out
+  // as bare waypoints while the whole economy happened in a 10,000-unit huddle
+  // near the origin.
+  //
+  // They are settlements now, for two reasons. Somewhere that far away is what
+  // the detail system exists for, and until one existed there was nothing for
+  // it to defer. And every one of them is a long freight run from anywhere,
+  // which is the first real test of an economy that prices distance honestly:
+  // the corridor to Coldwater is forty times the length of the Yard-to-Porch
+  // hop, and the freight quote should say so.
+  //
+  // Each mines ONE family, like everyone else, and must buy the other two. That
+  // is deliberate — a self-sufficient outpost would be a simpler world but it
+  // would trade with nobody, and trade is the thing worth testing out here.
+  {
+    institution: {
+      id: "ore-station-one", name: "Ore Station One", siteId: "ore-station-one",
+      archetypeId: "settlement", controllerInstitutionId: "person:ore-station-super",
+      accounts: { operating: { balance: 62000, committed: 0 } },
+      inventories: { aluminum: 14, "iron-nickel": 0, silicate: 0, "water-ice": 0 },
+      // The only aluminium in the world: a structural material with half again
+      // the effective yield of iron-nickel, so the far station is worth the haul
+      // for something other than being far away.
+      renewableResources: ["aluminum"],
+      protectionPolicy: { mode: "direct", protectedCash: 14000, jurisdictionRadius: 2200, responseThreshold: 0.3 },
+    },
+    controller: {
+      id: "person:ore-station-super", name: "Dag Wren", archetypeId: "person",
+      controls: ["ore-station-one"],
+      // Runs a working ore station and wants it bigger: quick to chase supply,
+      // quick to cut a price to keep the freight moving.
+      traits: { caution: 0.4, growthBias: 0.7, urgencyBias: 0.5 },
+    },
+    population: {
+      id: "population:ore-station-one", name: "Ore Station One Crew", size: 85,
+      householdCash: 20000, householdCashCap: 24000,
+      incomeAmount: 6000, incomeIntervalSeconds: 120, needIds: STANDARD_NEEDS,
+    },
+    extraction: {
+      id: "mine-ore-station-aluminum", resourceId: "aluminum", resourceName: "Aluminum",
+      miningFamilies: ["structural"],
+    },
+  },
+  {
+    institution: {
+      id: "coldwater-depot", name: "Coldwater Depot", siteId: "coldwater-depot",
+      archetypeId: "settlement", controllerInstitutionId: "person:coldwater-keeper",
+      accounts: { operating: { balance: 58000, committed: 0 } },
+      inventories: { "water-ice": 18, "iron-nickel": 0, silicate: 0 },
+      renewableResources: ["water-ice"],
+      protectionPolicy: { mode: "direct", protectedCash: 16000, jurisdictionRadius: 2000, responseThreshold: 0.35 },
+    },
+    controller: {
+      id: "person:coldwater-keeper", name: "Sera Okonjo", archetypeId: "person",
+      controls: ["coldwater-depot"],
+      // The most isolated place in the world, and it bargains like it: holds its
+      // price hard, hoards its margin, in no hurry about anything.
+      traits: { caution: 0.85, growthBias: 0.1, urgencyBias: 0.4 },
+    },
+    population: {
+      id: "population:coldwater-depot", name: "Coldwater Depot Crew", size: 70,
+      householdCash: 18000, householdCashCap: 22000,
+      incomeAmount: 5200, incomeIntervalSeconds: 120, needIds: STANDARD_NEEDS,
+    },
+    extraction: {
+      id: "mine-coldwater-water", resourceId: "water-ice", resourceName: "Water Ice",
+      miningFamilies: ["volatile"],
+    },
+  },
+  {
+    institution: {
+      id: "deep-research", name: "Deep Research", siteId: "deep-research",
+      archetypeId: "settlement", controllerInstitutionId: "person:deep-research-warden",
+      accounts: { operating: { balance: 54000, committed: 0 } },
+      inventories: { carbonaceous: 16, "iron-nickel": 0, "water-ice": 0 },
+      renewableResources: ["carbonaceous"],
+      protectionPolicy: { mode: "contract", protectedCash: 12000, jurisdictionRadius: 1800, responseThreshold: 0.4, contractSeverity: 0.6 },
+    },
+    controller: {
+      id: "person:deep-research-warden", name: "Tolan Reyes", archetypeId: "person",
+      controls: ["deep-research"],
+      // Patient to a fault. Revisits nothing in a hurry and will not be rushed
+      // into paying over the odds, which out here mostly means waiting.
+      traits: { caution: 0.55, growthBias: 0.35, urgencyBias: 0.15 },
+    },
+    population: {
+      id: "population:deep-research", name: "Deep Research Staff", size: 60,
+      householdCash: 17000, householdCashCap: 21000,
+      incomeAmount: 4800, incomeIntervalSeconds: 120, needIds: STANDARD_NEEDS,
+    },
+    extraction: {
+      id: "mine-deep-research-carbon", resourceId: "carbonaceous", resourceName: "Carbonaceous Material",
+      miningFamilies: ["industrial"],
+    },
+  },
 ]);
 
 export function settlementInstitutionRecords() {

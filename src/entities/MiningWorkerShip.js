@@ -1,6 +1,6 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260813-1813-da38db5";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260813-1813-da38db5";
-import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260813-1813-da38db5";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260813-1827-6f00c8e";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260813-1827-6f00c8e";
+import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260813-1827-6f00c8e";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;

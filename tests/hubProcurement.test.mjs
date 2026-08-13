@@ -144,8 +144,16 @@ test("hub five creates a real structural choice for Scrap Porch", () => {
     buyerInstitutionId: "scrap-forge", family: "structural", units: 6,
   });
   const eligible = candidates.filter((candidate) => candidate.eligible);
-  assert.deepEqual(new Set(eligible.map((candidate) => candidate.institutionId)), new Set(["yard-exchange", "morrow-shoal"]));
+  // Ore Station One is a legal structural producer too, since the far stations
+  // became settlements — it is simply 37,000 units away and loses on delivered
+  // cost. Being eligible and being worth it are different things, and this test
+  // is about the second.
+  assert.deepEqual(new Set(eligible.map((candidate) => candidate.institutionId)),
+    new Set(["yard-exchange", "morrow-shoal", "ore-station-one"]));
   assert.equal(candidates[0].institutionId, "morrow-shoal", "its low ask overcomes the somewhat longer opening route");
+  assert.ok(candidates.findIndex((candidate) => candidate.institutionId === "ore-station-one")
+    > candidates.findIndex((candidate) => candidate.institutionId === "morrow-shoal"),
+    "and the far station ranks below both of the near ones");
   assert.ok(candidates.every((candidate) => candidate.reasons.length > 0));
 });
 
@@ -160,7 +168,8 @@ test("hub six creates a real industrial choice whose winner changes with operati
   });
   assert.deepEqual(
     new Set(opening.filter((candidate) => candidate.eligible).map((candidate) => candidate.institutionId)),
-    new Set(["the-ledge", "kiln-crossing"]),
+    // Deep Research mines industrial as well now, 85,000 units out.
+    new Set(["the-ledge", "kiln-crossing", "deep-research"]),
   );
   assert.equal(opening[0].institutionId, "the-ledge", "the route-and-wear quote makes the nearer supplier cheaper to deliver");
 
@@ -535,6 +544,16 @@ test("the whole chain is on the ledger, in order", () => {
 
 test("a hauler travels to a remote market before accepting work posted there", () => {
   const { state, procurement, manager, ships, hub } = createFullWorld();
+  // Keep this inside the core, the way the logistics harness does. The far
+  // stations are 37,000-85,000 units out, a flat posted rate cannot clear a
+  // deadhead that long, and their demand oversubscribes The Ledge so hard that
+  // most of its orders are refused for capacity. This is a test of whether a
+  // hauler CAN work a market it is not sitting in; leaving them in would
+  // quietly turn it into a test of long-haul economics instead.
+  ["ore-station-one", "coldwater-depot", "deep-research"].forEach((id) => {
+    delete state.logistics.institutions[id];
+  });
+  state.hubProcurement.orders = {};
   procurement.update();
   const order = listOrders(state, { status: [PROCUREMENT_STATUS.ACCEPTED, PROCUREMENT_STATUS.READY] })
     .find((entry) => entry.supplierInstitutionId === "the-ledge") ?? listOrders(state)[0];

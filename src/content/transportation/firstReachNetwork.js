@@ -1,4 +1,4 @@
-import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260813-1813-da38db5";
+import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260813-1827-6f00c8e";
 
 export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
   { id: "lane-yard-scrap", fromId: "yard-exchange", toId: "scrap-porch", distance: 1875, bidirectional: true },
@@ -75,10 +75,40 @@ export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
       seed: 7291,
     },
   },
+
+  // ── The long roads ────────────────────────────────────────────────────────
+  //
+  // Distances measured off the actual site positions in `worldSites`, not
+  // chosen. The core huddles inside 10,000 units; these run 37,000 to 85,000,
+  // and freight is quoted per unit of road — so a run out to Coldwater costs
+  // roughly forty times the Yard-to-Porch hop. That is the point of them.
+  //
+  // Ore Station One now has TWO ways in: the existing Rook road from The Ledge
+  // (38,328) and this shorter one from Kiln Crossing (37,473). The frontier
+  // should not hang on a single lane, and two roads within 900 units of each
+  // other is the first thing to exercise route selection with something other
+  // than an obvious winner.
+  {
+    id: "lane-kiln-ore-station",
+    fromId: "kiln-crossing",
+    toId: "ore-station-one",
+    distance: 37473,
+    bidirectional: true,
+    corridor: {
+      ...FRONTIER_FREIGHT_CORRIDOR,
+      id: "corridor-kiln-ore-station",
+      name: "Kiln Reach",
+      seed: 7731,
+    },
+  },
+  // Beyond Ore Station the road runs on rather than back to the core: it is
+  // shorter from there to Coldwater than from anywhere inside the huddle.
+  { id: "lane-ore-station-coldwater", fromId: "ore-station-one", toId: "coldwater-depot", distance: 76158, bidirectional: true },
+  { id: "lane-morrow-deep-research", fromId: "morrow-shoal", toId: "deep-research", distance: 84953, bidirectional: true },
 ]);
 
 export const FIRST_REACH_CARRIER_POLICY = Object.freeze({
-  knownDestinationIds: ["yard-exchange", "scrap-porch", "the-ledge", "blue-lantern", "morrow-shoal", "kiln-crossing", "ore-station-one"],
+  knownDestinationIds: ["yard-exchange", "scrap-porch", "the-ledge", "blue-lantern", "morrow-shoal", "kiln-crossing", "ore-station-one", "coldwater-depot", "deep-research"],
   expectedWearPerDistance: 0.00016,
   maximumWear: 6,
   minimumReturnMargin: 0.9,

@@ -34,6 +34,9 @@ function createWorld() {
       { id: "the-ledge", name: "The Ledge", position: { x: 7000, y: -4500 } },
       { id: "blue-lantern", name: "Blue Lantern", position: { x: 2950, y: 2180 } },
       { id: "morrow-shoal", name: "Morrow Shoal", position: { x: -3820, y: 2320 } },
+      { id: "ore-station-one", name: "Ore Station One", position: { x: 40000, y: -24000 } },
+      { id: "coldwater-depot", name: "Coldwater Depot", position: { x: 70000, y: 46000 } },
+      { id: "deep-research", name: "Deep Research", position: { x: -72000, y: 53000 } },
     ],
     addWorkerShip: () => {},
   };
