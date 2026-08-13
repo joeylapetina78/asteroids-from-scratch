@@ -1,16 +1,16 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260813-1804-7f86b39";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260813-1804-7f86b39";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260813-1804-7f86b39";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260813-1804-7f86b39";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260813-1804-7f86b39";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260813-1804-7f86b39";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260813-1804-7f86b39";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260813-1804-7f86b39";
-import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260813-1804-7f86b39";
-import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260813-1804-7f86b39";
-import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260813-1804-7f86b39";
-import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260813-1804-7f86b39";
-import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260813-1804-7f86b39";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260813-1813-da38db5";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260813-1813-da38db5";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260813-1813-da38db5";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260813-1813-da38db5";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260813-1813-da38db5";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260813-1813-da38db5";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260813-1813-da38db5";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260813-1813-da38db5";
+import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260813-1813-da38db5";
+import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260813-1813-da38db5";
+import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260813-1813-da38db5";
+import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260813-1813-da38db5";
+import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260813-1813-da38db5";
 
 export function createGameState() {
   const state = {

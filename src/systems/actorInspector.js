@@ -4,14 +4,14 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260813-1804-7f86b39";
-import { collectIntentions } from "./intentions.js?v=fresh-20260813-1804-7f86b39";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260813-1804-7f86b39";
-import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260813-1804-7f86b39";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260813-1804-7f86b39";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260813-1804-7f86b39";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260813-1804-7f86b39";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260813-1804-7f86b39";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260813-1813-da38db5";
+import { collectIntentions } from "./intentions.js?v=fresh-20260813-1813-da38db5";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260813-1813-da38db5";
+import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260813-1813-da38db5";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260813-1813-da38db5";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260813-1813-da38db5";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260813-1813-da38db5";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260813-1813-da38db5";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;

@@ -1,5 +1,5 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260813-1804-7f86b39";
-import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260813-1804-7f86b39";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260813-1813-da38db5";
+import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260813-1813-da38db5";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_THRUST_POWER = 95;

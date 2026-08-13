@@ -25,17 +25,18 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260813-1804-7f86b39";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260813-1804-7f86b39";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260813-1804-7f86b39";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260813-1804-7f86b39";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260813-1804-7f86b39";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260813-1804-7f86b39";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260813-1804-7f86b39";
-import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260813-1804-7f86b39";
-import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260813-1804-7f86b39";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260813-1804-7f86b39";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260813-1804-7f86b39";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260813-1813-da38db5";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260813-1813-da38db5";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260813-1813-da38db5";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260813-1813-da38db5";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260813-1813-da38db5";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260813-1813-da38db5";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260813-1813-da38db5";
+import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260813-1813-da38db5";
+import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260813-1813-da38db5";
+import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260813-1813-da38db5";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260813-1813-da38db5";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260813-1813-da38db5";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -433,10 +434,15 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   }
 
   // ── 1 & 2: a gap in a family this hub may not mine becomes an order ──────
-  function postNeeds() {
+  function postNeeds(tick = 0) {
     listSettlementIds(state).forEach((buyerInstitutionId) => {
       const buyer = institution(buyerInstitutionId);
       if (!buyer) return;
+      // How closely this settlement is being simulated. A hub nobody is near
+      // reconsiders its purchasing every few seconds instead of every one —
+      // same code, less often. With no focus set, this is always true and the
+      // world behaves exactly as it did. See `detailLevel`.
+      if (!shouldActThisTick(state, buyerInstitutionId, { tick })) return;
 
       getImportFamilies(state, buyerInstitutionId).forEach((position) => {
         const onOrder = getIncomingProcurement(state, buyerInstitutionId, position.family);
@@ -1083,8 +1089,8 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     pruneDeclinedOrders();
   }
 
-  function decide() {
-    postNeeds();
+  function decide({ tick = 0 } = {}) {
+    postNeeds(tick);
     // Sellers move first, so a buyer never bids up against an ask that has
     // already come down to meet it.
     updateSupplierAsks();
@@ -1125,9 +1131,9 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
 
   // One whole tick. The clock drives the phases separately; every test and the
   // boot sequence drives this.
-  function update() {
+  function update({ tick = 0 } = {}) {
     observe();
-    decide();
+    decide({ tick });
     settle();
   }
 
