@@ -1,5 +1,5 @@
-import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260812-1801-94af5ff";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260812-1801-94af5ff";
+import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260812-1943-36fb228";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260812-1943-36fb228";
 
 // What a mining outfit knows about where the ore is, and how much it trusts it.
 //
@@ -107,10 +107,98 @@ export function createObservedDeposit({ x, y, resourceId, policy, at = null }) {
   };
 }
 
+// ── Filing the map by resource ──────────────────────────────────────────────
+//
+// WHY THIS EXISTS: a company's map is one flat record per deposit, and picking
+// somewhere to send a worker meant walking ALL of it and throwing most of it
+// away. Cinder Contracting knows 7,751 deposits and 567 iron-nickel ones, so
+// ~93% of every scan was discarded — 2.0ms a ranking, several rankings in the
+// tick that assigns workers, and it grows with the world.
+//
+// So the map gets filed by resource. `knowledge` stays exactly what it was —
+// the authoritative flat `{id: record}` map, saved and mutated in place — and
+// the filing is DERIVED: buckets of live references to those same records, so
+// a deposit's confidence rising is visible through both without a write here.
+//
+// WHY NOT A "COUNT THE KEYS" SIGNATURE, the way `actorRegistry` checks whether
+// its index went stale: at this size counting is not cheap. `Object.keys()` on
+// 7,751 entries measures 0.64ms against a 1.86ms scan — a third of the cost we
+// are here to remove, paid on every call forever. That signature is right for
+// `actorRegistry`, whose tables hold tens of records, and wrong for this one.
+//
+// WHAT KEEPS IT HONEST INSTEAD: this module owns every write. A deposit enters
+// a map through `rememberSurveyedDeposit` or `recordDepositObservation` and
+// through nothing else, and both file it as they store it, so the index cannot
+// drift from the map it describes. That is an invariant rather than a habit —
+// `deposit knowledge is only ever added through this module` in the tests is
+// what holds the door shut. Anything that must write directly anyway has to
+// call `invalidateDepositIndex` and say so.
+//
+// The index hangs off the map under a GLOBAL symbol, not in a module-level
+// WeakMap, for the reason `extractionOffers` documents: a bare and a
+// `?v=`-suffixed specifier are DIFFERENT modules, so module-level state forks
+// silently between the game and the tests. Two copies of this module reaching
+// the same map must reach the same index — `Symbol.for` is what guarantees it.
+// It is non-enumerable, so `Object.keys`/`Object.values`, spread and
+// `JSON.stringify` cannot see it and no save file ever carries it.
+
+const DEPOSIT_INDEX = Symbol.for("asteroids.depositKnowledge.byResource");
+
+function bucketFor(index, resourceId) {
+  let bucket = index.get(resourceId);
+  if (!bucket) index.set(resourceId, bucket = []);
+  return bucket;
+}
+
+function depositIndex(knowledge) {
+  const existing = knowledge[DEPOSIT_INDEX];
+  if (existing) return existing;
+
+  const index = new Map();
+  Object.values(knowledge).forEach((deposit) => {
+    if (deposit?.resourceId) bucketFor(index, deposit.resourceId).push(deposit);
+  });
+  // A frozen or sealed map is nobody's normal case, but it must not throw —
+  // it simply pays for the filing again next time.
+  if (Object.isExtensible(knowledge)) {
+    Object.defineProperty(knowledge, DEPOSIT_INDEX, { value: index, writable: true, configurable: true, enumerable: false });
+  }
+  return index;
+}
+
+// File a deposit that has just been stored. A map nobody has ranked against
+// yet has no index; it will be built from the map when somebody asks.
+function fileDeposit(knowledge, deposit) {
+  const index = knowledge[DEPOSIT_INDEX];
+  if (index) bucketFor(index, deposit.resourceId).push(deposit);
+}
+
+// Throw the filing away. Only needed if something writes into a map without
+// going through this module — see above for why that is a thing to avoid
+// rather than a thing to do carefully.
+export function invalidateDepositIndex(knowledge) {
+  if (knowledge) delete knowledge[DEPOSIT_INDEX];
+}
+
+// Chart a deposit somebody else surveyed, if this company has not got it
+// already. The one door into a map for secondhand knowledge.
+export function rememberSurveyedDeposit(knowledge, deposit) {
+  const existing = knowledge[deposit.id];
+  if (existing) return existing;
+  knowledge[deposit.id] = deposit;
+  fileDeposit(knowledge, deposit);
+  return deposit;
+}
+
 // A crew worked this rock and it paid. Knowledge earned, not granted.
 export function recordDepositObservation(knowledge, { x, y, resourceId, policy, at = null }) {
   const id = depositId({ x, y, resourceId });
-  const deposit = knowledge[id] ??= createObservedDeposit({ x, y, resourceId, policy, at });
+  let deposit = knowledge[id];
+  if (!deposit) {
+    deposit = createObservedDeposit({ x, y, resourceId, policy, at });
+    knowledge[id] = deposit;
+    fileDeposit(knowledge, deposit);
+  }
   deposit.confidence = Math.min(1, deposit.confidence + policy.confidenceGain);
   deposit.successfulSelections += 1;
   deposit.lastObservedAt = at;
@@ -123,8 +211,11 @@ export function recordDepositObservation(knowledge, { x, y, resourceId, policy, 
 // are the operator's, so two companies looking at the identical map still go to
 // different rocks.
 export function rankDepositCandidates({ knowledge, resourceId, position, policy }) {
-  return Object.values(knowledge ?? {})
-    .filter((deposit) => deposit.resourceId === resourceId)
+  if (!knowledge) return [];
+  const bucket = depositIndex(knowledge).get(resourceId);
+  if (!bucket?.length) return [];
+
+  return bucket
     .map((deposit) => ({ deposit, score: scoreDeposit(deposit, position, policy) }))
     .sort((first, second) => second.score - first.score || first.deposit.id.localeCompare(second.deposit.id))
     .slice(0, policy.candidateCount)
