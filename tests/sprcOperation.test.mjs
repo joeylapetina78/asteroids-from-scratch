@@ -745,11 +745,22 @@ function createLogisticsHarness({ now = () => 1_000, commissionHauler = null } =
   const state = createGameState();
   state.logistics = createInitialLogisticsState(now());
   // This harness exercises the original bilateral freight lifecycle with two
-  // physical test ships. Hub-five competition has its own integration tests;
-  // omit it here so it cannot legitimately win the cargo these assertions
-  // intentionally follow through Yard Exchange.
-  delete state.logistics.institutions["morrow-shoal"];
-  delete state.logistics.institutions["person:morrow-shoal-factor"];
+  // physical test ships, and follows one specific lane — Yard Exchange to
+  // Scrap Porch — all the way through. Settlements beyond the three it funds
+  // are omitted so they cannot legitimately win that cargo.
+  //
+  // This used to drop Morrow Shoal alone. Once a seller facing more demand than
+  // capacity started choosing between buyers on what they pay rather than on
+  // which order was written first, the other two unfunded settlements began
+  // outbidding Scrap Forge for Yard Exchange's structural capacity and the lane
+  // under test stopped existing. That is the market working; the fixture simply
+  // has to name every rival it means to exclude.
+  ["morrow-shoal", "blue-lantern", "kiln-crossing"].forEach((id) => {
+    delete state.logistics.institutions[id];
+  });
+  ["person:morrow-shoal-factor", "person:blue-lantern-factor", "person:kiln-crossing-factor"].forEach((id) => {
+    delete state.logistics.institutions[id];
+  });
   // The authored freight routes are gone: every run now comes from a purchase
   // order. Give the hubs money and stock so procurement produces real work for
   // these carriers to find.

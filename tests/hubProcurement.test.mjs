@@ -354,7 +354,15 @@ test("a capacity refusal reopens when the supplier clears its book", () => {
   world.tick(1);
   assert.equal(order.declinedReason, "supplier-at-capacity", "the refusal remains while the book is full");
 
+  // Clear the book for real. The injected blocker sits on TOP of whatever this
+  // supplier has genuinely agreed to sell, and a seller that has accepted a
+  // price is bound to it — it does not renege because a better offer turned up.
+  // So delivering the blocker alone leaves the real commitments still holding
+  // the room, and nothing about capacity recovery gets tested.
   world.state.hubProcurement.orders[blockerId].status = PROCUREMENT_STATUS.DELIVERED;
+  listOrders(world.state, { supplierInstitutionId: order.supplierInstitutionId })
+    .filter((entry) => entry.family === order.family && entry.id !== order.id)
+    .forEach((entry) => { entry.status = PROCUREMENT_STATUS.DELIVERED; });
   world.tick(1);
   assert.notEqual(order.declinedReason, "supplier-at-capacity", "capacity recovery is a real transition");
   assert.ok(world.state.ledger.getEventsAfterId(0).some((event) =>
@@ -695,6 +703,24 @@ test("live carrier cost can lift an underpriced freight offer and clear it", () 
 
 // ── Repricing: the two sides converge instead of restating offers ──────────
 
+// Take capacity contention out of the way, so a test about PRICE measures
+// price. A seller with twelve units of book and four well-funded settlements
+// asking for six each will decide between them on what they pay long before
+// one buyer's repricing enters into it — correct behaviour, and pure noise in
+// these cases. Leaving one buyer funded, and clearing the rivals already on
+// that supplier's book, makes the seller's answer depend only on the price
+// under test.
+function soleBuyer(world, order) {
+  Object.values(world.state.logistics.institutions)
+    .filter((institution) => institution.archetypeId === "settlement" && institution.id !== order.buyerInstitutionId)
+    .forEach((institution) => { institution.accounts.operating.balance = 0; });
+  listOrders(world.state)
+    .filter((entry) => entry.id !== order.id
+      && entry.supplierInstitutionId === order.supplierInstitutionId
+      && entry.family === order.family)
+    .forEach((entry) => { delete world.state.hubProcurement.orders[entry.id]; });
+}
+
 function advanceWorld(minutes = 2) {
   let clock = 1_000;
   const state = createGameState();
@@ -732,6 +758,7 @@ test("a repriced order goes back on the table and closes once it clears the floo
   order.originalPricePerUnit = 300;
   order.pricePerUnit = 50;
   order.committedPayment = order.units * 50;
+  soleBuyer(world, order);
   world.tick(1);
   assert.equal(order.status, PROCUREMENT_STATUS.DECLINED, "refused at the low price");
 
@@ -772,6 +799,7 @@ test("a buyer that cannot fund the raise defers it and keeps its money", () => {
   order.originalPricePerUnit = order.pricePerUnit;
   order.supplierFloor = order.pricePerUnit * 2;
   order.supplierAsk = order.pricePerUnit * 2;
+  soleBuyer(world, order);
   const buyer = world.state.logistics.institutions[order.buyerInstitutionId];
   buyer.accounts.operating.balance = 10;
   const priceBefore = order.pricePerUnit;

@@ -25,16 +25,16 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260812-1943-36fb228";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260812-1943-36fb228";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260812-1943-36fb228";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260812-1943-36fb228";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260812-1943-36fb228";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260812-1943-36fb228";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260812-1943-36fb228";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260812-1943-36fb228";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260812-1943-36fb228";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260812-1943-36fb228";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260812-2045-3ff3331";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260812-2045-3ff3331";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260812-2045-3ff3331";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260812-2045-3ff3331";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260812-2045-3ff3331";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260812-2045-3ff3331";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260812-2045-3ff3331";
+import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260812-2045-3ff3331";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260812-2045-3ff3331";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260812-2045-3ff3331";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -743,30 +743,33 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   }
 
   // ── 3: a supplier accepts only if the price clears what the goods cost it ──
+  // A seller answering everyone who asked, in one clearing.
+  //
+  // WHY THIS IS A CLEARING AND NOT A LOOP: this used to walk the offered orders
+  // in creation order and accept greedily against live capacity, so the FIRST
+  // offer written to a supplier took the room and later ones were told
+  // `supplier-at-capacity`. Creation order comes from `postNeeds`, which
+  // iterates `listSettlementIds` — `Object.values(logistics.institutions)`,
+  // i.e. SEED INSERTION ORDER. So whichever settlement happened to be defined
+  // first in the content files got served first whenever a supplier was
+  // oversubscribed, and it read as commercial advantage when it was really
+  // array order.
+  //
+  // That is exactly what `extractionMarket` was built to remove one domain
+  // over, where Cinder won every auction because its `update()` ran first. Read
+  // that module's header for the reasoning; this is the same fix on the selling
+  // side.
+  //
+  // PRICE FIRST, THEN CAPACITY. A seller will not sell below its own cost to
+  // anybody, and that judgement has nothing to do with who else is asking — so
+  // unaffordable offers are refused before the room is shared out, and capacity
+  // is only ever allocated among offers the seller would genuinely take.
   function considerOffers() {
+    const viable = [];
+
     listOrders(state, { status: PROCUREMENT_STATUS.OFFERED }).forEach((order) => {
       const supplier = institution(order.supplierInstitutionId);
       if (!supplier) return;
-
-      // Can it actually deliver this on top of what it already owes? Price is
-      // not the only reason to say no, and a promise it cannot keep is worse
-      // for the buyer than a refusal it can act on.
-      const alreadyOwed = getCommittedSupply(state, order.supplierInstitutionId, order.family);
-      if (alreadyOwed + order.units > MAX_OUTSTANDING_SALE_UNITS) {
-        order.status = PROCUREMENT_STATUS.DECLINED;
-        order.declinedReason = "supplier-at-capacity";
-        order.declinedAt = now();
-        order.reasons = [
-          `${hubName(order.supplierInstitutionId)} already owes ${alreadyOwed} ${order2Label(order.resourceId)} it has not delivered.`,
-          `Taking another ${order.units} would put it past the ${MAX_OUTSTANDING_SALE_UNITS} it can dig in reasonable time.`,
-        ];
-        releaseCommitment(order);
-        emit("procurement.orderDeclined", `${hubName(order.supplierInstitutionId)} turned down ${order.units} ${order2Label(order.resourceId)}: it already owes ${alreadyOwed} and will not promise what it cannot mine.`, {
-          procurementOrderId: order.id, sellerId: order.supplierInstitutionId, buyerId: order.buyerInstitutionId,
-          reason: "supplier-at-capacity", alreadyOwed, requested: order.units, capacity: MAX_OUTSTANDING_SALE_UNITS,
-        });
-        return;
-      }
 
       // The terms carry whatever this seller is currently asking, and are
       // written back onto the order: that floor is the number the buyer moves
@@ -787,14 +790,95 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
         return;
       }
 
-      order.status = PROCUREMENT_STATUS.ACCEPTED;
-      order.acceptedAt = now();
-      order.supplierReasons = ask.reasons;
-      emit("procurement.orderAccepted", `${hubName(order.supplierInstitutionId)} accepted ${order.committedPayment} cr for ${order.units} ${order2Label(order.resourceId)} and will mine toward it.`, {
-        procurementOrderId: order.id, sellerId: order.supplierInstitutionId, buyerId: order.buyerInstitutionId,
-        units: order.units, committedPayment: order.committedPayment, reasons: ask.reasons,
+      viable.push({ order, ask });
+    });
+
+    // Capacity is held per supplier AND per family, so each is cleared on its
+    // own book rather than against some pooled total.
+    const books = new Map();
+    viable.forEach((entry) => {
+      const key = `${entry.order.supplierInstitutionId}|${entry.order.family}`;
+      if (!books.has(key)) books.set(key, []);
+      books.get(key).push(entry);
+    });
+
+    books.forEach((entries, key) => {
+      const [supplierInstitutionId, family] = key.split("|");
+      const ranked = [...entries].sort(compareSupplierOffers);
+      let remaining = Math.max(0, MAX_OUTSTANDING_SALE_UNITS - getCommittedSupply(state, supplierInstitutionId, family));
+      const taken = [];
+
+      ranked.forEach(({ order, ask }) => {
+        if (order.units <= remaining) {
+          remaining -= order.units;
+          taken.push(order);
+          order.status = PROCUREMENT_STATUS.ACCEPTED;
+          order.acceptedAt = now();
+          order.supplierReasons = ask.reasons;
+          emit("procurement.orderAccepted", `${hubName(order.supplierInstitutionId)} accepted ${order.committedPayment} cr for ${order.units} ${order2Label(order.resourceId)} and will mine toward it.`, {
+            procurementOrderId: order.id, sellerId: order.supplierInstitutionId, buyerId: order.buyerInstitutionId,
+            units: order.units, committedPayment: order.committedPayment, reasons: ask.reasons,
+          });
+          return;
+        }
+
+        // Turned down for room, not for price. Say who took it — a buyer told
+        // only "at capacity" cannot tell being outbid from being unlucky, which
+        // is the same hole `extractionMarket.getMarketOutbid` exists to close.
+        const alreadyOwed = getCommittedSupply(state, supplierInstitutionId, family);
+        order.status = PROCUREMENT_STATUS.DECLINED;
+        order.declinedReason = "supplier-at-capacity";
+        order.declinedAt = now();
+        order.reasons = [
+          `${hubName(supplierInstitutionId)} already owes ${alreadyOwed} ${order2Label(order.resourceId)} it has not delivered.`,
+          `Taking another ${order.units} would put it past the ${MAX_OUTSTANDING_SALE_UNITS} it can dig in reasonable time.`,
+          ...(taken.length > 0
+            ? [`It took ${taken.map((entry) => `${hubName(entry.buyerInstitutionId)}'s ${entry.units} at ${Math.round(entry.pricePerUnit)} cr/unit`).join(" and ")} first.`]
+            : []),
+        ];
+        releaseCommitment(order);
+        emit("procurement.orderDeclined", `${hubName(supplierInstitutionId)} turned down ${order.units} ${order2Label(order.resourceId)}: it already owes ${alreadyOwed} and will not promise what it cannot mine.`, {
+          procurementOrderId: order.id, sellerId: supplierInstitutionId, buyerId: order.buyerInstitutionId,
+          reason: "supplier-at-capacity", alreadyOwed, requested: order.units, capacity: MAX_OUTSTANDING_SALE_UNITS,
+          // Who got the room instead, so the refusal is falsifiable.
+          preferredBuyerIds: taken.map((entry) => entry.buyerInstitutionId),
+        });
       });
     });
+  }
+
+  // Which offer a seller would rather have, when it cannot have both.
+  //
+  // MARGIN PER UNIT, not total margin: the scarce thing is units of sale
+  // capacity, so the offer worth taking is the one that pays best for each unit
+  // of the book it consumes. Ranking by total would simply prefer big orders.
+  //
+  // Goodwill is a TIEBREAK rather than a weighted term. A seller preferring a
+  // customer it trusts is right, but inventing a second weighting scheme here
+  // without measuring it would be guessing — `workQueue` earns its weights by
+  // being the only thing ordering that queue, and this ranking already has a
+  // real economic quantity to lead with.
+  //
+  // A genuine dead heat breaks on the oldest request, then on a hash of the
+  // pair. NOT on institution id: comparing ids would put every tie straight
+  // back into the seed order this clearing exists to remove.
+  function compareSupplierOffers(first, second) {
+    const margin = (entry) => ((entry.order.committedPayment ?? 0) - (entry.ask.minAcceptablePrice ?? 0))
+      / Math.max(1, entry.order.units ?? 1);
+    const marginGap = margin(second) - margin(first);
+    if (Math.abs(marginGap) > 0.000001) return marginGap;
+
+    const goodwill = (entry) => getGoodwill(getRelationshipProjection(state, {
+      fromId: entry.order.supplierInstitutionId,
+      toId: entry.order.buyerInstitutionId,
+    }));
+    const goodwillGap = goodwill(second) - goodwill(first);
+    if (Math.abs(goodwillGap) > 0.000001) return goodwillGap;
+
+    const age = (first.order.createdAt ?? 0) - (second.order.createdAt ?? 0);
+    if (age !== 0) return age;
+
+    return offerTieHash(first.order) - offerTieHash(second.order);
   }
 
   // Capacity is a temporary refusal, not a terminal contract state. Reopen the
@@ -882,9 +966,19 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   // out of the treasury.
   function repriceUnfilledOrders() {
     listOrders(state, { status: [PROCUREMENT_STATUS.OFFERED, PROCUREMENT_STATUS.DECLINED] }).forEach((order) => {
-      // Paying more does not conjure ore. A capacity refusal is answered by
-      // waiting, not by bidding.
-      if (order.declinedReason === "supplier-at-capacity") return;
+      // A capacity refusal USED TO be excluded here, on the reasoning that
+      // "paying more does not conjure ore". That was true while a seller's
+      // limited book went to whoever asked first: the price was irrelevant to
+      // the refusal, so raising it was pure waste.
+      //
+      // It stopped being true when `considerOffers` became a clearing. A seller
+      // facing more demand than capacity now takes the offers that pay best per
+      // unit of book, so bidding up is precisely how an outbid buyer wins the
+      // room next time — and refusing to let it try would leave the cheapest
+      // bidder permanently starved with no way to answer.
+      //
+      // Still bounded by the same ceiling and the same throttle as any other
+      // raise, so this cannot become a bidding war.
       const lastPricedAt = order.lastRepricedAt ?? order.createdAt ?? 0;
       if (now() - lastPricedAt < REPRICE_INTERVAL_MS) return;
 
@@ -979,10 +1073,18 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     updateSupplierAsks();
     reopenOnConcession();
     repriceUnfilledOrders();
-    considerOffers();
-    // Fresh offers resolve first; old capacity refusals may then return to the
-    // board for the next pass without crowding out a deal already in motion.
+    // Buyers refused for room get back on the board BEFORE the seller answers,
+    // so they are ranked in the same clearing as everyone else.
+    //
+    // This used to run after `considerOffers`, on the reasoning that fresh
+    // offers should resolve first and old refusals could return next pass. That
+    // was survivable while a seller took offers in arrival order, but it means
+    // a refused buyer is permanently one tick behind: every time room opens,
+    // that tick's new orders take it and the buyer waiting longest is refused
+    // again. It is the same "who got there first" privilege the clearing below
+    // exists to remove, one step upstream, so it moves ahead of it.
     reopenCapacityDeclines();
+    considerOffers();
     // Mined ore lands in the seller's own stock; move what is owed into the
     // contract reserve before anything else can consume it, then settle any
     // reserve that is now whole.
@@ -1014,6 +1116,20 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
 
   update();
   return { update, observe, decide, settle, getState: () => procurement, completeOrder, markShipped, listOrders: (filter) => listOrders(state, filter) };
+}
+
+// A stable, arbitrary tiebreak for two offers a seller values identically.
+// Deliberately a hash rather than an id comparison: sorting by id would put
+// every dead heat straight back into the seed order this clearing removes.
+// Same device, and the same reason, as `extractionMarket.pairHash`.
+function offerTieHash(order) {
+  const key = `${order.supplierInstitutionId}|${order.buyerInstitutionId}|${order.id}`;
+  let hash = 2166136261;
+  for (let index = 0; index < key.length; index += 1) {
+    hash ^= key.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }
 
 function order2Label(resourceId) {
