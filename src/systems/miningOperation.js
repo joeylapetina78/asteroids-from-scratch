@@ -1,25 +1,25 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260812-2142-5cc0c24";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260812-2142-5cc0c24";
-import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260812-2142-5cc0c24";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260812-2142-5cc0c24";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260812-2142-5cc0c24";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260812-2142-5cc0c24";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260812-2142-5cc0c24";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260812-2142-5cc0c24";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260812-2142-5cc0c24";
-import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260812-2142-5cc0c24";
-import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260812-2142-5cc0c24";
-import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260812-2142-5cc0c24";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260812-2142-5cc0c24";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260812-2142-5cc0c24";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260812-2142-5cc0c24";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260812-2142-5cc0c24";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260812-2142-5cc0c24";
-import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260812-2142-5cc0c24";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260812-2142-5cc0c24";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260812-2142-5cc0c24";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260812-2142-5cc0c24";
-import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260812-2142-5cc0c24";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260813-1804-7f86b39";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260813-1804-7f86b39";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260813-1804-7f86b39";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260813-1804-7f86b39";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260813-1804-7f86b39";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260813-1804-7f86b39";
+import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260813-1804-7f86b39";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260813-1804-7f86b39";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260813-1804-7f86b39";
+import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260813-1804-7f86b39";
+import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260813-1804-7f86b39";
+import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260813-1804-7f86b39";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260813-1804-7f86b39";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260813-1804-7f86b39";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260813-1804-7f86b39";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260813-1804-7f86b39";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260813-1804-7f86b39";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260813-1804-7f86b39";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260813-1804-7f86b39";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260813-1804-7f86b39";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260813-1804-7f86b39";
+import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260813-1804-7f86b39";
 
 // Identity only: which hub extracts which material at which site.
 //

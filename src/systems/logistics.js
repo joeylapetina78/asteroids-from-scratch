@@ -1,19 +1,19 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260812-2142-5cc0c24";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260812-2142-5cc0c24";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260812-2142-5cc0c24";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260812-2142-5cc0c24";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260812-2142-5cc0c24";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260812-2142-5cc0c24";
-import { adaptShipment } from "./intentions.js?v=fresh-20260812-2142-5cc0c24";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260812-2142-5cc0c24";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260812-2142-5cc0c24";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260812-2142-5cc0c24";
-import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260812-2142-5cc0c24";
-import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260812-2142-5cc0c24";
-import { rankCarrierBids } from "./carrierSelection.js?v=fresh-20260812-2142-5cc0c24";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260812-2142-5cc0c24";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260812-2142-5cc0c24";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260812-2142-5cc0c24";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260813-1804-7f86b39";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260813-1804-7f86b39";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260813-1804-7f86b39";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260813-1804-7f86b39";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260813-1804-7f86b39";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260813-1804-7f86b39";
+import { adaptShipment } from "./intentions.js?v=fresh-20260813-1804-7f86b39";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260813-1804-7f86b39";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260813-1804-7f86b39";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260813-1804-7f86b39";
+import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260813-1804-7f86b39";
+import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260813-1804-7f86b39";
+import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260813-1804-7f86b39";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260813-1804-7f86b39";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260813-1804-7f86b39";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260813-1804-7f86b39";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -357,6 +357,16 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
   // What this run costs the carrier, and therefore what it must be paid.
   // Maintenance is valued at what repairs CURRENTLY cost this carrier, so a
   // repair-price rise flows straight into freight asks.
+  // How much a carrier lets an established relationship outweigh raw money when
+  // choosing between runs. Neutral caution reproduces the flat weight this
+  // module used for everybody, so the baseline is unchanged and only the spread
+  // is new. See `carrierSelection` for why the number rides on the bid.
+  function carrierRelationshipWeight(carrierInstitutionId) {
+    const caution = getActorTraits(state, carrierInstitutionId)?.caution;
+    const scaled = Number.isFinite(caution) ? caution : 0.5;
+    return DEFAULT_RELATIONSHIP_WEIGHT * (0.5 + scaled);
+  }
+
   function isDueForMaintenance(carrier, shipInstitution) {
     const policy = carrier.policies?.transportation ?? {};
     const threshold = (policy.maximumWear ?? Infinity) - (policy.minimumReturnMargin ?? 0);
@@ -697,6 +707,12 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
           currentWear: shipInstitution.wear ?? 0,
           repositionDistance: repositionDistance(candidate.repositionFrom, candidate.template.originSiteId),
           relationship: getRelationshipProjection(state, { fromId: candidate.template.issuerInstitutionId, toId: carrier.id }),
+          // What a trusted issuer is worth to THIS carrier on top of the money.
+          // Caution buys preference for the counterparty already known, the same
+          // mapping `workQueue` uses for a service business choosing a customer.
+          // A carrier at the neutral middle values it exactly as everybody did
+          // before this was a per-carrier judgement.
+          relationshipWeight: carrierRelationshipWeight(carrier.id),
         };
         const list = bidsByTemplate.get(candidate.template.id) ?? [];
         list.push(bid);

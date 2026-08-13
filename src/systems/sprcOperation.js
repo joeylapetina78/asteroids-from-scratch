@@ -1,18 +1,18 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260812-2142-5cc0c24";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260812-2142-5cc0c24";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260812-2142-5cc0c24";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260812-2142-5cc0c24";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260812-2142-5cc0c24";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260812-2142-5cc0c24";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260812-2142-5cc0c24";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260812-2142-5cc0c24";
-import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260812-2142-5cc0c24";
-import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260812-2142-5cc0c24";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260812-2142-5cc0c24";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260812-2142-5cc0c24";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260812-2142-5cc0c24";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260812-2142-5cc0c24";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260812-2142-5cc0c24";
+import { depositCredits } from "./accounts.js?v=fresh-20260813-1804-7f86b39";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260813-1804-7f86b39";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260813-1804-7f86b39";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260813-1804-7f86b39";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260813-1804-7f86b39";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260813-1804-7f86b39";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260813-1804-7f86b39";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260813-1804-7f86b39";
+import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260813-1804-7f86b39";
+import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260813-1804-7f86b39";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260813-1804-7f86b39";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260813-1804-7f86b39";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260813-1804-7f86b39";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260813-1804-7f86b39";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260813-1804-7f86b39";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -98,6 +98,12 @@ const REPAIR_SECONDS = 30;
 const MILL_CONVERSION_COST = 120;
 const REPAIR_LABOR_COST = 700;
 const REPAIR_FACILITY_COST = 350;
+// Where dismantling a wreck sits against building a repair part. A repair order
+// carries 60 for scheduled work and 80 for a breakdown, and this sits under
+// both: salvage is opportunistic, and a craft stranded waiting on a part is not.
+// `workQueue` treats severity as a hard tier, so any value below 60 orders the
+// same — this one is named so the intent survives a retune of the others.
+const DISMANTLING_SEVERITY = 20;
 // Fallback unit costs used only before anything has actually been bought.
 const REFERENCE_UNIT_COSTS = Object.freeze({ "hull-plate": 80, "machine-part": 70, copper: 60, silicate: 20, "iron-nickel": 34, aluminum: 68 });
 // Reprice an unfilled order at most this often, and never above this multiple
@@ -694,9 +700,40 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     appendHistory("production.queued", { productionOrderId: id, repairOrderId: repair.id, outputItemId, outputAmount });
   }
 
+  // What The Maw builds next. The same shape as the repair berth, weighted by
+  // the same person — Sal runs both, so his impatience and his loyalty should
+  // show in both rather than in one and not the other.
+  //
+  // A production order inherits the SEVERITY of the repair it unblocks: a part
+  // for a machine that has broken outranks a part for one merely due for
+  // calibration, because the machine waiting on it does. Dismantling a wreck
+  // carries no repair behind it and sits below both — severity is a hard tier
+  // in `workQueue`, so that is a statement about order rather than a weight.
+  // Opportunistic salvage genuinely should wait while a craft is stranded.
+  function readyProductionWorkItems() {
+    return sprc.productionQueue.map((id) => sprc.productionOrders[id])
+      .filter((entry) => entry?.status === "queued")
+      .map((entry) => {
+        const repair = entry.sourceRepairOrderId ? sprc.repairOrders[entry.sourceRepairOrderId] : null;
+        return {
+          id: entry.id,
+          severity: repair ? (repair.priority ?? 0) : DISMANTLING_SEVERITY,
+          createdAt: entry.createdAt ?? 0,
+          revenue: repair?.servicePrice ?? 0,
+          goodwill: repair
+            ? getGoodwill(getRelationshipProjection(state, { fromId: sprc.institution.id, toId: repair.payerInstitutionId }))
+            : 0,
+        };
+      });
+  }
+
   function startNextProduction() {
     if (sprc.facilities.maw.status !== "working" || sprc.facilities.maw.activeProductionOrderId) return;
-    const order = sprc.productionQueue.map((id) => sprc.productionOrders[id]).find((entry) => entry?.status === "queued");
+    const next = orderWorkQueue(readyProductionWorkItems(), {
+      policy: resolveWorkQueuePolicy(state, sprc.institution.id),
+      now: now(),
+    })[0];
+    const order = next ? sprc.productionOrders[next.id] : null;
     if (!order) return;
     Object.entries(order.inputs).forEach(([itemId, amount]) => {
       removeInventory("raw", itemId, amount);
@@ -1402,11 +1439,11 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     // The berth order with the numbers behind it. A queue is the most visible
     // thing a service business does, so its position must be readable rather
     // than inferred — the same reason `extractionMarket` reports who outbid you.
-    const queue = explainWorkQueue(readyRepairWorkItems(), {
-      policy: resolveWorkQueuePolicy(state, sprc.institution.id),
-      now: now(),
-    });
-    return { sprc, openRepair, missing, activeNeed, activeResponse, queue };
+    const policy = resolveWorkQueuePolicy(state, sprc.institution.id);
+    const queue = explainWorkQueue(readyRepairWorkItems(), { policy, now: now() });
+    // The Maw's order too, weighted by the same person and readable the same way.
+    const productionQueue = explainWorkQueue(readyProductionWorkItems(), { policy, now: now() });
+    return { sprc, openRepair, missing, activeNeed, activeResponse, queue, productionQueue };
   }
 
   function restoreContractDefinitions() {
