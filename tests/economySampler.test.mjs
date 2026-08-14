@@ -363,6 +363,100 @@ test("commissioned craft are a visible capital burn rather than an unexplained l
   assert.equal(reconciliation.residual, 0);
 });
 
+// ── Arriving and leaving is not creating and destroying ─────────────────────
+//
+// The case that sent me looking. Sable Meridian Security is seeded holding
+// 3,200 credits and only registered the first time protection is needed, so the
+// world's total rose by 3,200 with nothing creating it and the reconciliation
+// reported a 3,200 leak. Nothing leaked — an actor walked in with money already
+// in its pocket.
+//
+// This stops being a curiosity at step 4: aggregating a far region into one
+// balance sheet and expanding it again adds and removes actors constantly.
+
+const bands = (total, extra = {}) => ({
+  total, populations: 0, player: 0, institutions: total,
+  incomeCumulative: 0, productionSpendCumulative: 0, capitalSpendCumulative: 0,
+  discardedCumulative: 0, spentCumulative: 0, ...extra,
+});
+
+test("an actor arriving with a balance is reported as arrival, not as a leak", () => {
+  const samples = [
+    { t: 0, money: bands(1_000), actors: { "yard-exchange": { id: "yard-exchange", name: "Yard Exchange", cash: 1_000 } } },
+    {
+      t: 60_000,
+      money: bands(4_200),
+      actors: {
+        "yard-exchange": { id: "yard-exchange", name: "Yard Exchange", cash: 1_000 },
+        "sable-meridian-security": { id: "sable-meridian-security", name: "Sable Meridian Security", cash: 3_200 },
+      },
+    },
+  ];
+
+  const reconciliation = reconcileMoney(samples);
+  assert.equal(reconciliation.observed, 3_200, "the world does hold 3,200 more than it did");
+  assert.equal(reconciliation.endowed, 3_200, "and all of it walked in with an actor");
+  assert.equal(reconciliation.flow, 0, "nothing actually moved between parties");
+  assert.equal(reconciliation.residual, 0, "so there is nothing unexplained");
+  assert.deepEqual(reconciliation.arrivals.map((entry) => entry.id), ["sable-meridian-security"],
+    "and the newcomer is named, so the claim can be checked");
+});
+
+test("an actor leaving takes its balance out of the world, also not a leak", () => {
+  const samples = [
+    {
+      t: 0,
+      money: bands(4_200),
+      actors: {
+        "yard-exchange": { id: "yard-exchange", name: "Yard Exchange", cash: 1_000 },
+        "gone-concern": { id: "gone-concern", name: "Gone Concern", cash: 3_200 },
+      },
+    },
+    { t: 60_000, money: bands(1_000), actors: { "yard-exchange": { id: "yard-exchange", name: "Yard Exchange", cash: 1_000 } } },
+  ];
+
+  const reconciliation = reconcileMoney(samples);
+  assert.equal(reconciliation.observed, -3_200);
+  assert.equal(reconciliation.withdrawn, 3_200);
+  assert.equal(reconciliation.flow, 0);
+  assert.equal(reconciliation.residual, 0);
+  assert.deepEqual(reconciliation.departures.map((entry) => entry.id), ["gone-concern"]);
+});
+
+// The distinction has to CUT BOTH WAYS, or it becomes a way to hide leaks:
+// an actor arriving must not launder a real one happening beside it.
+test("an arrival does not hide a leak happening alongside it", () => {
+  const samples = [
+    { t: 0, money: bands(1_000), actors: { "yard-exchange": { id: "yard-exchange", name: "Yard Exchange", cash: 1_000 } } },
+    {
+      t: 60_000,
+      money: bands(4_700),
+      actors: {
+        // The incumbent gained 500 with nothing creating it — a genuine leak.
+        "yard-exchange": { id: "yard-exchange", name: "Yard Exchange", cash: 1_500 },
+        "sable-meridian-security": { id: "sable-meridian-security", name: "Sable Meridian Security", cash: 3_200 },
+      },
+    },
+  ];
+
+  const reconciliation = reconcileMoney(samples);
+  assert.equal(reconciliation.endowed, 3_200, "the arrival is still accounted for separately");
+  assert.equal(reconciliation.flow, 500, "and the other 500 is real movement");
+  assert.equal(reconciliation.residual, 500, "which nothing created, so it is still reported");
+});
+
+test("a world where nobody comes or goes reconciles exactly as it always did", () => {
+  const samples = [
+    { t: 0, money: bands(1_000), actors: { a: { id: "a", name: "A", cash: 1_000 } } },
+    { t: 60_000, money: bands(1_750, { incomeCumulative: 500, productionSpendCumulative: 100 }), actors: { a: { id: "a", name: "A", cash: 1_750 } } },
+  ];
+  const reconciliation = reconcileMoney(samples);
+  assert.equal(reconciliation.endowed, 0);
+  assert.equal(reconciliation.withdrawn, 0);
+  assert.equal(reconciliation.flow, reconciliation.observed, "with a stable roster, flow IS the observed change");
+  assert.equal(reconciliation.residual, 350, "and the old answer is unchanged");
+});
+
 test("reconciling needs two samples", () => {
   assert.equal(reconcileMoney([]), null);
   assert.equal(reconcileMoney([{ t: 0, money: {} }]), null);

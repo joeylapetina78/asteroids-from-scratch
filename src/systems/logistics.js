@@ -1,19 +1,19 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260813-2131-ea0bc9d";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260813-2131-ea0bc9d";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260813-2131-ea0bc9d";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260813-2131-ea0bc9d";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260813-2131-ea0bc9d";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260813-2131-ea0bc9d";
-import { adaptShipment } from "./intentions.js?v=fresh-20260813-2131-ea0bc9d";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260813-2131-ea0bc9d";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260813-2131-ea0bc9d";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260813-2131-ea0bc9d";
-import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260813-2131-ea0bc9d";
-import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260813-2131-ea0bc9d";
-import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260813-2131-ea0bc9d";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260813-2131-ea0bc9d";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260813-2131-ea0bc9d";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260813-2131-ea0bc9d";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260813-2143-3cd1c72";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260813-2143-3cd1c72";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260813-2143-3cd1c72";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260813-2143-3cd1c72";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260813-2143-3cd1c72";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260813-2143-3cd1c72";
+import { adaptShipment } from "./intentions.js?v=fresh-20260813-2143-3cd1c72";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260813-2143-3cd1c72";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260813-2143-3cd1c72";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260813-2143-3cd1c72";
+import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260813-2143-3cd1c72";
+import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260813-2143-3cd1c72";
+import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260813-2143-3cd1c72";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260813-2143-3cd1c72";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260813-2143-3cd1c72";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260813-2143-3cd1c72";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;

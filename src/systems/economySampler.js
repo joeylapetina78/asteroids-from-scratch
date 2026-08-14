@@ -23,13 +23,13 @@
 //      system, it does not appear here. Where a total cannot be reconciled the
 //      residual is reported as a residual rather than smoothed away.
 
-import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260813-2131-ea0bc9d";
-import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260813-2131-ea0bc9d";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260813-2131-ea0bc9d";
-import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260813-2131-ea0bc9d";
-import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260813-2131-ea0bc9d";
-import { listActors } from "./actorRegistry.js?v=fresh-20260813-2131-ea0bc9d";
-import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260813-2131-ea0bc9d";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260813-2143-3cd1c72";
+import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260813-2143-3cd1c72";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260813-2143-3cd1c72";
+import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260813-2143-3cd1c72";
+import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260813-2143-3cd1c72";
+import { listActors } from "./actorRegistry.js?v=fresh-20260813-2143-3cd1c72";
+import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260813-2143-3cd1c72";
 
 // 5 s is fast enough to see a repricing (throttled to 60 s) as a step rather
 // than a jump, and slow enough that two hours of history is a few thousand
@@ -423,6 +423,29 @@ export function seriesChange(points) {
 // So the change in total money should equal created minus burned — and the
 // `residual` is the honest report of how much it does not. A non-zero residual
 // is a real finding about the simulation, not a rounding artefact to hide.
+//
+// A THIRD WAY MONEY MOVES, which the first version folded into the residual and
+// therefore blamed on the simulation: an actor ARRIVING or LEAVING.
+//
+// Several institutions are stood up lazily — Sable Meridian Security is seeded
+// with 3,200 credits and only registered the first time protection is needed.
+// The moment it appears, the world's total rises by 3,200 with nothing having
+// created it, and the reconciliation reported a 3,200 leak. Nothing leaked. An
+// actor walked in with money already in its pocket.
+//
+// That distinction stops being a curiosity at step 4. Aggregating a far region
+// into one balance sheet and expanding it again ADDS AND REMOVES ACTORS
+// CONSTANTLY, and every one of those would otherwise read as credits appearing
+// or vanishing. So arrival and departure are measured and reported in their own
+// right, and the residual is computed only over actors present at BOTH ends —
+// like compared with like.
+//
+// The one inexactness, stated rather than hidden: an actor that arrives partway
+// through the window may have earned or spent before the closing sample, and
+// that movement is attributed to its arrival rather than to flow. At a five
+// second sampling interval the misattribution is small, and it is bounded by
+// what one actor can transact in one interval. `arrivals` and `departures` name
+// exactly who is involved so it can always be checked.
 export function reconcileMoney(samples) {
   if (samples.length < 2) return null;
   const first = samples[0];
@@ -432,6 +455,35 @@ export function reconcileMoney(samples) {
   const capitalBurned = (last.money.capitalSpendCumulative ?? 0) - (first.money.capitalSpendCumulative ?? 0);
   const burned = productionBurned + capitalBurned;
   const observed = last.money.total - first.money.total;
+
+  const firstActors = first.actors ?? {};
+  const lastActors = last.actors ?? {};
+  const arrivals = [];
+  const departures = [];
+  let endowed = 0;
+  let withdrawn = 0;
+
+  Object.entries(lastActors).forEach(([id, actor]) => {
+    if (firstActors[id]) return;
+    endowed += actor.cash ?? 0;
+    arrivals.push({ id, name: actor.name ?? id, cash: round(actor.cash ?? 0) });
+  });
+  Object.entries(firstActors).forEach(([id, actor]) => {
+    if (lastActors[id]) return;
+    withdrawn += actor.cash ?? 0;
+    departures.push({ id, name: actor.name ?? id, cash: round(actor.cash ?? 0) });
+  });
+
+  // What genuinely moved between parties that existed at both ends.
+  //
+  // Taken from the observed total rather than by re-summing the bands: the
+  // total already contains every holder, so subtracting what arrived and adding
+  // back what left is exact by construction. Re-adding population, player and
+  // institution flows separately would be the same number computed a second
+  // way, and would quietly produce NaN for any sample that does not carry the
+  // full band breakdown.
+  const flow = observed - endowed + withdrawn;
+
   return {
     fromMs: first.t,
     toMs: last.t,
@@ -442,7 +494,15 @@ export function reconcileMoney(samples) {
     notCreatedAtCap: round(last.money.discardedCumulative - first.money.discardedCumulative),
     expected: round(created - burned),
     observed: round(observed),
-    residual: round(observed - (created - burned)),
+    // Money that entered or left the counted world with an actor rather than
+    // through a transaction. Reported, never folded into the residual.
+    endowed: round(endowed),
+    withdrawn: round(withdrawn),
+    arrivals,
+    departures,
+    // What actually flowed between parties present at both ends.
+    flow: round(flow),
+    residual: round(flow - (created - burned)),
     finalConsumption: round(last.money.spentCumulative - first.money.spentCumulative),
   };
 }
