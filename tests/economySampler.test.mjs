@@ -25,6 +25,7 @@ import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { createPopulationOperation } from "../src/systems/populationDemand.js";
 import { recordAcquisition } from "../src/systems/costBasis.js";
 import { getResourceTradeValue } from "../src/systems/resourceDefinitions.js";
+import { ACTOR_ROLE, listActors, registerActorSource, unregisterActorSource } from "../src/systems/actorRegistry.js";
 
 function createWorld({ stock = {}, hubCash = 50_000 } = {}) {
   let clock = 1_000_000;
@@ -91,6 +92,72 @@ test("every treasury is counted, wherever its operation keeps it", () => {
   });
   assert.equal(snapshot.actors["sprc"].inventoryUnits, 5, "SPRC's shelf sits beside its institution and is still read");
   assert.equal(snapshot.actors["miner:cinder"].inventoryUnits, 3);
+});
+
+// THE BOUNDARY INSURANCE, and the reason this stopped being a hand-written
+// list. A kind of actor nobody thought to write down here is money the
+// reconciliation reports as vanishing — that is exactly how five treasuries
+// went missing the first time. Step 4 will introduce actor kinds that do not
+// exist yet: a procedurally generated company, and a far region aggregated into
+// a single balance sheet. Both arrive through `registerActorSource`, and both
+// have to be counted without this file being touched.
+test("a kind of actor that did not exist yet is still counted", () => {
+  const world = createWorld();
+  const before = readEconomySnapshot(world.state, { now: world.now() }).money.institutions;
+
+  // Something no state shape in this codebase currently knows about.
+  world.state.__farRegions = {
+    "region:outer-drift": {
+      id: "region:outer-drift",
+      name: "Outer Drift",
+      accounts: { operating: { balance: 12_345, committed: 0 } },
+      inventories: { silicate: 7 },
+    },
+  };
+  registerActorSource(world.state, "far-regions", (state) =>
+    Object.values(state.__farRegions ?? {}).map((record) => ({
+      id: record.id, record, role: ACTOR_ROLE.INSTITUTION, domain: "far-regions",
+    })));
+
+  const holders = listAccountHolders(world.state).map((holder) => holder.record.id);
+  assert.ok(holders.includes("region:outer-drift"),
+    "a treasury introduced through the registry is found without this file naming it");
+
+  const snapshot = readEconomySnapshot(world.state, { now: world.now() });
+  assert.equal(snapshot.money.institutions, before + 12_345, "and its money is in the world total");
+  assert.equal(snapshot.actors["region:outer-drift"].inventoryUnits, 7, "along with what it holds");
+
+  const listed = Object.values(snapshot.actors).reduce((sum, actor) => sum + actor.cash, 0);
+  assert.equal(snapshot.money.institutions, listed, "the total is still the sum of what is listed");
+
+  unregisterActorSource(world.state, "far-regions");
+  assert.ok(!listAccountHolders(world.state).map((holder) => holder.record.id).includes("region:outer-drift"),
+    "and it leaves again when its source does");
+});
+
+// A person or a ship has no balance sheet of its own — a controller's money is
+// their institution's, and a population's cash is counted separately as
+// household cash. Enumerating every actor rather than every institution makes
+// double-counting the live risk, so it is worth stating.
+test("only balance sheets are counted, not everyone the registry knows", () => {
+  const world = createWorld();
+  createPopulationOperation({ state: world.state, now: world.now });
+
+  const holders = listAccountHolders(world.state).map((holder) => holder.record.id);
+  const registryIds = listActors(world.state).map((actor) => actor.id);
+
+  assert.ok(registryIds.length > holders.length, "the registry knows more actors than there are treasuries");
+  holders.forEach((id) => {
+    assert.ok(!id.startsWith("person:"), `${id} is a person and holds no treasury of its own`);
+    assert.ok(!id.startsWith("population:"), `${id} is a population, counted as household cash instead`);
+  });
+
+  const snapshot = readEconomySnapshot(world.state, { now: world.now() });
+  assert.equal(
+    snapshot.money.total,
+    snapshot.money.populations + snapshot.money.institutions + snapshot.money.player,
+    "household, institution and player cash stay three separate pots",
+  );
 });
 
 test("paying an actor outside logistics is a transfer, not a leak", () => {
