@@ -10,12 +10,12 @@
 // draws from a family and substitutes freely within it. A hub does not need
 // iron-nickel specifically; it needs structural material.
 
-import { getEffectiveMaterialUnits, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260813-2143-3cd1c72";
-import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260813-2143-3cd1c72";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260813-2143-3cd1c72";
+import { getEffectiveMaterialUnits, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260813-2152-909c8a7";
+import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260813-2152-909c8a7";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260813-2152-909c8a7";
 // The store only — deliberately not `miningOperation`, which imports THIS
 // module. See `miningOrderBook` for why the derivation lives elsewhere.
-import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260813-2143-3cd1c72";
+import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260813-2152-909c8a7";
 
 // How many seconds of consumption a hub tries to keep on the shelf. Higher
 // means fatter buffers and less frequent, larger orders.
