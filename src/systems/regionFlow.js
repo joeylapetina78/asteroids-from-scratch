@@ -1,6 +1,6 @@
-import { TRADED_FAMILIES, getFamilyConsumptionRates } from "./hubInventory.js?v=fresh-20260814-2029-4c85d98";
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260814-2029-4c85d98";
-import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND } from "./populationDemand.js?v=fresh-20260814-2029-4c85d98";
+import { TRADED_FAMILIES, getFamilyConsumptionRates } from "./hubInventory.js?v=fresh-20260814-2033-3b23f7e";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260814-2033-3b23f7e";
+import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND } from "./populationDemand.js?v=fresh-20260814-2033-3b23f7e";
 
 // A place simulated as RATES rather than as transactions. Step 4, Phase B.
 //
