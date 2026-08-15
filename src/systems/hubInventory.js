@@ -10,13 +10,13 @@
 // draws from a family and substitutes freely within it. A hub does not need
 // iron-nickel specifically; it needs structural material.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260815-0001-50065bb";
-import { recordAcquisition } from "./costBasis.js?v=fresh-20260815-0001-50065bb";
-import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES } from "./populationDemand.js?v=fresh-20260815-0001-50065bb";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260815-0001-50065bb";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260815-0037-8f1e3cc";
+import { recordAcquisition } from "./costBasis.js?v=fresh-20260815-0037-8f1e3cc";
+import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260815-0037-8f1e3cc";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260815-0037-8f1e3cc";
 // The store only — deliberately not `miningOperation`, which imports THIS
 // module. See `miningOrderBook` for why the derivation lives elsewhere.
-import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260815-0001-50065bb";
+import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260815-0037-8f1e3cc";
 
 // How many seconds of consumption a hub tries to keep on the shelf. Higher
 // means fatter buffers and less frequent, larger orders.
@@ -41,7 +41,10 @@ export function getFamilyConsumptionRates(hubInstitutionId) {
       const need = POPULATION_NEEDS[needId];
       if (!need) return;
       const families = need.families ?? TRADED_FAMILIES;
-      const perSecond = (need.materialUnits ?? 0) / Math.max(1, need.demandIntervalSeconds);
+      // Read through the SAME scaled interval the population actually waits, so
+      // the planning rate and the real consumption cannot drift apart. If these
+      // two ever disagree one of them has a bug — they are not two estimates.
+      const perSecond = (need.materialUnits ?? 0) / Math.max(1, getScaledDemandInterval(need, profile));
       const share = perSecond / families.length;
       families.forEach((family) => {
         if (rates[family] === undefined) return;

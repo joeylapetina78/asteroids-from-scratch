@@ -23,11 +23,11 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260815-0001-50065bb";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260815-0001-50065bb";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260815-0001-50065bb";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260815-0001-50065bb";
-import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260815-0001-50065bb";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260815-0037-8f1e3cc";
+import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260815-0037-8f1e3cc";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260815-0037-8f1e3cc";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260815-0037-8f1e3cc";
+import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260815-0037-8f1e3cc";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -114,6 +114,43 @@ export function createInitialPopulationState(now = Date.now()) {
     populations[profile.id] = createPopulationRecord(profile, now + index * 17_000);
   });
   return { populations, productionOrders: {}, counter: 0 };
+}
+
+// ── How much a settlement of a given size actually wants ───────────────────
+//
+// `size` was authored on every population from the beginning and read by exactly
+// one system: `protectionPlanning`, where it decides how exposed a settlement is
+// and what a raid would cost it. Nothing connected it to appetite, so a crew of
+// sixty ate precisely as much as a town of a hundred and forty and the number
+// was decoration everywhere else.
+//
+// NORMALISED AT THE TOP, WHICH IS THE WHOLE CARE HERE. The reference is the
+// largest authored settlement, so the biggest place keeps exactly the demand it
+// has today and every smaller one wants proportionally less. Nothing in the
+// world becomes hungrier than it already was — which matters because every
+// settlement is currently running its shelves empty, and a change that raised
+// demand anywhere would deepen a famine rather than describe one.
+//
+// Fixed rather than computed from whatever content happens to exist, so that
+// authoring a bigger settlement later makes THAT settlement hungrier instead of
+// silently making all the existing ones less so.
+const REFERENCE_POPULATION_SIZE = 140;
+
+export function getPopulationDemandScale(population) {
+  const size = population?.size;
+  if (!Number.isFinite(size) || size <= 0) return 1;
+  return size / REFERENCE_POPULATION_SIZE;
+}
+
+// The interval a population of this size actually waits between wanting a thing.
+//
+// Scaling the WAIT rather than the units drawn is deliberate: a need consumes a
+// whole number of material units, so scaling the draw would round every
+// settlement between sixty and a hundred and twenty-five to the same integer and
+// throw the distinction away. A smaller place simply needs resupplying less
+// often, which is also the more natural reading.
+export function getScaledDemandInterval(need, population) {
+  return (need.demandIntervalSeconds ?? 1) / Math.max(0.05, getPopulationDemandScale(population));
 }
 
 function createPopulationRecord(profile, now) {
@@ -328,7 +365,7 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
     Object.values(populationRecord.needs).forEach((needState) => {
       const need = POPULATION_NEEDS[needState.needId];
       if (!need) return;
-      const dueAt = needState.lastDemandAt + need.demandIntervalSeconds * 1000;
+      const dueAt = needState.lastDemandAt + getScaledDemandInterval(need, populationRecord) * 1000;
       if (now() < dueAt) return;
       needState.lastDemandAt = now();
       if (populationRecord.distressActive && populationRecord.distressPolicy?.deferredNeedIds.includes(need.id)) {

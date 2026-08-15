@@ -328,7 +328,16 @@ test("Cinder Contracting dispatches three independent workers to distinct open o
   const manager = createMiningOperation({ state, game, now: () => 1_000 });
   assert.equal(added.length, 3);
   assert.equal(manager.workers.length, 3);
-  assert.equal(new Set(manager.workers.map((worker) => worker.assignment.contractId)).size, 3);
+  // The invariant is INDEPENDENCE, not a headcount: no two workers may be sent
+  // to the same order. How many are dispatched depends on how much work exists,
+  // and open work is now bounded by real hub shortfalls, which scale with each
+  // settlement's population. A fleet larger than the available work leaves a
+  // ship idle — that is a fact about the economy, and `fleetCapacity` is what
+  // decides whether to keep paying for it.
+  const dispatched = manager.workers.filter((worker) => worker.assignment);
+  assert.ok(dispatched.length > 0, "there is real work at world start");
+  assert.equal(new Set(dispatched.map((worker) => worker.assignment.contractId)).size, dispatched.length,
+    "no two workers were sent to the same order");
   assert.ok(manager.workers.every((worker) => worker.capabilities.tractorField.powerSource === "evergreen"));
   assert.deepEqual(manager.workers.map((worker) => manager.getState().ships[worker.id].wear), [0.65, 0.25, 0.1]);
 });
@@ -520,7 +529,17 @@ test("a mining institution delivery conserves material and payment into freight 
   const populationCashBefore = population.householdCash;
   const stockBefore = buyer.inventories["water-ice"] ?? 0;
   worker.cargo["water-ice"] = 3;
+  // A hub accepts only what it is actually short of, and that shortfall now
+  // scales with the settlement's population — so how much of the load is taken
+  // against the order (versus sold on as surplus) is a property of the world,
+  // not a constant. Assert against what was delivered rather than what was
+  // carried, or this measures the authored order size instead of conservation.
   worker.deliver();
+  // How much the hub actually took against its order, read off the allocation
+  // the operation books — the worker's own call does not report it back here.
+  const deliveredUnits = Object.values(manager.getState().allocations)
+    .filter((allocation) => allocation.status === "completed")
+    .reduce((total, allocation) => total + (allocation.delivered ?? 0), 0);
 
   // Hubs open with stock and the price is derived from the gap, so assert the
   // movement rather than absolute levels: the buyer's payment reaches the miner,
@@ -533,7 +552,8 @@ test("a mining institution delivery conserves material and payment into freight 
     .find((transaction) => transaction.type === "operating-expense")?.amount ?? 0;
   // The royalty is a real transfer to the population, not a cost that vanishes:
   // it leaves the miner and arrives, to the credit, in household cash.
-  const royalty = 3 * miningRoyaltyPerUnit("water-ice");
+  const royalty = deliveredUnits * miningRoyaltyPerUnit("water-ice");
+  assert.ok(deliveredUnits > 0, "the hub took some of the load against its order");
   assert.equal(population.householdCash - populationCashBefore, royalty,
     "the territory's population received the mining royalty");
   assert.equal(manager.getState().institution.accounts.operating.balance - minerCashBefore, buyerPaid + operatingExpense - royalty,
@@ -612,7 +632,12 @@ test("an unregistered Cinder craft receives paid technology service through SPRC
   const minerCashBefore = mining.getState().institution.accounts.operating.balance;
   const sprcCashBefore = state.sprc.account.balance;
 
-  for (let completed = 0; completed < 6 && !workerRecord.pendingIssue; completed += 1) {
+  // Run until the craft actually wears out rather than for a fixed six loads.
+  // A load is only as big as the hub's real shortfall, and that shortfall now
+  // scales with the settlement's population — so "six deliveries" is no longer a
+  // fixed amount of work, and pinning the loop to it made this a test about
+  // order size rather than about wear.
+  for (let completed = 0; completed < 40 && !workerRecord.pendingIssue; completed += 1) {
     // Orders now exist only while a hub has a real gap. Draining the shelves
     // keeps one open, so this stays a test about wear rather than about supply.
     Object.values(state.logistics.institutions).forEach((institution) => {
@@ -628,6 +653,13 @@ test("an unregistered Cinder craft receives paid technology service through SPRC
   assert.equal(worker.miningDisabled, true);
   assert.equal(state.sprc.serviceSubjects[worker.id], undefined, "the worker was not pre-authored into SPRC");
 
+  // This test is about the SERVICE PATH — an unregistered craft reaching Sal
+  // through a public capability — not about whether a miner can afford upkeep.
+  // Since hub orders now scale with settlement population, a miner earns less
+  // per run and Cinder finishes this wear loop unable to fund the repair, which
+  // parks the request as `payer-cannot-afford` and tests something else entirely.
+  // Fund it explicitly so the subject under test is the capability.
+  mining.getState().institution.accounts.operating.balance += 5_000;
   worker.onEvent("service.arrived", { issueType: workerRecord.pendingIssue, destinationSiteId: "scrap-porch" });
   sprc.update();
   const repair = Object.values(state.sprc.repairOrders).find((candidate) => candidate.subjectId === worker.id);

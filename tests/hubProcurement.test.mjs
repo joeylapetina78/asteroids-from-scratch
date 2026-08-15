@@ -23,6 +23,7 @@ import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState, createLogisticsManager } from "../src/systems/logistics.js";
 import { NpcShip } from "../src/entities/NpcShip.js";
 import { getWorldSites } from "../src/systems/worldSites.js";
+import { getEffectiveMaterialUnits } from "../src/systems/resourceDefinitions.js";
 
 function createWorld({ cash = 20_000 } = {}) {
   const state = createGameState();
@@ -274,12 +275,25 @@ test("a hub never has more on order than it is short", () => {
     .filter((institution) => institution.archetypeId === "settlement")
     .forEach(({ id: buyerInstitutionId }) => {
     ["structural", "industrial", "volatile"].forEach((family) => {
-      const open = listOrders(state, { buyerInstitutionId, status: ["offered", "accepted", "ready", "shipped"] })
-        .filter((order) => order.family === family)
-        .reduce((sum, order) => sum + order.units, 0);
+      // Compared in EFFECTIVE units, because that is what a target is measured
+      // in. An order is placed in physical crates, and a low-yield material like
+      // carbonaceous needs six crates to cover four effective units — so
+      // comparing crates against an effective target reads as over-ordering
+      // whenever the target is small enough for the difference to show.
+      const orders = listOrders(state, { buyerInstitutionId, status: ["offered", "accepted", "ready", "shipped"] })
+        .filter((order) => order.family === family);
+      const open = orders.reduce((sum, order) => sum + getEffectiveMaterialUnits(order.resourceId, order.units), 0);
       const position = getInventoryPosition(state, buyerInstitutionId, family);
-      assert.ok(open <= position.target,
-        `${buyerInstitutionId} has ${open} ${family} on order against a target of ${position.target}`);
+
+      // Freight moves in whole crates, and a crate is not always worth one
+      // effective unit: aluminum yields 1.5, carbonaceous 0.65. Covering a
+      // four-unit shortfall in aluminum therefore means three crates and 4.5
+      // effective units, because you cannot order two-thirds of a crate. So the
+      // bound is the shortfall plus at most ONE crate of granularity — anything
+      // beyond that is genuinely ordering the same gap twice.
+      const crate = Math.max(0, ...orders.map((order) => getEffectiveMaterialUnits(order.resourceId, 1)));
+      assert.ok(open <= position.target + crate + 0.001,
+        `${buyerInstitutionId} has ${open} effective ${family} on order against a target of ${position.target} (one crate = ${crate})`);
     });
   });
 });
