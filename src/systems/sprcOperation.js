@@ -1,18 +1,18 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260814-2141-04dbdcd";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260814-2141-04dbdcd";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260814-2141-04dbdcd";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260814-2141-04dbdcd";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260814-2141-04dbdcd";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260814-2141-04dbdcd";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260814-2141-04dbdcd";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260814-2141-04dbdcd";
-import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260814-2141-04dbdcd";
-import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260814-2141-04dbdcd";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260814-2141-04dbdcd";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260814-2141-04dbdcd";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260814-2141-04dbdcd";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260814-2141-04dbdcd";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260814-2141-04dbdcd";
+import { depositCredits } from "./accounts.js?v=fresh-20260815-0000-e62b7fb";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260815-0000-e62b7fb";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260815-0000-e62b7fb";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260815-0000-e62b7fb";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260815-0000-e62b7fb";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260815-0000-e62b7fb";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260815-0000-e62b7fb";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260815-0000-e62b7fb";
+import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260815-0000-e62b7fb";
+import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260815-0000-e62b7fb";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260815-0000-e62b7fb";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260815-0000-e62b7fb";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260815-0000-e62b7fb";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260815-0000-e62b7fb";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260815-0000-e62b7fb";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -788,6 +788,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       source: "wreck-dismantling", at: now(),
     }));
     sprc.account.balance -= wreck.dismantlingCost ?? 0;
+    sprc.institution.capitalSpend = (sprc.institution.capitalSpend ?? 0) + (wreck.dismantlingCost ?? 0);
     sprc.account.committed = Math.max(0, (sprc.account.committed ?? 0) - (wreck.dismantlingCost ?? 0));
     order.status = "completed";
     order.completedAt = now();

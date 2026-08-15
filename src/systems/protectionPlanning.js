@@ -1,6 +1,6 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260814-2141-04dbdcd";
-import { ensurePatrolOperations } from "./patrolOperations.js?v=fresh-20260814-2141-04dbdcd";
-import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js?v=fresh-20260814-2141-04dbdcd";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260815-0000-e62b7fb";
+import { ensurePatrolOperations } from "./patrolOperations.js?v=fresh-20260815-0000-e62b7fb";
+import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js?v=fresh-20260815-0000-e62b7fb";
 
 export const PROTECTION_REQUEST_STATUS = Object.freeze({
   INTERNAL: "covered-internally",
@@ -241,6 +241,8 @@ export function getPlayerProtectionJobsForSite(state, siteId, issuer = null) {
       jobTierLabel: "Live Protection Request",
       title: `Protect ${issuer ?? request.siteId}`,
       issuer: issuer ?? request.issuerInstitutionId,
+      // The hub that posted the job is the hub that pays for it.
+      issuerInstitutionId: request.issuerInstitutionId,
       summary: `Respond to the active ${request.threatType} threatening ${request.siteId}.`,
       terms: {
         protectionRequestId: request.id, threatId: request.threatId,

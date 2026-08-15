@@ -1,7 +1,7 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260814-2141-04dbdcd";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260814-2141-04dbdcd";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260814-2141-04dbdcd";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260814-2141-04dbdcd";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260815-0000-e62b7fb";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260815-0000-e62b7fb";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260815-0000-e62b7fb";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260815-0000-e62b7fb";
 
 const PATROL_OPENING_BALANCE = 1800;
 const PATROL_COMPONENTS = Object.freeze([
@@ -224,7 +224,8 @@ export function servicePatrolCraft(state, now = Date.now()) {
     const craft = operations[siteId]?.craft;
     if (!craft || craft.status !== "destroyed") return;
     craft.replacementStartedAt ??= craft.destroyedAt ?? now;
-    const treasury = state.logistics?.institutions?.[seed.institution.id]?.accounts?.operating;
+    const owner = state.logistics?.institutions?.[seed.institution.id];
+    const treasury = owner?.accounts?.operating;
     const protectedCash = seed.institution.protectionPolicy?.protectedCash ?? 0;
     const spendable = Math.max(0, (treasury?.balance ?? 0) - (treasury?.committed ?? 0) - protectedCash);
     if (!treasury || spendable < WATCH_REPLACEMENT_COST) {
@@ -237,6 +238,10 @@ export function servicePatrolCraft(state, now = Date.now()) {
     }
     if (now - craft.replacementStartedAt < WATCH_REPLACEMENT_SECONDS * 1000) return;
     treasury.balance -= WATCH_REPLACEMENT_COST;
+    // Declared on the LIVE record, not the content seed — the sampler reads
+    // `state.logistics.institutions`, so booking it against the seed would leave
+    // the burn invisible and the replacement looking like money vanishing.
+    owner.capitalSpend = (owner.capitalSpend ?? 0) + WATCH_REPLACEMENT_COST;
     treasury.transactions?.push({ id: `WATCH-HULL-${siteId}-${now}`, at: now, type: "capital-expense", amount: -WATCH_REPLACEMENT_COST, balance: treasury.balance, referenceId: craft.id });
     craft.hull = craft.maxHull;
     craft.status = "available";

@@ -1,19 +1,20 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260814-2141-04dbdcd";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260814-2141-04dbdcd";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260814-2141-04dbdcd";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260814-2141-04dbdcd";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260814-2141-04dbdcd";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260814-2141-04dbdcd";
-import { adaptShipment } from "./intentions.js?v=fresh-20260814-2141-04dbdcd";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260814-2141-04dbdcd";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260814-2141-04dbdcd";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260814-2141-04dbdcd";
-import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260814-2141-04dbdcd";
-import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260814-2141-04dbdcd";
-import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260814-2141-04dbdcd";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260814-2141-04dbdcd";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260814-2141-04dbdcd";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260814-2141-04dbdcd";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260815-0000-e62b7fb";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260815-0000-e62b7fb";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260815-0000-e62b7fb";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260815-0000-e62b7fb";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260815-0000-e62b7fb";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260815-0000-e62b7fb";
+import { adaptShipment } from "./intentions.js?v=fresh-20260815-0000-e62b7fb";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260815-0000-e62b7fb";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260815-0000-e62b7fb";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260815-0000-e62b7fb";
+import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260815-0000-e62b7fb";
+import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260815-0000-e62b7fb";
+import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260815-0000-e62b7fb";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260815-0000-e62b7fb";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260815-0000-e62b7fb";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260815-0000-e62b7fb";
+import { issuerTreasuryRecords, seedIssuerTreasuries } from "./contractTreasury.js?v=fresh-20260815-0000-e62b7fb";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -127,6 +128,10 @@ export function createInitialLogisticsState(now = Date.now()) {
     JSON.parse(JSON.stringify(record)),
   ]));
   const carrierRecords = Object.fromEntries(carrierInstitutionRecords().map((record) => [record.id, record]));
+  // Contract issuers hold real money, and they exist from the first tick so the
+  // economy sampler never sees one ARRIVE mid-run — an arrival that pays out
+  // before the next sample reads as a residual the size of the payout.
+  const issuerRecords = Object.fromEntries(issuerTreasuryRecords().map((record) => [record.id, record]));
   const haulers = Object.fromEntries(FIRST_REACH_CARRIERS.map((seed) => [seed.ship.physicalId, {
     shipInstitutionId: seed.ship.id,
     carrierInstitutionId: seed.institution.id,
@@ -142,6 +147,7 @@ export function createInitialLogisticsState(now = Date.now()) {
     institutions: {
       ...settlementRecords,
       ...carrierRecords,
+      ...issuerRecords,
       // The people who actually run the three settlements. Their traits are the
       // ONLY thing that makes the hubs price differently from one another —
       // there is no per-hub code anywhere.
@@ -164,6 +170,9 @@ export function createInitialLogisticsState(now = Date.now()) {
 
 export function ensureLogisticsState(state, now = Date.now()) {
   state.logistics ??= createInitialLogisticsState(now);
+  // Contract issuers hold real money and must exist before the first economy
+  // sample, or their arrival is mistaken for flow.
+  seedIssuerTreasuries(state, { now });
   state.logistics.institutions ??= {};
   FIRST_REACH_SETTLEMENTS.forEach((seed) => {
     state.logistics.institutions[seed.institution.id] ??= JSON.parse(JSON.stringify(seed.institution));

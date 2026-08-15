@@ -1,16 +1,17 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260814-2141-04dbdcd";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260814-2141-04dbdcd";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260814-2141-04dbdcd";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260814-2141-04dbdcd";
-import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260814-2141-04dbdcd";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260814-2141-04dbdcd";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260814-2141-04dbdcd";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260814-2141-04dbdcd";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260814-2141-04dbdcd";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260814-2141-04dbdcd";
-import { getStandingMiningOrderAvailability, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260814-2141-04dbdcd";
-import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260814-2141-04dbdcd";
-import { recordAuthorityRevenue } from "./rightsAuthority.js?v=fresh-20260814-2141-04dbdcd";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260815-0000-e62b7fb";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260815-0000-e62b7fb";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260815-0000-e62b7fb";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260815-0000-e62b7fb";
+import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260815-0000-e62b7fb";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260815-0000-e62b7fb";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260815-0000-e62b7fb";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260815-0000-e62b7fb";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260815-0000-e62b7fb";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260815-0000-e62b7fb";
+import { getStandingMiningOrderAvailability, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260815-0000-e62b7fb";
+import { payFromIssuer } from "./contractTreasury.js?v=fresh-20260815-0000-e62b7fb";
+import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260815-0000-e62b7fb";
+import { recordAuthorityRevenue } from "./rightsAuthority.js?v=fresh-20260815-0000-e62b7fb";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -556,12 +557,32 @@ export function createContractManager({ state, onChange = () => {} }) {
     const principal = contract.terms.principal ?? contract.reward.credits ?? 0;
     const maxInterest = contract.terms.maxInterest ?? 0;
 
+    // A lender lends its OWN money. This used to conjure the principal, which
+    // meant the Finance Office could write a twenty-thousand credit loan out of
+    // an empty office and the world's money supply grew every time you borrowed.
+    const advance = payFromIssuer(state, {
+      issuer: contract.issuer, institutionId: contract.issuerInstitutionId ?? null,
+      amount: principal, referenceId: contract.id, kind: "loan-principal",
+    });
+
+    if (!advance.funded && principal > 0) {
+      state.ledger.recordEvent("loan.declined", {
+        contractId: contract.id,
+        contractTitle: contract.title,
+        issuer: contract.issuer,
+        principal,
+        shortfall: advance.shortfall,
+        reason: advance.reason ?? "lender-underfunded",
+      }, { visible: true, message: `${contract.issuer} does not have ${principal} cr to lend right now.` });
+      return;
+    }
+
     contract.disbursedAt = Date.now();
     const obligation = createLoanObligation(state, contract);
     contract.obligationId = obligation.id;
     contract.balance = obligation.balance;
     contract.maxBalance = obligation.maxBalance;
-    depositCredits(state, principal);
+    depositCredits(state, advance.paid);
     state.ledger.recordEvent("loan.disbursed", {
       contractId: contract.id,
       contractTitle: contract.title,
@@ -617,12 +638,43 @@ export function createContractManager({ state, onChange = () => {} }) {
 
     contract.status = "paid";
     contract.paidAt = Date.now();
-    depositCredits(state, credits);
+
+    // WHO IS ACTUALLY OUT OF POCKET FOR THIS.
+    //
+    // A delivery settled through a standing mining order was ALREADY funded:
+    // `settleStandingMiningOrder` debited the buying hub and put the ore on its
+    // shelf, and the reward was set to exactly what the hub paid. Charging the
+    // issuer as well would take the money twice for one delivery. Everything
+    // else — story rewards, bounties, courier work — had no payer at all, and
+    // now comes out of the issuer's own treasury.
+    const alreadyFunded = Boolean(contract.standingMiningSettlement);
+    const settlement = alreadyFunded
+      ? { paid: credits, funded: true, institutionId: contract.standingMiningSettlement.buyerInstitutionId }
+      : payFromIssuer(state, { issuer: contract.issuer, institutionId: contract.issuerInstitutionId ?? null, amount: credits, referenceId: contract.id, kind: "contract-reward" });
+
+    if (!settlement.funded && credits > 0) {
+      // Never silently conjure the difference. A contract that cannot be paid
+      // stays unpaid and says who could not pay it.
+      contract.status = "fulfilled";
+      state.ledger.recordEvent("contract.paymentBlocked", {
+        contractId: contract.id,
+        contractTitle: contract.title,
+        issuer: contract.issuer,
+        creditsOwed: credits,
+        shortfall: settlement.shortfall,
+        reason: settlement.reason ?? "issuer-underfunded",
+      }, { visible: true, message: `${contract.issuer} cannot cover ${credits} cr right now; the payment is outstanding.` });
+      onChange(contract);
+      return;
+    }
+
+    depositCredits(state, settlement.paid);
     state.ledger.recordEvent("contract.paid", {
       contractId: contract.id,
       contractTitle: contract.title,
       contractGroup: contract.group,
-      creditsPaid: credits,
+      creditsPaid: settlement.paid,
+      payerInstitutionId: settlement.institutionId,
       accountCredits: getCredits(state),
     });
 

@@ -1,4 +1,5 @@
-import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260814-2141-04dbdcd";
+import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260815-0000-e62b7fb";
+import { creditPayee } from "./contractTreasury.js?v=fresh-20260815-0000-e62b7fb";
 
 export function createPaymentRequest({
   payableType,
@@ -28,6 +29,15 @@ export function processPayment(state, request, requestedAmount = Infinity) {
   }
 
   spendCredits(state, amount);
+  // Somebody receives this. Without it the payment left the world entirely,
+  // which is the same class of bug as a payout with no payer — just pointing
+  // the other way.
+  creditPayee(state, {
+    payeeEntityId: request.payeeEntityId,
+    amount,
+    referenceId: request.payableId,
+    kind: `${request.payableType}-payment`,
+  });
 
   const receipt = {
     id: `payment:${Date.now()}:${Math.random().toString(16).slice(2)}`,

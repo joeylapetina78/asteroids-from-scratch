@@ -75,7 +75,12 @@ This document is a living manual for authoring. It should grow whenever a new ev
 | `loan.paymentMade` | `obligationId`, `sourceContractId`, `amountPaid`, `balance`, `accountCredits` | Credits were paid from the current account toward a loan obligation. |
 | `loan.paidOff` | `obligationId`, `sourceContractId`, `creditorEntityId`, `accountCredits` | A loan obligation reached zero balance and its collateral can be released. |
 | `rook.bonusAwarded` | `creditsPaid`, `accountCredits` | Rook paid a non-contract bonus. |
-| `cargo.sold` | `creditsEarned`, `units` | Cargo was sold for credits. |
+| `cargo.sold` | `creditsEarned`, `units`, `buyerInstitutionId`, `unitPrice` | Cargo was sold to a hub, which paid for it from its own account and received the material. |
+| `contract.paymentBlocked` | `contractId`, `issuer`, `creditsOwed`, `shortfall` | An issuer could not fund a reward it owed; the contract stays unpaid rather than conjuring credits. |
+| `loan.declined` | `contractId`, `issuer`, `principal`, `shortfall` | A lender did not have the principal to advance. |
+| `institution.treasuryOpened` | `institutionId`, `endowment`, `commitments` | A contract issuer's treasury was stood up, endowed against what its authored contracts promise. Hidden. |
+| `payment.payeeUnbanked` | `payeeEntityId`, `amount`, `kind` | A payment was made to a payee with no account to receive it. Hidden; names a gap rather than letting money leave the world. |
+| `pilot.endowed` | `credits`, `reason` | Starting credits the pilot brought into the world. Hidden. |
 | `ship.purchased` | `offerId`, `shipName`, `price` | A ship package was purchased for the current pilot/account. |
 
 ## Contract Terms

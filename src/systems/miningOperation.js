@@ -1,25 +1,25 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260814-2141-04dbdcd";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260814-2141-04dbdcd";
-import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260814-2141-04dbdcd";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260814-2141-04dbdcd";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260814-2141-04dbdcd";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260814-2141-04dbdcd";
-import { getInventoryPosition } from "./hubInventory.js?v=fresh-20260814-2141-04dbdcd";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260814-2141-04dbdcd";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260814-2141-04dbdcd";
-import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260814-2141-04dbdcd";
-import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260814-2141-04dbdcd";
-import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260814-2141-04dbdcd";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260814-2141-04dbdcd";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260814-2141-04dbdcd";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260814-2141-04dbdcd";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260814-2141-04dbdcd";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260814-2141-04dbdcd";
-import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260814-2141-04dbdcd";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260814-2141-04dbdcd";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260814-2141-04dbdcd";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260814-2141-04dbdcd";
-import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260814-2141-04dbdcd";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260815-0000-e62b7fb";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260815-0000-e62b7fb";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260815-0000-e62b7fb";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260815-0000-e62b7fb";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260815-0000-e62b7fb";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260815-0000-e62b7fb";
+import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260815-0000-e62b7fb";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260815-0000-e62b7fb";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260815-0000-e62b7fb";
+import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260815-0000-e62b7fb";
+import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260815-0000-e62b7fb";
+import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260815-0000-e62b7fb";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260815-0000-e62b7fb";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260815-0000-e62b7fb";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260815-0000-e62b7fb";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic } from "./diagnostics.js?v=fresh-20260815-0000-e62b7fb";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260815-0000-e62b7fb";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260815-0000-e62b7fb";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260815-0000-e62b7fb";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260815-0000-e62b7fb";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260815-0000-e62b7fb";
+import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260815-0000-e62b7fb";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -1280,21 +1280,21 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     return { acceptedUnits: delivered, paid: payment, surplusSoldUnits };
   }
 
+  // Selling leftovers is the same transaction the player makes at a dock, so it
+  // goes through the same shared path rather than a private copy of the rule.
   function sellSurplusAtHub({ ship, siteId, resourceId, acceptedUnits }) {
     const surplus = Math.max(0, (ship.cargo[resourceId] ?? 0) - acceptedUnits);
     if (surplus <= 0) return 0;
-    const buyerInstitutionId = siteId === "scrap-porch" ? "scrap-forge" : siteId;
-    const buyer = state.logistics?.institutions?.[buyerInstitutionId];
-    const unitPrice = Math.max(1, Math.floor(getInstitutionalFeedstockTradeValue(resourceId) * 0.7));
-    const affordableUnits = Math.min(surplus, Math.floor((buyer?.accounts?.operating?.balance ?? 0) / unitPrice));
-    if (!buyer || affordableUnits <= 0) return 0;
-    const payment = affordableUnits * unitPrice;
-    buyer.inventories[resourceId] = (buyer.inventories[resourceId] ?? 0) + affordableUnits;
-    buyer.accounts.operating.balance -= payment;
-    operation.institution.accounts.operating.balance += payment;
-    operation.institution.accounts.operating.transactions.push({ id: `MIN-SURPLUS-${now()}-${ship.id}`, at: now(), type: "wholesale-income", amount: payment, balance: operation.institution.accounts.operating.balance, referenceId: buyerInstitutionId });
-    record("mining.surplusSold", `${ship.name} sold ${affordableUnits} surplus ${resourceId.replaceAll("-", " ")} to ${siteName(siteId)} supply for ${payment} cr.`, { siteId, resourceId, quantity: affordableUnits, payment, shipInstitutionId: ship.id, shipName: ship.name, buyerInstitutionId });
-    return affordableUnits;
+
+    const sale = sellMaterialToHub(state, {
+      siteId, resourceId, units: surplus, source: "mining-surplus", now: now(),
+    });
+    if (sale.acceptedUnits <= 0) return 0;
+
+    operation.institution.accounts.operating.balance += sale.payment;
+    operation.institution.accounts.operating.transactions.push({ id: `MIN-SURPLUS-${now()}-${ship.id}`, at: now(), type: "wholesale-income", amount: sale.payment, balance: operation.institution.accounts.operating.balance, referenceId: sale.buyerId });
+    record("mining.surplusSold", `${ship.name} sold ${sale.acceptedUnits} surplus ${resourceId.replaceAll("-", " ")} to ${siteName(siteId)} supply for ${sale.payment} cr.`, { siteId, resourceId, quantity: sale.acceptedUnits, payment: sale.payment, shipInstitutionId: ship.id, shipName: ship.name, buyerInstitutionId: sale.buyerId });
+    return sale.acceptedUnits;
   }
 
   function finishDelivery({ allocation, ship, siteId, resourceId, delivered, payment, orderLabel }) {
@@ -1308,6 +1308,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     const operatingExpense = crewPay + consumables;
     if (operatingExpense > 0) {
       operation.institution.accounts.operating.balance -= operatingExpense;
+      // Crew wages and consumables leave the simulated economy — nobody counted
+      // here receives them — so the burn is declared rather than left to surface
+      // as an unexplained shrinkage in the money supply.
+      operation.institution.capitalSpend = (operation.institution.capitalSpend ?? 0) + operatingExpense;
       operation.institution.accounts.operating.transactions.push({
         id: `MIN-OPS-${now()}-${ship.id}`,
         at: now(), type: "operating-expense", amount: -operatingExpense,

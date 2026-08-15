@@ -1,8 +1,8 @@
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260814-2141-04dbdcd";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260814-2141-04dbdcd";
-import { evaluateSupplierAsk, getSpendable } from "./valuation.js?v=fresh-20260814-2141-04dbdcd";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260814-2141-04dbdcd";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260814-2141-04dbdcd";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260815-0000-e62b7fb";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260815-0000-e62b7fb";
+import { evaluateSupplierAsk, getSpendable } from "./valuation.js?v=fresh-20260815-0000-e62b7fb";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260815-0000-e62b7fb";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260815-0000-e62b7fb";
 
 const PROVIDER_SEEDS = Object.freeze([
   {
@@ -379,6 +379,7 @@ export function serviceProtectionProviders(state, now = Date.now()) {
       }
       if (now - craft.replacementStartedAt < CRAFT_REPLACEMENT_SECONDS * 1000) return;
       account.balance -= CRAFT_REPLACEMENT_COST;
+      institution.capitalSpend = (institution.capitalSpend ?? 0) + CRAFT_REPLACEMENT_COST;
       account.transactions?.push({ id: `PSC-HULL-${now}`, at: now, type: "capital-expense", amount: -CRAFT_REPLACEMENT_COST, balance: account.balance, referenceId: craft.id });
       craft.hull = craft.maxHull;
       craft.status = "available";
@@ -407,6 +408,7 @@ export function serviceProtectionProviders(state, now = Date.now()) {
     const cost = Math.ceil(missing * CRAFT_REPAIR_COST_PER_POINT);
     if (getSpendable(account, institution.policies) < cost) return;
     account.balance -= cost;
+    institution.capitalSpend = (institution.capitalSpend ?? 0) + cost;
     account.transactions?.push({ id: `PSC-REP-${now}`, at: now, type: "maintenance-expense", amount: -cost, balance: account.balance, referenceId: craft.id });
     craft.hull = craft.maxHull;
     const component = getWorstComponent(craft);
