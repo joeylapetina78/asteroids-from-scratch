@@ -1,6 +1,6 @@
-import { getResourceFamily, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260814-2122-cfc8bf2";
-import { ROCKMOSS_CRAWLER_TYPE } from "./rockmossStrains.js?v=fresh-20260814-2122-cfc8bf2";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./hostileLoot.js?v=fresh-20260814-2122-cfc8bf2";
+import { getResourceFamily, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260814-2140-75a5acd";
+import { ROCKMOSS_CRAWLER_TYPE } from "./rockmossStrains.js?v=fresh-20260814-2140-75a5acd";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./hostileLoot.js?v=fresh-20260814-2140-75a5acd";
 
 // Something else out here is interested in what you left behind.
 //
@@ -83,6 +83,22 @@ export const GRAZING_DEFAULTS = Object.freeze({
   // A ripe grazer is visibly fatter; this is the scale at maxFullness.
   maxGrowthScale: 2.1,
 
+  // ── The mouth: a grown one stops nibbling and starts filtering ──
+  //
+  // A small grazer picks at one drop at a time. A big one opens a field and
+  // hoovers as it swims, the way a whale stops chasing individual animals and
+  // just holds its mouth open. The glow IS the field — what you can see is
+  // exactly what it can reach, so a fat one cruising a spill visibly clears a
+  // lane through it.
+  fieldFromFullness: 3,
+  fieldRadiusMin: 60,
+  fieldRadiusMax: 210,
+  // Matched to the ship's collector so a grazer's pull reads as the same kind of
+  // machinery the player already understands.
+  fieldPullForce: 380,
+  // Close enough to the mouth to be gone.
+  swallowRange: 24,
+
   // ── Emergence ──
   // A pile this big, sitting untouched, is worth surfacing for.
   clusterSize: 5,
@@ -126,6 +142,29 @@ export function isRipe(grazer, policy = GRAZING_DEFAULTS) {
 export function getGrowthScale(grazer, policy = GRAZING_DEFAULTS) {
   const fed = Math.min(1, (grazer?.fullness ?? 0) / Math.max(1, policy.maxFullness));
   return 1 + fed * (policy.maxGrowthScale - 1);
+}
+
+// How far a grazer's feeding field reaches. Zero until it has grown into one,
+// then it opens up with fullness — this is the radius the glow is drawn at, so
+// the creature's reach is never a hidden number.
+export function getGrazeFieldRadius(grazer, policy = GRAZING_DEFAULTS) {
+  const fullness = grazer?.fullness ?? 0;
+  if (fullness < policy.fieldFromFullness) return 0;
+  const span = Math.max(1, policy.maxFullness - policy.fieldFromFullness);
+  const grown = Math.min(1, (fullness - policy.fieldFromFullness) / span);
+  return policy.fieldRadiusMin + grown * (policy.fieldRadiusMax - policy.fieldRadiusMin);
+}
+
+export function isFilterFeeder(grazer, policy = GRAZING_DEFAULTS) {
+  return getGrazeFieldRadius(grazer, policy) > 0;
+}
+
+// A stuffed one stops hunting. It still drags material around in its field —
+// that is just physics, and it looks right — but it claims nothing and eats
+// nothing, so it stops competing with hungrier neighbours for a spill it has no
+// room for. Being full is also the point at which it is worth the most to shoot.
+export function isSated(grazer, policy = GRAZING_DEFAULTS) {
+  return (grazer?.fullness ?? 0) >= policy.maxFullness;
 }
 
 // What a harvested grazer is carrying.
@@ -180,7 +219,7 @@ export function planGrazing(grazers, pickups, { shipPosition = null, policy = GR
   // Sitting meals first, so nobody's dinner is auctioned out from under them.
   grazers.forEach((grazer) => {
     const held = grazer.grazingTarget;
-    if (!held || !available.has(held) || guarded(grazer.position)) return;
+    if (!held || !available.has(held) || guarded(grazer.position) || isSated(grazer, policy)) return;
     available.delete(held);
     busy.add(grazer);
     assignments.push({ grazer, pickup: held, distance: Math.sqrt(distanceSquared(grazer.position, held.position)) });
@@ -188,7 +227,7 @@ export function planGrazing(grazers, pickups, { shipPosition = null, policy = GR
 
   const candidates = [];
   grazers.forEach((grazer) => {
-    if (busy.has(grazer) || guarded(grazer.position)) return;
+    if (busy.has(grazer) || guarded(grazer.position) || isSated(grazer, policy)) return;
     available.forEach((pickup) => {
       // Something it recently failed to reach is somebody else's problem for a
       // while. Another creature coming from a different angle may well manage it.
@@ -246,22 +285,139 @@ export function getGrazingSteerTarget(grazer) {
   };
 }
 
+// A grown grazer feeding by suction rather than by picking.
+//
+// It does NOT claim what it eats. A filter feeder does not pick a target and
+// negotiate for it — it swims with its mouth open and whatever it passes goes
+// in. So this runs outside the ranked clearing entirely: no assignment, no
+// choreography, just physics. Two big ones crossing the same spill both pull at
+// it and whichever mouth reaches it first gets it, which is what should happen.
+//
+// The pull is the same shape the ship's collector uses, so a grazer's field
+// reads as the same kind of machinery the player already has a feel for.
+function applyGrazeFields(grazers, pickups, { deltaSeconds, guarded, policy }) {
+  const swallowed = new Set();
+  const swallowRangeSquared = policy.swallowRange * policy.swallowRange;
+
+  grazers.forEach((grazer) => {
+    const radius = getGrazeFieldRadius(grazer, policy);
+    if (radius <= 0 || guarded(grazer.position)) return;
+    const radiusSquared = radius * radius;
+    let room = policy.maxFullness - (grazer.fullness ?? 0);
+
+    pickups.forEach((pickup) => {
+      if (swallowed.has(pickup) || !isEdible(pickup) || !isSettled(pickup, policy)) return;
+      if (guarded(pickup.position)) return;
+
+      // Suction reaches THROUGH the rock face it is browsing. Material settles
+      // deep inside boulders and a creature is held well off a big one's surface
+      // by its own rock-shyness, so a field measured only from the creature can
+      // fall short of ore it is parked right beside. Extending it by how deeply
+      // the drop is buried is what lets a grown one draw buried material out
+      // instead of hovering next to it — which is the whole reason the field
+      // beats picking.
+      const buried = Math.max(0, (pickup.grazeReach ?? policy.nibbleRange) - policy.nibbleRange);
+      const reachSquared = (radius + buried) * (radius + buried);
+
+      const dx = grazer.position.x - pickup.position.x;
+      const dy = grazer.position.y - pickup.position.y;
+      const separation = dx * dx + dy * dy;
+      if (separation === 0 || separation > reachSquared) return;
+
+      const gap = Math.sqrt(separation);
+      const pullRadius = radius + buried;
+
+      // Sweep rather than test a point. The pull accelerates material hard and
+      // nothing damps it, so a drop can cross the entire mouth between two
+      // frames — tunnelling straight through, getting yanked back, and orbiting
+      // forever without ever being measured as "close enough". Anything that
+      // would pass through the mouth this frame is eaten by it.
+      const closingSpeed = Math.hypot(pickup.velocity?.x ?? 0, pickup.velocity?.y ?? 0);
+      const mouth = policy.swallowRange + closingSpeed * deltaSeconds;
+
+      if (separation <= swallowRangeSquared || gap <= mouth) {
+        // A full one still drags material along without eating it, which is why
+        // `room` gates the swallow rather than the pull.
+        if (room <= 0) return;
+        swallowed.add(pickup);
+        grazer.fullness = Math.min(policy.maxFullness, (grazer.fullness ?? 0) + policy.fullnessPerMeal);
+        room -= policy.fullnessPerMeal;
+        return;
+      }
+
+      // Stronger the closer it gets, so material accelerates into the mouth
+      // instead of drifting in at a constant crawl.
+      const strength = Math.max(0.45, 1 - gap / pullRadius) * 1.35;
+      const force = policy.fieldPullForce * strength * deltaSeconds;
+      pickup.velocity.x += (dx / gap) * force;
+      pickup.velocity.y += (dy / gap) * force;
+    });
+  });
+
+  return swallowed;
+}
+
 // Advance every grazer's meal by a frame. Returns the drops that were finished,
 // for the caller to remove from the world — this module never mutates the pickup
 // list itself, the same way the mining clearing hands back awards rather than
 // applying them.
 export function advanceGrazing(grazers, pickups, { deltaSeconds, shipPosition = null, policy = GRAZING_DEFAULTS } = {}) {
-  const assignments = planGrazing(grazers, pickups, { shipPosition, policy });
-  const assigned = new Map(assignments.map((assignment) => [assignment.grazer, assignment]));
-  const eaten = [];
+  const shyRadiusSquared = policy.shipShyRadius * policy.shipShyRadius;
+  const guarded = (point) => Boolean(shipPosition) && distanceSquared(point, shipPosition) < shyRadiusSquared;
 
-  // Anything that lost its meal — scared off, or outbid before it started —
-  // forgets the whole performance rather than resuming mid-bite later.
+  // Suction first, and outside the clearing entirely: a grown one eats what it
+  // swims through rather than what it was awarded.
+  const swallowed = applyGrazeFields(grazers, pickups, { deltaSeconds, guarded, policy });
+  const eaten = [...swallowed];
+
+  const assignments = planGrazing(grazers, pickups, { shipPosition, policy })
+    // Anything a mouth already closed on this frame is not still a meal to walk
+    // toward — including somebody else's.
+    .filter(({ pickup }) => !swallowed.has(pickup));
+  const assigned = new Map(assignments.map((assignment) => [assignment.grazer, assignment]));
+
+  // Anything that lost its meal — scared off, outbid before it started, or
+  // hoovered up by a bigger neighbour — forgets the whole performance rather
+  // than resuming mid-bite later.
   grazers.forEach((grazer) => {
     if (!assigned.has(grazer) && grazer.grazingTarget) clearMeal(grazer);
   });
 
   assignments.forEach(({ grazer, pickup, distance }) => {
+    // A filter feeder still swims at food, but it has stopped picking at things:
+    // it takes its target in one gulp on arrival rather than tasting it.
+    //
+    // The gulp happens at `grazeReach`, not at the mouth, and that is not a
+    // detail — ore settles deep inside rocks, and a creature can never physically
+    // get its mouth within a couple of dozen units of something buried a hundred
+    // deep in a boulder. Leaving suction as the only way a grown one eats made it
+    // WORSE at buried material than a small one that nibbles from the rock face.
+    // Growing up should never cost a creature food it used to be able to reach.
+    if (isFilterFeeder(grazer, policy)) {
+      if (grazer.grazingTarget !== pickup) beginMeal(grazer, pickup, policy);
+      grazer.grazingStage = GRAZING_STAGE.APPROACH;
+      // This branch returns before the shared timer below, so it has to run its
+      // own clock — without it a filter feeder parked next to something it can
+      // never reach would hold that claim forever, which is exactly the freeze
+      // the give-up rule exists to prevent.
+      grazer.grazingStageSeconds = (grazer.grazingStageSeconds ?? 0) + deltaSeconds;
+
+      if (distance <= (pickup.grazeReach ?? policy.nibbleRange)) {
+        eaten.push(pickup);
+        grazer.fullness = Math.min(policy.maxFullness, (grazer.fullness ?? 0) + policy.fullnessPerMeal);
+        clearMeal(grazer);
+        return;
+      }
+
+      // Still subject to giving up on something it genuinely cannot get to.
+      if (grazer.grazingStageSeconds >= policy.approachTimeoutSeconds) {
+        grazer.grazingAvoid = pickup;
+        grazer.grazingAvoidUntil = (grazer.age ?? 0) + policy.giveUpSeconds;
+        clearMeal(grazer);
+      }
+      return;
+    }
+
     if (grazer.grazingTarget !== pickup || !grazer.grazingStage) beginMeal(grazer, pickup, policy);
     grazer.grazingRecoilDistance = policy.recoilDistance;
     grazer.grazingStageSeconds = (grazer.grazingStageSeconds ?? 0) + deltaSeconds;

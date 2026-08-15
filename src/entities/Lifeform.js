@@ -1,9 +1,10 @@
 import {
   GRAZING_STAGE,
+  getGrazeFieldRadius,
   getGrazingSteerTarget,
   getGrowthScale,
   isRipe,
-} from "../systems/grazing.js?v=fresh-20260814-2122-cfc8bf2";
+} from "../systems/grazing.js?v=fresh-20260814-2140-75a5acd";
 
 // How hard a grazer commits once it has locked onto food. Idle wandering keeps
 // the old dreamy steering; a creature crossing a field to a meal does not.
@@ -698,16 +699,45 @@ function drawGrazer(context, lifeform) {
     ? 1 + Math.sin(lifeform.pulse * 26) * 0.13
     : 1;
 
+  // The feeding field, drawn at exactly the radius it actually reaches — the
+  // glow IS the mouth, so nothing about a big one's reach is a hidden number.
+  // Drawn before the body and outside the chew scaling so it stays a true circle
+  // while the creature works.
+  const field = getGrazeFieldRadius(lifeform);
+  if (field > 0) {
+    const breathe = 1 + Math.sin(lifeform.pulse * 1.6 + lifeform.seed) * 0.035;
+    const reach = field * breathe;
+
+    context.save();
+    // Undo the heading rotation: a suction field has no facing.
+    context.rotate(-Math.atan2(lifeform.velocity.y, lifeform.velocity.x));
+    context.fillStyle = "rgba(150, 240, 170, 0.10)";
+    context.beginPath();
+    context.arc(0, 0, reach, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = ripe ? "rgba(198, 255, 150, 0.50)" : "rgba(150, 240, 178, 0.34)";
+    context.lineWidth = 1.6;
+    context.stroke();
+
+    // Intake lines drifting inward, so you can see which way it is pulling.
+    const spokes = 8;
+    const drift = (lifeform.pulse * 0.55) % 1;
+    context.strokeStyle = ripe ? "rgba(198, 255, 150, 0.34)" : "rgba(150, 240, 178, 0.22)";
+    context.lineWidth = 1;
+    for (let index = 0; index < spokes; index += 1) {
+      const angle = (Math.PI * 2 * index) / spokes + lifeform.seed;
+      const outer = reach * (1 - drift * 0.45);
+      const inner = outer * 0.62;
+      context.beginPath();
+      context.moveTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
+      context.lineTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
+      context.stroke();
+    }
+    context.restore();
+  }
+
   context.save();
   context.scale(chew, 2 - chew);
-
-  if (ripe) {
-    // A soft bloom so a ripe one reads across a dark field.
-    context.fillStyle = "rgba(196, 255, 150, 0.16)";
-    context.beginPath();
-    context.ellipse(0, 0, nose * 1.5, pinch * 2.4, 0, 0, Math.PI * 2);
-    context.fill();
-  }
 
   context.fillStyle = ripe ? "rgba(198, 255, 150, 0.32)" : "rgba(140, 240, 178, 0.18)";
   context.strokeStyle = ripe ? "#c6ff96" : LIFE_COLORS.grazer;

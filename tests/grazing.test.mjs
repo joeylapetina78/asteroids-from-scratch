@@ -12,8 +12,10 @@ import {
   GRAZING_STAGE,
   advanceGrazing,
   findGrazingClusters,
+  getGrazeFieldRadius,
   getGrazerSporeYield,
   getGrowthScale,
+  isFilterFeeder,
   isEdible,
   isRipe,
   isSettled,
@@ -23,7 +25,11 @@ import {
 const FAR_FROM_SHIP = { x: 100_000, y: 100_000 };
 
 function pickup({ type = "iron-nickel", x = 0, y = 0, age = 999, strain = null } = {}) {
-  return { type, position: { x, y }, age, grazedSeconds: 0, quantity: 1, strain };
+  return { type, position: { x, y }, age, velocity: { x: 0, y: 0 }, quantity: 1, strain };
+}
+
+function fedGrazer({ x = 0, y = 0, seed = 1, fullness = 0 } = {}) {
+  return { ...grazer({ x, y, seed }), fullness };
 }
 
 function grazer({ x = 0, y = 0, seed = 1 } = {}) {
@@ -276,4 +282,115 @@ test("a grazer keeps the meal it has already started", () => {
 test("an empty field asks nothing of the simulation", () => {
   assert.deepEqual(advanceGrazing([], [], { deltaSeconds: 1 }).eaten, []);
   assert.deepEqual(advanceGrazing([grazer()], [], { deltaSeconds: 1 }).eaten, []);
+});
+
+// ── The mouth: a grown one filter-feeds ─────────────────────────────────────
+
+test("a small grazer has no field; a grown one opens one that widens as it fills", () => {
+  assert.equal(getGrazeFieldRadius(fedGrazer({ fullness: 0 })), 0, "a lean one picks, it does not filter");
+  assert.equal(isFilterFeeder(fedGrazer({ fullness: 0 })), false);
+
+  const opening = getGrazeFieldRadius(fedGrazer({ fullness: GRAZING_DEFAULTS.fieldFromFullness }));
+  const full = getGrazeFieldRadius(fedGrazer({ fullness: GRAZING_DEFAULTS.maxFullness }));
+  assert.equal(opening, GRAZING_DEFAULTS.fieldRadiusMin);
+  assert.equal(full, GRAZING_DEFAULTS.fieldRadiusMax);
+  assert.ok(full > opening, "the bigger it gets the more it can take in at once");
+});
+
+test("a field drags material toward the mouth as it swims", () => {
+  const whale = fedGrazer({ x: 0, y: 0, fullness: GRAZING_DEFAULTS.maxFullness });
+  const drifting = pickup({ x: 150, y: 0 });
+
+  advanceGrazing([whale], [drifting], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP });
+  assert.ok(drifting.velocity.x < 0, "pulled inward, not left where it lay");
+  assert.equal(drifting.velocity.y, 0, "and straight down the line to the mouth");
+});
+
+test("material that reaches the mouth is swallowed whole, with no nibbling", () => {
+  const whale = fedGrazer({ x: 0, y: 0, fullness: 8 });
+  const atTheMouth = pickup({ x: GRAZING_DEFAULTS.swallowRange - 4, y: 0 });
+
+  const { eaten } = advanceGrazing([whale], [atTheMouth], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP });
+  assert.deepEqual(eaten, [atTheMouth], "gone on contact — a filter feeder does not pick at things");
+  assert.equal(whale.fullness, 9, "and it fed");
+});
+
+// A filter feeder does not bid for what it eats; it swims with its mouth open.
+test("a field takes what it passes without claiming it first", () => {
+  const whale = fedGrazer({ x: 0, y: 0, fullness: 10 });
+  const passing = pickup({ x: 10, y: 0 });
+  assert.equal(whale.grazingTarget, null, "nothing was ever assigned to it");
+
+  const { eaten } = advanceGrazing([whale], [passing], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP });
+  assert.deepEqual(eaten, [passing]);
+});
+
+test("a full grazer still drags material along but stops swallowing it", () => {
+  const stuffed = fedGrazer({ x: 0, y: 0, fullness: GRAZING_DEFAULTS.maxFullness });
+  const spare = pickup({ x: 12, y: 0 });
+
+  const { eaten } = advanceGrazing([stuffed], [spare], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP });
+  assert.deepEqual(eaten, [], "there is no room left");
+  assert.equal(stuffed.fullness, GRAZING_DEFAULTS.maxFullness, "and it cannot overfill");
+});
+
+// Everything the small ones respect, the big ones respect too.
+test("a field will not reach into the space you are occupying", () => {
+  const whale = fedGrazer({ x: 0, y: 0, fullness: GRAZING_DEFAULTS.maxFullness });
+  const yours = pickup({ x: 20, y: 0 });
+
+  const { eaten } = advanceGrazing([whale], [yours], { deltaSeconds: 1 / 30, shipPosition: { x: 0, y: 0 } });
+  assert.deepEqual(eaten, [], "your presence still protects your haul");
+  assert.equal(yours.velocity.x, 0, "and nothing even tugs at it");
+});
+
+test("a field does not take fresh drops or things that are not food", () => {
+  const whale = fedGrazer({ x: 0, y: 0, fullness: GRAZING_DEFAULTS.maxFullness });
+  const fresh = pickup({ x: 12, y: 0, age: 0 });
+  const treasure = pickup({ x: 0, y: 12, type: "crystal-matrix" });
+
+  const { eaten } = advanceGrazing([whale], [fresh, treasure], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP });
+  assert.deepEqual(eaten, [], "the rules that protect your loop are not size-dependent");
+  assert.equal(fresh.velocity.x, 0);
+  assert.equal(treasure.velocity.y, 0);
+});
+
+test("two mouths never split one drop between them", () => {
+  const first = fedGrazer({ x: 0, y: 0, seed: 1, fullness: 10 });
+  const second = fedGrazer({ x: 20, y: 0, seed: 2, fullness: 10 });
+  const contested = pickup({ x: 10, y: 0 });
+
+  const { eaten } = advanceGrazing([first, second], [contested], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP });
+  assert.deepEqual(eaten, [contested], "reported once");
+  assert.equal(first.fullness + second.fullness, 21, "and fed exactly one of them");
+});
+
+// Growing up must never cost a creature food it used to be able to reach. Ore
+// settles deep inside rocks; a grown one can no more get its mouth to something
+// buried a hundred units into a boulder than a small one can. When suction was
+// the ONLY way a big grazer ate, it went from eating buried ore to ignoring it.
+test("a grown grazer is never worse at buried material than a small one", () => {
+  const buried = () => Object.assign(pickup({ x: 140, y: 0 }), { grazeReach: 150 });
+
+  const lean = grazer({ x: 0, y: 0, seed: 1 });
+  const leanFood = buried();
+  let leanAte = false;
+  for (let tick = 0; tick < 400 && !leanAte; tick += 1) {
+    leanAte = advanceGrazing([lean], [leanFood], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP }).eaten.length > 0;
+  }
+  assert.ok(leanAte, "a small one browses it off the rock face");
+
+  const grown = fedGrazer({ x: 0, y: 0, seed: 1, fullness: 8 });
+  const grownFood = buried();
+  const { eaten } = advanceGrazing([grown], [grownFood], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP });
+  assert.deepEqual(eaten, [grownFood], "and a big one takes it in one gulp, from the same distance");
+});
+
+test("a filter feeder gulps its target rather than tasting it", () => {
+  const grown = fedGrazer({ x: 0, y: 0, seed: 1, fullness: 8 });
+  const food = pickup({ x: 25, y: 0 });
+
+  const { eaten } = advanceGrazing([grown], [food], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP });
+  assert.deepEqual(eaten, [food], "no nibble, no recoil, no settle");
+  assert.equal(grown.grazingStage, null, "and it is already looking for the next one");
 });
