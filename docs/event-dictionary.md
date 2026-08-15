@@ -112,6 +112,8 @@ The older delivery fields still exist for display and compatibility. Future cont
 | `resource.collected` | `resourceType`, `amount` | Ship collected a loose resource. |
 | `resource.processed` | `resourceType`, `output`, `amount` | Processor converted a resource. |
 | `life.grazed` | `resourceType`, `amount`, `x`, `y` | Rock-life ate material that was left lying unclaimed. Hidden; the only way loose ore leaves the world without being collected. |
+| `life.surfaced` | `type`, `units`, `x`, `y` | Rock-life emerged at a pile of abandoned material. Hidden. |
+| `life.harvested` | `type`, `fullness`, `spores` | A ripe grazer was shot and gave up the spores it had grown. |
 | `mining.contractAccepted` | `orderId`, `allocationId`, `resourceId`, `quantity`, `shipInstitutionId` | Cinder assigned a physical worker to funded work. |
 | `mining.contractFulfilled` | `orderId`, `siteId`, `resourceId`, `quantity`, `payment`, `shipInstitutionId` | A worker delivered accepted material, received payment, and incurred work wear. |
 | `mining.surplusSold` | `siteId`, `resourceId`, `quantity`, `payment`, `buyerInstitutionId` | Cargo beyond an allocation entered local supply inventory. |

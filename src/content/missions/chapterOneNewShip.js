@@ -1,4 +1,4 @@
-import { chapterOneRoute, yardExchangeServices } from "../storyWorld.js?v=fresh-20260814-2033-3b23f7e";
+import { chapterOneRoute, yardExchangeServices } from "../storyWorld.js?v=fresh-20260814-2120-e890647";
 
 export const chapterOneNewShipMission = {
   id: "chapter-1-new-ship",

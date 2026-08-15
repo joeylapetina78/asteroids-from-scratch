@@ -1,3 +1,21 @@
+import {
+  GRAZING_STAGE,
+  getGrazingSteerTarget,
+  getGrowthScale,
+  isRipe,
+} from "../systems/grazing.js?v=fresh-20260814-2120-e890647";
+
+// How hard a grazer commits once it has locked onto food. Idle wandering keeps
+// the old dreamy steering; a creature crossing a field to a meal does not.
+const GRAZER_FEED_URGENCY = Object.freeze({
+  approach: 6,
+  nibble: 8,
+  recoil: 6.5,
+  finish: 2,
+});
+// And it swims faster while it is going somewhere on purpose.
+const GRAZER_FEED_SPEED_SCALE = 1.6;
+
 const LIFE_COLORS = {
   hunter: "#ff5d6c",
   threadling: "#b8f7ff",
@@ -28,8 +46,12 @@ export class Lifeform {
     // birthSeconds 0 = born fully formed (initial seeding, hunters, incursions).
     this.age = 0;
     this.birthSeconds = birthSeconds;
-    this.radius = getRadius(type);
-    this.maxSpeed = getMaxSpeed(type);
+    // A grazer thickens as it feeds, so `radius` is derived rather than fixed.
+    this.baseRadius = getRadius(type);
+    this.radius = this.baseRadius;
+    this.fullness = 0;
+    this.baseMaxSpeed = getMaxSpeed(type);
+    this.maxSpeed = this.baseMaxSpeed;
     this.maxForce = getMaxForce(type);
     this.perception = getPerception(type);
     this.isAlive = true;
@@ -40,6 +62,14 @@ export class Lifeform {
   update(deltaSeconds, world) {
     this.pulse += deltaSeconds;
     this.age += deltaSeconds;
+
+    // What it has eaten shows on it, and a fat one is a bigger target.
+    if (this.type === "grazer") {
+      if (this.fullness > 0) this.radius = this.baseRadius * getGrowthScale(this);
+      // Chasing a meal lifts the speed ceiling too, so a distant feast is worth
+      // crossing the field for rather than a five-minute drift.
+      this.maxSpeed = this.grazingTarget ? this.baseMaxSpeed * GRAZER_FEED_SPEED_SCALE : this.baseMaxSpeed;
+    }
 
     if (this.type === "hunter") {
       this.updateHunter(deltaSeconds, world);
@@ -95,13 +125,34 @@ export class Lifeform {
 
   updateGrazer(deltaSeconds, world) {
     // Something abandoned in the field outranks the usual patrol around a rock.
-    // The grazing system decides WHAT is worth going to (and refuses anything
-    // near the ship); this only steers there.
-    if (this.grazingTarget) {
-      this.applySteer(seek(this, this.grazingTarget.position, this.maxSpeed), 1.25);
+    // The grazing system decides WHAT is worth going to and WHERE in the meal it
+    // is; this only puts the body there. Each stage moves differently, which is
+    // the whole reason the meal reads as an animal deciding rather than as a
+    // countdown: a hard dart in, a quick flinch back, a slow settle.
+    const bite = getGrazingSteerTarget(this);
+
+    if (bite) {
+      const stage = this.grazingStage;
+      // A drifting grazer has almost no steering authority — `maxForce` 0.13
+      // means about eleven seconds just to reach its own top speed. That is
+      // right for an animal idling around a rock and hopeless for one crossing
+      // a field to a meal, which is why a whole spill used to take minutes to
+      // clear: nearly all of it was spent accelerating and turning, not eating.
+      // Committing to food buys real urgency.
+      const urgency = stage === GRAZING_STAGE.NIBBLE ? GRAZER_FEED_URGENCY.nibble
+        : stage === GRAZING_STAGE.RECOIL ? GRAZER_FEED_URGENCY.recoil
+        : stage === GRAZING_STAGE.FINISH ? GRAZER_FEED_URGENCY.finish
+        : GRAZER_FEED_URGENCY.approach;
+      const pace = stage === GRAZING_STAGE.FINISH ? 0.35 : 1;
+
+      this.applySteer(seek(this, bite, this.maxSpeed * pace), urgency);
       this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 125), 58), 0.55);
       this.applySteer(fleeIfClose(this, world.ship.position, 300, this.maxSpeed * 1.15), 1.8);
-      this.avoidAsteroids(world.asteroids, 4.2);
+      // Barely any rock-shyness while feeding. Grazers live around rocks, and at
+      // full avoidance a drop resting against one sits exactly where approach and
+      // avoidance cancel — the creature hangs there at a fixed distance forever,
+      // holding a claim on food it can never reach.
+      this.avoidAsteroids(world.asteroids, 0.9);
       return;
     }
 
@@ -632,17 +683,55 @@ function drawThreadling(context, lifeform) {
 }
 
 function drawGrazer(context, lifeform) {
-  const pinch = 5 + Math.sin(lifeform.pulse * 3 + lifeform.seed) * 1.4;
+  // A fed grazer is visibly a fed grazer: longer, rounder, and lit from inside
+  // by the spores it is growing. You should be able to pick the ripe one out of
+  // a field at a glance, because that is the one worth shooting.
+  const growth = getGrowthScale(lifeform);
+  const swell = 1 + (growth - 1) * 1.35;
+  const pinch = (5 + Math.sin(lifeform.pulse * 3 + lifeform.seed) * 1.4) * swell;
+  const nose = 15 * growth;
+  const tail = -16 * growth;
+  const ripe = isRipe(lifeform);
 
-  context.fillStyle = "rgba(140, 240, 178, 0.18)";
-  context.strokeStyle = LIFE_COLORS.grazer;
+  // Chewing shows in the body, not just in the path it takes.
+  const chew = lifeform.grazingStage === GRAZING_STAGE.NIBBLE
+    ? 1 + Math.sin(lifeform.pulse * 26) * 0.13
+    : 1;
+
+  context.save();
+  context.scale(chew, 2 - chew);
+
+  if (ripe) {
+    // A soft bloom so a ripe one reads across a dark field.
+    context.fillStyle = "rgba(196, 255, 150, 0.16)";
+    context.beginPath();
+    context.ellipse(0, 0, nose * 1.5, pinch * 2.4, 0, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  context.fillStyle = ripe ? "rgba(198, 255, 150, 0.32)" : "rgba(140, 240, 178, 0.18)";
+  context.strokeStyle = ripe ? "#c6ff96" : LIFE_COLORS.grazer;
   context.lineWidth = 2;
   context.beginPath();
-  context.moveTo(15, 0);
-  context.bezierCurveTo(6, -pinch, -8, -pinch, -16, 0);
-  context.bezierCurveTo(-8, pinch, 6, pinch, 15, 0);
+  context.moveTo(nose, 0);
+  context.bezierCurveTo(nose * 0.4, -pinch, tail * 0.5, -pinch, tail, 0);
+  context.bezierCurveTo(tail * 0.5, pinch, nose * 0.4, pinch, nose, 0);
   context.fill();
   context.stroke();
+
+  // The spores it is carrying, showing through as it fills up.
+  const carried = Math.min(4, Math.floor(lifeform.fullness ?? 0) >> 1);
+  if (carried > 0) {
+    context.fillStyle = ripe ? "rgba(214, 255, 170, 0.95)" : "rgba(180, 250, 200, 0.6)";
+    for (let index = 0; index < carried; index += 1) {
+      const along = tail * 0.55 + ((nose - tail * 0.55) * (index + 0.5)) / carried;
+      context.beginPath();
+      context.arc(along, Math.sin(lifeform.pulse * 2 + index) * pinch * 0.22, 1.7, 0, Math.PI * 2);
+      context.fill();
+    }
+  }
+
+  context.restore();
 }
 
 function drawSkitter(context, lifeform) {

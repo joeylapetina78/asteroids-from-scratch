@@ -1,7 +1,7 @@
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260814-2033-3b23f7e";
-import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260814-2033-3b23f7e";
-import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260814-2033-3b23f7e";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260814-2033-3b23f7e";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260814-2120-e890647";
+import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260814-2120-e890647";
+import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260814-2120-e890647";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260814-2120-e890647";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.
@@ -340,6 +340,49 @@ function createEmergingLifeformNear(type, anchor, random, seedOffset) {
     },
     seed: hashNumbers(anchor.position.x, anchor.position.y, seedOffset),
     birthSeconds: AMBIENT_EMERGE_SECONDS,
+  });
+}
+
+// Rock-life surfacing at a spill of abandoned material.
+//
+// It slips out from behind a nearby rock when there is one to hide behind, and
+// otherwise rises straight out of the dark — either way through the same emerge
+// animation ambient life uses, so it scales and fades up rather than appearing.
+// A creature that pops into existence next to your salvage reads as a spawner;
+// one that surfaces reads as something that was always out there.
+const FEAST_EMERGE_SECONDS = 1.1;
+const FEAST_ROCK_SEARCH_RADIUS = 420;
+
+export function createGrazerAtFeast(centre, asteroids, random = Math.random) {
+  const cover = asteroids
+    .filter((asteroid) => Math.hypot(asteroid.position.x - centre.x, asteroid.position.y - centre.y) <= FEAST_ROCK_SEARCH_RADIUS)
+    .sort((first, second) =>
+      Math.hypot(first.position.x - centre.x, first.position.y - centre.y)
+      - Math.hypot(second.position.x - centre.x, second.position.y - centre.y))[0] ?? null;
+
+  const angle = random() * Math.PI * 2;
+  // Behind the rock, or a little way off in open space — never right on top of
+  // the food, so the first thing it does is swim in.
+  const origin = cover
+    ? {
+        x: cover.position.x + Math.cos(angle) * (cover.radius ?? 40) * 0.85,
+        y: cover.position.y + Math.sin(angle) * (cover.radius ?? 40) * 0.85,
+      }
+    : {
+        x: centre.x + Math.cos(angle) * randomRange(random, 190, 330),
+        y: centre.y + Math.sin(angle) * randomRange(random, 190, 330),
+      };
+
+  const towardFood = Math.atan2(centre.y - origin.y, centre.x - origin.x);
+  const speed = randomRange(random, 30, 70);
+
+  return new Lifeform({
+    type: "grazer",
+    x: origin.x,
+    y: origin.y,
+    velocity: { x: Math.cos(towardFood) * speed, y: Math.sin(towardFood) * speed },
+    seed: hashNumbers(Math.round(origin.x), Math.round(origin.y), 8813),
+    birthSeconds: FEAST_EMERGE_SECONDS,
   });
 }
 

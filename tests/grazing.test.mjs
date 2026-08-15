@@ -9,8 +9,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   GRAZING_DEFAULTS,
+  GRAZING_STAGE,
   advanceGrazing,
+  findGrazingClusters,
+  getGrazerSporeYield,
+  getGrowthScale,
   isEdible,
+  isRipe,
   isSettled,
   planGrazing,
 } from "../src/systems/grazing.js";
@@ -106,41 +111,166 @@ test("food beyond sight is not noticed", () => {
 test("a drop is finished only after being worked on, not on contact", () => {
   const meal = pickup({ x: 0 });
   const hungry = [grazer({ x: 5 })];
-  const world = { deltaSeconds: 1, shipPosition: FAR_FROM_SHIP };
+  const world = { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP };
 
   const first = advanceGrazing(hungry, [meal], world);
-  assert.equal(first.eaten.length, 0, "one second in, still eating");
-  assert.equal(hungry[0].grazingTarget, meal, "and it is visibly going for it");
+  assert.equal(first.eaten.length, 0, "arriving is not eating");
+  assert.equal(hungry[0].grazingTarget, meal, "but it is visibly going for it");
 
-  for (let second = 0; second < GRAZING_DEFAULTS.biteSeconds; second += 1) {
-    var result = advanceGrazing(hungry, [meal], world);
+  // Watch the whole performance: it must taste, flinch off, and come back before
+  // anything disappears.
+  const stages = new Set();
+  let eaten = [];
+  for (let tick = 0; tick < 400 && eaten.length === 0; tick += 1) {
+    stages.add(hungry[0].grazingStage);
+    eaten = advanceGrazing(hungry, [meal], world).eaten;
   }
-  assert.deepEqual(result.eaten, [meal], "finished, and handed back for the caller to remove");
+
+  assert.deepEqual(eaten, [meal], "finished, and handed back for the caller to remove");
+  assert.ok(stages.has(GRAZING_STAGE.NIBBLE), "it tasted it");
+  assert.ok(stages.has(GRAZING_STAGE.RECOIL), "and flinched back off it at least once");
+  assert.ok(stages.has(GRAZING_STAGE.FINISH), "and settled before it vanished");
 });
 
+test("eating fattens the creature, and a fed one eventually goes ripe", () => {
+  const hungry = grazer({ x: 0 });
+  assert.equal(isRipe(hungry), false, "a lean grazer is not worth shooting");
+  assert.equal(getGrazerSporeYield(hungry), 0, "and carries nothing");
+
+  const world = { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP };
+  for (let meal = 0; meal < GRAZING_DEFAULTS.ripeAt; meal += 1) {
+    const food = pickup({ x: 2, y: 0 });
+    let eaten = [];
+    for (let tick = 0; tick < 400 && eaten.length === 0; tick += 1) {
+      eaten = advanceGrazing([hungry], [food], world).eaten;
+    }
+    assert.equal(eaten.length, 1, `meal ${meal + 1} finished`);
+  }
+
+  assert.equal(hungry.fullness, GRAZING_DEFAULTS.ripeAt);
+  assert.ok(isRipe(hungry), "fed enough to be worth harvesting");
+  assert.ok(getGrazerSporeYield(hungry) > 0, "and carrying spores to show for it");
+  assert.ok(getGrowthScale(hungry) > 1, "and visibly bigger than it started");
+});
+
+// The entity does the moving, so a stationary fixture never arrives — which is
+// exactly the point: distance, not a timer, is what starts a meal.
 test("a grazer out of reach steers toward food without consuming it", () => {
   const meal = pickup({ x: 300 });
   const hungry = [grazer({ x: 0 })];
 
-  for (let second = 0; second < 30; second += 1) {
-    advanceGrazing(hungry, [meal], { deltaSeconds: 1, shipPosition: FAR_FROM_SHIP });
+  const { eaten } = advanceGrazing(hungry, [meal], { deltaSeconds: 1, shipPosition: FAR_FROM_SHIP });
+  assert.equal(eaten.length, 0, "nothing is eaten from across the field");
+  assert.equal(hungry[0].grazingTarget, meal, "it is on its way");
+  assert.equal(hungry[0].grazingStage, GRAZING_STAGE.APPROACH, "and still only travelling");
+});
+
+// A drop resting against a rock sits exactly where a creature's approach and its
+// asteroid-avoidance cancel out. It hung there at a fixed distance forever,
+// holding a claim on food nothing could reach — which stranded the last two
+// units of a fourteen-unit spill indefinitely. Wanting is not reaching.
+test("food it cannot get to is released rather than claimed forever", () => {
+  const unreachable = pickup({ x: 300 });
+  const stuck = grazer({ x: 0 });
+  stuck.age = 0;
+
+  // Claim it first, then let it fail to make progress.
+  advanceGrazing([stuck], [unreachable], { deltaSeconds: 0.5, shipPosition: FAR_FROM_SHIP });
+  assert.equal(stuck.grazingTarget, unreachable, "it set off toward the drop");
+
+  let ticks = 1;
+  while (stuck.grazingTarget && ticks < 200) {
+    stuck.age += 0.5;
+    advanceGrazing([stuck], [unreachable], { deltaSeconds: 0.5, shipPosition: FAR_FROM_SHIP });
+    ticks += 1;
   }
-  assert.equal(meal.grazedSeconds, 0, "it has to actually get there");
-  assert.equal(hungry[0].grazingTarget, meal);
+
+  assert.equal(stuck.grazingTarget, null, "it gave up instead of hanging there");
+  assert.ok(ticks * 0.5 <= GRAZING_DEFAULTS.approachTimeoutSeconds + 1, "and gave up promptly");
+
+  // And it does not immediately re-claim the same trap.
+  advanceGrazing([stuck], [unreachable], { deltaSeconds: 0.5, shipPosition: FAR_FROM_SHIP });
+  assert.equal(stuck.grazingTarget, null, "the drop it failed to reach is somebody else's problem for a while");
+});
+
+// Another creature coming from a different angle may well manage it, so a
+// refusal is personal rather than a global blacklist on the drop.
+test("giving up is personal, not a mark on the food", () => {
+  const awkward = pickup({ x: 300 });
+  const quitter = grazer({ x: 0, seed: 1 });
+  quitter.grazingAvoid = awkward;
+  quitter.grazingAvoidUntil = 999;
+  quitter.age = 0;
+
+  const fresh = grazer({ x: 320, seed: 2 });
+  const assignments = planGrazing([quitter, fresh], [awkward], { shipPosition: FAR_FROM_SHIP });
+
+  assert.equal(assignments.length, 1);
+  assert.equal(assignments[0].grazer, fresh, "the one that has not failed at it still tries");
+});
+
+// ── A feast should draw a crowd ─────────────────────────────────────────────
+
+test("a lone drop is not a feast", () => {
+  const scattered = [pickup({ x: 0 }), pickup({ x: 4000 })];
+  assert.deepEqual(findGrazingClusters(scattered, [], { shipPosition: FAR_FROM_SHIP }), []);
+});
+
+test("a pile of abandoned material with nobody on it wants mouths", () => {
+  const pile = Array.from({ length: 9 }, (unused, index) => pickup({ x: index * 30, y: 0 }));
+  const clusters = findGrazingClusters(pile, [], { shipPosition: FAR_FROM_SHIP });
+
+  assert.equal(clusters.length, 1, "one spill, one crowd");
+  assert.equal(clusters[0].units, 9);
+  assert.ok(clusters[0].missing > 0, "and nothing is eating it yet");
+  assert.ok(clusters[0].wanted <= GRAZING_DEFAULTS.maxGrazersPerCluster, "a spill is not a swarm");
+});
+
+test("a pile already being worked does not call for more", () => {
+  const pile = Array.from({ length: 6 }, (unused, index) => pickup({ x: index * 30, y: 0 }));
+  const crowd = Array.from({ length: GRAZING_DEFAULTS.maxGrazersPerCluster },
+    (unused, index) => grazer({ x: 60, y: 0, seed: index }));
+  assert.deepEqual(findGrazingClusters(pile, crowd, { shipPosition: FAR_FROM_SHIP }), []);
+});
+
+test("a pile you are standing over never calls anything up", () => {
+  const pile = Array.from({ length: 9 }, (unused, index) => pickup({ x: index * 20, y: 0 }));
+  assert.deepEqual(findGrazingClusters(pile, [], { shipPosition: { x: 80, y: 0 } }), [],
+    "your presence protects the whole spill, not just the nearest drop");
+});
+
+test("fresh spill is not a feast until it has been abandoned", () => {
+  const pile = Array.from({ length: 9 }, (unused, index) => pickup({ x: index * 30, y: 0, age: 0 }));
+  assert.deepEqual(findGrazingClusters(pile, [], { shipPosition: FAR_FROM_SHIP }), []);
 });
 
 // You came back and scared it off — it does not get to resume mid-meal.
 test("interrupted feeding is forgotten rather than banked", () => {
   const meal = pickup({ x: 0 });
   const hungry = [grazer({ x: 5 })];
-  advanceGrazing(hungry, [meal], { deltaSeconds: 3, shipPosition: FAR_FROM_SHIP });
-  const progress = meal.grazedSeconds;
-  assert.ok(progress > 0, "it had started");
+  for (let tick = 0; tick < 10; tick += 1) {
+    advanceGrazing(hungry, [meal], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP });
+  }
+  assert.ok(hungry[0].grazingStage, "it had started");
 
   // The ship arrives; the grazer is now too close to feed.
-  advanceGrazing(hungry, [meal], { deltaSeconds: 2, shipPosition: { x: 0, y: 0 } });
-  assert.ok(meal.grazedSeconds < progress, "progress decays once nobody is working on it");
-  assert.equal(hungry[0].grazingTarget, null, "and it has given up on the meal");
+  advanceGrazing(hungry, [meal], { deltaSeconds: 1 / 30, shipPosition: { x: 0, y: 0 } });
+  assert.equal(hungry[0].grazingTarget, null, "it gave up the meal");
+  assert.equal(hungry[0].grazingStage, null, "and forgot how far through it was");
+});
+
+// A creature that re-auctioned its dinner every frame would twitch between
+// meals and finish none of them.
+test("a grazer keeps the meal it has already started", () => {
+  const near = pickup({ x: 0, y: 0 });
+  const hungry = [grazer({ x: 40, y: 0 })];
+  advanceGrazing(hungry, [near], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP });
+  assert.equal(hungry[0].grazingTarget, near);
+
+  // Something closer appears. It should NOT abandon what it is already eating.
+  const closer = pickup({ x: 41, y: 0 });
+  advanceGrazing(hungry, [near, closer], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP });
+  assert.equal(hungry[0].grazingTarget, near, "dinner is not re-auctioned mid-bite");
 });
 
 test("an empty field asks nothing of the simulation", () => {
