@@ -1,6 +1,6 @@
-import { TRADED_FAMILIES, getFamilyConsumptionRates } from "./hubInventory.js?v=fresh-20260815-0037-af5b9ab";
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260815-0037-af5b9ab";
-import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND } from "./populationDemand.js?v=fresh-20260815-0037-af5b9ab";
+import { TRADED_FAMILIES, getFamilyConsumptionRates } from "./hubInventory.js?v=fresh-20260815-0038-449a36b";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260815-0038-449a36b";
+import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260815-0038-449a36b";
 
 // A place simulated as RATES rather than as transactions. Step 4, Phase B.
 //
@@ -121,9 +121,17 @@ function measureConsumed(first, last, institutionId) {
 // refuses to advance. A freshly booted world is the second, and reporting it as
 // the first is exactly the kind of false certainty this module exists to avoid.
 export function minimumObservationSeconds(institutionId) {
+  // Read through the SCALED interval, because that is the cycle the settlement
+  // actually runs on. A small place waits proportionally longer between wanting
+  // things, so watching it for the authored interval would once again be taking
+  // a glance and calling it an observation — the exact mistake this floor exists
+  // to prevent, just re-introduced by the population scaling.
   const intervals = POPULATION_PROFILES
     .filter((profile) => profile.hubInstitutionId === institutionId)
-    .flatMap((profile) => profile.needIds.map((needId) => POPULATION_NEEDS[needId]?.demandIntervalSeconds ?? 0));
+    .flatMap((profile) => profile.needIds
+      .map((needId) => POPULATION_NEEDS[needId])
+      .filter(Boolean)
+      .map((need) => getScaledDemandInterval(need, profile)));
   return intervals.length > 0 ? Math.max(...intervals) : 0;
 }
 

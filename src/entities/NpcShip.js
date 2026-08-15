@@ -1,7 +1,7 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260815-0037-af5b9ab";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260815-0037-af5b9ab";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260815-0037-af5b9ab";
-import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260815-0037-af5b9ab";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260815-0038-449a36b";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260815-0038-449a36b";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260815-0038-449a36b";
+import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260815-0038-449a36b";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
