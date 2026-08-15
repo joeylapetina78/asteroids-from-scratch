@@ -15,6 +15,32 @@ export const ROCKMOSS_STRAINS = {
   pod: { id: "pod", shape: "pod", color: [255, 158, 214], accent: [255, 224, 242], yieldHint: "seedstock" },
 };
 
+export const ROCKMOSS_CRAWLER_TYPE = "rockmoss-crawler";
+
+// What a spore of a given strain LOOKS like — one source of truth, read both by
+// the pickup drifting in space and by the unit sitting in the cargo hold.
+//
+// Every strain used to ship the same green crawler, so a hold full of spores was
+// six different lifeforms wearing one costume and you could not tell what you
+// were carrying. A spore now takes its parent's growth-shape and colour, which
+// makes the cargo hold readable for the same reason the rocks are: the thing
+// looks like what it came from.
+export function getStrainAppearance(strainId) {
+  const strain = ROCKMOSS_STRAINS[strainId] ?? ROCKMOSS_STRAINS.moss;
+  return {
+    id: strain.id,
+    // Namespaced so a spore silhouette can never collide with an ore family's.
+    shape: `spore-${strain.shape}`,
+    color: toCss(strain.color),
+    accent: toCss(strain.accent),
+    label: `${strain.id} spore`,
+  };
+}
+
+function toCss([red, green, blue]) {
+  return `#${[red, green, blue].map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
 // Choose a strain from the zone's identity — mirrors pickAmbientType. Always
 // falls back to plain green moss so nothing is ever strainless. `random` is
 // passed in so callers control determinism (start-field vs per-rock chunk seed).

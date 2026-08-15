@@ -94,6 +94,17 @@ export class Lifeform {
   }
 
   updateGrazer(deltaSeconds, world) {
+    // Something abandoned in the field outranks the usual patrol around a rock.
+    // The grazing system decides WHAT is worth going to (and refuses anything
+    // near the ship); this only steers there.
+    if (this.grazingTarget) {
+      this.applySteer(seek(this, this.grazingTarget.position, this.maxSpeed), 1.25);
+      this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 125), 58), 0.55);
+      this.applySteer(fleeIfClose(this, world.ship.position, 300, this.maxSpeed * 1.15), 1.8);
+      this.avoidAsteroids(world.asteroids, 4.2);
+      return;
+    }
+
     const asteroid = findNearestAsteroid(this.position, world.asteroids, 520);
 
     if (asteroid) {
