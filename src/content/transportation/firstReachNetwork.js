@@ -1,4 +1,4 @@
-import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260814-2016-6d4590b";
+import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260814-2029-4c85d98";
 
 export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
   { id: "lane-yard-scrap", fromId: "yard-exchange", toId: "scrap-porch", distance: 1875, bidirectional: true },

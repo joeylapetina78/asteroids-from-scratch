@@ -11,7 +11,7 @@ import {
   ensurePanelCondition,
   panelStageIndex,
   repairPanelCondition,
-} from "./panelMaintenance.js?v=fresh-20260814-2016-6d4590b";
+} from "./panelMaintenance.js?v=fresh-20260814-2029-4c85d98";
 
 export const COMPONENT_THRESHOLDS = Object.freeze({ degraded: 0.55, emergency: 0.8, failed: 1 });
 
