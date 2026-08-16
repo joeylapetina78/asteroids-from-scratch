@@ -28,6 +28,24 @@
 // Everything else — asteroids, tractor fields, pickups, freight, procurement,
 // populations — is the live world untouched.
 //
+// MEASURED THROUGHPUT, AND THE HONEST LIMIT. The premise was that driving the
+// loop directly would fast-forward the world. It does not, here: measured at
+// roughly 0.26x real time in the preview pane — 157 simulated seconds in about
+// ten wall minutes. A spot reading mid-chunk shows 2.9x, so the compute itself is
+// faster than real time; the wall clock goes somewhere between chunks, and the
+// tab appears to deprioritise this work heavily when it is not the focused
+// surface. Simulating an hour would take hours.
+//
+// The cost is dominated by per-frame work over ~2,500 asteroids and ~400
+// lifeforms, almost none of which affects whether a settlement eats. The obvious
+// speedup is to skip the entity systems that do not feed the economy — but that
+// is EXACTLY the compromise that produced the earlier confidently-wrong answers,
+// so it may only be done by keeping the workers and the rocks they mine, and
+// then proving the reduced world reports the same throughput as a full-fidelity
+// run over the same span. Until that is done this probe is faithful but slow,
+// which is the right way round: a slow instrument wastes time, a fast wrong one
+// wastes decisions.
+//
 // Usage from the console:
 //   await measureVitality({ minutes: 60 })
 
