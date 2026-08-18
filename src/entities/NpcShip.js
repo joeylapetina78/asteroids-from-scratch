@@ -1,7 +1,7 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260815-0038-449a36b";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260815-0038-449a36b";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260815-0038-449a36b";
-import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260815-0038-449a36b";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260818-0644-d8d52fb";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260818-0644-d8d52fb";
+import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260818-0644-d8d52fb";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -85,6 +85,7 @@ export class NpcShip {
     this.cargoTransfers = [];
     this.departureTimer = 0;
     this.activeTowRequestId = null;
+    this.activeMovementId = null;
     this.towDestinationSiteId = null;
     this.activeCorridorId = null;
     this.navigationMetrics = { distanceTraveled: 0, carefulDistance: 0, replanCount: 0, corridorEntries: 0 };
@@ -160,6 +161,7 @@ export class NpcShip {
           siteName: arrivedSite?.name ?? null,
           routeLegsCompleted: this.completedRouteLegs,
           shipmentId: this.activeShipmentId,
+          movementId: this.activeMovementId,
           towRequestId: this.activeTowRequestId,
           navigationMetrics: { ...this.navigationMetrics },
           provisionalLogistics: false,
@@ -259,6 +261,32 @@ export class NpcShip {
     this.operationalStatus = "loading";
     this.cargoSegments.forEach((segment) => { segment.loaded = Boolean(this.activeShipmentId); });
     this.lastWaypointDistance = distance(this.position, this.getWaypoint());
+    return true;
+  }
+
+  // Empty repositioning and service returns are travel, not cargo. Keeping
+  // their identity outside the freight portfolio prevents an interrupted
+  // arrival from reserving cargo space forever as a phantom manifest.
+  assignMovement({ movementId, destinationSiteId, route = this.route }) {
+    if (!movementId || !this.canAcceptRoute(route)) return false;
+    const destinationIndex = route.findIndex((site) => site.id === destinationSiteId);
+    if (destinationIndex < 0) return false;
+    this.activeMovementId = movementId;
+    this.route = route;
+    this.routeIndex = Math.min(1, destinationIndex);
+    this.activeCorridorId = null;
+    this.navigationMetrics = { distanceTraveled: 0, carefulDistance: 0, replanCount: 0, corridorEntries: 0 };
+    this.departureTimer = 1.1;
+    this.operationalStatus = "loading";
+    this.cargoSegments.forEach((segment) => { segment.loaded = Boolean(this.activeShipmentId); });
+    this.lastWaypointDistance = distance(this.position, this.getWaypoint());
+    return true;
+  }
+
+  clearMovement(movementId = null) {
+    if (movementId && this.activeMovementId !== movementId) return false;
+    this.activeMovementId = null;
+    if (!this.activeShipmentId) this.operationalStatus = "seeking-work";
     return true;
   }
 

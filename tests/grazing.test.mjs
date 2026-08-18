@@ -69,6 +69,21 @@ test("nothing is touched while it lies fresh, however hungry the field is", () =
   assert.equal(assignments.length, 0, "cracking a rock and scooping it up is never disturbed");
 });
 
+test("assignment planning can be throttled without interrupting an existing meal", () => {
+  const heldFood = pickup({ x: 12 });
+  const waitingFood = pickup({ x: 18 });
+  const eating = grazer({ seed: 1 });
+  const waiting = grazer({ seed: 2 });
+  eating.grazingTarget = heldFood;
+
+  const assignments = planGrazing([eating, waiting], [heldFood, waitingFood], {
+    shipPosition: FAR_FROM_SHIP,
+    assignNew: false,
+  });
+
+  assert.deepEqual(assignments.map(({ grazer: assigned }) => assigned), [eating]);
+});
+
 test("your presence protects your haul", () => {
   const ship = { x: 0, y: 0 };
   const underTheShip = pickup({ x: 40, y: 0 });

@@ -54,6 +54,7 @@ export const BLOCKER_KIND = Object.freeze({
 const MAX_EVENT_REFS = 10;
 const MAX_ALTERNATIVES = 6;
 const MAX_BLOCKER_DEPTH = 8;
+const MAX_RETIRED_TOMBSTONES = 100;
 
 export function ensureDiagnostics(state) {
   state.diagnostics ??= { actors: {}, updatedAt: null };
@@ -165,7 +166,7 @@ export function clearBlocker(state, actorId, { state: actorState = DIAGNOSTIC_ST
 // still explain what the actor was, while current-actor projections can omit it.
 export function retireDiagnostic(state, actorId, { summary = "Retired", at = Date.now() } = {}) {
   if (!actorId) return null;
-  return recordDiagnostic(state, actorId, {
+  const record = recordDiagnostic(state, actorId, {
     state: DIAGNOSTIC_STATE.RETIRED,
     summary,
     blocker: null,
@@ -175,6 +176,12 @@ export function retireDiagnostic(state, actorId, { summary = "Retired", at = Dat
     nextReconsiderAt: null,
     retiredAt: at,
   }, at);
+  const retired = Object.values(ensureDiagnostics(state).actors)
+    .filter((candidate) => candidate.state === DIAGNOSTIC_STATE.RETIRED)
+    .sort((first, second) => (first.retiredAt ?? first.updatedAt ?? 0) - (second.retiredAt ?? second.updatedAt ?? 0));
+  retired.slice(0, Math.max(0, retired.length - MAX_RETIRED_TOMBSTONES))
+    .forEach((candidate) => { delete state.diagnostics.actors[candidate.actorId]; });
+  return record;
 }
 
 export function getDiagnostic(state, actorId) {

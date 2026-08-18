@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { applyCraftUse, ensureCraftComponents, serviceCraftComponent } from "../src/systems/componentCondition.js";
+import { applyCraftUse, ensureCraftComponents, routineServiceCraft, serviceCraftComponent } from "../src/systems/componentCondition.js";
 
 const DEFINITIONS = [
   { id: "drive", label: "Drive" },
@@ -27,6 +27,20 @@ test("servicing one component does not reset its neighbors or erase permanent ag
   assert.equal(craft.components.drive.condition.currentCondition, agedMaximum);
   assert.equal(craft.components.tool.condition.wear, toolWear);
   assert.equal(craft.components.drive.serviceHistory[0].repairOrderId, "repair-1");
+});
+
+test("routine maintenance tends the whole craft but leaves serious faults diagnosed", () => {
+  const craft = {};
+  ensureCraftComponents(craft, DEFINITIONS);
+  applyCraftUse(craft, { drive: 0.6, tool: 0.85 });
+
+  const result = routineServiceCraft(craft, { at: 500, providerId: "yard-exchange" });
+
+  assert.deepEqual(result.serviced, ["drive"]);
+  assert.deepEqual(result.diagnosed, ["tool"]);
+  assert.equal(craft.components.drive.condition.stage, "healthy");
+  assert.equal(craft.components.tool.condition.stage, "emergency");
+  assert.equal(craft.components.drive.serviceHistory.at(-1).serviceType, "routine-maintenance");
 });
 
 test("seeded starting wear is distributed by component archetype data", () => {

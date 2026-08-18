@@ -402,6 +402,24 @@ test("an actor arriving with a balance is reported as arrival, not as a leak", (
     "and the newcomer is named, so the claim can be checked");
 });
 
+test("a hub-funded arriving carrier is a transfer plus hull burn, not an external endowment", () => {
+  const samples = [
+    { t: 0, money: bands(20_000), actors: { hub: { id: "hub", cash: 20_000 } } },
+    {
+      t: 60_000, money: bands(14_000, { capitalSpendCumulative: 6_000 }),
+      actors: {
+        hub: { id: "hub", cash: 9_000 },
+        carrier: { id: "carrier", cash: 5_000, arrivalInternalFunding: 5_000 },
+      },
+    },
+  ];
+  const reconciliation = reconcileMoney(samples);
+  assert.equal(reconciliation.internallyFundedArrivals, 5_000);
+  assert.equal(reconciliation.endowed, 0);
+  assert.equal(reconciliation.capitalBurned, 6_000);
+  assert.equal(reconciliation.residual, 0);
+});
+
 test("an actor leaving takes its balance out of the world, also not a leak", () => {
   const samples = [
     {

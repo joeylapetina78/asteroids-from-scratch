@@ -1,20 +1,20 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260815-0038-449a36b";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260815-0038-449a36b";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260815-0038-449a36b";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260815-0038-449a36b";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260815-0038-449a36b";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260815-0038-449a36b";
-import { adaptShipment } from "./intentions.js?v=fresh-20260815-0038-449a36b";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260815-0038-449a36b";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260815-0038-449a36b";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260815-0038-449a36b";
-import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260815-0038-449a36b";
-import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260815-0038-449a36b";
-import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260815-0038-449a36b";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260815-0038-449a36b";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260815-0038-449a36b";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260815-0038-449a36b";
-import { issuerTreasuryRecords, seedIssuerTreasuries } from "./contractTreasury.js?v=fresh-20260815-0038-449a36b";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260818-0644-d8d52fb";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260818-0644-d8d52fb";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260818-0644-d8d52fb";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260818-0644-d8d52fb";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260818-0644-d8d52fb";
+import { adaptShipment } from "./intentions.js?v=fresh-20260818-0644-d8d52fb";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260818-0644-d8d52fb";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260818-0644-d8d52fb";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260818-0644-d8d52fb";
+import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-0644-d8d52fb";
+import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260818-0644-d8d52fb";
+import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260818-0644-d8d52fb";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260818-0644-d8d52fb";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, routineServiceCraft, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260818-0644-d8d52fb";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260818-0644-d8d52fb";
+import { issuerTreasuryRecords, seedIssuerTreasuries } from "./contractTreasury.js?v=fresh-20260818-0644-d8d52fb";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -60,17 +60,45 @@ function freightComponentForIssue(shipInstitution, issueType) {
 // plainly is not needed. Both are SUSTAINED conditions, not single ticks.
 const HAULER_HIRE_AFTER_BUSY_SECONDS = 60;
 const HAULER_RELEASE_AFTER_IDLE_SECONDS = 120;
+const REACTIVATED_MINIMUM_SERVICE_SECONDS = 300;
 const HAULER_COST = 6000;
+const CONVENTIONAL_HIRE_MAINTENANCE_RESERVE = 3000;
+export const REGIONAL_HAULER_FLOOR = 8;
+const HUB_SPONSORED_OPERATING_GRANT = 5000;
+const HUB_SPONSORED_MAINTENANCE_ESCROW = 3000;
+const HUB_SPONSOR_AFTER_UNSERVED_SECONDS = 60;
+const HUB_SPONSOR_COOLDOWN_SECONDS = 240;
+const MAX_SPONSORED_HAULERS_PER_HUB = 1;
+const FREIGHT_MAINTENANCE_ESCROW_SHARE = 0.2;
+const ROUTINE_HUB_SERVICE_PRICE = 120;
+const ROUTINE_HUB_SERVICE_WEAR = 2.4;
+const ROUTINE_HUB_SERVICE_COOLDOWN_MS = 4 * 60 * 1000;
+// Remote full-service remains a meaningful premium over Sal's berth, but no
+// longer consumes ten ordinary repair cycles in one surprise invoice.
+const ORE_STATION_SERVICE_PRICE = 650;
 const MIN_HAULERS = 1;
-const MAX_HAULERS_PER_CARRIER = 4;
+const MAX_HAULERS_PER_CARRIER = 3;
 const MAX_REGIONAL_HAULERS = 12;
 const EMERGENCY_REPLACE_AFTER_SECONDS = 20;
+const CIRCUIT_LAYOVER_BASE_MS = 10 * 1000;
+const CIRCUIT_LAYOVER_VARIATION_MS = 18 * 1000;
+const MAX_TERMINAL_SHIPMENTS = 120;
 
 const SITE_NAMES = Object.freeze({
   "yard-exchange": "Yard Exchange",
   "scrap-porch": "Scrap Porch",
   "the-ledge": "The Ledge",
   "blue-lantern": "Blue Lantern",
+});
+
+const ORE_STATION_SERVICE = Object.freeze({
+  id: "ore-station-service", name: "Rook Frontier Service", archetypeId: "repair-cooperative",
+  controllerInstitutionId: "person:ore-station-mechanic", siteId: "ore-station-one",
+  accounts: { operating: { id: "FR-ACCT-ORE-SERVICE", balance: 12000, committed: 0, transactions: [] } },
+});
+const ORE_STATION_MECHANIC = Object.freeze({
+  id: "person:ore-station-mechanic", name: "Tamsin Rook", archetypeId: "person",
+  controls: ["ore-station-service"], traits: { caution: 0.62, growthBias: 0.35, urgencyBias: 0.72 },
 });
 
 // The four authored freight routes that used to live here are gone.
@@ -116,6 +144,116 @@ export function getNextFreightLeg(plannedRoute = [], destinationIds = []) {
   return nextStopIndex > 0 ? plannedRoute.slice(0, nextStopIndex + 1) : [];
 }
 
+// A carrier's territory is derived from its own home and appetite for growth,
+// not from a hand-authored route. Careful independents work a tight neighborhood;
+// ambitious operators learn a broader piece of the connected transport graph.
+export function deriveCarrierTerritory({ network, homeSiteId, traits = {}, knownDestinationIds = null } = {}) {
+  if (!network?.destinations?.[homeSiteId]) return { homeSiteId, maxHops: 0, hopDistances: {}, siteIds: [] };
+  const growthBias = Number.isFinite(traits.growthBias) ? traits.growthBias : CARRIER_DEFAULT_TRAITS.growthBias;
+  const maxHops = growthBias >= 0.68 ? 3 : growthBias >= 0.34 ? 2 : 1;
+  const known = knownDestinationIds ? new Set(knownDestinationIds) : null;
+  const hops = new Map([[homeSiteId, 0]]);
+  const frontier = [homeSiteId];
+  while (frontier.length > 0) {
+    const siteId = frontier.shift();
+    const nextHop = (hops.get(siteId) ?? 0) + 1;
+    if (nextHop > maxHops) continue;
+    network.connections.forEach((connection) => {
+      const neighborId = connection.fromId === siteId
+        ? connection.toId
+        : connection.bidirectional !== false && connection.toId === siteId ? connection.fromId : null;
+      if (!neighborId || (known && !known.has(neighborId)) || hops.has(neighborId)) return;
+      hops.set(neighborId, nextHop);
+      frontier.push(neighborId);
+    });
+  }
+  return {
+    homeSiteId,
+    maxHops,
+    hopDistances: Object.fromEntries(hops),
+    siteIds: [...hops.keys()],
+  };
+}
+
+// Rank only adjacent stops. A ship decides one leg at a time from knowledge it
+// personally accumulated at docks; no current remote contract enters this
+// calculation. Relationships and temperament make two firms choose differently
+// even when they stand on the same apron looking at the same roads.
+export function rankCarrierCircuitStops({ network, currentSiteId, homeSiteId, traits = {}, territory = null,
+  marketKnowledge = {}, relationships = {}, previousSiteId = null, shipId = "carrier", tripCount = 0, at = Date.now() } = {}) {
+  if (!network?.destinations?.[currentSiteId]) return [];
+  const resolvedTerritory = territory ?? deriveCarrierTerritory({ network, homeSiteId, traits });
+  const caution = Number.isFinite(traits.caution) ? traits.caution : CARRIER_DEFAULT_TRAITS.caution;
+  const growthBias = Number.isFinite(traits.growthBias) ? traits.growthBias : CARRIER_DEFAULT_TRAITS.growthBias;
+  const candidates = network.connections.flatMap((connection) => {
+    const destinationSiteId = connection.fromId === currentSiteId
+      ? connection.toId
+      : connection.bidirectional !== false && connection.toId === currentSiteId ? connection.fromId : null;
+    if (!destinationSiteId) return [];
+    const destinationHop = resolvedTerritory.hopDistances[destinationSiteId];
+    if (destinationHop == null) return [];
+    const knowledge = marketKnowledge[destinationSiteId] ?? {};
+    const relationship = relationships[destinationSiteId] ?? {};
+    const hoursUnvisited = Math.min(4, Math.max(0, at - (knowledge.lastVisitedAt ?? 0)) / (60 * 60 * 1000));
+    const demandSignal = Math.max(0, knowledge.demandSignal ?? 0);
+    const relationshipSignal = (relationship.trust ?? 0) + (relationship.reliability ?? 0)
+      + (relationship.gratitude ?? 0) - (relationship.resentment ?? 0);
+    const homePull = destinationSiteId === homeSiteId ? 2 + caution * 4 : 0;
+    const exploration = (knowledge.visitCount ?? 0) === 0 ? 2 + growthBias * 3 : hoursUnvisited;
+    const repeatPenalty = destinationSiteId === previousSiteId ? 2.5 + growthBias : 0;
+    const distancePenalty = (connection.distance ?? 0) / 20_000 * (0.6 + caution);
+    const individuality = deterministicUnit(`${shipId}:${destinationSiteId}:${tripCount}`) * (1.2 + growthBias);
+    const score = demandSignal * 3 + relationshipSignal * 1.5 + homePull + exploration + individuality
+      - repeatPenalty - distancePenalty;
+    return [{ destinationSiteId, distance: connection.distance ?? 0, score, reasons: {
+      demandSignal, relationshipSignal, homePull, exploration, individuality, repeatPenalty, distancePenalty,
+    } }];
+  });
+  return candidates.sort((first, second) => second.score - first.score
+    || first.distance - second.distance || first.destinationSiteId.localeCompare(second.destinationSiteId));
+}
+
+function deterministicUnit(value) {
+  let hash = 2166136261;
+  for (let index = 0; index < String(value).length; index += 1) {
+    hash ^= String(value).charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967295;
+}
+
+const PROCEDURAL_OPERATOR_GIVEN_NAMES = Object.freeze([
+  "Ari", "Belen", "Corin", "Dessa", "Eli", "Fara", "Galen", "Hollis", "Iona", "Jori", "Kade", "Luma",
+]);
+const PROCEDURAL_OPERATOR_SURNAMES = Object.freeze([
+  "Ash", "Brindle", "Cairn", "Dovetail", "Ember", "Fenn", "Gorse", "Hale", "Ivory", "Junction", "Keel", "Lark",
+]);
+const PROCEDURAL_CARRIER_MOTIVATIONS = Object.freeze([
+  "keep the home hub supplied even when the margin is thin",
+  "build trusted repeat trade with a small circle of ports",
+  "range outward carefully and learn which markets endure",
+  "turn quick local loads into enough capital for an independent fleet",
+  "avoid stranded cargo and protect the crew's maintenance reserve",
+  "connect overlooked settlements before larger carriers notice them",
+]);
+
+function createSponsoredOperatorProfile(hub, index) {
+  const seed = `${hub.id}:${index}`;
+  const givenIndex = Math.floor(deterministicUnit(`${seed}:given`) * PROCEDURAL_OPERATOR_GIVEN_NAMES.length);
+  const surnameIndex = Math.floor(deterministicUnit(`${seed}:surname`) * PROCEDURAL_OPERATOR_SURNAMES.length);
+  const motivationIndex = Math.floor(deterministicUnit(`${seed}:motivation`) * PROCEDURAL_CARRIER_MOTIVATIONS.length);
+  return {
+    name: `${PROCEDURAL_OPERATOR_GIVEN_NAMES[givenIndex]} ${PROCEDURAL_OPERATOR_SURNAMES[surnameIndex]}`,
+    traits: {
+      caution: 0.25 + deterministicUnit(`${seed}:caution`) * 0.55,
+      growthBias: 0.2 + deterministicUnit(`${seed}:growth`) * 0.6,
+      urgencyBias: 0.35 + deterministicUnit(`${seed}:urgency`) * 0.5,
+    },
+    motivation: PROCEDURAL_CARRIER_MOTIVATIONS[motivationIndex],
+    background: `Founded at ${hub.name} in response to locally observed freight shortages.`,
+  };
+}
+
 export function createInitialLogisticsState(now = Date.now()) {
   // Hubs open holding a working stock of the family they MINE, and nothing of
   // the families they must import. A settlement that has been feeding a
@@ -148,6 +286,8 @@ export function createInitialLogisticsState(now = Date.now()) {
       ...settlementRecords,
       ...carrierRecords,
       ...issuerRecords,
+      [ORE_STATION_SERVICE.id]: structuredClone(ORE_STATION_SERVICE),
+      [ORE_STATION_MECHANIC.id]: structuredClone(ORE_STATION_MECHANIC),
       // The people who actually run the three settlements. Their traits are the
       // ONLY thing that makes the hubs price differently from one another —
       // there is no per-hub code anywhere.
@@ -165,6 +305,7 @@ export function createInitialLogisticsState(now = Date.now()) {
     haulers,
     shipments: {}, movements: {}, containers: {}, responses: {}, history: [{ id: "log-history-1", type: "logistics.instantiated", at: now }],
     counters: { shipment: 0, movement: 0, container: 0, response: 0, transaction: 0 }, lastLedgerEventId: 0,
+    settledSprcRepairs: {},
   };
 }
 
@@ -174,6 +315,10 @@ export function ensureLogisticsState(state, now = Date.now()) {
   // sample, or their arrival is mistaken for flow.
   seedIssuerTreasuries(state, { now });
   state.logistics.institutions ??= {};
+  state.logistics.institutions[ORE_STATION_SERVICE.id] ??= structuredClone(ORE_STATION_SERVICE);
+  state.logistics.institutions[ORE_STATION_MECHANIC.id] ??= structuredClone(ORE_STATION_MECHANIC);
+  state.logistics.laidUpHaulers ??= {};
+  state.logistics.settledSprcRepairs ??= {};
   FIRST_REACH_SETTLEMENTS.forEach((seed) => {
     state.logistics.institutions[seed.institution.id] ??= JSON.parse(JSON.stringify(seed.institution));
   });
@@ -235,11 +380,17 @@ export function ensureLogisticsState(state, now = Date.now()) {
     hauler.activeShipmentId = hauler.activeShipmentIds[0] ?? null;
     hauler.maintenanceRequested ??= false;
     hauler.lastDecisionKey ??= null;
+    hauler.previousMarketSiteId ??= null;
+    hauler.circuitTrips ??= 0;
+    hauler.nextCircuitDepartureAt ??= null;
   });
+  Object.values(state.logistics.institutions ?? {})
+    .filter((institution) => institution.archetypeId === "hauling-business")
+    .forEach((carrier) => { carrier.marketKnowledge ??= {}; });
   return state.logistics;
 }
 
-export function createLogisticsManager({ state, ships = [], destinations = [], now = () => Date.now(), onProcurementDelivered = null, onProcurementShipped = null, commissionHauler = null, decommissionHauler = null }) {
+export function createLogisticsManager({ state, ships = [], destinations = [], now = () => Date.now(), onProcurementDelivered = null, onProcurementShipped = null, commissionHauler = null, decommissionHauler = null, regionalHaulerFloor = 0 }) {
   const logistics = ensureLogisticsState(state, now());
   const shipById = new Map(ships.map((ship) => [ship.id, ship]));
   const destinationRecords = destinations.length > 0
@@ -277,6 +428,8 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
   function observe() {
     pruneCompletedOperations();
     consumeEvents();
+    reconcileCompletedSprcRepairs();
+    reconcilePhysicalHaulerState();
   }
 
   function decide() {
@@ -293,6 +446,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       if (!ship) return;
       const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
       synchronizeFreightUse(ship, shipInstitution, hauler);
+      performRoutineHubMaintenance(shipId);
       if (hauler.activeShipmentId && ship.operationalStatus === "seeking-work") {
         (hauler.activeShipmentIds ?? [hauler.activeShipmentId]).forEach((shipmentId) => {
           const shipment = logistics.shipments[shipmentId];
@@ -315,8 +469,22 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
         dispatchShipmentPortfolio(shipId);
       }
       if (!hauler.activeShipmentId && !hauler.activeMovementId && hauler.status === "seeking-work" && ship.operationalStatus !== "maintenance") {
-        if (hauler.combatMaintenanceIssue) assignMaintenanceAction(shipId, { force: true, issueType: hauler.combatMaintenanceIssue });
-        else if (!assignNpcShipment(shipId, freightWinners)) assignMaintenanceAction(shipId);
+        // Service is a state transition, not merely one possible reason to
+        // reject a load. Once the craft itself reaches its return threshold it
+        // must enter that transition before consulting freight winners. The
+        // old order could leave a ship declining every local load while also
+        // failing to become a maintenance actor, indefinitely.
+        const serviceDue = Boolean(hauler.combatMaintenanceIssue) || isDueForMaintenance(
+          logistics.institutions[hauler.carrierInstitutionId], shipInstitution,
+        );
+        if (serviceDue) {
+          assignMaintenanceAction(shipId, {
+            force: true,
+            issueType: hauler.combatMaintenanceIssue ?? "preventive-service",
+          });
+        } else if (!assignNpcShipment(shipId, freightWinners)) {
+          assignMaintenanceAction(shipId);
+        }
       }
     });
   }
@@ -332,7 +500,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const terminal = Object.values(logistics.shipments)
       .filter((shipment) => ["delivered", "cancelled", "expired"].includes(shipment.status) && !shipment.contractId)
       .sort((a, b) => (a.deliveredAt ?? a.createdAt ?? 0) - (b.deliveredAt ?? b.createdAt ?? 0));
-    const excess = Math.max(0, terminal.length - 400);
+    const excess = Math.max(0, terminal.length - MAX_TERMINAL_SHIPMENTS);
     for (const shipment of terminal.slice(0, excess)) {
       delete logistics.containers[shipment.containerId];
       delete logistics.shipments[shipment.id];
@@ -342,17 +510,104 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
   function consumeEvents() {
     for (const event of state.ledger.getEventsAfterId(logistics.lastLedgerEventId, { includeHidden: true })) {
       logistics.lastLedgerEventId = Math.max(logistics.lastLedgerEventId, event.id);
-      if (event.type === "npc.routeCompleted" && event.payload.shipmentId) {
-        if (logistics.shipments[event.payload.shipmentId]) completeNpcShipmentPortfolio(event.payload.npcId, event.payload.siteId);
-        else if (logistics.movements[event.payload.shipmentId]) completeMovement(event.payload.npcId, event.payload.shipmentId, event.payload.siteId);
+      if (event.type === "npc.routeCompleted") {
+        if (event.payload.shipmentId && logistics.shipments[event.payload.shipmentId]) completeNpcShipmentPortfolio(event.payload.npcId, event.payload.siteId);
+        const movementId = event.payload.movementId
+          ?? (logistics.movements[event.payload.shipmentId] ? event.payload.shipmentId : null);
+        if (movementId) completeMovement(event.payload.npcId, movementId, event.payload.siteId);
       }
       if (event.type === "npc.wearIssue") recordWearIssue(event.payload);
       if (event.type === "incursion.npcHit") recordCombatDamage(event.payload);
       if (event.type === "sprc.repairCompleted") {
-        settleRepairInvoice(event.payload.haulerId, event.payload.serviceRevenue ?? 180, event.payload.repairOrderId);
-        restoreAfterMaintenance(event.payload.haulerId, event.payload.componentId, event.payload.repairOrderId);
+        settleCompletedSprcRepair(event.payload);
       }
     }
+  }
+
+  // The operational ledger is intentionally bounded. In a very busy, long
+  // running terrarium, thousands of physical events can roll a repair event
+  // out before logistics' next turn. Reconcile against SPRC's durable order
+  // book as well, so a completed customer never remains parked forever merely
+  // because it missed an ephemeral notification.
+  function reconcileCompletedSprcRepairs() {
+    Object.values(state.sprc?.repairOrders ?? {})
+      .filter((repair) => repair.status === "completed" && repair.subjectHaulerId)
+      .forEach((repair) => settleCompletedSprcRepair({
+        repairOrderId: repair.id, haulerId: repair.subjectHaulerId,
+        componentId: repair.componentId ?? null, serviceRevenue: repair.servicePrice ?? 180,
+      }));
+  }
+
+  function settleCompletedSprcRepair(payload) {
+    const repairId = payload.repairOrderId;
+    if (!repairId || logistics.settledSprcRepairs[repairId]) return false;
+    const hauler = logistics.haulers[payload.haulerId];
+    if (!hauler) return false;
+    const completed = state.sprc?.repairOrders?.[repairId];
+    const laterOpenRepair = Object.values(state.sprc?.repairOrders ?? {}).find((repair) =>
+      repair.id !== repairId
+      && (repair.subjectHaulerId ?? repair.subjectId) === payload.haulerId
+      && !["completed", "canceled"].includes(repair.status)
+      && (repair.createdAt ?? 0) >= (completed?.createdAt ?? 0));
+    if (laterOpenRepair) {
+      // This completion belongs to an older visit. It must never release a
+      // craft from the newer repair now governing its condition.
+      logistics.settledSprcRepairs[repairId] = now();
+      return false;
+    }
+    const account = logistics.institutions[hauler.carrierInstitutionId]?.accounts?.operating;
+    const alreadyPaid = account?.transactions?.some((transaction) => transaction.type === "repair-expense" && transaction.referenceId === repairId);
+    if (!alreadyPaid) settleRepairInvoice(payload.haulerId, payload.serviceRevenue ?? 180, repairId);
+    const physicalShip = shipById.get(payload.haulerId);
+    if (hauler.maintenanceRequested || physicalShip?.operationalStatus === "maintenance" || !alreadyPaid) {
+      restoreAfterMaintenance(payload.haulerId, payload.componentId, repairId);
+    }
+    logistics.settledSprcRepairs[repairId] = now();
+    return true;
+  }
+
+  function reconcilePhysicalHaulerState() {
+    Object.entries(logistics.haulers).forEach(([shipId, hauler]) => {
+      const ship = shipById.get(shipId);
+      if (!ship) return;
+      const recordedIds = [...new Set(hauler.activeShipmentIds ?? [hauler.activeShipmentId].filter(Boolean))];
+      const physicalIds = (ship.shipmentCommitments ?? []).map((entry) => entry.shipmentId).filter(Boolean);
+      const candidateIds = [...new Set([...recordedIds, ...physicalIds])];
+      const liveIds = candidateIds.filter((shipmentId) => {
+        const shipment = logistics.shipments[shipmentId];
+        return shipment?.assigneeType === "npc" && shipment.assigneeId === shipId
+          && ["assigned", "loaded"].includes(shipment.status);
+      });
+      const orphanedIds = physicalIds.filter((shipmentId) => !liveIds.includes(shipmentId));
+      orphanedIds.forEach((shipmentId) => ship.clearShipment?.(shipmentId));
+      hauler.activeShipmentIds = liveIds;
+      hauler.activeShipmentId = liveIds[0] ?? null;
+
+      // A physical dock is a durable fact. Settle cargo or movement directly
+      // instead of depending exclusively on a high-volume event stream.
+      const dockedSiteId = ship.dockedSiteId ?? null;
+      if (dockedSiteId) {
+        if (hauler.activeMovementId && logistics.movements[hauler.activeMovementId]?.destinationSiteId === dockedSiteId) {
+          completeMovement(shipId, hauler.activeMovementId, dockedSiteId);
+        }
+        completeNpcShipmentPortfolio(shipId, dockedSiteId);
+        if (!hauler.activeShipmentId && !hauler.activeMovementId) hauler.currentSiteId = dockedSiteId;
+      }
+
+      const openRepair = Object.values(state.sprc?.repairOrders ?? {})
+        .filter((repair) => (repair.subjectHaulerId ?? repair.subjectId) === shipId
+          && !["completed", "canceled"].includes(repair.status))
+        .sort((first, second) => (second.createdAt ?? 0) - (first.createdAt ?? 0))[0];
+      if (openRepair) {
+        hauler.maintenanceRequested = true;
+        hauler.status = "maintenance-required";
+        ship.operationalStatus = "maintenance";
+      } else if (!hauler.activeShipmentId && !hauler.activeMovementId && !hauler.maintenanceRequested) {
+        if (ship.operationalStatus === "maintenance" || ship.operationalStatus === "awaiting-assignment") ship.operationalStatus = "seeking-work";
+        hauler.status = "seeking-work";
+        clearBlocker(state, shipId, { state: DIAGNOSTIC_STATE.FREE, summary: `${getCarrierContext(shipId).shipName} is available for freight.`, at: now() });
+      }
+    });
   }
 
   // ── Supplier-side freight pricing ────────────────────────────────────────
@@ -382,20 +637,60 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     return (shipInstitution?.wear ?? 0) >= threshold;
   }
 
+  function performRoutineHubMaintenance(shipId) {
+    const hauler = logistics.haulers[shipId];
+    const ship = shipById.get(shipId);
+    if (!hauler || !ship || ship.dockedSiteId !== hauler.currentSiteId || hauler.activeShipmentId
+      || hauler.activeMovementId || hauler.maintenanceRequested || ship.operationalStatus === "maintenance") return null;
+    const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
+    ensureFreightComponents(shipInstitution);
+    if ((shipInstitution.wear ?? 0) < ROUTINE_HUB_SERVICE_WEAR) return null;
+    if (now() - (hauler.lastRoutineMaintenanceAt ?? 0) < ROUTINE_HUB_SERVICE_COOLDOWN_MS) return null;
+    const carrier = logistics.institutions[hauler.carrierInstitutionId];
+    const account = carrier.accounts.operating;
+    const available = (account.balance ?? 0) - (account.committed ?? 0) - maintenanceProtectedCash(carrier);
+    if (available < ROUTINE_HUB_SERVICE_PRICE) return null;
+    const service = routineServiceCraft(shipInstitution, { at: now(), providerId: hauler.currentSiteId });
+    hauler.lastRoutineMaintenanceAt = now();
+    if (service.serviced.length === 0) return null;
+    recordAccountTransaction(carrier.id, -ROUTINE_HUB_SERVICE_PRICE, "routine-maintenance-expense", `routine:${shipId}:${now()}`, `General maintenance at ${siteName(hauler.currentSiteId)}`);
+    carrier.maintenanceEscrow = Math.max(0, (carrier.maintenanceEscrow ?? 0) - ROUTINE_HUB_SERVICE_PRICE);
+    projectFreightWear(shipInstitution);
+    ship.wear = shipInstitution.wear;
+    publishCarrierEvent("carrier.routineMaintenanceCompleted", shipId, {
+      siteId: hauler.currentSiteId, amount: ROUTINE_HUB_SERVICE_PRICE,
+      servicedComponentCount: service.serviced.length, diagnosedComponentIds: service.diagnosed,
+    }, `${getCarrierContext(shipId).pilotName} bought general maintenance for ${getCarrierContext(shipId).shipName} at ${siteName(hauler.currentSiteId)} for ${ROUTINE_HUB_SERVICE_PRICE} cr${service.diagnosed.length ? "; the inspection found a fault requiring a repair shop" : "."}`);
+    return service;
+  }
+
+  function maintenanceProtectedCash(carrier) {
+    const policy = carrier.policies?.transportation ?? {};
+    return Math.max(0, (policy.minimumOperatingCash ?? 0) - (carrier.maintenanceEscrow ?? 0));
+  }
+
   function repositionDistance(fromSiteId, toSiteId) {
     if (!fromSiteId || fromSiteId === toSiteId) return 0;
     const route = findTransportationRoute(transportationNetwork, fromSiteId, toSiteId);
     return route?.distance ?? 0;
   }
 
-  function canReposition(fromSiteId, toSiteId) {
-    return repositionDistance(fromSiteId, toSiteId) > 0;
-  }
-
   function evaluateCarrierAsk({ template, plan, carrier, currentWear = 0, offeredPrice, repositionFrom = null }) {
     const distance = (plan?.route?.distance ?? 0) + repositionDistance(repositionFrom, template.originSiteId);
     const policy = carrier.policies?.transportation ?? {};
-    const serviceCost = getServiceCost(state, carrier.id, "maintenance", FREIGHT_REFERENCE_SERVICE_COST);
+    const learnedServiceCost = getServiceCost(state, carrier.id, "maintenance", FREIGHT_REFERENCE_SERVICE_COST);
+    const serviceRoutes = (carrier.repairOptions ?? [])
+      .map((option) => ({ option, route: findTransportationRoute(transportationNetwork, template.destinationSiteId, option.destinationId, policy.knownDestinationIds) }))
+      .filter((entry) => entry.route)
+      .sort((first, second) => (first.option.priority ?? 0) - (second.option.priority ?? 0) || first.route.distance - second.route.distance);
+    const likelyProvider = serviceRoutes[0]?.option?.institutionId;
+    const quotedProviderCost = likelyProvider === ORE_STATION_SERVICE.id
+      ? ORE_STATION_SERVICE_PRICE
+      : FREIGHT_REFERENCE_SERVICE_COST;
+    // Price the contract using the facility the ship is actually likely to
+    // reach at the end of this run. A 180-credit estimate followed by a
+    // 1,800-credit frontier invoice was mathematically guaranteed insolvency.
+    const serviceCost = Math.max(learnedServiceCost, quotedProviderCost);
     const maxWear = policy.maximumWear ?? 6;
     // Charge only the wear THIS run adds (plan.projectedWear is cumulative and
     // includes the ship's existing wear — billing that to one trip would make
@@ -597,7 +892,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
   }
 
-  function buildCarrierCandidates(shipId, { recordAsks = false, allowPortfolioExtension = false, includeRemoteObservation = false } = {}) {
+  function buildCarrierCandidates(shipId, { recordAsks = false, allowPortfolioExtension = false } = {}) {
     const hauler = logistics.haulers[shipId];
     const ship = shipById.get(shipId);
     const extending = Boolean(allowPortfolioExtension && hauler.activeShipmentId);
@@ -609,12 +904,10 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
     // Every run on the board is backed by a purchase order whose goods exist.
     const offered = getProcurementFreightOffers(state);
-    const hasLoadableLocalWork = offered.some((entry) => entry.originSiteId === hauler.currentSiteId
-      && countActiveForTemplate(entry.id) < 1 && availableToLoad(entry) >= entry.amount);
     const candidates = offered
       // Remote postings may inform travel, but accepting work is a physical
       // market action. Do not reserve, purchase, or load until docked there.
-      .filter((entry) => includeRemoteObservation || entry.originSiteId === hauler.currentSiteId)
+      .filter((entry) => entry.originSiteId === hauler.currentSiteId)
       .filter((entry) => countActiveForTemplate(entry.id) < 1)
       .filter((entry) => availableToLoad(entry) >= entry.amount)
       .filter((entry) => !extending || (entry.originSiteId === hauler.currentSiteId
@@ -622,17 +915,12 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       // A hauler may take a contract from either end of the relationship: if it
       // is not already at the pickup, it flies there empty first and the cost of
       // that leg is priced into what it will accept.
-      .map((template) => ({ template, repositionFrom: template.originSiteId === hauler.currentSiteId ? null : hauler.currentSiteId }))
+      .map((template) => ({ template, repositionFrom: null }))
       // Take what is in front of you. A hauler only flies to the far end of a
       // relationship when there is nothing loadable where it already is, and
       // never when it is due for service — reaching further is for healthy
       // hulls. This is what lets either end of a trade lane be served without
       // changing how a carrier behaves when work is already local.
-      .filter(({ template, repositionFrom }) => {
-        if (!repositionFrom) return true;
-        if (!includeRemoteObservation || hasLoadableLocalWork || isDueForMaintenance(carrier, shipInstitution)) return false;
-        return canReposition(hauler.currentSiteId, template.originSiteId);
-      })
       .map(({ template, repositionFrom }) => {
         const rate = getFreightRate(template);
         const plan = evaluateTransportPlan({ network: transportationNetwork, originId: template.originSiteId, destinationId: template.destinationSiteId, payment: rate, currentWear: shipInstitution.wear ?? 0, policy: carrier.policies?.transportation, repairOptions: carrier.repairOptions });
@@ -651,7 +939,45 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     return candidates;
   }
 
-  function assignMarketReposition(shipId) {
+  function observeLocalCarrierMarket(shipId) {
+    const hauler = logistics.haulers[shipId];
+    const ship = shipById.get(shipId);
+    const carrier = logistics.institutions[hauler?.carrierInstitutionId];
+    if (!hauler || !ship || !carrier || ship.dockedSiteId !== hauler.currentSiteId) return null;
+    carrier.marketKnowledge ??= {};
+    const localLoadable = getProcurementFreightOffers(state)
+      .filter((offer) => offer.originSiteId === hauler.currentSiteId
+        && countActiveForTemplate(offer.id) < 1 && availableToLoad(offer) >= offer.amount);
+    const previous = carrier.marketKnowledge[hauler.currentSiteId] ?? {};
+    const observationKey = `${hauler.currentSiteId}:${hauler.circuitTrips ?? 0}`;
+    if (hauler.lastMarketObservationKey === observationKey) return previous;
+    hauler.lastMarketObservationKey = observationKey;
+    carrier.marketKnowledge[hauler.currentSiteId] = {
+      ...previous,
+      lastVisitedAt: now(), lastObservedAt: now(),
+      visitCount: (previous.visitCount ?? 0) + 1,
+      demandSignal: (previous.demandSignal ?? 0) * 0.7 + localLoadable.length * 0.3,
+      lastObservedOfferCount: localLoadable.length,
+    };
+    return carrier.marketKnowledge[hauler.currentSiteId];
+  }
+
+  function circuitLayoverMs(shipId, carrier) {
+    const traits = getActorTraits(state, carrier.id) ?? CARRIER_DEFAULT_TRAITS;
+    const caution = Number.isFinite(traits.caution) ? traits.caution : CARRIER_DEFAULT_TRAITS.caution;
+    const variation = deterministicUnit(`${shipId}:${logistics.haulers[shipId]?.circuitTrips ?? 0}:layover`);
+    return Math.round(CIRCUIT_LAYOVER_BASE_MS * (0.75 + caution * 0.75) + variation * CIRCUIT_LAYOVER_VARIATION_MS);
+  }
+
+  function carrierTerritory(carrier) {
+    return deriveCarrierTerritory({
+      network: transportationNetwork, homeSiteId: carrier.homeSiteId,
+      traits: getActorTraits(state, carrier.id) ?? CARRIER_DEFAULT_TRAITS,
+      knownDestinationIds: carrier.policies?.transportation?.knownDestinationIds,
+    });
+  }
+
+  function assignCircuitMovement(shipId) {
     const hauler = logistics.haulers[shipId];
     const ship = shipById.get(shipId);
     const carrier = logistics.institutions[hauler?.carrierInstitutionId];
@@ -659,35 +985,56 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     if (!hauler || !ship || ship.dockedSiteId !== hauler.currentSiteId || hauler.activeShipmentId
       || hauler.activeMovementId || hauler.status !== "seeking-work" || isDueForMaintenance(carrier, shipInstitution)) return null;
 
-    const choices = getProcurementFreightOffers(state)
-      .filter((offer) => offer.originSiteId !== hauler.currentSiteId)
-      .filter((offer) => countActiveForTemplate(offer.id) < 1 && availableToLoad(offer) >= offer.amount)
-      .map((template) => {
-        const approach = findTransportationRoute(transportationNetwork, hauler.currentSiteId, template.originSiteId, carrier.policies?.transportation?.knownDestinationIds);
-        const plan = evaluateTransportPlan({ network: transportationNetwork, originId: template.originSiteId, destinationId: template.destinationSiteId, payment: getFreightRate(template), currentWear: shipInstitution.wear ?? 0, policy: carrier.policies?.transportation, repairOptions: carrier.repairOptions });
-        const ask = evaluateCarrierAsk({ template, plan, carrier, currentWear: shipInstitution.wear ?? 0, offeredPrice: getFreightRate(template), repositionFrom: hauler.currentSiteId });
-        return { template, approach, plan, ask };
-      })
-      .filter(({ approach, plan, ask }) => approach?.path?.length > 1 && plan.eligible && ask.acceptable)
-      .sort((a, b) => b.plan.score - a.plan.score || a.approach.distance - b.approach.distance || a.template.id.localeCompare(b.template.id));
-    const selected = choices[0];
+    observeLocalCarrierMarket(shipId);
+    if (hauler.nextCircuitDepartureAt == null) {
+      hauler.nextCircuitDepartureAt = now() + circuitLayoverMs(shipId, carrier);
+      return null;
+    }
+    if (now() < hauler.nextCircuitDepartureAt) return null;
+
+    const territory = carrierTerritory(carrier);
+    let selected = null;
+    let approach = null;
+    if (territory.hopDistances[hauler.currentSiteId] == null && carrier.homeSiteId) {
+      approach = findTransportationRoute(transportationNetwork, hauler.currentSiteId, carrier.homeSiteId,
+        carrier.policies?.transportation?.knownDestinationIds);
+      if (approach?.path?.length > 1) selected = { destinationSiteId: carrier.homeSiteId, score: 1_000_000_000, reasons: { returningHome: true } };
+    } else {
+      const relationships = Object.fromEntries(territory.siteIds.map((siteId) => {
+        const hub = Object.values(logistics.institutions).find((institution) => institution.siteId === siteId) ?? logistics.institutions[siteId];
+        return [siteId, hub ? getRelationshipProjection(state, { fromId: carrier.id, toId: hub.id }) : null];
+      }));
+      selected = rankCarrierCircuitStops({
+        network: transportationNetwork, currentSiteId: hauler.currentSiteId, homeSiteId: carrier.homeSiteId,
+        traits: getActorTraits(state, carrier.id) ?? CARRIER_DEFAULT_TRAITS,
+        territory, marketKnowledge: carrier.marketKnowledge, relationships,
+        previousSiteId: hauler.previousMarketSiteId, shipId, tripCount: hauler.circuitTrips ?? 0, at: now(),
+      })[0] ?? null;
+      if (selected) approach = findTransportationRoute(transportationNetwork, hauler.currentSiteId, selected.destinationSiteId,
+        carrier.policies?.transportation?.knownDestinationIds);
+    }
     if (!selected) return null;
-    const routeSites = buildPhysicalTransportationRoute(transportationNetwork, selected.approach);
+    const routeSites = buildPhysicalTransportationRoute(transportationNetwork, approach);
     if (ship.canAcceptRoute ? !ship.canAcceptRoute(routeSites) : routeSites.length < 2) return null;
 
     const id = `MOVE-${String(++logistics.counters.movement).padStart(4, "0")}`;
     logistics.movements[id] = {
-      id, type: "market-reposition", shipId, originSiteId: hauler.currentSiteId,
-      destinationSiteId: selected.template.originSiteId, observedOfferId: selected.template.id,
+      id, type: "market-circuit", shipId, originSiteId: hauler.currentSiteId,
+      destinationSiteId: selected.destinationSiteId, observedOfferId: null,
+      decision: selected.reasons, score: selected.score,
       status: "active", createdAt: now(),
     };
+    hauler.previousMarketSiteId = hauler.currentSiteId;
+    hauler.circuitTrips = (hauler.circuitTrips ?? 0) + 1;
+    hauler.nextCircuitDepartureAt = null;
     hauler.activeMovementId = id;
     hauler.status = "seeking-market";
-    ship.assignShipment({ shipmentId: id, destinationSiteId: selected.template.originSiteId, route: routeSites });
-    appendHistory("market.repositionStarted", { movementId: id, shipId, destinationSiteId: selected.template.originSiteId, observedOfferId: selected.template.id });
-    publishCarrierEvent("carrier.marketReposition", shipId, {
-      movementId: id, destinationSiteId: selected.template.originSiteId, observedOfferId: selected.template.id,
-    }, `${getCarrierContext(shipId).pilotName} saw work posted at ${siteName(selected.template.originSiteId)} and is traveling there to seek it; the contract is not reserved.`);
+    if (ship.assignMovement) ship.assignMovement({ movementId: id, destinationSiteId: selected.destinationSiteId, route: routeSites });
+    else ship.assignShipment({ shipmentId: id, destinationSiteId: selected.destinationSiteId, route: routeSites });
+    appendHistory("market.circuitStarted", { movementId: id, shipId, destinationSiteId: selected.destinationSiteId, decision: selected.reasons });
+    publishCarrierEvent("carrier.marketCircuit", shipId, {
+      movementId: id, destinationSiteId: selected.destinationSiteId, decision: selected.reasons,
+    }, `${getCarrierContext(shipId).pilotName} chose ${siteName(selected.destinationSiteId)} as ${getCarrierContext(shipId).carrierName}'s next market stop from its own route knowledge.`);
     return logistics.movements[id];
   }
 
@@ -703,7 +1050,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
         && ship?.dockedSiteId === hauler.currentSiteId
         && ship?.remainingCargoCapacity > 0
         && ship?.operationalStatus === "awaiting-assignment");
-      buildCarrierCandidates(shipId, { recordAsks, allowPortfolioExtension: canExtendPortfolio, includeRemoteObservation: true }).forEach((candidate) => {
+      buildCarrierCandidates(shipId, { recordAsks, allowPortfolioExtension: canExtendPortfolio }).forEach((candidate) => {
         const bid = {
           offerId: candidate.template.id,
           carrierId: carrier.id,
@@ -748,6 +1095,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       return null;
     }
     const carrier = logistics.institutions[hauler.carrierInstitutionId];
+    const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
     const account = carrier.accounts.operating;
     if (account.balance < 0) {
       publishDecisionOnce(shipId, `insolvent:${account.balance}`, `${getCarrierContext(shipId).carrierName} cannot accept freight: account ${account.id} is overdrawn at ${account.balance} cr.`, { reason: "insolvent", balance: account.balance });
@@ -763,11 +1111,17 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       // carrier useful work, so the absence of an extra local load is not a
       // blocker and should not replace its active itinerary diagnostics.
       if (extendPortfolio && ship.shipments?.length) return null;
-      const observedCandidates = candidates.length ? candidates : buildCarrierCandidates(shipId, { includeRemoteObservation: true });
-      if (observedCandidates.some((candidate) => candidate.plan.reason === "maintenance-policy")) {
+      const observedCandidates = candidates;
+      // "This long run would leave too little return margin" is a reason to
+      // decline that run, not evidence that a healthy ship is already broken.
+      // Only turn the refusal into a preventive-service trip once the craft
+      // itself has reached the operator's advisory threshold.
+      const advisoryWear = carrier.policies?.transportation?.maintenanceAdvisoryWear ?? Infinity;
+      if (observedCandidates.some((candidate) => candidate.plan.reason === "maintenance-policy")
+        && (shipInstitution.wear ?? 0) >= advisoryWear) {
         return assignMaintenanceAction(shipId, { force: true });
       }
-      const marketMovement = assignMarketReposition(shipId);
+      const marketMovement = assignCircuitMovement(shipId);
       if (marketMovement) return marketMovement;
       const declined = candidates.find((candidate) => !candidate.plan.eligible);
       publishCarrierDiagnosticBlocker(shipId, hauler, candidates, declined);
@@ -1020,19 +1374,44 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const policy = carrier.policies?.transportation ?? {};
     const threshold = (policy.maximumWear ?? Infinity) - (policy.minimumReturnMargin ?? 0);
     if (!options.force && (shipInstitution.wear ?? 0) < threshold) return null;
-    const repairRoutes = carrier.repairOptions
+    const repairRoutes = (carrier.repairOptions ?? [])
       .map((option) => ({ option, route: findTransportationRoute(transportationNetwork, hauler.currentSiteId, option.destinationId, policy.knownDestinationIds) }))
       .filter((entry) => entry.route)
       .sort((a, b) => (a.option.priority ?? 0) - (b.option.priority ?? 0) || a.route.distance - b.route.distance);
     const selected = repairRoutes[0];
-    if (!selected) { appendHistory("maintenance.blocked", { shipId, reason: "no-reachable-maintenance" }); return null; }
+    if (!selected) {
+      appendHistory("maintenance.blocked", { shipId, reason: "no-reachable-maintenance" });
+      recordBlocker(state, shipId, createBlocker({
+        kind: BLOCKER_KIND.NO_ROUTE,
+        summary: `${getCarrierContext(shipId).shipName} is due for service but cannot reach a known repair facility`,
+        subjectId: shipId,
+        waitingFor: "a reachable repair provider",
+        wakeOn: ["repair-provider-opened", "transport-network-changed"],
+        detail: { currentSiteId: hauler.currentSiteId, repairOptions: carrier.repairOptions ?? [] },
+        at: now(),
+      }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+      return null;
+    }
     if (hauler.currentSiteId === selected.option.destinationId) return requestPreventiveMaintenance(shipId, options.issueType);
     const routeSites = selected.route.path.map((id) => transportationNetwork.destinations[id]);
-    if (ship.canAcceptRoute ? !ship.canAcceptRoute(routeSites) : routeSites.length < 2) { appendHistory("maintenance.blocked", { shipId, reason: "execution-route-rejected" }); return null; }
+    if (ship.canAcceptRoute ? !ship.canAcceptRoute(routeSites) : routeSites.length < 2) {
+      appendHistory("maintenance.blocked", { shipId, reason: "execution-route-rejected" });
+      recordBlocker(state, shipId, createBlocker({
+        kind: BLOCKER_KIND.NO_ROUTE,
+        summary: `${getCarrierContext(shipId).shipName} is due for service but cannot execute the route to ${siteName(selected.option.destinationId)}`,
+        subjectId: shipId, objectId: selected.option.destinationId,
+        waitingFor: "a physically usable service route",
+        wakeOn: ["ship-route-cleared", "transport-network-changed"],
+        detail: { currentSiteId: hauler.currentSiteId, destinationSiteId: selected.option.destinationId },
+        at: now(),
+      }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+      return null;
+    }
     const id = `MOVE-${String(++logistics.counters.movement).padStart(4, "0")}`;
     logistics.movements[id] = { id, type: "service-return", shipId, originSiteId: hauler.currentSiteId, destinationSiteId: selected.option.destinationId, providerInstitutionId: selected.option.institutionId, issueType: options.issueType ?? "preventive-service", status: "active", createdAt: now() };
     hauler.activeMovementId = id; hauler.status = "returning-maintenance";
-    ship.assignShipment({ shipmentId: id, destinationSiteId: selected.option.destinationId, route: routeSites });
+    if (ship.assignMovement) ship.assignMovement({ movementId: id, destinationSiteId: selected.option.destinationId, route: routeSites });
+    else ship.assignShipment({ shipmentId: id, destinationSiteId: selected.option.destinationId, route: routeSites });
     appendHistory("maintenance.returnStarted", { movementId: id, shipId, destinationSiteId: selected.option.destinationId });
     publishCarrierEvent("carrier.maintenanceReturn", shipId, { movementId: id, destinationSiteId: selected.option.destinationId, wear: shipInstitution.wear ?? 0 }, `${getCarrierContext(shipId).pilotName} declined further freight and is returning ${getCarrierContext(shipId).shipName} to ${siteName(selected.option.destinationId)} for service.`);
     return logistics.movements[id];
@@ -1040,7 +1419,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
 
   function completeMovement(shipId, movementId, siteId) {
     const movement = logistics.movements[movementId];
-    if (movement?.type === "market-reposition") return completeMarketReposition(shipId, movementId, siteId);
+    if (["market-reposition", "market-circuit"].includes(movement?.type)) return completeMarketReposition(shipId, movementId, siteId);
     return completeMaintenanceMovement(shipId, movementId, siteId);
   }
 
@@ -1054,11 +1433,14 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     hauler.activeMovementId = null;
     hauler.status = "seeking-work";
     hauler.lastDecisionKey = null;
-    shipById.get(shipId)?.clearShipment();
-    appendHistory("market.repositionCompleted", { movementId, shipId, siteId, observedOfferId: movement.observedOfferId });
+    hauler.nextCircuitDepartureAt = now() + circuitLayoverMs(shipId, logistics.institutions[hauler.carrierInstitutionId]);
+    const ship = shipById.get(shipId);
+    ship?.clearMovement?.(movementId);
+    if (!ship?.clearMovement) ship?.clearShipment?.();
+    appendHistory("market.circuitCompleted", { movementId, shipId, siteId, observedOfferId: movement.observedOfferId });
     publishCarrierEvent("carrier.marketArrived", shipId, {
       movementId, siteId, observedOfferId: movement.observedOfferId,
-    }, `${getCarrierContext(shipId).shipName} arrived at ${siteName(siteId)} and may now compete for contracts posted there.`);
+    }, `${getCarrierContext(shipId).shipName} arrived at ${siteName(siteId)} and is checking the local freight board.`);
     return true;
   }
 
@@ -1068,7 +1450,10 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     movement.status = "completed"; movement.completedAt = now();
     const hauler = logistics.haulers[shipId];
     hauler.currentSiteId = siteId; hauler.activeMovementId = null;
-    shipById.get(shipId)?.clearShipment();
+    hauler.maintenanceProviderInstitutionId = movement.providerInstitutionId;
+    const ship = shipById.get(shipId);
+    ship?.clearMovement?.(movementId);
+    if (!ship?.clearMovement) ship?.clearShipment?.();
     appendHistory("maintenance.returnCompleted", { movementId, shipId, siteId });
     publishCarrierEvent("carrier.arrivedForMaintenance", shipId, { movementId, siteId }, `${getCarrierContext(shipId).shipName} arrived at ${siteName(siteId)} and is requesting service.`);
     requestPreventiveMaintenance(shipId, movement.issueType);
@@ -1084,6 +1469,9 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const resolvedIssueType = issueType === "preventive-service"
       ? (FREIGHT_COMPONENT_ISSUES[component?.id] ?? issueType)
       : issueType;
+    if (hauler.currentSiteId === "ore-station-one" && hauler.maintenanceProviderInstitutionId === ORE_STATION_SERVICE.id) {
+      return completeOreStationMaintenance(shipId, component, resolvedIssueType);
+    }
     hauler.maintenanceRequested = true; hauler.status = "maintenance-required";
     const ship = shipById.get(shipId); if (ship) ship.operationalStatus = "maintenance";
     const maintenancePayload = { npcId: shipId, componentId: component?.id ?? null, issueType: resolvedIssueType, wear: projectFreightWear(shipInstitution), issueCount: shipInstitution.issueCount ?? 0, causedByCarefulMode: false, cause: resolvedIssueType === "hull-fatigue" ? "combat-damage" : "operational-wear" };
@@ -1091,6 +1479,47 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     publishMaintenanceRequest(shipId, maintenancePayload);
     publishCarrierEvent("carrier.maintenanceRequested", shipId, maintenancePayload, `${getCarrierContext(shipId).pilotName} placed ${getCarrierContext(shipId).shipName} in Scrap Porch's service queue at wear ${(shipInstitution.wear ?? 0).toFixed(2)}.`);
     appendHistory("maintenance.requested", { shipId, componentId: maintenancePayload.componentId, issueType: resolvedIssueType });
+    return true;
+  }
+
+  function completeOreStationMaintenance(shipId, component, issueType) {
+    const hauler = logistics.haulers[shipId];
+    const carrier = logistics.institutions[hauler.carrierInstitutionId];
+    const account = carrier.accounts.operating;
+    const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
+    const wear = shipInstitution?.wear ?? 0;
+    const carrierPolicy = carrier.policies?.transportation ?? {};
+    if (wear >= (carrierPolicy.maintenanceAdvisoryWear ?? Infinity) && !hauler.maintenanceAdvisoryIssued) {
+      hauler.maintenanceAdvisoryIssued = true;
+      publishCarrierEvent("carrier.maintenanceAdvisory", shipId, { wear, nearestServiceOptions: carrier.repairOptions?.map((option) => option.destinationId) ?? [] }, `${getCarrierContext(shipId).pilotName} received an early maintenance advisory for ${getCarrierContext(shipId).shipName} at wear ${wear.toFixed(2)}.`);
+    }
+    if (wear >= (carrierPolicy.maintenancePlanningWear ?? Infinity) && !hauler.maintenancePlanningIssued) {
+      hauler.maintenancePlanningIssued = true;
+      publishCarrierEvent("carrier.maintenancePlanned", shipId, { wear }, `${getCarrierContext(shipId).pilotName} is now reserving the next safe route to a repair shop.`);
+    }
+    const available = (account.balance ?? 0) - (account.committed ?? 0) - maintenanceProtectedCash(carrier);
+    if (available < ORE_STATION_SERVICE_PRICE) {
+      hauler.maintenanceRequested = true;
+      hauler.status = "maintenance-required";
+      const ship = shipById.get(shipId); if (ship) ship.operationalStatus = "maintenance";
+      recordBlocker(state, shipId, createBlocker({
+        kind: BLOCKER_KIND.PAYER_CANNOT_AFFORD,
+        summary: `${carrier.name} cannot fund ${ORE_STATION_SERVICE_PRICE} cr of frontier service`,
+        detail: { quotedPrice: ORE_STATION_SERVICE_PRICE, available },
+        wakeOn: ["payer-balance-changed", "freight-delivered"],
+      }));
+      return null;
+    }
+    const repairId = `ORE-RPR-${shipId}-${now()}`;
+    recordAccountTransaction(carrier.id, -ORE_STATION_SERVICE_PRICE, "repair-expense", repairId, "Paid Rook Frontier Service repair invoice");
+    recordAccountTransaction(ORE_STATION_SERVICE.id, ORE_STATION_SERVICE_PRICE, "repair-income", repairId, `Serviced ${shipId}`);
+    carrier.maintenanceEscrow = Math.max(0, (carrier.maintenanceEscrow ?? 0) - ORE_STATION_SERVICE_PRICE);
+    recordServiceCost(state, { institutionId: carrier.id, serviceType: "maintenance", price: ORE_STATION_SERVICE_PRICE, at: now() });
+    restoreAfterMaintenance(shipId, component?.id ?? null, repairId);
+    state.ledger.recordEvent("frontierService.repairCompleted", {
+      institutionId: ORE_STATION_SERVICE.id, payerInstitutionId: carrier.id, haulerId: shipId,
+      repairOrderId: repairId, amount: ORE_STATION_SERVICE_PRICE, issueType,
+    }, { visible: true, message: `Tamsin Rook completed ${getCarrierContext(shipId).shipName}'s frontier service for ${ORE_STATION_SERVICE_PRICE} cr.` });
     return true;
   }
 
@@ -1104,6 +1533,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     projectFreightWear(shipInstitution);
     shipInstitution.issueCount = 0;
     hauler.maintenanceRequested = false; hauler.status = "seeking-work"; hauler.lastDecisionKey = null;
+    hauler.maintenanceAdvisoryIssued = false; hauler.maintenancePlanningIssued = false;
     const ship = shipById.get(shipId);
     if (ship) { ship.wear = shipInstitution.wear; ship.wearIssueCount = 0; ship.pendingWearIssue = null; ship.hull = ship.maxHull ?? 680; ship.operationalStatus = "seeking-work"; applyFreightConditionEffects(ship, shipInstitution); }
     hauler.combatMaintenanceIssue = null;
@@ -1121,6 +1551,10 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     hauler.activeShipmentId = hauler.activeShipmentIds[0] ?? null;
     hauler.status = hauler.activeShipmentId ? "transporting" : "seeking-work";
     hauler.lastDecisionKey = null;
+    if (!hauler.activeShipmentId) {
+      const carrier = logistics.institutions[hauler.carrierInstitutionId];
+      hauler.nextCircuitDepartureAt = now() + circuitLayoverMs(shipId, carrier);
+    }
     shipById.get(shipId)?.clearShipment(shipmentId);
     applyFreightTaskUse(shipId, { "docking-gear": 0.012, "cargo-handling": 0.018, hull: 0.004 });
     return true;
@@ -1160,6 +1594,9 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     if (shipment.assigneeType === "npc") {
       const carrierId = logistics.haulers[shipment.assigneeId].carrierInstitutionId;
       const transaction = recordAccountTransaction(carrierId, shipment.payment, "freight-income", shipment.id, `Completed freight delivery ${shipment.id}`);
+      const carrier = logistics.institutions[carrierId];
+      const escrowTarget = carrier.policies?.transportation?.maintenanceEscrowTarget ?? HUB_SPONSORED_MAINTENANCE_ESCROW;
+      carrier.maintenanceEscrow = Math.min(escrowTarget, (carrier.maintenanceEscrow ?? 0) + shipment.payment * FREIGHT_MAINTENANCE_ESCROW_SHARE);
       const loanRepayment = repayEmergencyFleetLoan(carrierId, shipment.payment);
       const balance = logistics.institutions[carrierId].accounts.operating.balance;
       shipById.get(shipment.assigneeId)?.queueCargoTransfer?.({ commodity: shipment.commodity, direction: "to-hub" });
@@ -1202,6 +1639,15 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     if (shipment.assigneeType === "npc") {
       shipById.get(shipment.assigneeId)?.queueCargoTransfer?.({ commodity: shipment.commodity, direction: "from-hub" });
       applyFreightTaskUse(shipment.assigneeId, { "docking-gear": 0.008, "cargo-handling": 0.015, hull: 0.003 });
+      const hauler = logistics.haulers[shipment.assigneeId];
+      const carrier = logistics.institutions[hauler?.carrierInstitutionId];
+      if (carrier) {
+        carrier.marketKnowledge ??= {};
+        const knowledge = carrier.marketKnowledge[shipment.originSiteId] ??= {};
+        knowledge.successfulLoads = (knowledge.successfulLoads ?? 0) + 1;
+        knowledge.lastSuccessfulLoadAt = now();
+        knowledge.demandSignal = Math.max(knowledge.demandSignal ?? 0, 1);
+      }
     }
     shipment.status = "loaded"; shipment.loadedAt = now();
     appendHistory("shipment.loaded", { shipmentId: shipment.id, containerId: shipment.containerId, assigneeId: shipment.assigneeId });
@@ -1246,13 +1692,15 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const carrier = logistics.institutions[hauler.carrierInstitutionId];
     const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
     const requiredCapabilities = payload.issueType === "hull-fatigue" ? ["structural-repair"] : payload.issueType === "control-fault" ? ["control-systems"] : ["mechanical-repair"];
-    state.ledger.recordEvent("maintenance.requested", { subjectId: shipId, subjectName: shipInstitution.name, referenceId: shipInstitution.referenceId, craftClass: "freight-hauler", componentId: payload.componentId ?? null, issueType: payload.issueType, requiredCapabilities, locationSiteId: "scrap-porch", mobility: "recovered", payerInstitutionId: carrier.id, payer: { balance: carrier.accounts.operating.balance, committed: carrier.accounts.operating.committed ?? 0, protectedCash: carrier.policies?.transportation?.minimumOperatingCash ?? 0 }, servicePrice: 180, wear: payload.wear, issueCount: payload.issueCount, causedByCarefulMode: payload.causedByCarefulMode }, { visible: false });
+    state.ledger.recordEvent("maintenance.requested", { subjectId: shipId, subjectName: shipInstitution.name, referenceId: shipInstitution.referenceId, craftClass: "freight-hauler", componentId: payload.componentId ?? null, issueType: payload.issueType, requiredCapabilities, locationSiteId: hauler.currentSiteId, mobility: "recovered", payerInstitutionId: carrier.id, payer: { balance: carrier.accounts.operating.balance, committed: carrier.accounts.operating.committed ?? 0, protectedCash: maintenanceProtectedCash(carrier) }, servicePrice: 180, wear: payload.wear, issueCount: payload.issueCount, causedByCarefulMode: payload.causedByCarefulMode }, { visible: false });
   }
 
   function settleRepairInvoice(shipId, amount, referenceId) {
     const hauler = logistics.haulers[shipId];
     if (!hauler || !Number.isFinite(amount) || amount <= 0) return null;
     const transaction = recordAccountTransaction(hauler.carrierInstitutionId, -amount, "repair-expense", referenceId, `Paid Scrap Porch repair invoice ${referenceId}`);
+    const carrier = logistics.institutions[hauler.carrierInstitutionId];
+    carrier.maintenanceEscrow = Math.max(0, (carrier.maintenanceEscrow ?? 0) - amount);
     state.sprc.account.balance += amount;
     // Book the real upkeep cost so this carrier's future freight asks reflect
     // what maintenance now costs it.
@@ -1378,6 +1826,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       // old six-ship regional singleton cap must not prevent one carrier from
       // responding just because unrelated firms already own the slots.
       const waitingFreightCount = getProcurementFreightOffers(state)
+        .filter((offer) => carrierTerritory(carrier).siteIds.includes(offer.originSiteId))
         .filter((offer) => countActiveForTemplate(offer.id) < 1 && availableToLoad(offer) >= offer.amount).length;
       const capacityPressure = allCapacityCommitted && waitingFreightCount > 0;
       if (!capacityPressure) policy.allBusySince = null;
@@ -1390,7 +1839,9 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
 
       if (busyLongEnough && operational.length < MAX_HAULERS_PER_CARRIER
         && totalHaulers < MAX_REGIONAL_HAULERS && commissionHauler) {
-        if (carrier.accounts.operating.balance - HAULER_COST < 0) {
+        const hireCashFloor = (carrier.policies?.transportation?.minimumOperatingCash ?? 0)
+          + CONVENTIONAL_HIRE_MAINTENANCE_RESERVE;
+        if (carrier.accounts.operating.balance - HAULER_COST < hireCashFloor) {
           const decisionKey = `${waitingFreightCount}:${Math.round(carrier.accounts.operating.balance)}`;
           if (policy.lastHireDeferredKey !== decisionKey) {
             policy.lastHireDeferredKey = decisionKey;
@@ -1406,10 +1857,13 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
 
       // ── laying one up ─────────────────────────────────────────────────
       if (Object.keys(logistics.haulers).length <= MIN_HAULERS) return;
+      if (waitingFreightCount > 0) return;
       owned.forEach(([haulerId, hauler]) => {
         if (hauler.activeShipmentId || hauler.activeMovementId) { hauler.idleSince = null; return; }
         hauler.idleSince ??= now();
         if (now() - hauler.idleSince < HAULER_RELEASE_AFTER_IDLE_SECONDS * 1000) return;
+        if (hauler.reactivatedAt != null
+          && now() - hauler.reactivatedAt < REACTIVATED_MINIMUM_SERVICE_SECONDS * 1000) return;
         const ship = shipById.get(haulerId);
         // Never lay up a ship that is carrying something or under tow: the
         // cargo would go with it.
@@ -1418,11 +1872,164 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
         layUpHauler(haulerId, hauler, carrierId, carrier);
       });
     });
+
+    assessHubSponsoredCapacity();
+  }
+
+  // A procedural settlement cannot depend on a hand-authored carrier roster.
+  // If the region is below its working floor, or a hub has had physical cargo
+  // waiting for a full minute without one eligible carrier, a solvent hub may
+  // capitalize a small independent cartage company. The hull cost is a real
+  // capital burn; the operating grant is a transfer into the new company's
+  // account. Once its ship has been idle long enough the ordinary lay-up rule
+  // can remove the craft again, while the company remains an actor that may be
+  // recapitalized later.
+  function assessHubSponsoredCapacity() {
+    if (!commissionHauler) return;
+    logistics.hubCapacityPolicy ??= {};
+    const operational = Object.entries(logistics.haulers).filter(([shipId, hauler]) =>
+      shipById.get(shipId)?.isAlive !== false && hauler.status !== "destroyed");
+    if (operational.length >= MAX_REGIONAL_HAULERS) return;
+
+    const waitingByOrigin = new Map();
+    getProcurementFreightOffers(state)
+      .filter((offer) => countActiveForTemplate(offer.id) < 1 && availableToLoad(offer) >= offer.amount)
+      .forEach((offer) => waitingByOrigin.set(offer.originSiteId, (waitingByOrigin.get(offer.originSiteId) ?? 0) + 1));
+
+    const eligibleOfferIds = new Set();
+    operational.forEach(([shipId]) => {
+      buildCarrierCandidates(shipId)
+        .filter((candidate) => candidate.plan.eligible)
+        .forEach((candidate) => eligibleOfferIds.add(candidate.template.id));
+    });
+    const coveredOrigins = new Set();
+    operational.forEach(([shipId, hauler]) => {
+      const carrier = logistics.institutions[hauler.carrierInstitutionId];
+      if (carrier?.homeSiteId) coveredOrigins.add(carrier.homeSiteId);
+      if (hauler.currentSiteId) coveredOrigins.add(hauler.currentSiteId);
+      const movementDestination = logistics.movements[hauler.activeMovementId]?.destinationSiteId;
+      if (movementDestination) coveredOrigins.add(movementDestination);
+      (hauler.activeShipmentIds ?? []).forEach((shipmentId) => {
+        const destinationSiteId = logistics.shipments[shipmentId]?.destinationSiteId;
+        if (destinationSiteId) coveredOrigins.add(destinationSiteId);
+      });
+      const physical = shipById.get(shipId);
+      if (physical?.dockedSiteId) coveredOrigins.add(physical.dockedSiteId);
+    });
+    const unservedByOrigin = new Map();
+    getProcurementFreightOffers(state)
+      .filter((offer) => countActiveForTemplate(offer.id) < 1 && availableToLoad(offer) >= offer.amount
+        && !eligibleOfferIds.has(offer.id) && !coveredOrigins.has(offer.originSiteId))
+      .forEach((offer) => unservedByOrigin.set(offer.originSiteId, (unservedByOrigin.get(offer.originSiteId) ?? 0) + 1));
+
+    const hubs = Object.values(logistics.institutions)
+      .filter((institution) => institution.archetypeId === "settlement" && institution.siteId && institution.accounts?.operating)
+      .sort((first, second) => {
+        const firstNeed = unservedByOrigin.get(first.siteId) ?? waitingByOrigin.get(first.siteId) ?? 0;
+        const secondNeed = unservedByOrigin.get(second.siteId) ?? waitingByOrigin.get(second.siteId) ?? 0;
+        if (firstNeed !== secondNeed) return secondNeed - firstNeed;
+        return second.accounts.operating.balance - first.accounts.operating.balance;
+      });
+
+    hubs.forEach((hub) => {
+      const policy = logistics.hubCapacityPolicy[hub.id] ??= { unservedSince: null, sponsored: 0, lastSponsoredAt: null };
+      const unserved = unservedByOrigin.get(hub.siteId) ?? 0;
+      if (unserved > 0) policy.unservedSince ??= now();
+      else policy.unservedSince = null;
+
+      const belowFloor = operational.length < Math.max(0, regionalHaulerFloor);
+      const persistentlyUnserved = policy.unservedSince != null
+        && now() - policy.unservedSince >= HUB_SPONSOR_AFTER_UNSERVED_SECONDS * 1000;
+      if (!belowFloor && !(regionalHaulerFloor > 0 && persistentlyUnserved)) return;
+      if (operational.length >= MAX_REGIONAL_HAULERS) return;
+
+      const dormant = Object.values(logistics.laidUpHaulers ?? {}).find((record) => record.sponsoredByInstitutionId === hub.id);
+      if (dormant) {
+        const restored = reactivateLaidUpHauler(dormant);
+        if (restored) {
+          operational.push([restored.id, logistics.haulers[restored.id]]);
+          policy.unservedSince = null;
+          return;
+        }
+      }
+      const sponsoredCompanies = Object.values(logistics.institutions)
+        .filter((institution) => institution.sponsoredByInstitutionId === hub.id).length;
+      if (sponsoredCompanies >= MAX_SPONSORED_HAULERS_PER_HUB) return;
+      if (policy.lastSponsoredAt != null && now() - policy.lastSponsoredAt < HUB_SPONSOR_COOLDOWN_SECONDS * 1000) return;
+
+      const protectedCash = getActorProtectedCash(state, hub.id);
+      const totalCommitment = HAULER_COST + HUB_SPONSORED_OPERATING_GRANT;
+      if (hub.accounts.operating.balance - totalCommitment < protectedCash) return;
+      const created = sponsorHubHauler(hub, policy);
+      if (!created) return;
+      operational.push([created.id, logistics.haulers[created.id]]);
+      policy.unservedSince = null;
+      policy.lastSponsoredAt = now();
+    });
+  }
+
+  function sponsorHubHauler(hub, policy) {
+    const index = (logistics.counters.hauler = (logistics.counters.hauler ?? 0) + 1);
+    const carrierId = `carrier:${hub.siteId}-sponsored-${index}`;
+    const operatorId = `person:${hub.siteId}-dispatcher-${index}`;
+    const shipId = `hauler-sponsored-${index}`;
+    const carrierName = `${hub.name} Cartage ${index}`;
+    const operatorProfile = createSponsoredOperatorProfile(hub, index);
+    const operatorName = operatorProfile.name;
+    const minimumOperatingCash = 1800;
+    const templatePolicy = structuredClone(FIRST_REACH_CARRIERS[0]?.policy ?? {});
+    const repairOptions = structuredClone(FIRST_REACH_CARRIERS[0]?.repairOptions ?? []);
+
+    logistics.institutions[carrierId] = {
+      id: carrierId, name: carrierName, archetypeId: "hauling-business", controllerInstitutionId: operatorId,
+      homeSiteId: hub.siteId, sponsoredByInstitutionId: hub.id,
+      accounts: { operating: { id: `FR-ACCT-SPONSORED-${index}`, balance: HUB_SPONSORED_OPERATING_GRANT, committed: 0, transactions: [] } },
+      maintenanceEscrow: HUB_SPONSORED_MAINTENANCE_ESCROW,
+      arrivalInternalFunding: HUB_SPONSORED_OPERATING_GRANT,
+      motivation: operatorProfile.motivation,
+      marketKnowledge: {},
+      policies: { transportation: { ...templatePolicy, minimumOperatingCash, maintenanceEscrowTarget: HUB_SPONSORED_MAINTENANCE_ESCROW } }, repairOptions,
+    };
+    logistics.institutions[operatorId] = {
+      id: operatorId, name: operatorName, archetypeId: "person", controls: [carrierId],
+      traits: operatorProfile.traits, motivation: operatorProfile.motivation, background: operatorProfile.background,
+      license: { id: `HLC-SPONSORED-${index}`, class: "commercial-hauler", status: "active" },
+    };
+    const created = commissionHauler({ id: shipId, name: `${hub.name} Relief ${index}`, homeSiteId: hub.siteId, seed: 100 + index, carrierInstitutionId: carrierId });
+    if (!created) {
+      delete logistics.institutions[carrierId];
+      delete logistics.institutions[operatorId];
+      return null;
+    }
+
+    hub.accounts.operating.balance -= HAULER_COST + HUB_SPONSORED_OPERATING_GRANT;
+    hub.capitalSpend = (hub.capitalSpend ?? 0) + HAULER_COST;
+    policy.sponsored += 1;
+    const shipInstitutionId = `ship:${shipId}`;
+    const initialWear = 0.25 + ((index * 37) % 150) / 100;
+    logistics.institutions[shipInstitutionId] = {
+      id: shipInstitutionId, name: created.name, referenceId: `HAUL-SPONSORED-${index}`,
+      archetypeId: "cargo-ship", controllerInstitutionId: carrierId, wear: initialWear, issueCount: 0,
+    };
+    ensureFreightComponents(logistics.institutions[shipInstitutionId]);
+    logistics.haulers[shipId] = {
+      shipInstitutionId, carrierInstitutionId: carrierId, currentSiteId: hub.siteId,
+      activeShipmentId: null, activeMovementId: null, maintenanceRequested: false,
+      lastDecisionKey: null, status: "seeking-work", idleSince: null,
+    };
+    shipById.set(shipId, created);
+    state.ledger.recordEvent("hub.haulerSponsored", {
+      institutionId: hub.id, institutionName: hub.name, carrierInstitutionId: carrierId,
+      haulerId: shipId, hullCost: HAULER_COST, operatingGrant: HUB_SPONSORED_OPERATING_GRANT,
+      maintenanceEscrow: HUB_SPONSORED_MAINTENANCE_ESCROW, initialWear,
+      regionalFleetSize: Object.keys(logistics.haulers).length,
+    }, { visible: true, message: `${hub.name} capitalized ${carrierName} and put ${created.name} into regional freight service.` });
+    return created;
   }
 
   function ensureEmergencyReplacementFunding(carrierId, carrier) {
     const minimumCash = carrier.policies?.transportation?.minimumOperatingCash ?? 0;
-    const needed = Math.max(0, HAULER_COST + minimumCash - carrier.accounts.operating.balance);
+    const needed = Math.max(0, HAULER_COST + minimumCash + CONVENTIONAL_HIRE_MAINTENANCE_RESERVE - carrier.accounts.operating.balance);
     if (needed <= 0) return true;
     const financePolicy = carrier.policies?.transportation?.emergencyFleetFinance ?? {};
     const homeInstitution = Object.values(logistics.institutions).find((institution) =>
@@ -1488,11 +2095,14 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
 
     carrier.accounts.operating.balance -= HAULER_COST;
     carrier.capitalSpend = (carrier.capitalSpend ?? 0) + HAULER_COST;
+    carrier.maintenanceEscrow = Math.max(carrier.maintenanceEscrow ?? 0, CONVENTIONAL_HIRE_MAINTENANCE_RESERVE);
+    carrier.policies.transportation.maintenanceEscrowTarget ??= HUB_SPONSORED_MAINTENANCE_ESCROW;
     recordAccountTransaction(carrierId, 0, "capital-expense", id, `Commissioned ${created.name}`);
     const shipInstitutionId = `ship:${id}`;
+    const initialWear = 0.25 + ((index * 29) % 150) / 100;
     logistics.institutions[shipInstitutionId] = {
       id: shipInstitutionId, name: created.name, referenceId: `HAUL-${index}-RELIEF`,
-      archetypeId: "cargo-ship", controllerInstitutionId: carrierId, wear: 0, issueCount: 0,
+      archetypeId: "cargo-ship", controllerInstitutionId: carrierId, wear: initialWear, issueCount: 0,
     };
     logistics.haulers[id] = {
       shipInstitutionId, carrierInstitutionId: carrierId, currentSiteId: homeSiteId,
@@ -1503,10 +2113,36 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     appendHistory("carrier.haulerHired", { carrierInstitutionId: carrierId, haulerId: id, cost: HAULER_COST });
     state.ledger.recordEvent("carrier.haulerHired", {
       carrierInstitutionId: carrierId, haulerId: id, shipName: created.name,
-      cost: HAULER_COST, fleetSize: Object.keys(logistics.haulers).length,
+      cost: HAULER_COST, maintenanceReserve: CONVENTIONAL_HIRE_MAINTENANCE_RESERVE, initialWear,
+      fleetSize: Object.keys(logistics.haulers).length,
       balance: Math.round(carrier.accounts.operating.balance),
     }, { visible: true, message: `${carrier.name ?? carrierId} put ${created.name} into service for ${HAULER_COST} cr — every ship it had was committed with freight still waiting.` });
     return true;
+  }
+
+  function reactivateLaidUpHauler(record) {
+    const carrier = logistics.institutions[record.carrierInstitutionId];
+    const shipInstitution = logistics.institutions[record.shipInstitutionId];
+    if (!carrier || !shipInstitution || !commissionHauler) return null;
+    const created = commissionHauler({
+      id: record.id, name: shipInstitution.name, homeSiteId: record.currentSiteId ?? carrier.homeSiteId,
+      seed: record.seed ?? 1, carrierInstitutionId: carrier.id,
+    });
+    if (!created) return null;
+    shipInstitution.status = "active";
+    delete shipInstitution.retiredAt;
+    logistics.haulers[record.id] = {
+      shipInstitutionId: record.shipInstitutionId, carrierInstitutionId: carrier.id,
+      currentSiteId: record.currentSiteId ?? carrier.homeSiteId, activeShipmentId: null,
+      activeMovementId: null, maintenanceRequested: false, lastDecisionKey: null,
+      status: "seeking-work", idleSince: null, reactivatedAt: now(),
+    };
+    shipById.set(record.id, created);
+    delete logistics.laidUpHaulers[record.id];
+    state.ledger.recordEvent("carrier.haulerReactivated", {
+      carrierInstitutionId: carrier.id, haulerId: record.id, sponsoredByInstitutionId: record.sponsoredByInstitutionId,
+    }, { visible: true, message: `${carrier.name} returned ${shipInstitution.name} from lay-up instead of commissioning another hull.` });
+    return created;
   }
 
   function layUpHauler(haulerId, hauler, carrierId, carrier) {
@@ -1516,6 +2152,12 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     shipById.delete(haulerId);
     delete logistics.haulers[haulerId];
     const shipInstitution = logistics.institutions[hauler.shipInstitutionId];
+    logistics.laidUpHaulers ??= {};
+    logistics.laidUpHaulers[haulerId] = {
+      id: haulerId, shipInstitutionId: hauler.shipInstitutionId, carrierInstitutionId: carrierId,
+      currentSiteId: hauler.currentSiteId, seed: ship?.seed ?? 1,
+      sponsoredByInstitutionId: carrier.sponsoredByInstitutionId ?? null, laidUpAt: now(),
+    };
     if (shipInstitution) {
       shipInstitution.status = "retired";
       shipInstitution.retiredAt = now();
@@ -1556,10 +2198,7 @@ export function createStandingFreightJob(template, issuer = null, postedRate = n
 export function getStandingFreightJobsForSite(siteId, issuer = null, state = null) {
   if (!state) return [];
   const posted = state.logistics?.postedFreightRates ?? {};
-  // Offered at BOTH ends of the lane. An NPC hauler may take a run from the far
-  // end and fly to the pickup, so the player sees the same board rather than
-  // only what happens to originate where they are standing.
   return getProcurementFreightOffers(state)
-    .filter((template) => template.originSiteId === siteId || template.destinationSiteId === siteId)
+    .filter((template) => template.originSiteId === siteId)
     .map((template) => createStandingFreightJob(template, issuer, posted[template.id] ?? null));
 }

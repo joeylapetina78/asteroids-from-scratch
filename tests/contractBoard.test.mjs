@@ -88,6 +88,23 @@ test("a delivered purchase moves to completed", () => {
   assert.ok(procurement);
 });
 
+test("the board retains all live work but only a bounded tail of completed work", () => {
+  const { state } = createWorld();
+  const operation = state.miningOperation;
+  for (let index = 0; index < 260; index += 1) {
+    operation.allocations[`historic-${index}`] = {
+      id: `historic-${index}`, orderId: "mine-yard-iron", workerShipId: `worker-${index}`,
+      status: "completed", acceptedAt: index + 1, completedAt: index + 1,
+    };
+  }
+
+  const contracts = listContracts(state);
+  assert.ok(contracts.some((contract) => contract.state !== CONTRACT_STATE.DONE), "current work remains visible");
+  assert.equal(contracts.filter((contract) => contract.state === CONTRACT_STATE.DONE).length, 200);
+  assert.equal(contracts.some((contract) => contract.id === "historic-0"), false, "old display history rolls off");
+  assert.equal(contracts.some((contract) => contract.id === "historic-259"), true, "recent history remains visible");
+});
+
 test("a declined purchase reads as stuck and keeps its reason", () => {
   const { state } = createWorld();
   const order = listOrders(state)[0];

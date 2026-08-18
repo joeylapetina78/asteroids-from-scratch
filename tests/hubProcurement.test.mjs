@@ -20,10 +20,17 @@ import { recordAcquisition } from "../src/systems/costBasis.js";
 import { getInventoryPosition } from "../src/systems/hubInventory.js";
 import { getPostedMiningOrders } from "../src/systems/miningOperation.js";
 import { createGameState } from "../src/state/gameState.js";
-import { createInitialLogisticsState, createLogisticsManager } from "../src/systems/logistics.js";
+import {
+  createInitialLogisticsState,
+  createLogisticsManager,
+  deriveCarrierTerritory,
+  getStandingFreightJobsForSite,
+  rankCarrierCircuitStops,
+} from "../src/systems/logistics.js";
 import { NpcShip } from "../src/entities/NpcShip.js";
 import { getWorldSites } from "../src/systems/worldSites.js";
 import { getEffectiveMaterialUnits } from "../src/systems/resourceDefinitions.js";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, createBlocker, getDiagnostic, recordBlocker } from "../src/systems/diagnostics.js";
 
 function createWorld({ cash = 20_000 } = {}) {
   const state = createGameState();
@@ -556,8 +563,9 @@ test("the whole chain is on the ledger, in order", () => {
     "posted before delivered");
 });
 
-test("a hauler travels to a remote market before accepting work posted there", () => {
-  const { state, procurement, manager, ships, hub } = createFullWorld();
+test("remote freight cannot summon a hauler away from its own market circuit", () => {
+  let clock = 1_000;
+  const { state, procurement, manager, hub } = createFullWorld({ now: () => clock });
   // Keep this inside the core, the way the logistics harness does. The far
   // stations are 37,000-85,000 units out, a flat posted rate cannot clear a
   // deadhead that long, and their demand oversubscribes The Ledge so hard that
@@ -587,28 +595,98 @@ test("a hauler travels to a remote market before accepting work posted there", (
   Object.entries(state.logistics.institutions).forEach(([id, institution]) => {
     if (id !== order.supplierInstitutionId) institution.awaitingPickup = {};
   });
-  // A long lane opens under-priced and relies on the buyer's repricing loop to
-  // raise it. Post a rate that clears the deadhead so this stays a test of
-  // whether a hauler CAN work the far end, not of the opening rate.
+  // Make the remote offer extremely attractive. It still must not act as a
+  // beacon: the carrier has not physically visited its board.
   state.logistics.postedFreightRates = { [`procurement-${order.id}`]: 900 };
   manager.update();
 
   assert.equal(Object.values(state.logistics.shipments).length, 0,
-    "remote work is visible but is not accepted or reserved from afar");
-  const movement = Object.values(state.logistics.movements)
-    .find((entry) => entry.type === "market-reposition" && entry.destinationSiteId === order.supplierInstitutionId);
-  assert.ok(movement, "a hauler may still travel empty to the market where it saw work");
-  const ship = ships.find((entry) => entry.id === movement.shipId);
-  ship.dockedSiteId = movement.destinationSiteId;
-  state.ledger.recordEvent("npc.routeCompleted", {
-    npcId: movement.shipId, shipmentId: movement.id, siteId: movement.destinationSiteId,
-  }, { visible: false });
-  manager.update();
+    "remote work is neither accepted nor reserved from afar");
+  assert.equal(Object.values(state.logistics.movements).length, 0, "the carrier observes its local board before departing");
 
-  const shipment = Object.values(state.logistics.shipments).find((entry) => entry.assigneeId === movement.shipId);
-  assert.ok(shipment, "the docked hauler can now compete for and accept the local posting");
-  assert.equal(shipment.originSiteId, movement.destinationSiteId);
-  assert.equal(shipment.repositionedFrom, null, "market travel is not disguised as contract performance");
+  clock += 40_000;
+  manager.update();
+  const movement = Object.values(state.logistics.movements)[0];
+  assert.ok(movement, "after its individual layover the carrier chooses another market stop");
+  assert.equal(movement.type, "market-circuit");
+  assert.equal(movement.observedOfferId, null, "the movement was not prompted by a remote posting");
+  assert.ok(movement.decision && Number.isFinite(movement.score), "the emergent decision remains inspectable");
+});
+
+test("delivered procurement history remains bounded without touching open orders", () => {
+  const { state, procurement } = createWorld();
+  Object.values(state.hubProcurement.orders).forEach((order) => { order.status = PROCUREMENT_STATUS.OFFERED; });
+  for (let index = 0; index < 100; index += 1) {
+    state.hubProcurement.orders[`delivered-${index}`] = {
+      id: `delivered-${index}`, status: PROCUREMENT_STATUS.DELIVERED,
+      createdAt: index, deliveredAt: index,
+    };
+  }
+
+  procurement.observe();
+
+  assert.equal(listOrders(state, { status: PROCUREMENT_STATUS.DELIVERED }).length, 80);
+  assert.equal(state.hubProcurement.orders["delivered-0"], undefined);
+  assert.ok(state.hubProcurement.orders["delivered-99"]);
+  assert.ok(listOrders(state, { status: PROCUREMENT_STATUS.OFFERED }).length > 0, "open market work remains authoritative");
+});
+
+test("a fulfilled procurement wait cannot leave its supplier diagnostically stuck", () => {
+  const { state, procurement } = createWorld();
+  const actorId = "scrap-forge";
+  recordBlocker(state, actorId, createBlocker({
+    kind: BLOCKER_KIND.AWAITING_MATERIAL,
+    summary: "waiting for an order that has already cleared",
+    detail: { procurementOrderId: "old-order" },
+  }));
+  Object.values(state.hubProcurement.orders).forEach((order) => {
+    if (order.supplierInstitutionId === actorId && order.status === PROCUREMENT_STATUS.ACCEPTED) {
+      order.status = PROCUREMENT_STATUS.DELIVERED;
+    }
+  });
+
+  procurement.settle();
+
+  assert.equal(getDiagnostic(state, actorId).blocker, null);
+  assert.equal(getDiagnostic(state, actorId).state, DIAGNOSTIC_STATE.FREE);
+});
+
+test("bespoke carrier knowledge produces different circuits without fixed routes", () => {
+  const network = {
+    destinations: { home: {}, north: {}, south: {}, far: {} },
+    connections: [
+      { fromId: "home", toId: "north", distance: 1_000, bidirectional: true },
+      { fromId: "home", toId: "south", distance: 1_000, bidirectional: true },
+      { fromId: "north", toId: "far", distance: 1_000, bidirectional: true },
+    ],
+  };
+  const cautiousTerritory = deriveCarrierTerritory({ network, homeSiteId: "home", traits: { growthBias: 0.1 } });
+  const ambitiousTerritory = deriveCarrierTerritory({ network, homeSiteId: "home", traits: { growthBias: 0.9 } });
+  assert.ok(!cautiousTerritory.siteIds.includes("far"));
+  assert.ok(ambitiousTerritory.siteIds.includes("far"), "temperament determines reach through the shared graph");
+
+  const common = { network, currentSiteId: "home", homeSiteId: "home", traits: { caution: 0.5, growthBias: 0.5 }, at: 1_000 };
+  const northLearner = rankCarrierCircuitStops({ ...common, shipId: "north-learner", marketKnowledge: { north: { demandSignal: 3 }, south: { demandSignal: 0 } } });
+  const southLearner = rankCarrierCircuitStops({ ...common, shipId: "south-learner", marketKnowledge: { north: { demandSignal: 0 }, south: { demandSignal: 3 } } });
+  assert.equal(northLearner[0].destinationSiteId, "north");
+  assert.equal(southLearner[0].destinationSiteId, "south");
+  assert.ok(northLearner.every((choice) => ["north", "south"].includes(choice.destinationSiteId)),
+    "a circuit decision takes one physical neighboring leg at a time");
+});
+
+test("the player sees freight only at its physical pickup board", () => {
+  const { state, procurement, hub } = createFullWorld();
+  procurement.update();
+  listOrders(state, { status: [PROCUREMENT_STATUS.ACCEPTED, PROCUREMENT_STATUS.READY] }).forEach((order) => {
+    hub(order.supplierInstitutionId).inventories[order.resourceId] = order.units + 30;
+  });
+  procurement.update();
+  const offer = getProcurementFreightOffers(state)[0];
+  assert.ok(getStandingFreightJobsForSite(offer.originSiteId, null, state)
+    .some((job) => job.terms.standingFreightTemplateId === offer.id));
+  assert.ok(!getStandingFreightJobsForSite(offer.destinationSiteId, null, state)
+    .some((job) => job.terms.standingFreightTemplateId === offer.id),
+    "the destination board cannot expose or award cargo waiting somewhere else");
 });
 
 test("supplier comparisons price physical ore by delivered effective yield", () => {
@@ -709,6 +787,9 @@ test("live carrier cost can lift an underpriced freight offer and clear it", () 
   listOrders(state, { status: PROCUREMENT_STATUS.READY })
     .filter((order) => order.id !== offer.procurementOrderId)
     .forEach((order) => { order.status = PROCUREMENT_STATUS.ACCEPTED; });
+  const [localShipId, localHauler] = Object.entries(state.logistics.haulers)[0];
+  localHauler.currentSiteId = offer.originSiteId;
+  world.ships.find((ship) => ship.id === localShipId).dockedSiteId = offer.originSiteId;
   state.logistics.postedFreightRates = { [offer.id]: 1 };
   manager.update();
   assert.equal(Object.values(state.logistics.shipments).filter((entry) => entry.templateId === offer.id).length, 0,
@@ -717,19 +798,7 @@ test("live carrier cost can lift an underpriced freight offer and clear it", () 
   clock += 46_000;
   manager.update();
   assert.ok(state.logistics.postedFreightRates[offer.id] > 1, "the issuer moved to the live carrier ask");
-  let shipment = Object.values(state.logistics.shipments).find((entry) => entry.templateId === offer.id);
-  if (!shipment) {
-    const movement = Object.values(state.logistics.movements)
-      .find((entry) => entry.type === "market-reposition" && entry.destinationSiteId === offer.originSiteId);
-    assert.ok(movement, "a remote carrier travels to the posting market without reserving its work");
-    const ship = world.ships.find((entry) => entry.id === movement.shipId);
-    ship.dockedSiteId = movement.destinationSiteId;
-    state.ledger.recordEvent("npc.routeCompleted", {
-      npcId: movement.shipId, shipmentId: movement.id, siteId: movement.destinationSiteId,
-    }, { visible: false });
-    manager.update();
-    shipment = Object.values(state.logistics.shipments).find((entry) => entry.templateId === offer.id);
-  }
+  const shipment = Object.values(state.logistics.shipments).find((entry) => entry.templateId === offer.id);
   assert.ok(shipment, "the issuer moved to the live carrier ask and the work cleared");
   assert.ok(shipment.payment > 1);
   assert.equal(state.logistics.postedFreightRates[offer.id], shipment.payment);

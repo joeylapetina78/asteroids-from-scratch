@@ -25,18 +25,18 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260815-0038-449a36b";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260815-0038-449a36b";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260815-0038-449a36b";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260815-0038-449a36b";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260815-0038-449a36b";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260815-0038-449a36b";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260815-0038-449a36b";
-import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260815-0038-449a36b";
-import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260815-0038-449a36b";
-import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260815-0038-449a36b";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260815-0038-449a36b";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260815-0038-449a36b";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260818-0644-d8d52fb";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260818-0644-d8d52fb";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260818-0644-d8d52fb";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260818-0644-d8d52fb";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260818-0644-d8d52fb";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260818-0644-d8d52fb";
+import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260818-0644-d8d52fb";
+import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260818-0644-d8d52fb";
+import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260818-0644-d8d52fb";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260818-0644-d8d52fb";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260818-0644-d8d52fb";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -74,6 +74,7 @@ const FREIGHT_BASE_MARGIN = 0.2;
 // Refused orders are kept long enough to read, then cleared so the board stays
 // legible instead of accumulating thousands of dead rows.
 const DECLINED_RETENTION_MS = 5 * 60 * 1000;
+const MAX_DELIVERED_ORDER_HISTORY = 80;
 // Fallback only. A hub decides through whoever runs it, so both its buying and
 // its selling read that person's traits — the same hub, two roles, one
 // temperament. These constants apply only to a settlement with nobody in
@@ -936,7 +937,19 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   // A supplier that owes goods and cannot yet cover them says so, and the
   // buyer can see exactly how short it is.
   function reportOutstandingReservations() {
-    listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED }).forEach((order) => {
+    const accepted = listOrders(state, { status: PROCUREMENT_STATUS.ACCEPTED });
+    const suppliersStillOwing = new Set(accepted.map((order) => order.supplierInstitutionId));
+    Object.values(state.diagnostics?.actors ?? {}).forEach((diagnostic) => {
+      if (diagnostic.blocker?.kind !== BLOCKER_KIND.AWAITING_MATERIAL
+        || !diagnostic.blocker?.detail?.procurementOrderId
+        || suppliersStillOwing.has(diagnostic.actorId)) return;
+      clearBlocker(state, diagnostic.actorId, {
+        state: DIAGNOSTIC_STATE.FREE,
+        summary: `${hubName(diagnostic.actorId)} has filled its outstanding sale reserve`,
+        at: now(),
+      });
+    });
+    accepted.forEach((order) => {
       const supplier = institution(order.supplierInstitutionId);
       const reserved = saleReserve(supplier ?? {})[order.id] ?? 0;
       recordBlocker(state, order.supplierInstitutionId, createBlocker({
@@ -1078,6 +1091,13 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     });
   }
 
+  function pruneDeliveredOrders() {
+    const delivered = listOrders(state, { status: PROCUREMENT_STATUS.DELIVERED })
+      .sort((first, second) => (first.deliveredAt ?? first.createdAt ?? 0) - (second.deliveredAt ?? second.createdAt ?? 0));
+    delivered.slice(0, Math.max(0, delivered.length - MAX_DELIVERED_ORDER_HISTORY))
+      .forEach((order) => { delete procurement.orders[order.id]; });
+  }
+
   // ── The tick, in phases ─────────────────────────────────────────────────
   //
   // Every step keeps the exact position it held before. See `worldClock`.
@@ -1087,6 +1107,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   // orders to decide whether a family was turned down too recently to ask again.
   function observe() {
     pruneDeclinedOrders();
+    pruneDeliveredOrders();
   }
 
   function decide({ tick = 0 } = {}) {

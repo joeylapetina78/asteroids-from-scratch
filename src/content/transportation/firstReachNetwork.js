@@ -1,4 +1,4 @@
-import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260815-0038-449a36b";
+import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260818-0644-d8d52fb";
 
 export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
   { id: "lane-yard-scrap", fromId: "yard-exchange", toId: "scrap-porch", distance: 1875, bidirectional: true },
@@ -112,15 +112,18 @@ export const FIRST_REACH_CARRIER_POLICY = Object.freeze({
   expectedWearPerDistance: 0.00016,
   maximumWear: 6,
   minimumReturnMargin: 0.9,
+  maintenanceAdvisoryWear: 3.9,
+  maintenancePlanningWear: 4.5,
   operatingCostPerDistance: 0.004,
   wearPenalty: 8,
   emergencyFleetFinance: {
     enabled: true,
-    maximumPrincipal: 8000,
+    maximumPrincipal: 12000,
     repaymentShare: 0.25,
   },
 });
 
 export const FIRST_REACH_REPAIR_OPTIONS = Object.freeze([
   { institutionId: "sprc", destinationId: "scrap-porch", priority: 1 },
+  { institutionId: "ore-station-service", destinationId: "ore-station-one", priority: 1 },
 ]);

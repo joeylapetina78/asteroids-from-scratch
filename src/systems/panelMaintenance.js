@@ -146,6 +146,23 @@ export function repairPanelCondition(condition) {
   return previousStage;
 }
 
+// Routine service is deliberately ship-owner facing rather than component
+// facing: one general inspection tends every still-serviceable system at once.
+// It removes most ordinary wear, but an emergency/failed part has become a
+// diagnosed repair and is left for a capable repair shop.
+export function routineServicePanelCondition(condition, thresholds, { wearRemaining = 0.25 } = {}) {
+  const previousStage = condition?.stage ?? "healthy";
+  if (!condition || previousStage === "emergency" || previousStage === "failed") {
+    return { serviced: false, previousStage, stage: previousStage };
+  }
+  condition.wear = Math.max(0, (condition.wear ?? 0) * wearRemaining);
+  condition.stage = stageForWear(condition.wear, thresholds);
+  const wearFraction = Math.min(1, condition.wear / Math.max(1, thresholds.failed));
+  condition.currentCondition = Math.max(0, (condition.maxRecoverableCondition ?? 100) * (1 - wearFraction));
+  condition.serviceCount = (condition.serviceCount ?? 0) + 1;
+  return { serviced: true, previousStage, stage: condition.stage };
+}
+
 // Transfer stored reserve into a panel's missing integrity, 1:1, bounded by the
 // panel's headroom, the available reserve, and this frame's rate budget. Mutates
 // `panel.integrity` and `reserveHolder.repairReserve`, and returns the amount

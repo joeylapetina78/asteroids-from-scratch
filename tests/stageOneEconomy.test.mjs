@@ -10,6 +10,7 @@ import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { createSprcOperation } from "../src/systems/sprcOperation.js";
 import { STANDING_MINING_ORDERS, createMiningOperation } from "../src/systems/miningOperation.js";
+import { DIAGNOSTIC_STATE, getDiagnostic } from "../src/systems/diagnostics.js";
 
 // ── Routine wear ───────────────────────────────────────────────────────────
 
@@ -238,6 +239,24 @@ test("Cinder stands a ship down after two minutes with nothing to do", () => {
   const released = world.state.ledger.getEventsAfterId(0).filter((entry) => entry.type === "mining.workerReleased");
   assert.ok(released.length > 0, "and it says who and for how long");
   assert.ok(released[0].payload.idleSeconds >= 120);
+  assert.equal(getDiagnostic(world.state, released[0].payload.shipInstitutionId)?.state, DIAGNOSTIC_STATE.RETIRED,
+    "a released ship leaves the current actor population instead of returning as a free ghost");
+});
+
+test("completed mining allocations retain only a compact operational tail", () => {
+  const world = createFleetWorld();
+  const allocations = world.mining.getState().allocations;
+  for (let index = 0; index < 75; index += 1) {
+    allocations[`completed-${index}`] = {
+      id: `completed-${index}`, status: "completed", acceptedAt: index, completedAt: index,
+    };
+  }
+
+  world.mining.observe();
+  const retained = Object.values(allocations).filter((allocation) => allocation.status === "completed");
+  assert.equal(retained.length, 40);
+  assert.equal(allocations["completed-0"], undefined);
+  assert.ok(allocations["completed-74"]);
 });
 
 test("a ship carrying cargo is never stood down", () => {

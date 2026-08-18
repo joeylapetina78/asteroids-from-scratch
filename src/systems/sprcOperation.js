@@ -1,18 +1,18 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260815-0038-449a36b";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260815-0038-449a36b";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260815-0038-449a36b";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260815-0038-449a36b";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260815-0038-449a36b";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260815-0038-449a36b";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260815-0038-449a36b";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260815-0038-449a36b";
-import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260815-0038-449a36b";
-import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260815-0038-449a36b";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260815-0038-449a36b";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260815-0038-449a36b";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260815-0038-449a36b";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260815-0038-449a36b";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260815-0038-449a36b";
+import { depositCredits } from "./accounts.js?v=fresh-20260818-0644-d8d52fb";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260818-0644-d8d52fb";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260818-0644-d8d52fb";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260818-0644-d8d52fb";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260818-0644-d8d52fb";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260818-0644-d8d52fb";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260818-0644-d8d52fb";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260818-0644-d8d52fb";
+import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260818-0644-d8d52fb";
+import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260818-0644-d8d52fb";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260818-0644-d8d52fb";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260818-0644-d8d52fb";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260818-0644-d8d52fb";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260818-0644-d8d52fb";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -158,7 +158,7 @@ export function createInitialSprcState(now = Date.now()) {
     projects: institution.projects,
     inventories: institution.inventories,
     facilities: {
-      maw: { id: SPRC.facilityId, name: "The Maw", facilityType: "recovery-mill", status: "working", capacity: 1, activeProductionOrderId: null },
+      maw: { id: SPRC.facilityId, name: "The Maw", facilityType: "recovery-mill", status: "working", capacity: 1, activeProductionOrderId: null, activeProductionOrderIds: [] },
       berthTwo: { id: SPRC.berthId, name: "Berth Two", facilityType: "repair-berth", status: "available", capacity: 1, activeRepairOrderId: null },
     },
     haulers: {
@@ -186,6 +186,7 @@ export function createInitialSprcState(now = Date.now()) {
       },
     },
     repairOrders: {},
+    businessPressure: { repairSince: null, productionSince: null },
     repairQueue: [],
     productionOrders: {},
     productionQueue: [],
@@ -203,6 +204,10 @@ export function ensureSprcOperation(state, now = Date.now()) {
   const sprc = state.sprc;
   sprc.inventories.reserved ??= { raw: {}, produced: {} };
   sprc.repairOrders ??= {};
+  sprc.businessPressure ??= { repairSince: null, productionSince: null };
+  sprc.facilities.maw.capacity ??= 1;
+  sprc.facilities.maw.activeProductionOrderIds ??= sprc.facilities.maw.activeProductionOrderId
+    ? [sprc.facilities.maw.activeProductionOrderId] : [];
   sprc.serviceSubjects ??= sprc.haulers;
   Object.entries(sprc.haulers ?? {}).forEach(([id, hauler]) => { sprc.serviceSubjects[id] = hauler; });
   sprc.repairQueue ??= [];
@@ -267,6 +272,8 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     expireProcurementOrders();
     completeDueProduction();
     completeDueRepairs();
+    advanceSecondCradle();
+    advanceBusinessExpansion();
   }
 
   // What Sal does about it.
@@ -282,7 +289,7 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   function decide() {
     retryDeferredServiceRequests();
     startNextProduction();
-    startNextRepair();
+    startNextRepairs();
     assessOpenRepairs();
     assessOperatingPlan();
     repriceOpenProcurement();
@@ -728,22 +735,26 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   }
 
   function startNextProduction() {
-    if (sprc.facilities.maw.status !== "working" || sprc.facilities.maw.activeProductionOrderId) return;
-    const next = orderWorkQueue(readyProductionWorkItems(), {
-      policy: resolveWorkQueuePolicy(state, sprc.institution.id),
-      now: now(),
-    })[0];
-    const order = next ? sprc.productionOrders[next.id] : null;
-    if (!order) return;
-    Object.entries(order.inputs).forEach(([itemId, amount]) => {
-      removeInventory("raw", itemId, amount);
-      addReserved("raw", itemId, -amount);
-    });
-    order.status = "running";
-    order.startedAt = now();
-    order.completesAt = order.startedAt + order.durationSeconds * 1000;
-    sprc.facilities.maw.activeProductionOrderId = order.id;
-    appendHistory("production.started", { productionOrderId: order.id, inputs: order.inputs });
+    const maw = sprc.facilities.maw;
+    if (maw.status !== "working") return;
+    maw.activeProductionOrderIds ??= maw.activeProductionOrderId ? [maw.activeProductionOrderId] : [];
+    while (maw.activeProductionOrderIds.length < (maw.capacity ?? 1)) {
+      const next = orderWorkQueue(readyProductionWorkItems(), {
+        policy: resolveWorkQueuePolicy(state, sprc.institution.id), now: now(),
+      })[0];
+      const order = next ? sprc.productionOrders[next.id] : null;
+      if (!order) break;
+      Object.entries(order.inputs).forEach(([itemId, amount]) => {
+        removeInventory("raw", itemId, amount);
+        addReserved("raw", itemId, -amount);
+      });
+      order.status = "running";
+      order.startedAt = now();
+      order.completesAt = order.startedAt + order.durationSeconds * 1000;
+      maw.activeProductionOrderIds.push(order.id);
+      maw.activeProductionOrderId = maw.activeProductionOrderIds[0] ?? null;
+      appendHistory("production.started", { productionOrderId: order.id, inputs: order.inputs });
+    }
   }
 
   function completeDueProduction() {
@@ -756,7 +767,8 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       addInventory("produced", order.output.itemId, order.output.amount);
       order.status = "completed";
       order.completedAt = now();
-      sprc.facilities.maw.activeProductionOrderId = null;
+      sprc.facilities.maw.activeProductionOrderIds = (sprc.facilities.maw.activeProductionOrderIds ?? []).filter((id) => id !== order.id);
+      sprc.facilities.maw.activeProductionOrderId = sprc.facilities.maw.activeProductionOrderIds[0] ?? null;
       // Carry input costs into the finished good: raw material price →
       // produced part → repair price. This is the cost-propagation link.
       recordProduction(state, {
@@ -792,7 +804,8 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
     sprc.account.committed = Math.max(0, (sprc.account.committed ?? 0) - (wreck.dismantlingCost ?? 0));
     order.status = "completed";
     order.completedAt = now();
-    sprc.facilities.maw.activeProductionOrderId = null;
+    sprc.facilities.maw.activeProductionOrderIds = (sprc.facilities.maw.activeProductionOrderIds ?? []).filter((id) => id !== order.id);
+    sprc.facilities.maw.activeProductionOrderId = sprc.facilities.maw.activeProductionOrderIds[0] ?? null;
     wreck.status = "salvaged";
     wreck.titleStatus = "retired-after-salvage";
     wreck.salvagedAt = now();
@@ -852,32 +865,36 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       }));
   }
 
-  function startNextRepair() {
-    if (sprc.facilities.berthTwo.activeRepairOrderId) return;
-    const next = orderWorkQueue(readyRepairWorkItems(), {
-      policy: resolveWorkQueuePolicy(state, sprc.institution.id),
-      now: now(),
-    })[0];
-    const order = next ? sprc.repairOrders[next.id] : null;
-    if (!order) return;
-    if (!repairReservationIsBacked(order)) {
-      reconcileRepairReservation(order);
-      return;
-    }
-    Object.entries(order.reserved.produced).forEach(([itemId, amount]) => {
-      removeInventory("produced", itemId, amount);
-      addReserved("produced", itemId, -amount);
+  function startNextRepairs() {
+    const berths = Object.values(sprc.facilities).filter((facility) => facility.facilityType === "repair-berth");
+    berths.forEach((berth) => {
+      if (berth.activeRepairOrderId) return;
+      const next = orderWorkQueue(readyRepairWorkItems(), {
+        policy: resolveWorkQueuePolicy(state, sprc.institution.id),
+        now: now(),
+      })[0];
+      const order = next ? sprc.repairOrders[next.id] : null;
+      if (!order) return;
+      if (!repairReservationIsBacked(order)) {
+        reconcileRepairReservation(order);
+        return;
+      }
+      Object.entries(order.reserved.produced).forEach(([itemId, amount]) => {
+        removeInventory("produced", itemId, amount);
+        addReserved("produced", itemId, -amount);
+      });
+      Object.entries(order.reserved.raw ?? {}).forEach(([itemId, amount]) => {
+        removeInventory("raw", itemId, amount);
+        addReserved("raw", itemId, -amount);
+      });
+      order.status = "repairing";
+      order.startedAt = now();
+      order.completesAt = order.startedAt + REPAIR_SECONDS * 1000;
+      order.activeFacilityId = berth.id;
+      berth.status = "occupied";
+      berth.activeRepairOrderId = order.id;
+      appendHistory("repair.started", { repairOrderId: order.id, facilityId: berth.id, consumed: { produced: order.reserved.produced, raw: order.reserved.raw } });
     });
-    Object.entries(order.reserved.raw ?? {}).forEach(([itemId, amount]) => {
-      removeInventory("raw", itemId, amount);
-      addReserved("raw", itemId, -amount);
-    });
-    order.status = "repairing";
-    order.startedAt = now();
-    order.completesAt = order.startedAt + REPAIR_SECONDS * 1000;
-    sprc.facilities.berthTwo.status = "occupied";
-    sprc.facilities.berthTwo.activeRepairOrderId = order.id;
-    appendHistory("repair.started", { repairOrderId: order.id, consumed: { produced: order.reserved.produced, raw: order.reserved.raw } });
   }
 
   function completeDueRepairs() {
@@ -892,10 +909,146 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
         subject.availableForWork = true;
         subject.repairHistory.push(order.id);
       }
-      sprc.facilities.berthTwo.status = "available";
-      sprc.facilities.berthTwo.activeRepairOrderId = null;
+      const berth = Object.values(sprc.facilities).find((facility) => facility.id === order.activeFacilityId)
+        ?? sprc.facilities.berthTwo;
+      berth.status = "available";
+      berth.activeRepairOrderId = null;
       appendHistory("repair.completed", { repairOrderId: order.id, subjectId: order.subjectId, haulerId: order.subjectHaulerId, componentId: order.componentId ?? null, serviceRevenue: order.servicePrice ?? 180 });
       state.ledger.recordEvent("sprc.repairCompleted", { repairOrderId: order.id, subjectId: order.subjectId, haulerId: order.subjectHaulerId, componentId: order.componentId ?? null, shipName: subject?.shipName, craftClass: order.craftClass, payerInstitutionId: order.payerInstitutionId, serviceRevenue: order.servicePrice ?? 180 }, { visible: true });
+    });
+  }
+
+  // The authored project used to be a sign in Sal's office and nothing more.
+  // A sustained queue now turns it into real industrial demand; imported or
+  // locally-made parts can fund it, and completion adds actual parallel repair
+  // capacity rather than merely changing a status label.
+  function advanceSecondCradle() {
+    const project = sprc.projects?.["sprc-second-cradle"];
+    if (!project || project.status === "completed") return;
+    const openRepairs = Object.values(sprc.repairOrders).filter((repair) => !["completed", "canceled"].includes(repair.status));
+    if (project.status === "planned" && openRepairs.length >= 4) project.status = "funding";
+    if (project.status === "funding") {
+      const plates = project.requirements?.["hull-plate"] ?? 0;
+      const parts = project.requirements?.["machine-part"] ?? 0;
+      const credits = project.requirements?.credits ?? 0;
+      const spendable = sprc.account.balance - sprc.account.protectedReserve - sprc.account.committed;
+      if ((sprc.inventories.produced["hull-plate"] ?? 0) < plates
+        || (sprc.inventories.produced["machine-part"] ?? 0) < parts
+        || spendable < credits) return;
+      sprc.inventories.produced["hull-plate"] -= plates;
+      sprc.inventories.produced["machine-part"] -= parts;
+      sprc.account.balance -= credits;
+      project.reserved = { "hull-plate": plates, "machine-part": parts, credits };
+      project.status = "building";
+      project.startedAt = now();
+      project.completesAt = now() + 60 * 1000;
+      state.ledger.recordEvent("sprc.projectStarted", { projectId: project.id, requirements: project.reserved }, {
+        visible: true, message: "Sal started building the Second Repair Cradle.",
+      });
+      return;
+    }
+    if (project.status !== "building" || project.completesAt > now()) return;
+    project.status = "completed";
+    project.completedAt = now();
+    sprc.facilities.berthThree = {
+      id: "facility:sprc-berth-three", name: "Second Repair Cradle",
+      facilityType: "repair-berth", status: "available", capacity: 1, activeRepairOrderId: null,
+    };
+    state.ledger.recordEvent("sprc.projectCompleted", { projectId: project.id, facilityId: sprc.facilities.berthThree.id }, {
+      visible: true, message: "The Second Repair Cradle is open; Sal can work two ships at once.",
+    });
+  }
+
+  // Once the authored second cradle exists, Sal can continue growing like a
+  // business. Expansion requires sustained real work, completed paying jobs,
+  // cash above reserve, and physical parts. The parts requirement is visible
+  // to regional industry, so each project creates procurement and freight.
+  function advanceBusinessExpansion() {
+    const projects = sprc.projects ??= {};
+    const active = Object.values(projects).find((project) => project.kind === "business-expansion" && !["completed", "canceled"].includes(project.status));
+    const foundation = projects["sprc-second-cradle"];
+    // Later growth cannot cannibalize the parts intended to establish Sal's
+    // authored second cradle. Older saves that already authorized an expansion
+    // hold it transparently, then resume funding as soon as the foundation is
+    // open.
+    if (foundation?.status !== "completed") {
+      if (active && active.status === "funding") active.status = "waiting-foundation";
+      return;
+    }
+    if (active?.status === "waiting-foundation") active.status = "funding";
+    if (active) return advanceExpansionProject(active);
+
+    const completedRepairs = Object.values(sprc.repairOrders).filter((repair) => repair.status === "completed").length;
+    const openRepairs = Object.values(sprc.repairOrders).filter((repair) => !["completed", "canceled"].includes(repair.status)).length;
+    const berthCount = Object.values(sprc.facilities).filter((facility) => facility.facilityType === "repair-berth").length;
+    const queuedProduction = Object.values(sprc.productionOrders).filter((order) => order.status === "queued").length;
+    const mawCapacity = sprc.facilities.maw.capacity ?? 1;
+    const pressure = sprc.businessPressure;
+
+    pressure.repairSince = openRepairs >= berthCount * 3 && completedRepairs >= berthCount * 3
+      ? (pressure.repairSince ?? now()) : null;
+    pressure.productionSince = queuedProduction >= mawCapacity * 3 && completedRepairs >= 4
+      ? (pressure.productionSince ?? now()) : null;
+    const repairReady = pressure.repairSince != null && now() - pressure.repairSince >= 180_000;
+    const productionReady = pressure.productionSince != null && now() - pressure.productionSince >= 180_000;
+    if (!repairReady && !productionReady) return;
+
+    const type = repairReady ? "repair-berth" : "maw-line";
+    const scale = type === "repair-berth" ? berthCount : mawCapacity;
+    const id = `sprc-${type}-expansion-${scale + 1}`;
+    projects[id] = {
+      id, kind: "business-expansion", expansionType: type,
+      name: type === "repair-berth" ? `Repair Cradle ${berthCount + 1}` : `Maw Production Line ${mawCapacity + 1}`,
+      status: "funding", requirements: {
+        "hull-plate": 4 + scale * 2, "machine-part": 3 + scale,
+        credits: 600 + scale * 300,
+      },
+      reserved: { "hull-plate": 0, "machine-part": 0, credits: 0 },
+      createdAt: now(), rationale: type === "repair-berth"
+        ? "Sustained paid repair demand exceeds installed berth capacity."
+        : "The Maw's sustained production queue justifies another line.",
+    };
+    pressure.repairSince = null;
+    pressure.productionSince = null;
+    state.ledger.recordEvent("sprc.expansionAuthorized", { projectId: id, expansionType: type, requirements: projects[id].requirements }, {
+      visible: true, message: `Sal authorized ${projects[id].name} after sustained profitable demand.`,
+    });
+  }
+
+  function advanceExpansionProject(project) {
+    if (project.status === "funding") {
+      const plates = project.requirements["hull-plate"] ?? 0;
+      const parts = project.requirements["machine-part"] ?? 0;
+      const credits = project.requirements.credits ?? 0;
+      const spendable = sprc.account.balance - sprc.account.protectedReserve - sprc.account.committed;
+      if ((sprc.inventories.produced["hull-plate"] ?? 0) < plates
+        || (sprc.inventories.produced["machine-part"] ?? 0) < parts || spendable < credits) return;
+      sprc.inventories.produced["hull-plate"] -= plates;
+      sprc.inventories.produced["machine-part"] -= parts;
+      sprc.account.balance -= credits;
+      project.reserved = { "hull-plate": plates, "machine-part": parts, credits };
+      project.status = "building";
+      project.startedAt = now();
+      project.completesAt = now() + 90_000;
+      state.ledger.recordEvent("sprc.expansionStarted", { projectId: project.id, expansionType: project.expansionType, requirements: project.reserved }, {
+        visible: true, message: `Construction started on ${project.name}.`,
+      });
+      return;
+    }
+    if (project.status !== "building" || project.completesAt > now()) return;
+    project.status = "completed";
+    project.completedAt = now();
+    if (project.expansionType === "repair-berth") {
+      const berthNumber = Object.values(sprc.facilities).filter((facility) => facility.facilityType === "repair-berth").length + 1;
+      sprc.facilities[`berthExpansion${berthNumber}`] = {
+        id: `facility:sprc-berth-${berthNumber}`, name: `Repair Cradle ${berthNumber}`,
+        facilityType: "repair-berth", status: "available", capacity: 1, activeRepairOrderId: null,
+      };
+    } else {
+      sprc.facilities.maw.capacity = (sprc.facilities.maw.capacity ?? 1) + 1;
+    }
+    state.ledger.recordEvent("sprc.expansionCompleted", { projectId: project.id, expansionType: project.expansionType }, {
+      visible: true, message: `${project.name} opened for business.`,
     });
   }
 

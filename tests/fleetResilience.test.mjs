@@ -96,6 +96,21 @@ test("a hauler uses the shared capacity portfolio for compatible freight manifes
   assert.equal(ship.assignShipment({ shipmentId: "wrong-lane", originSiteId: "yard-exchange", destinationSiteId: "the-ledge", quantity: 1, route }), false, "the proposed route must still contain its destination");
 });
 
+test("an empty repositioning movement never consumes freight capacity", () => {
+  const route = [{ id: "scrap-porch", position: { x: 0, y: 0 } }, { id: "yard-exchange", position: { x: 100, y: 0 } }];
+  const ship = new NpcShip({ id: "empty-mover", name: "Empty Mover", route, x: 0, y: 0 });
+
+  assert.equal(ship.assignMovement({ movementId: "MOVE-TEST", destinationSiteId: "yard-exchange", route }), true);
+  assert.equal(ship.activeMovementId, "MOVE-TEST");
+  assert.equal(ship.activeShipmentId, null);
+  assert.equal(ship.shipmentCommitments.length, 0);
+  assert.equal(ship.remainingCargoCapacity, 12);
+
+  ship.clearMovement("MOVE-TEST");
+  assert.equal(ship.activeMovementId, null);
+  assert.equal(ship.operationalStatus, "seeking-work");
+});
+
 test("a hauler portfolio may hold independently owned cargo for different destinations", () => {
   const yard = { id: "yard-exchange", position: { x: 0, y: 0 } };
   const porch = { id: "scrap-porch", position: { x: 100, y: 0 } };
@@ -150,4 +165,18 @@ test("hauler inspection exposes manifests, capacity, and its next physical stop"
   assert.equal(view.freightPortfolio.nextStopId, porch.id);
   assert.deepEqual(view.freightPortfolio.plannedStops, [porch.id]);
   assert.equal(view.freightPortfolio.shipments[0].ownerInstitutionId, "scrap-porch");
+});
+
+test("hauler inspection labels a physically departed craft in transit instead of at its previous hub", () => {
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(1_000);
+  const actorId = "hauler-yard-scrap";
+  const route = [{ id: "yard-exchange", position: { x: 0, y: 0 } }, { id: "scrap-porch", position: { x: 100, y: 0 } }];
+  const ship = new NpcShip({ id: actorId, name: "Yard Hauler", route, x: 35, y: 0 });
+  ship.dockedSiteId = null;
+  ship.operationalStatus = "available";
+
+  const view = inspectActor(state, actorId, { game: { npcShips: [ship], worldSites: route } });
+  assert.equal(view.locationSiteId, "in-transit");
+  assert.deepEqual(view.position, ship.position);
 });

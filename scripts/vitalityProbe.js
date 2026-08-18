@@ -47,7 +47,8 @@
 // wastes decisions.
 //
 // Usage from the console:
-//   await measureVitality({ minutes: 60 })
+//   await measureVitality({ minutes: 60 })                 // trusted baseline
+//   await measureVitality({ minutes: 60, mode: "economy" }) // reduced physical world
 
 (function installVitalityProbe(global) {
   // The step is a CALIBRATED choice, not a convenience. Per-frame cost is
@@ -112,11 +113,16 @@
     };
   }
 
-  global.measureVitality = async function measureVitality({ minutes = 30, report = 6, stepSeconds = DEFAULT_STEP_SECONDS } = {}) {
+  global.measureVitality = async function measureVitality({ minutes = 30, report = 6, stepSeconds = DEFAULT_STEP_SECONDS, mode = "full" } = {}) {
     const asteroids = global.__asteroids;
     const game = asteroids?.game ?? asteroids;
     const clock = asteroids?.clock;
     if (!game?.update) throw new Error("no live game to measure");
+    if (!['full', 'economy'].includes(mode)) throw new Error(`unknown vitality mode: ${mode}`);
+    if (mode === "economy" && !game.updateEconomy) throw new Error("this build has no economy-only update path");
+    const updateWorld = mode === "economy"
+      ? (step) => game.updateEconomy(step)
+      : (step) => game.update(step);
 
     const steps = Math.round((minutes * 60) / stepSeconds);
     const reportEvery = Math.max(1, Math.floor(steps / report));
@@ -138,7 +144,7 @@
         clockDebtMs += stepSeconds * 1000;
 
         try {
-          game.update(stepSeconds);
+          updateWorld(stepSeconds);
         } catch (error) {
           frameErrors += 1;
           if (frameErrors < 3) console.warn("[vitality] frame error", error);
@@ -189,6 +195,7 @@
 
     return {
       simulatedMinutes: minutes,
+      mode,
       stepSeconds,
       frameErrors,
       verdict: {

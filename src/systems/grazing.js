@@ -1,6 +1,6 @@
-import { getResourceFamily, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260815-0038-449a36b";
-import { ROCKMOSS_CRAWLER_TYPE } from "./rockmossStrains.js?v=fresh-20260815-0038-449a36b";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./hostileLoot.js?v=fresh-20260815-0038-449a36b";
+import { getResourceFamily, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
+import { ROCKMOSS_CRAWLER_TYPE } from "./rockmossStrains.js?v=fresh-20260818-0644-d8d52fb";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./hostileLoot.js?v=fresh-20260818-0644-d8d52fb";
 
 // Something else out here is interested in what you left behind.
 //
@@ -204,7 +204,11 @@ function nibblesFor(grazer, policy) {
 // every frame would have creatures abandoning a half-eaten drop the instant a
 // marginally closer one appeared, which is how you get a field full of animals
 // twitching between meals and finishing none of them.
-export function planGrazing(grazers, pickups, { shipPosition = null, policy = GRAZING_DEFAULTS } = {}) {
+export function planGrazing(grazers, pickups, {
+  shipPosition = null,
+  policy = GRAZING_DEFAULTS,
+  assignNew = true,
+} = {}) {
   const shyRadiusSquared = policy.shipShyRadius * policy.shipShyRadius;
   const senseRadiusSquared = policy.senseRadius * policy.senseRadius;
   const guarded = (point) => Boolean(shipPosition) && distanceSquared(point, shipPosition) < shyRadiusSquared;
@@ -224,6 +228,10 @@ export function planGrazing(grazers, pickups, { shipPosition = null, policy = GR
     busy.add(grazer);
     assignments.push({ grazer, pickup: held, distance: Math.sqrt(distanceSquared(grazer.position, held.position)) });
   });
+
+  // Existing meals still advance every frame, but the expensive all-pairs
+  // auction only needs to run a few times per second.
+  if (!assignNew) return assignments;
 
   const candidates = [];
   grazers.forEach((grazer) => {
@@ -361,7 +369,12 @@ function applyGrazeFields(grazers, pickups, { deltaSeconds, guarded, policy }) {
 // for the caller to remove from the world — this module never mutates the pickup
 // list itself, the same way the mining clearing hands back awards rather than
 // applying them.
-export function advanceGrazing(grazers, pickups, { deltaSeconds, shipPosition = null, policy = GRAZING_DEFAULTS } = {}) {
+export function advanceGrazing(grazers, pickups, {
+  deltaSeconds,
+  shipPosition = null,
+  policy = GRAZING_DEFAULTS,
+  assignNew = true,
+} = {}) {
   const shyRadiusSquared = policy.shipShyRadius * policy.shipShyRadius;
   const guarded = (point) => Boolean(shipPosition) && distanceSquared(point, shipPosition) < shyRadiusSquared;
 
@@ -370,7 +383,7 @@ export function advanceGrazing(grazers, pickups, { deltaSeconds, shipPosition = 
   const swallowed = applyGrazeFields(grazers, pickups, { deltaSeconds, guarded, policy });
   const eaten = [...swallowed];
 
-  const assignments = planGrazing(grazers, pickups, { shipPosition, policy })
+  const assignments = planGrazing(grazers, pickups, { shipPosition, policy, assignNew })
     // Anything a mouth already closed on this frame is not still a meal to walk
     // toward — including somebody else's.
     .filter(({ pickup }) => !swallowed.has(pickup));

@@ -6,6 +6,7 @@ import {
   ensurePanelCondition,
   panelStageIndex,
   repairPanelCondition,
+  routineServicePanelCondition,
   stageForWear,
 } from "../src/systems/panelMaintenance.js";
 import {
@@ -56,6 +57,22 @@ test("repairPanelCondition clears to healthy and returns the prior stage", () =>
   assert.equal(c.currentCondition, c.maxRecoverableCondition,
     "service restores repairable condition only as far as the aged component permits");
   assert.equal(c.serviceCount, 1);
+});
+
+test("routine service broadly reduces ordinary wear but exposes serious diagnosed faults", () => {
+  const ordinary = createPanelCondition();
+  accumulatePanelWear(ordinary, T.degraded, T);
+  const serviced = routineServicePanelCondition(ordinary, T);
+  assert.equal(serviced.serviced, true);
+  assert.equal(ordinary.stage, "healthy");
+  assert.equal(ordinary.wear, T.degraded * 0.25);
+
+  const serious = createPanelCondition();
+  accumulatePanelWear(serious, T.emergency, T);
+  const diagnosed = routineServicePanelCondition(serious, T);
+  assert.equal(diagnosed.serviced, false);
+  assert.equal(serious.stage, "emergency");
+  assert.equal(serious.wear, T.emergency);
 });
 
 test("ensurePanelCondition migrates missing or stale condition data", () => {

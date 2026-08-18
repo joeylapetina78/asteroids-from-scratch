@@ -12,8 +12,8 @@ export function createSprcInstitutionInstance(now = Date.now()) {
     accounts: { operating: { id: "account:sprc-operating", balance: 18000, committed: 0, currency: "credits" } },
     policies: {
       protectedCash: 900,
-      inventoryTargets: { structuralFeedstockEquivalents: 8, "hull-plate": 3, "machine-part": 2, copper: 1 },
-      safetyStock: { "hull-plate": 1, "machine-part": 1, copper: 1 },
+      inventoryTargets: { structuralFeedstockEquivalents: 8, "hull-plate": 10, "machine-part": 8, copper: 1 },
+      safetyStock: { "hull-plate": 5, "machine-part": 4, copper: 1 },
       procurementBatchSizes: { copper: 3, silicate: 6 },
       projectedServiceCoverageTarget: 2,
       servicePriorities: ["disabled-systems", "damaged-hull", "routine-wear"],

@@ -11,7 +11,8 @@ import {
   ensurePanelCondition,
   panelStageIndex,
   repairPanelCondition,
-} from "./panelMaintenance.js?v=fresh-20260815-0038-449a36b";
+  routineServicePanelCondition,
+} from "./panelMaintenance.js?v=fresh-20260818-0644-d8d52fb";
 
 export const COMPONENT_THRESHOLDS = Object.freeze({ degraded: 0.55, emergency: 0.8, failed: 1 });
 
@@ -76,4 +77,22 @@ export function serviceCraftComponent(craft, componentId, { at = Date.now(), pro
     restoredTo: component.condition.currentCondition, lifetimeDegradation: component.condition.lifetimeDegradation });
   craft.aggregateWear = getAggregateComponentWear(craft);
   return { componentId, priorStage, condition: component.condition };
+}
+
+export function routineServiceCraft(craft, { at = Date.now(), providerId = null, wearRemaining = 0.25 } = {}) {
+  const serviced = [];
+  const diagnosed = [];
+  Object.values(craft.components ?? {}).forEach((component) => {
+    const result = routineServicePanelCondition(component.condition, COMPONENT_THRESHOLDS, { wearRemaining });
+    if (!result.serviced) {
+      if (result.previousStage === "emergency" || result.previousStage === "failed") diagnosed.push(component.id);
+      return;
+    }
+    component.serviceHistory ??= [];
+    component.serviceHistory.push({ at, providerId, serviceType: "routine-maintenance", priorStage: result.previousStage,
+      restoredTo: component.condition.currentCondition, lifetimeDegradation: component.condition.lifetimeDegradation });
+    serviced.push(component.id);
+  });
+  craft.aggregateWear = getAggregateComponentWear(craft);
+  return { serviced, diagnosed, aggregateWear: craft.aggregateWear };
 }

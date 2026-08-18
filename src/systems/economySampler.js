@@ -23,13 +23,13 @@
 //      system, it does not appear here. Where a total cannot be reconciled the
 //      residual is reported as a residual rather than smoothed away.
 
-import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260815-0038-449a36b";
-import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260815-0038-449a36b";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260815-0038-449a36b";
-import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260815-0038-449a36b";
-import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260815-0038-449a36b";
-import { listActors } from "./actorRegistry.js?v=fresh-20260815-0038-449a36b";
-import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260815-0038-449a36b";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
+import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260818-0644-d8d52fb";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260818-0644-d8d52fb";
+import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260818-0644-d8d52fb";
+import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260818-0644-d8d52fb";
+import { listActors } from "./actorRegistry.js?v=fresh-20260818-0644-d8d52fb";
+import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260818-0644-d8d52fb";
 
 // 5 s is fast enough to see a repricing (throttled to 60 s) as a step rather
 // than a jump, and slow enough that two hours of history is a few thousand
@@ -161,6 +161,7 @@ export function readEconomySnapshot(state, { now = Date.now() } = {}) {
       unitsSold: trade?.unitsSold ?? 0,
       productionSpend: round(trade?.productionSpend ?? 0),
       capitalSpend: round(institution.capitalSpend ?? 0),
+      arrivalInternalFunding: round(institution.arrivalInternalFunding ?? 0),
     };
 
     institutionCash += finances.balance;
@@ -461,11 +462,14 @@ export function reconcileMoney(samples) {
   const arrivals = [];
   const departures = [];
   let endowed = 0;
+  let internallyFundedArrivals = 0;
   let withdrawn = 0;
 
   Object.entries(lastActors).forEach(([id, actor]) => {
     if (firstActors[id]) return;
-    endowed += actor.cash ?? 0;
+    const internalFunding = Math.min(actor.cash ?? 0, actor.arrivalInternalFunding ?? 0);
+    endowed += (actor.cash ?? 0) - internalFunding;
+    internallyFundedArrivals += internalFunding;
     arrivals.push({ id, name: actor.name ?? id, cash: round(actor.cash ?? 0) });
   });
   Object.entries(firstActors).forEach(([id, actor]) => {
@@ -497,6 +501,7 @@ export function reconcileMoney(samples) {
     // Money that entered or left the counted world with an actor rather than
     // through a transaction. Reported, never folded into the residual.
     endowed: round(endowed),
+    internallyFundedArrivals: round(internallyFundedArrivals),
     withdrawn: round(withdrawn),
     arrivals,
     departures,

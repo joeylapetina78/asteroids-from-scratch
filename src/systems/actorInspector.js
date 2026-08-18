@@ -4,14 +4,14 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260815-0038-449a36b";
-import { collectIntentions } from "./intentions.js?v=fresh-20260815-0038-449a36b";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260815-0038-449a36b";
-import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260815-0038-449a36b";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260815-0038-449a36b";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260815-0038-449a36b";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260815-0038-449a36b";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260815-0038-449a36b";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260818-0644-d8d52fb";
+import { collectIntentions } from "./intentions.js?v=fresh-20260818-0644-d8d52fb";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260818-0644-d8d52fb";
+import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260818-0644-d8d52fb";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260818-0644-d8d52fb";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260818-0644-d8d52fb";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260818-0644-d8d52fb";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260818-0644-d8d52fb";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
@@ -20,8 +20,13 @@ export function inspectActor(state, actorId, { game = null } = {}) {
   const miningOperation = miningOperations.find((operation) => operation?.ships?.[actorId]) ?? null;
   const miningShip = miningOperation?.ships?.[actorId] ?? null;
   const logisticsHauler = state.logistics?.haulers?.[actorId] ?? null;
+  const physicalNpc = (game?.npcShips ?? []).find((entry) => entry.id === actorId) ?? null;
   const isInstitution = diagnostic?.actorKind === "institution";
-  const locationSiteId = resolveActorSiteId(state, actorId, diagnostic?.locationSiteId, game);
+  const isPhysicalTransit = Boolean(physicalNpc && physicalNpc.dockedSiteId == null
+    && ["loading", "available", "tow-loading", "being-towed"].includes(physicalNpc.operationalStatus));
+  const locationSiteId = isPhysicalTransit
+    ? null
+    : physicalNpc?.dockedSiteId ?? resolveActorSiteId(state, actorId, diagnostic?.locationSiteId, game);
   const worldSite = (game?.worldSites ?? []).find((site) => site.id === locationSiteId) ?? null;
 
   const view = {
@@ -31,8 +36,8 @@ export function inspectActor(state, actorId, { game = null } = {}) {
     controllerId: diagnostic?.controllerId ?? null,
     state: diagnostic?.state ?? "unknown",
     summary: diagnostic?.summary ?? null,
-    locationSiteId: locationSiteId ?? miningShip?.currentSiteId ?? logisticsHauler?.currentSiteId ?? null,
-    position: diagnostic?.position ?? miningShip?.position ?? worldSite?.position ?? null,
+    locationSiteId: isPhysicalTransit ? "in-transit" : locationSiteId ?? miningShip?.currentSiteId ?? logisticsHauler?.currentSiteId ?? null,
+    position: physicalNpc?.position ?? diagnostic?.position ?? miningShip?.position ?? worldSite?.position ?? null,
     intention: diagnostic?.intention ?? null,
     lastDecision: diagnostic?.lastDecision ?? null,
     blockerChain: diagnostic?.blocker ? formatBlockerChain(resolveBlockerChain(state, diagnostic.blocker)) : [],
@@ -63,7 +68,7 @@ export function inspectActor(state, actorId, { game = null } = {}) {
       uncommitted: worker.assignment ? null : { ...(worker.cargo ?? {}) },
     };
   } else if (logisticsHauler) {
-    const npc = (game?.npcShips ?? []).find((entry) => entry.id === actorId) ?? null;
+    const npc = physicalNpc;
     const shipments = (logisticsHauler.activeShipmentIds ?? [logisticsHauler.activeShipmentId].filter(Boolean))
       .map((shipmentId) => state.logistics?.shipments?.[shipmentId])
       .filter(Boolean);
@@ -74,7 +79,7 @@ export function inspectActor(state, actorId, { game = null } = {}) {
       }, {}),
       committedTo: shipments.map((shipment) => shipment.id).join(", ") || null,
       committedUnits: shipments.reduce((sum, shipment) => sum + (shipment.quantity ?? 0), 0),
-      uncommitted: null,
+      uncommitted: shipments.length > 0 ? null : {},
     };
     view.freightPortfolio = {
       capacity: npc?.commitmentPortfolio?.capacity ?? null,

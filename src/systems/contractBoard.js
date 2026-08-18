@@ -15,13 +15,13 @@
 //   WHO IS DOING IT   supplier — null while it is still up for grabs
 //   WHERE IS IT       one of available / taken / done / blocked
 
-import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260815-0038-449a36b";
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260815-0038-449a36b";
-import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260815-0038-449a36b";
-import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260815-0038-449a36b";
-import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260815-0038-449a36b";
-import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js?v=fresh-20260815-0038-449a36b";
-import { ensureGateBounty } from "./gateBounty.js?v=fresh-20260815-0038-449a36b";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260818-0644-d8d52fb";
+import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260818-0644-d8d52fb";
+import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260818-0644-d8d52fb";
+import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260818-0644-d8d52fb";
+import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js?v=fresh-20260818-0644-d8d52fb";
+import { ensureGateBounty } from "./gateBounty.js?v=fresh-20260818-0644-d8d52fb";
 
 export const CONTRACT_STATE = Object.freeze({
   AVAILABLE: "available",   // posted, nobody has taken it
@@ -40,6 +40,8 @@ export const CONTRACT_KIND = Object.freeze({
   SALVAGE: "salvage",           // recovering titled wreckage for its owner
   BOUNTY: "bounty",             // evergreen bearer-token redemption
 });
+
+const MAX_COMPLETED_CONTRACT_ROWS = 200;
 
 // What to call a party, and where it sits — both read off the record it
 // already has. These were two hardcoded tables listing the same three
@@ -417,7 +419,7 @@ function collectGateBounty(state) {
 
 // Every agreement in the world, newest first within each state.
 export function listContracts(state) {
-  return [
+  const contracts = [
     ...collectExtraction(state),
     ...collectPurchases(state),
     ...collectFreight(state),
@@ -426,6 +428,10 @@ export function listContracts(state) {
     ...collectWreckSalvage(state),
     ...collectGateBounty(state),
   ].sort((first, second) => (second.at ?? 0) - (first.at ?? 0));
+  const live = contracts.filter((contract) => contract.state !== CONTRACT_STATE.DONE);
+  const completed = contracts.filter((contract) => contract.state === CONTRACT_STATE.DONE)
+    .slice(0, MAX_COMPLETED_CONTRACT_ROWS);
+  return [...live, ...completed].sort((first, second) => (second.at ?? 0) - (first.at ?? 0));
 }
 
 export function summarizeContracts(contracts) {

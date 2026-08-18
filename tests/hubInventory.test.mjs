@@ -205,7 +205,7 @@ test("a carrier moving prepaid cargo does not buy it a second time", () => {
 
 // ── Carriers spin up and down with the work ────────────────────────────────
 
-function createCarrierWorld() {
+function createCarrierWorld({ regionalHaulerFloor = 0 } = {}) {
   let clock = 1_000_000;
   const state = createGameState();
   state.logistics = createInitialLogisticsState(clock);
@@ -227,6 +227,7 @@ function createCarrierWorld() {
       commissioned.push(ship);
       return ship;
     },
+    regionalHaulerFloor,
   });
   return { state, manager, ships, commissioned, advance: (seconds) => { clock += seconds * 1000; } };
 }
@@ -244,8 +245,22 @@ function addReadyFreight(state) {
   };
 }
 
-const busy = (state) => Object.values(state.logistics.haulers).forEach((hauler) => { hauler.activeShipmentId = "SHIP-BUSY"; });
-const idle = (state) => Object.values(state.logistics.haulers).forEach((hauler) => { hauler.activeShipmentId = null; hauler.activeMovementId = null; });
+const busy = (state) => Object.entries(state.logistics.haulers).forEach(([shipId, hauler]) => {
+  const shipmentId = `SHIP-BUSY-${shipId}`;
+  state.logistics.shipments[shipmentId] = {
+    id: shipmentId, status: "assigned", assigneeType: "npc", assigneeId: shipId,
+  };
+  hauler.activeShipmentIds = [shipmentId];
+  hauler.activeShipmentId = shipmentId;
+});
+const idle = (state) => Object.values(state.logistics.haulers).forEach((hauler) => {
+  (hauler.activeShipmentIds ?? []).forEach((shipmentId) => {
+    if (shipmentId.startsWith("SHIP-BUSY-")) delete state.logistics.shipments[shipmentId];
+  });
+  hauler.activeShipmentIds = [];
+  hauler.activeShipmentId = null;
+  hauler.activeMovementId = null;
+});
 
 test("a carrier puts another ship into service when its own are all committed", () => {
   const world = createCarrierWorld();
@@ -261,6 +276,10 @@ test("a carrier puts another ship into service when its own are all committed", 
   const hired = world.state.ledger.getEventsAfterId(0).filter((entry) => entry.type === "carrier.haulerHired");
   assert.ok(hired.length > 0);
   assert.ok(hired[0].payload.cost > 0, "with what it cost");
+  assert.equal(hired[0].payload.maintenanceReserve, 3_000, "with its first repair funded");
+  assert.ok(hired[0].payload.initialWear > 0, "and a believable used-craft condition");
+  const hiredCarrier = world.state.logistics.institutions[hired[0].payload.carrierInstitutionId];
+  assert.ok(hiredCarrier.maintenanceEscrow >= 3_000);
 });
 
 test("a moment of everyone being busy does not buy a ship", () => {
@@ -329,4 +348,51 @@ test("the region never runs out of haulers", () => {
     world.manager.update();
   }
   assert.ok(Object.keys(world.state.logistics.haulers).length >= 1, "somebody is always left to haul");
+});
+
+test("hub-sponsored haulers launch with varied condition and a funded repair cycle", () => {
+  const world = createCarrierWorld({ regionalHaulerFloor: 8 });
+  world.manager.update();
+  const sponsored = Object.values(world.state.logistics.institutions)
+    .filter((institution) => institution.sponsoredByInstitutionId);
+  assert.ok(sponsored.length >= 1);
+  assert.equal(Object.keys(world.state.logistics.haulers).length, 8,
+    "the regional floor is filled exactly instead of triggering speculative births");
+  const sponsorsByHub = new Map();
+  sponsored.forEach((carrier) => {
+    sponsorsByHub.set(carrier.sponsoredByInstitutionId, (sponsorsByHub.get(carrier.sponsoredByInstitutionId) ?? 0) + 1);
+    assert.ok(carrier.accounts.operating.balance >= 5_000, "the carrier is economically alive at launch");
+    assert.ok(carrier.maintenanceEscrow >= 3_000, "one repair cycle is explicitly reserved");
+    assert.ok(carrier.accounts.operating.balance - carrier.policies.transportation.minimumOperatingCash >= 3_000,
+      "the reserve does not make repair money unspendable");
+    const operator = world.state.logistics.institutions[carrier.controllerInstitutionId];
+    assert.ok(operator?.name && !operator.name.startsWith("Hub Dispatcher"), "the operator has a personal identity");
+    assert.ok(operator?.motivation, "the operator has an economic motivation");
+  });
+  assert.ok([...sponsorsByHub.values()].every((count) => count <= 1), "no hub creates a local swarm");
+  assert.equal(new Set(sponsored.map((carrier) => world.state.logistics.institutions[carrier.controllerInstitutionId].name)).size,
+    sponsored.length, "sponsored firms do not share a cloned proprietor");
+  const startingWear = sponsored.map((carrier) => Object.values(world.state.logistics.institutions)
+    .find((institution) => institution.controllerInstitutionId === carrier.id && institution.archetypeId === "cargo-ship")?.wear);
+  assert.ok(startingWear.every((wear) => wear > 0 && wear < 2), "generated craft are used but serviceable");
+  assert.ok(new Set(startingWear).size > 1, "the generated fleet does not share one artificial condition");
+});
+
+test("the frontier publishes a second maintenance destination", () => {
+  const state = createInitialLogisticsState(1_000);
+  assert.equal(state.institutions["ore-station-service"].siteId, "ore-station-one");
+  assert.ok(state.institutions["ore-station-service"].accounts.operating.balance > 0);
+});
+
+test("regional freight waiting prevents idle haulers from being laid up", () => {
+  const world = createCarrierWorld();
+  addReadyFreight(world.state);
+  idle(world.state);
+  const before = Object.keys(world.state.logistics.haulers).length;
+  world.manager.update();
+  world.advance(121);
+  idle(world.state);
+  world.manager.update();
+  assert.equal(Object.keys(world.state.logistics.haulers).length, before);
+  assert.equal(world.state.ledger.getEventsAfterId(0).filter((event) => event.type === "carrier.haulerLaidUp").length, 0);
 });

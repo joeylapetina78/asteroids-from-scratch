@@ -95,6 +95,20 @@ test("retired actors remain historical diagnostics but leave the current actor l
   assert.equal(listBlocked(state).some((actor) => actor.actorId === "relief-1"), false);
 });
 
+test("retired actor tombstones stay bounded during long-running fleet churn", () => {
+  const state = {};
+  for (let index = 0; index < 140; index += 1) {
+    const id = `retired-${index}`;
+    recordDiagnostic(state, id, { actorKind: "ship", actorName: `Retired ${index}` }, index);
+    retireDiagnostic(state, id, { summary: "Laid up", at: index });
+  }
+
+  const retired = listDiagnostics(state, { states: [DIAGNOSTIC_STATE.RETIRED] });
+  assert.equal(retired.length, 100, "only a compact historical tail remains in the live projection");
+  assert.equal(getDiagnostic(state, "retired-0"), null, "the oldest tombstone was discarded");
+  assert.ok(getDiagnostic(state, "retired-139"), "the most recent retirement remains explainable");
+});
+
 test("inspectable actors are ordered alphabetically by display name", () => {
   const state = {};
   recordDiagnostic(state, "ship:z", { actorName: "Zulu" });

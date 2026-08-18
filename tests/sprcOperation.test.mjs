@@ -1282,6 +1282,81 @@ test("SPRC repair revenue is conserved as a carrier account expense", () => {
   assert.ok(harness.state.ledger.getRecentEvents(20).some((event) => event.type === "carrier.repairPaid" && event.payload.accountId === "FR-ACCT-022"));
 });
 
+test("a completed durable repair releases a hauler even when its ledger event was missed", () => {
+  const harness = createLogisticsHarness();
+  const hauler = harness.state.logistics.haulers["hauler-scrap-yard"];
+  const carrier = harness.state.logistics.institutions[hauler.carrierInstitutionId];
+  const before = carrier.accounts.operating.balance;
+  hauler.maintenanceRequested = true;
+  hauler.status = "maintenance-required";
+  harness.ships[1].operationalStatus = "maintenance";
+  harness.state.sprc.repairOrders.RECONCILE = {
+    id: "RECONCILE", status: "completed", subjectHaulerId: "hauler-scrap-yard",
+    componentId: "propulsion", servicePrice: 180,
+  };
+
+  harness.manager.observe();
+  harness.manager.observe();
+
+  assert.equal(hauler.status, "seeking-work");
+  assert.equal(hauler.maintenanceRequested, false);
+  assert.equal(carrier.accounts.operating.balance, before - 180, "durable reconciliation invoices exactly once");
+  assert.equal(harness.state.logistics.settledSprcRepairs.RECONCILE > 0, true);
+});
+
+test("an older completed repair never releases a ship from its newer open repair", () => {
+  const harness = createLogisticsHarness();
+  const hauler = harness.state.logistics.haulers["hauler-scrap-yard"];
+  hauler.maintenanceRequested = true;
+  hauler.status = "maintenance-required";
+  harness.ships[1].operationalStatus = "maintenance";
+  harness.state.sprc.repairOrders.OLD = {
+    id: "OLD", status: "completed", subjectHaulerId: "hauler-scrap-yard",
+    componentId: "propulsion", servicePrice: 180, createdAt: 1_000,
+  };
+  harness.state.sprc.repairOrders.NEW = {
+    id: "NEW", status: "waiting-stock", subjectHaulerId: "hauler-scrap-yard",
+    componentId: "steering", servicePrice: 220, createdAt: 2_000,
+  };
+
+  harness.manager.observe();
+
+  assert.equal(hauler.maintenanceRequested, true);
+  assert.equal(hauler.status, "maintenance-required");
+  assert.equal(harness.ships[1].operationalStatus, "maintenance");
+});
+
+test("physical docking settles a loaded shipment even when its route event was missed", () => {
+  const harness = createLogisticsHarness();
+  const shipId = "hauler-yard-scrap";
+  const hauler = harness.state.logistics.haulers[shipId];
+  const ship = harness.ships[0];
+  harness.state.logistics.containers.ARRIVAL_CONTAINER = {
+    id: "ARRIVAL_CONTAINER", shipmentId: "ARRIVAL", commodity: "iron-nickel", quantity: 1,
+    ownerInstitutionId: "scrap-forge", custodianInstitutionId: hauler.carrierInstitutionId, custody: [],
+  };
+  harness.state.logistics.shipments.ARRIVAL = {
+    id: "ARRIVAL", containerId: "ARRIVAL_CONTAINER", assigneeType: "npc", assigneeId: shipId,
+    originSiteId: "yard-exchange", destinationSiteId: "scrap-porch",
+    sourceInstitutionId: "yard-exchange", destinationInstitutionId: "scrap-forge",
+    issuerInstitutionId: "scrap-forge", commodity: "iron-nickel", quantity: 1,
+    payment: 100, committedPayment: 100, goodsPayment: 0, status: "loaded",
+  };
+  hauler.activeShipmentIds = ["ARRIVAL"];
+  hauler.activeShipmentId = "ARRIVAL";
+  hauler.currentSiteId = "yard-exchange";
+  hauler.status = "transporting";
+  ship.dockedSiteId = "scrap-porch";
+  ship.operationalStatus = "awaiting-assignment";
+  harness.state.logistics.institutions["scrap-forge"].accounts.operating.committed = 100;
+
+  harness.manager.observe();
+
+  assert.equal(harness.state.logistics.shipments.ARRIVAL.status, "delivered");
+  assert.equal(hauler.currentSiteId, "scrap-porch");
+  assert.equal(hauler.activeShipmentId, null);
+});
+
 // RESTORED. The chain never broke. Once the authored freight routes were retired,
 // the purchase-order run this harness happens to pick terminates at the repair
 // site (Scrap Porch), which correctly collapses recovery to a SINGLE tow — so the
@@ -1376,6 +1451,46 @@ test("a remote carrier with no policy-eligible freight generates a return-to-mai
   assert.deepEqual(ship.assignment.route.map((site) => site.id), ["the-ledge", "yard-exchange", "scrap-porch"]);
 });
 
+test("maintenance due is a state transition before a carrier considers profitable local freight", () => {
+  const harness = createLogisticsHarness();
+  const ship = harness.ships[0];
+  const hauler = harness.state.logistics.haulers[ship.id];
+  const shipInstitution = harness.state.logistics.institutions[hauler.shipInstitutionId];
+  ship.wear = 5.2;
+  shipInstitution.wear = 5.2;
+
+  harness.manager.update();
+
+  assert.equal(Object.values(harness.state.logistics.shipments).some((entry) => entry.assigneeId === ship.id), false,
+    "even available local cargo cannot keep a due craft in bidding limbo");
+  assert.ok(["returning-maintenance", "maintenance-required"].includes(hauler.status));
+  assert.ok(hauler.activeMovementId || hauler.maintenanceRequested,
+    "the craft visibly enters its service journey or queue");
+});
+
+test("completed freight history remains bounded while live shipments survive pruning", () => {
+  const harness = createLogisticsHarness();
+  harness.state.logistics.shipments = {};
+  harness.state.logistics.containers = {};
+  for (let index = 0; index < 150; index += 1) {
+    harness.state.logistics.shipments[`old-${index}`] = {
+      id: `old-${index}`, status: "delivered", containerId: `container-${index}`,
+      createdAt: index, deliveredAt: index,
+    };
+    harness.state.logistics.containers[`container-${index}`] = { id: `container-${index}` };
+  }
+  harness.state.logistics.shipments.live = { id: "live", status: "loaded", createdAt: 0 };
+
+  harness.manager.observe();
+
+  const terminal = Object.values(harness.state.logistics.shipments)
+    .filter((shipment) => shipment.status === "delivered");
+  assert.equal(terminal.length, 120);
+  assert.ok(harness.state.logistics.shipments.live, "authoritative in-flight work is never pruned");
+  assert.equal(harness.state.logistics.containers["container-0"], undefined);
+  assert.ok(harness.state.logistics.containers["container-149"]);
+});
+
 test("a carrier rejected by maintenance policy cannot remain parked below a separate service threshold", () => {
   const harness = createLogisticsHarness();
   const ship = harness.ships[1];
@@ -1389,6 +1504,23 @@ test("a carrier rejected by maintenance policy cannot remain parked below a sepa
   assert.equal(hauler.maintenanceRequested, true);
   assert.equal(ship.operationalStatus, "maintenance");
   assert.ok(harness.state.ledger.getRecentEvents(20).some((event) => event.type === "carrier.maintenanceRequested" && event.payload.pilotName === "Mara Venn"));
+});
+
+test("a healthy carrier declines an overlong route without inventing a repair need", () => {
+  const harness = createLogisticsHarness();
+  const ship = harness.ships[1];
+  const hauler = harness.state.logistics.haulers[ship.id];
+  const carrier = harness.state.logistics.institutions[hauler.carrierInstitutionId];
+  const shipInstitution = harness.state.logistics.institutions[hauler.shipInstitutionId];
+  ship.wear = 1;
+  shipInstitution.wear = 1;
+  carrier.policies.transportation.expectedWearPerDistance = 1;
+
+  harness.manager.update();
+
+  assert.equal(hauler.maintenanceRequested, false);
+  assert.notEqual(ship.operationalStatus, "maintenance");
+  assert.equal(Object.values(harness.state.sprc?.repairOrders ?? {}).some((repair) => repair.subjectHaulerId === ship.id), false);
 });
 
 test("older logistics state receives policy and destination data without duplicating carriers", () => {
