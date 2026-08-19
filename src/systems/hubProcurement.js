@@ -25,18 +25,18 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260818-0644-d8d52fb";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260818-0644-d8d52fb";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260818-0644-d8d52fb";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260818-0644-d8d52fb";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260818-0644-d8d52fb";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260818-0644-d8d52fb";
-import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260818-0644-d8d52fb";
-import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260818-0644-d8d52fb";
-import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260818-0644-d8d52fb";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260818-0644-d8d52fb";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260818-0644-d8d52fb";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260818-2212-559e0fe";
+import { STANDING_MINING_ORDERS, getStandingMiningDefinitions } from "./miningOperation.js?v=fresh-20260818-2212-559e0fe";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260818-2212-559e0fe";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260818-2212-559e0fe";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260818-2212-559e0fe";
+import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260818-2212-559e0fe";
+import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260818-2212-559e0fe";
+import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260818-2212-559e0fe";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260818-2212-559e0fe";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260818-2212-559e0fe";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -166,21 +166,19 @@ export function evaluateSupplierCandidates(state, {
   buyerInstitutionId,
   family,
   units = 1,
-  definitions = STANDING_MINING_ORDERS,
+  definitions = null,
   connections = FIRST_REACH_TRANSPORT_CONNECTIONS,
 } = {}) {
+  definitions ??= getStandingMiningDefinitions(state);
   const institutions = state.logistics?.institutions ?? {};
   const destinationIds = Array.from(new Set(connections.flatMap((connection) => [connection.fromId, connection.toId])));
   const network = createTransportationNetwork({ destinations: destinationIds.map((id) => ({ id })), connections });
   const buyerSiteId = hubSiteId(state, buyerInstitutionId);
-  const miningFamiliesFor = (institutionId) => Array.from(new Set([
-    ...getMinedFamilies(institutionId),
-    ...Object.values(state.worldRecords?.authorityGrants ?? {})
-      .filter((grant) => grant.holderId === `institution:${institutionId}`
-        && grant.status !== "revoked" && grant.status !== "expired" && grant.status !== "void"
-        && grant.limits?.rightTypes?.includes("mining"))
-      .flatMap((grant) => grant.limits?.resourceFamilies ?? []),
-  ]));
+  const hasMiningAuthority = (institutionId, candidateFamily) => Object.values(state.worldRecords?.authorityGrants ?? {})
+    .some((grant) => grant.holderId === `institution:${institutionId}`
+      && grant.status !== "revoked" && grant.status !== "expired" && grant.status !== "void"
+      && grant.limits?.rightTypes?.includes("mining")
+      && (grant.limits?.resourceFamilies ?? []).includes(candidateFamily));
 
   return definitions
     .filter((definition) => getResourceFamily(definition.resourceId) === family)
@@ -188,7 +186,10 @@ export function evaluateSupplierCandidates(state, {
       const institutionId = definition.buyerInstitutionId;
       const supplier = institutions[institutionId] ?? null;
       const reasons = [];
-      const legal = miningFamiliesFor(institutionId).includes(family);
+      // The definition is installed capacity; the grant is permission to use
+      // it. Both are required, so a broad enabling charter cannot fabricate a
+      // mine and a physical mine cannot operate without authority.
+      const legal = hasMiningAuthority(institutionId, family);
       const route = supplier && institutionId !== buyerInstitutionId
         ? findTransportationRoute(network, hubSiteId(state, institutionId), buyerSiteId)
         : null;
@@ -676,7 +677,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   }
 
   function updateSupplierAsks() {
-    STANDING_MINING_ORDERS.forEach((definition) => {
+    getStandingMiningDefinitions(state).forEach((definition) => {
       const supplierInstitutionId = definition.buyerInstitutionId;
       if (!institution(supplierInstitutionId)) return;
       const record = askRecord(supplierInstitutionId, definition.resourceId);

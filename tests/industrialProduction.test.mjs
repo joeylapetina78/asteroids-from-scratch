@@ -53,20 +53,19 @@ test("Sal builds an opening buffer through larger orders spread across independe
   assert.ok(orders.every((order) => order.units > 4), "opening orders are large enough to cover freight lead time");
 });
 
-test("parts delivered to Scrap Porch cross a paid local counter into Sal's stock", () => {
+test("parts delivered to Scrap Porch move into its repair department without an internal sale", () => {
   const state = createGameState();
   const industry = createIndustrialProductionOperation({ state, now: () => 10_000 });
   const porch = state.logistics.institutions["scrap-forge"];
   porch.inventories["machine-part"] = 2;
   const porchCash = porch.accounts.operating.balance;
-  const salCash = state.sprc.account.balance;
+  assert.equal(state.sprc.account, porch.accounts.operating);
 
   industry.observe();
 
   assert.equal(porch.inventories["machine-part"], 0);
   assert.equal(state.sprc.inventories.produced["machine-part"], 3);
-  assert.equal(porch.accounts.operating.balance, porchCash + 230);
-  assert.equal(state.sprc.account.balance, salCash - 230);
+  assert.equal(porch.accounts.operating.balance, porchCash);
 });
 
 test("a sustained repair queue turns Sal's planned cradle into real parallel capacity", () => {
@@ -102,6 +101,16 @@ test("sustained regional shortages cause a solvent hub to commission new fabrica
   industry.decide();
   clock += 181_000;
   industry.decide();
+
+  const building = Object.values(state.industrial.constructionProjects)
+    .find((project) => project.itemId === "machine-part" && project.status === "building");
+  assert.ok(building, "money, construction material and labor start a real timed project");
+  assert.ok(state.population.laborAssignments[building.laborAssignmentId]);
+  assert.ok(state.population.operators[building.operatorId]?.motivation);
+  assert.equal(Object.keys(state.industrial.factories).length, initialFactoryCount, "capacity is not usable before construction finishes");
+
+  clock += 61_000;
+  industry.observe();
 
   const commissioned = Object.values(state.industrial.factories)
     .find((factory) => factory.emergedFromPressure && factory.recipes.some((recipe) => recipe.output === "machine-part"));

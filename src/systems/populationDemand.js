@@ -23,11 +23,10 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260818-0644-d8d52fb";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260818-0644-d8d52fb";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260818-0644-d8d52fb";
-import { settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-0644-d8d52fb";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260818-2212-559e0fe";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260818-2212-559e0fe";
+import { settlementExtractionDefinitions, settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-2212-559e0fe";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -113,7 +112,7 @@ export function createInitialPopulationState(now = Date.now()) {
     // turning one artificial production wave into continuous regional demand.
     populations[profile.id] = createPopulationRecord(profile, now + index * 17_000);
   });
-  return { populations, productionOrders: {}, counter: 0 };
+  return { populations, productionOrders: {}, counter: 0, operators: {}, laborAssignments: {}, operatorCounter: 0 };
 }
 
 // ── How much a settlement of a given size actually wants ───────────────────
@@ -189,6 +188,9 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
   population.populations ??= {};
   population.productionOrders ??= {};
   population.counter ??= 0;
+  population.operators ??= {};
+  population.laborAssignments ??= {};
+  population.operatorCounter ??= 0;
   // Late-added profiles and needs appear without wiping an existing save.
   POPULATION_PROFILES.forEach((profile) => {
     population.populations[profile.id] ??= createPopulationRecord(profile, now());
@@ -653,7 +655,7 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
     const families = describeFamilies(need);
     const cannotMine = missingFamilies(hub.id, need);
     const mustBuy = cannotMine.length > 0
-      ? `${hubName(hub)} holds no mining right for ${cannotMine.join("/")}, so it must buy this material from another hub`
+      ? `${hubName(hub)} has no installed ${cannotMine.join("/")} extraction capacity, so it must buy this material or commission new capacity`
       : null;
 
     switch (reason) {
@@ -758,15 +760,16 @@ function hubName(hub) {
   return hub.name ?? hub.id;
 }
 
-// Families this institution may commission extraction for.
+// Families this institution currently has installed extraction capacity for.
 function minedFamilies(institutionId) {
-  return INSTITUTION_MINING_RIGHTS
-    .filter((right) => right.institutionId === institutionId)
-    .flatMap((right) => right.families);
+  return settlementExtractionDefinitions()
+    .filter((definition) => definition.buyerInstitutionId === institutionId)
+    .flatMap((definition) => definition.miningFamilies ?? [getResourceFamily(definition.resourceId)]);
 }
 
-// Families a need pulls on that this hub may NOT mine, and therefore has to
-// buy from whichever hub can. This is the interdependence, stated plainly.
+// Families a need pulls on that this hub does not CURRENTLY mine. Broad legal
+// authority means it could build that capacity later; until it does, importing
+// remains the live response and preserves interdependence.
 function missingFamilies(institutionId, need) {
   if (!need?.families) return [];
   const mine = minedFamilies(institutionId);

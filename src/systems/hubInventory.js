@@ -10,13 +10,13 @@
 // draws from a family and substitutes freely within it. A hub does not need
 // iron-nickel specifically; it needs structural material.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
-import { recordAcquisition } from "./costBasis.js?v=fresh-20260818-0644-d8d52fb";
-import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260818-0644-d8d52fb";
-import { INSTITUTION_MINING_RIGHTS } from "./authoritySeeds.js?v=fresh-20260818-0644-d8d52fb";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
+import { recordAcquisition } from "./costBasis.js?v=fresh-20260818-2212-559e0fe";
+import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260818-2212-559e0fe";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-2212-559e0fe";
 // The store only — deliberately not `miningOperation`, which imports THIS
 // module. See `miningOrderBook` for why the derivation lives elsewhere.
-import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260818-0644-d8d52fb";
+import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260818-2212-559e0fe";
 
 // How many seconds of consumption a hub tries to keep on the shelf. Higher
 // means fatter buffers and less frequent, larger orders.
@@ -125,9 +125,12 @@ export function getInventoryPosition(state, hubInstitutionId, family, coverageSe
 
 // Families this hub may commission extraction for.
 export function getMinedFamilies(hubInstitutionId) {
-  return INSTITUTION_MINING_RIGHTS
-    .filter((right) => right.institutionId === hubInstitutionId)
-    .flatMap((right) => right.families);
+  // Authority says what a hub MAY establish; an extraction definition says
+  // what it has actually installed. Procurement must read capacity or a broad
+  // enabling charter would make the hub behave as though every mine existed.
+  return Array.from(new Set(settlementExtractionDefinitions()
+    .filter((order) => order.buyerInstitutionId === hubInstitutionId)
+    .flatMap((order) => order.miningFamilies ?? [getResourceFamily(order.resourceId)])));
 }
 
 // Families a hub needs but may not mine, so it has to buy them. This is the

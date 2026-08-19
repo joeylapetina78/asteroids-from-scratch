@@ -1,4 +1,4 @@
-import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260818-0644-d8d52fb";
+import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260818-2212-559e0fe";
 
 const RESOURCE_CONTRACTS = [
   {
@@ -174,9 +174,6 @@ export const chapterOneContracts = [
       contract.sourceClaimIds?.length
         ? "Only ore traced to the marked contract plots counts for this job. Off-plot ore is marked in cargo."
         : null,
-      contract.requiresFlightPermitZoneName
-        ? `Mining rights only — flight clearance for ${contract.requiresFlightPermitZoneName} is handled separately through Reach Transit Commission.`
-        : null,
       "Return to Rook Industries for the next available job.",
     ].filter(Boolean),
   })),
@@ -248,8 +245,7 @@ export const chapterOneContracts = [
       cost: 800,
       permitType: "work-pass",
       authorityId: "yard-exchange-authority",
-      grantZones: ["copper-drift"],
-      grantMiningAuthorities: ["copperline-prospectors"],
+      grantTerritoryRights: [{ territoryId: "territory:yard-exchange", rights: ["transit", "docking", "mining", "trade"] }],
     },
     reward: {},
     clauses: [
@@ -278,4 +274,32 @@ export const chapterOneContracts = [
       "Flight clearance for the zone is arranged separately if you do not already hold it.",
     ],
   },
+  ...[
+    ["scrap-porch", "Scrap Porch", "Scrap Porch Commons", 420],
+    ["the-ledge", "The Ledge", "Ledge Works Board", 560],
+    ["blue-lantern", "Blue Lantern", "Blue Lantern Mutual", 480],
+    ["morrow-shoal", "Morrow Shoal", "Morrow Claimholders' Moot", 460],
+    ["kiln-crossing", "Kiln Crossing", "Kiln Masters' Chapter", 540],
+    ["ore-station-one", "Ore Station One", "Ore Station Syndicate", 650],
+    ["coldwater-depot", "Coldwater Depot", "Coldwater Depot Trust", 620],
+    ["deep-research", "Deep Research", "Deep Research Collegium", 700],
+  ].map(([siteId, siteName, issuer, cost]) => ({
+    id: `territory-${siteId}-work-pass`,
+    type: "permit",
+    title: `${siteName} Work Pass`,
+    issuer,
+    summary: `Standing transit, docking, trade, and extraction authority within the ${siteName} jurisdiction.`,
+    terms: {
+      cost,
+      permitType: "work-pass",
+      authorityId: `${siteId}-authority`,
+      grantTerritoryRights: [{ territoryId: `territory:${siteId}`, rights: ["transit", "docking", "mining", "trade"] }],
+    },
+    reward: {},
+    clauses: [
+      `${cost} credits paid to ${issuer}.`,
+      `Visitor approach remains open without this pass; the pass grants standing commercial and extraction privileges throughout ${siteName}'s controlled territory.`,
+      "The grant does not confer patrol, salvage, construction, or enforcement authority.",
+    ],
+  })),
 ];

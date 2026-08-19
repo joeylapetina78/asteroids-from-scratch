@@ -1,5 +1,6 @@
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260818-0644-d8d52fb";
-import { getActorRecord } from "./actorRegistry.js?v=fresh-20260818-0644-d8d52fb";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260818-2212-559e0fe";
+import { getActorRecord } from "./actorRegistry.js?v=fresh-20260818-2212-559e0fe";
+import { getActorCapabilityPortfolio, getActorCapabilities as getPortfolioCapabilities } from "./assetCapabilities.js?v=fresh-20260818-2212-559e0fe";
 // One place to ask what an actor is and what it has.
 //
 // This module OWNS NOTHING. It resolves an id to the records that already
@@ -13,10 +14,10 @@ import { getActorRecord } from "./actorRegistry.js?v=fresh-20260818-0644-d8d52fb
 // `actorRegistry.listActors` for the second question; everything below is the
 // first, plus what an actor's configuration then MEANS.
 //
-// The rule for traits: an institution decides through whoever runs it, so an
-// institution's traits are its CONTROLLER's. A person carries their own. That
-// is what makes Yard Exchange and The Ledge price differently without either
-// of them having a bespoke code path.
+// The rule for traits: an institutional NPC carries an enduring agency profile
+// of its own; other institutions decide through whoever runs them. A person
+// carries their own. This lets a hub survive a change of representative without
+// becoming a different mind overnight.
 
 const DEFAULT_TRAITS = Object.freeze({ caution: 0.5, growthBias: 0.3, urgencyBias: 0.5 });
 
@@ -32,6 +33,12 @@ export function getControllerId(state, actorId) {
   return record.controllerInstitutionId ?? record.ownerInstitutionId ?? record.id ?? null;
 }
 
+export function getDecisionActorId(state, actorId) {
+  const record = findActorRecord(state, actorId);
+  if (!record) return null;
+  return record.agency?.kind === "institutional" ? record.id : getControllerId(state, actorId);
+}
+
 // ── Resolution with provenance ─────────────────────────────────────────────
 //
 // Every resolver below reports WHICH LAYER answered, because the two worst bugs
@@ -44,6 +51,7 @@ export function getControllerId(state, actorId) {
 // `resolve*` returns `{ value, source, reason }` for anything explaining itself.
 
 export const RESOLUTION_SOURCE = Object.freeze({
+  INSTITUTIONAL_AGENCY: "institutional-agency",
   CONTROLLER: "controller-configuration",
   OWN: "actor-record",
   ACTOR_POLICY: "actor-policy",
@@ -67,6 +75,14 @@ export function resolveActorTraits(state, actorId, fallback = DEFAULT_TRAITS) {
   const record = findActorRecord(state, actorId);
   if (!record) {
     return { value: fallback, source: RESOLUTION_SOURCE.UNRESOLVED, reason: `No record found for '${actorId}' in any state shape.` };
+  }
+
+  if (record.agency?.kind === "institutional" && record.agency.traits) {
+    return {
+      value: record.agency.traits,
+      source: RESOLUTION_SOURCE.INSTITUTIONAL_AGENCY,
+      reason: `${record.name ?? actorId} decides as an enduring organisation; representatives express but do not replace its policy identity.`,
+    };
   }
 
   const controllerId = record.controllerInstitutionId ?? record.ownerInstitutionId ?? null;
@@ -106,7 +122,14 @@ export function getArchetypeDefault(state, actorId, key) {
 // What kinds of work this actor may put on a public board. An archetype that
 // declares none can still act, but it cannot post.
 export function getActorOfferTypes(state, actorId) {
-  return getArchetype(state, actorId)?.offerTypes ?? [];
+  return getActorCapabilityPortfolio(state, actorId).offerTypes;
+}
+
+// The single public question decision code should ask. The actor core remains
+// unchanged as farms, charters, facilities and new ship classes are added;
+// those assets publish grants into the portfolio instead.
+export function getActorCapabilities(state, actorId, capabilityId = null) {
+  return getPortfolioCapabilities(state, actorId, capabilityId);
 }
 
 export function getActorAccount(state, actorId) {

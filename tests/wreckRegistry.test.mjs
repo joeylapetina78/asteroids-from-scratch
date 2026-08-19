@@ -30,7 +30,7 @@ test("SPRC buys a needed wreck without crossing protected cash", () => {
   const result = acquireWreckForSprc(state, { wreckId: wreck.id, at: 200 });
   assert.equal(result.acquired, true);
   assert.equal(wreck.previousOwnerInstitutionId, "carrier:yard-hauler");
-  assert.equal(wreck.ownerInstitutionId, "sprc");
+  assert.equal(wreck.ownerInstitutionId, "scrap-forge");
   assert.equal(wreck.titleStatus, "transferred-for-salvage");
   assert.equal(owner.balance, ownerBefore + result.evaluation.acquisitionPrice);
   assert.equal(state.sprc.account.balance, sprcBefore - result.evaluation.acquisitionPrice);

@@ -21,6 +21,9 @@
 // Not a `player.canMine` flag: rights are sets the pilot holds (zones, authorities)
 // checked against what each plot carries.
 
+import { RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260818-2212-559e0fe";
+import { evaluateTerritoryAccess } from "./hubTerritories.js?v=fresh-20260818-2212-559e0fe";
+
 const RIGHT_REQUIRING_STATUS = /required|restricted/i;
 // The zone influence at which the ship is considered to have ENTERED a zone —
 // the same threshold Game.updateZoneTitle uses before it logs a zone entry, so
@@ -48,19 +51,20 @@ export function getContractGrantedClaimIds(state) {
 }
 
 export function evaluatePlotMiningAccess(state, plot, grantedClaimIds = null) {
-  const miningRight = plot?.rights?.mining;
-  if (!miningRequiresRight(miningRight)) {
-    return { controlled: false, allowed: true };
-  }
-  const authorityId = miningRight.authorityId ?? null;
-  if (authorityId && getPlayerMiningAuthorities(state).includes(authorityId)) {
-    return { controlled: true, allowed: true, authorityId, via: "held-right" };
-  }
+  const territory = plot?.center ? evaluateTerritoryAccess(state, plot.center, RIGHT_TYPES.MINING) : null;
+  if (!territory?.controlled) return { controlled: false, allowed: true, via: "unclaimed-frontier" };
+  if (territory.allowed) return { controlled: true, allowed: true, territoryId: territory.territory.id, via: "territory-grant" };
   const granted = grantedClaimIds ?? getContractGrantedClaimIds(state);
   if (granted.has(plot.id) || (plot.sourceClaimId && granted.has(plot.sourceClaimId))) {
-    return { controlled: true, allowed: true, authorityId, via: "contract" };
+    return { controlled: true, allowed: true, territoryId: territory.territory.id, via: "contract" };
   }
-  return { controlled: true, allowed: false, authorityId };
+  return {
+    controlled: true,
+    allowed: false,
+    territoryId: territory.territory.id,
+    territoryName: territory.territory.name,
+    territory: territory.territory,
+  };
 }
 
 // ── Flight (zone-scoped pilot license — the rule the hub actually enforces) ───
@@ -72,15 +76,10 @@ export function getPlayerAuthorizedZones(state) {
 // A plot is a no-fly when it sits firmly inside a named zone the license does not
 // authorize. Open space and weak zone fringes are never a violation.
 export function evaluateFlightAccess(state, plot) {
-  const zoneId = plot?.strongestZoneId ?? null;
-  const influence = plot?.zoneInfluence ?? 0;
-  if (!zoneId || zoneId === "open-space" || influence < ZONE_ENTRY_INFLUENCE) {
-    return { controlled: false, allowed: true };
-  }
-  if (getPlayerAuthorizedZones(state).includes(zoneId)) {
-    return { controlled: true, allowed: true, via: "held-right" };
-  }
-  return { controlled: true, allowed: false, zoneId, zoneName: plot.strongestZoneName ?? zoneId };
+  const territory = plot?.center ? evaluateTerritoryAccess(state, plot.center, RIGHT_TYPES.TRANSIT) : null;
+  return territory?.controlled
+    ? { controlled: true, allowed: true, via: territory.allowed ? territory.via : "open-transit", territoryId: territory.territory.id }
+    : { controlled: false, allowed: true, via: "open-transit" };
 }
 
 // ── Combined ─────────────────────────────────────────────────────────────────
@@ -103,7 +102,19 @@ export function getPlotRestriction(state, plot, grantedClaimIds = null) {
   if (noFly) {
     return { noMine, noFly, label: "NO FLIGHT CLEARANCE", sublabel: fly.zoneName ?? "" };
   }
-  return { noMine, noFly, label: "NO MINING RIGHTS", sublabel: humanizeAuthorityId(mine.authorityId) };
+  const territory = mine.territory;
+  return {
+    noMine,
+    noFly,
+    territoryId: territory?.id ?? null,
+    color: territory?.color ?? [255, 92, 108],
+    label: `${territory?.name?.replace(/ Jurisdiction$/, "") ?? "HUB"} JURISDICTION`,
+    sublabel: "MINING RIGHTS REQUIRED",
+    detailLines: [
+      "MINING RIGHTS REQUIRED",
+      `CLEAR AT ${String(territory?.clearanceOfficeName ?? "Yard Exchange Travel Authority").toUpperCase()}`,
+    ],
+  };
 }
 
 export function isPlotRestrictedForPlayer(state, plot, grantedClaimIds = null) {

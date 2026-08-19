@@ -62,7 +62,7 @@ function mayMine(state, institutionId, placeId, resourceType) {
   }).allowed;
 }
 
-test("each hub may mine its own family and is refused every other one", () => {
+test("each hub has foundational extraction authority across resource families", () => {
   const state = seededState();
   const families = ["volatile", "structural", "industrial", "conductor", "energy", "advanced"];
   const sample = { volatile: "water-ice", structural: "iron-nickel", industrial: "silicate", conductor: "copper", energy: "uranium", advanced: "lithium" };

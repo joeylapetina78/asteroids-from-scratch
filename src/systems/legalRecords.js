@@ -1,5 +1,5 @@
-import { setCurrentAccountOwner } from "./accounts.js?v=fresh-20260818-0644-d8d52fb";
-import { ensureInstitution, ensurePerson, ensureShipAsset, issueWorldDocument, upsertWorldRelationship, WORLD_RECORD_RELATIONSHIPS } from "./worldRecords.js?v=fresh-20260818-0644-d8d52fb";
+import { setCurrentAccountOwner } from "./accounts.js?v=fresh-20260818-2212-559e0fe";
+import { ensureInstitution, ensurePerson, ensureShipAsset, issueWorldDocument, upsertWorldRelationship, WORLD_RECORD_RELATIONSHIPS } from "./worldRecords.js?v=fresh-20260818-2212-559e0fe";
 
 const REACH_TRANSIT_COMMISSION_ID = "institution:reach-transit-commission";
 const ROOK_INDUSTRIES_ID = "institution:rook-industries";
@@ -21,6 +21,8 @@ export function issuePilotLicense(state, { firstName, lastName, licenseId, statu
   license.lastName = lastName;
   license.licenseId = licenseId;
   license.status = status;
+  license.class ??= "provisional";
+  license.displayClass ??= "Provisional · 90-Day";
   license.issuedAt = Date.now();
 
   if (authorizedZones) {
@@ -32,6 +34,8 @@ export function issuePilotLicense(state, { firstName, lastName, licenseId, statu
     firstName,
     lastName,
     status,
+    class: license.class,
+    displayClass: license.displayClass,
     canonical,
     authorizedZones: [...license.authorizedZones],
     issuedAt: license.issuedAt,
@@ -53,6 +57,7 @@ export function recordVisitedZone(state, zoneId) {
 }
 
 export function getUnauthorizedVisitedZones(state) {
+  if (state.legal?.operatingRights?.enforceLegacyZones !== true) return [];
   const license = getPilotLicense(state);
   return license.visitedZoneIds.filter((zoneId) => !license.authorizedZones.includes(zoneId));
 }
@@ -160,6 +165,7 @@ function registerPilotLicenseWorldRecords(state, { firstName, lastName, licenseI
       type: "pilot-license",
       title: "Provisional Flight Authorization",
       status,
+      class: "provisional",
       canonical,
       holderEntityId,
       issuerEntityId: REACH_TRANSIT_COMMISSION_ID,

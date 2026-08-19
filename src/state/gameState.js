@@ -1,17 +1,19 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260818-0644-d8d52fb";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260818-0644-d8d52fb";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260818-0644-d8d52fb";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260818-0644-d8d52fb";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260818-0644-d8d52fb";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260818-0644-d8d52fb";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260818-0644-d8d52fb";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260818-0644-d8d52fb";
-import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260818-0644-d8d52fb";
-import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260818-0644-d8d52fb";
-import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260818-0644-d8d52fb";
-import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260818-0644-d8d52fb";
-import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260818-0644-d8d52fb";
-import { createInitialIndustrialState } from "../systems/industrialProduction.js?v=fresh-20260818-0644-d8d52fb";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260818-2212-559e0fe";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260818-2212-559e0fe";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260818-2212-559e0fe";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260818-2212-559e0fe";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260818-2212-559e0fe";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260818-2212-559e0fe";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260818-2212-559e0fe";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260818-2212-559e0fe";
+import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260818-2212-559e0fe";
+import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260818-2212-559e0fe";
+import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260818-2212-559e0fe";
+import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260818-2212-559e0fe";
+import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260818-2212-559e0fe";
+import { createInitialIndustrialState } from "../systems/industrialProduction.js?v=fresh-20260818-2212-559e0fe";
+import { consolidateSprcOwnership } from "../systems/sprcOwnership.js?v=fresh-20260818-2212-559e0fe";
+import { createInitialNpcDevelopmentState } from "../systems/npcDevelopment.js?v=fresh-20260818-2212-559e0fe";
 
 export function createGameState() {
   const state = {
@@ -59,11 +61,15 @@ export function createGameState() {
     // Their treasuries are intentionally NOT part of the tracked institutional
     // economy yet — see rightsAuthority.js.
     authorities: createInitialRightsAuthorities(),
+    // Procedural settlements are durable seeds, not reconstructed guesses.
+    // Authored settlements use the same compiler but remain content-owned.
+    settlements: { version: 1, generated: {} },
     sprc: createInitialSprcState(),
     logistics: createInitialLogisticsState(),
     population: createInitialPopulationState(),
     hubProcurement: createInitialProcurementState(),
     industrial: createInitialIndustrialState(),
+    npcDevelopment: createInitialNpcDevelopmentState(),
     towing: createInitialTowServiceState(),
     cargoCustody: {
       holderEntityId: null,
@@ -91,9 +97,12 @@ export function createGameState() {
         lastName: null,
         licenseId: null,
         status: "none",
+        class: "provisional",
+        displayClass: "Provisional · 90-Day",
         issuedAt: null,
         authorizedZones: ["starter-drift", "open-space", "scrap-wake", "dead-strip", "red-teeth"],
         visitedZoneIds: [],
+        territorialEndorsements: [],
       },
       currentShip: {
         titleHolder: "Rook Industries",
@@ -132,7 +141,9 @@ export function createGameState() {
       // Flight rights are NOT here: they are the pilot license's `authorizedZones`
       // above, which is the rule hub inspections actually enforce.
       operatingRights: {
+        enforceLegacyZones: false,
         mining: { authorityIds: ["rook-industries"] },
+        territories: { grants: [] },
       },
     },
     ship: {
@@ -283,6 +294,7 @@ export function createGameState() {
   };
 
   seedAuthorityFoundation(state);
+  consolidateSprcOwnership(state);
   return state;
 }
 

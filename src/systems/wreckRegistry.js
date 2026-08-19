@@ -1,4 +1,4 @@
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260818-0644-d8d52fb";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
 
 const DEFAULT_RECOVERY_FEE = 120;
 const DEFAULT_DISMANTLING_COST = 40;
@@ -59,7 +59,7 @@ export function acquireWreckForSprc(state, { wreckId, at = Date.now(), ...costs 
   state.sprc.account.committed = (state.sprc.account.committed ?? 0) + evaluation.recoveryFee + evaluation.dismantlingCost;
   ownerAccount.balance += evaluation.acquisitionPrice;
   record.previousOwnerInstitutionId = previousOwnerInstitutionId;
-  record.ownerInstitutionId = state.sprc.institution.id;
+  record.ownerInstitutionId = state.sprc.institution.ownerInstitutionId ?? state.sprc.institution.id;
   record.titleStatus = "transferred-for-salvage";
   record.status = "sprc-owned-awaiting-recovery";
   record.acquiredAt = at;

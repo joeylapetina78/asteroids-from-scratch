@@ -4,17 +4,21 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260818-0644-d8d52fb";
-import { collectIntentions } from "./intentions.js?v=fresh-20260818-0644-d8d52fb";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260818-0644-d8d52fb";
-import { describeActorResolution, getActorFinances } from "./actorConfig.js?v=fresh-20260818-0644-d8d52fb";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260818-0644-d8d52fb";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260818-0644-d8d52fb";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260818-0644-d8d52fb";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260818-0644-d8d52fb";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260818-2212-559e0fe";
+import { collectIntentions } from "./intentions.js?v=fresh-20260818-2212-559e0fe";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260818-2212-559e0fe";
+import { describeActorResolution, findActorRecord, getActorFinances } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260818-2212-559e0fe";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260818-2212-559e0fe";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260818-2212-559e0fe";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260818-2212-559e0fe";
+import { getActorCapabilityPortfolio } from "./assetCapabilities.js?v=fresh-20260818-2212-559e0fe";
+import { getHubActor } from "./hubActors.js?v=fresh-20260818-2212-559e0fe";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
+  const actorRecord = findActorRecord(state, actorId);
+  const hubActor = getHubActor(state, actorId);
   const diagnostic = getDiagnostic(state, actorId);
   const miningOperations = Object.values(state.miningOperations ?? (state.miningOperation ? { legacy: state.miningOperation } : {}));
   const miningOperation = miningOperations.find((operation) => operation?.ships?.[actorId]) ?? null;
@@ -54,6 +58,9 @@ export function inspectActor(state, actorId, { game = null } = {}) {
     visibleOffers: [],
     recentEvents: [],
     institution: null,
+    capabilityPortfolio: null,
+    agency: actorRecord?.agency ?? null,
+    hubActor: null,
   };
 
   // Cargo: what it holds, and how much of that is already promised.
@@ -101,7 +108,7 @@ export function inspectActor(state, actorId, { game = null } = {}) {
   // shared substrate. It now asks the same actor configuration the decision
   // side asks, so a new kind of actor is legible here for free.
   const controllerId = view.controllerId;
-  const finances = getActorFinances(state, controllerId);
+  const finances = getActorFinances(state, hubActor ? actorId : controllerId);
   if (finances) {
     view.cash = {
       balance: Math.round(finances.balance),
@@ -176,6 +183,19 @@ export function inspectActor(state, actorId, { game = null } = {}) {
   // `framework-default` on anything that decides is the tell, and both of the
   // worst bugs in this system would have been one glance away.
   view.resolution = describeActorResolution(state, actorId);
+  const portfolio = getActorCapabilityPortfolio(state, actorId);
+  if (portfolio.found) {
+    view.capabilityPortfolio = {
+      assets: portfolio.assets.map((asset) => ({
+        id: asset.id, name: asset.name, archetypeId: asset.archetypeId,
+        status: asset.status ?? "active", scope: asset.scope ?? {},
+      })),
+      capabilities: portfolio.capabilities.map((grant) => ({
+        id: grant.id, scope: grant.scope ?? {}, source: grant.source,
+      })),
+      offerTypes: portfolio.offerTypes,
+    };
+  }
   if (controllerId && controllerId !== actorId) {
     view.controllerResolution = describeActorResolution(state, controllerId);
   }
@@ -214,7 +234,18 @@ export function inspectActor(state, actorId, { game = null } = {}) {
       .map((event) => ({ id: event.id, type: event.type, message: event.message ?? null }));
   }
 
-  if (isInstitution) view.institution = describeInstitution(state, actorId);
+  if (hubActor) {
+    view.hubActor = {
+      population: hubActor.population ? { id: hubActor.population.id, name: hubActor.population.name, size: hubActor.population.size } : null,
+      facilityCount: hubActor.facilities.length,
+      assetCount: hubActor.assets.length,
+      needCount: hubActor.needs.filter((need) => !["resolved", "completed", "canceled"].includes(need.status)).length,
+      projectCount: hubActor.projects.filter((project) => !["completed", "failed", "canceled"].includes(project.status)).length,
+      relationshipCount: hubActor.relationships.length,
+      historyCount: hubActor.history.length,
+    };
+    view.institution = describeHubActor(hubActor);
+  } else if (isInstitution) view.institution = describeInstitution(state, actorId);
   if (controllerId) {
     view.relationships = Object.values(state.relationships?.projections ?? {})
       .filter((projection) => projection.fromId === controllerId || projection.toId === controllerId)
@@ -334,7 +365,7 @@ function describeInstitution(state, institutionId) {
       needs: Object.values(sprc.needs ?? {}).filter((need) => need.status === "open").map((need) => ({
         id: need.id, itemId: need.itemId, missing: need.missingAmount, urgency: need.urgency, purpose: need.purpose,
       })),
-      salvage: Object.values(state.wrecks?.records ?? {}).filter((wreck) => wreck.ownerInstitutionId === "sprc" || wreck.previousOwnerInstitutionId).map((wreck) => ({
+      salvage: Object.values(state.wrecks?.records ?? {}).filter((wreck) => ["sprc", "scrap-forge"].includes(wreck.ownerInstitutionId) || wreck.previousOwnerInstitutionId).map((wreck) => ({
         id: wreck.id, shipName: wreck.shipName, previousOwnerInstitutionId: wreck.previousOwnerInstitutionId,
         status: wreck.status, acquisitionPrice: wreck.acquisitionPrice, recoveryBudget: wreck.recoveryBudget,
         dismantlingOrderId: wreck.dismantlingOrderId, plannedYield: wreck.plannedSalvageYield, recoveredYield: wreck.salvageYield,
@@ -370,6 +401,44 @@ function describeInstitution(state, institutionId) {
     needs: [],
     facilities: null,
     costBasis: state.costBasis?.institutions?.[institutionId]?.items ?? null,
+  };
+}
+
+function describeHubActor(hub) {
+  const account = hub.treasury;
+  return {
+    inventories: hub.inventory ?? {},
+    account: account ? {
+      balance: Math.round(account.balance ?? 0),
+      committed: Math.round(account.committed ?? 0),
+      available: Math.round((account.balance ?? 0) - (account.committed ?? 0)),
+    } : null,
+    renewableResources: hub.institution.renewableResources ?? [],
+    openOrders: hub.domain.purchaseOrders.filter((order) => !["completed", "canceled", "expired", "delivered"].includes(order.status)).map((order) => ({
+      id: order.id,
+      item: order.resourceId ?? order.family ?? order.resourceFamily ?? order.commodity ?? order.itemId,
+      required: order.units ?? order.quantity ?? order.requiredAmount ?? order.requiredEquivalentUnits,
+      delivered: order.deliveredUnits ?? order.deliveredAmount ?? order.deliveredEquivalentUnits ?? 0,
+      unitPrice: order.unitPrice ?? order.pricePerUnit ?? order.pricePerEquivalent,
+      status: order.status,
+      repriceCount: order.repriceCount ?? 0,
+    })),
+    repairs: [],
+    deferred: [],
+    needs: hub.needs.map((need) => ({
+      id: need.id, itemId: need.itemId ?? need.kind,
+      missing: need.shortage ?? need.missingAmount ?? 0,
+      urgency: need.urgency ?? need.status, purpose: need.purpose ?? need.source,
+    })),
+    projects: hub.projects.map((project) => ({ id: project.id, name: project.name, kind: project.kind, status: project.status })),
+    departments: hub.departments,
+    facilities: {
+      count: hub.facilities.length,
+      names: hub.facilities.map((facility) => facility.name ?? facility.id),
+    },
+    policies: hub.policies,
+    history: hub.history,
+    costBasis: null,
   };
 }
 

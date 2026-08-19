@@ -4,6 +4,8 @@ import test from "node:test";
 import {
   FIRST_REACH_SETTLEMENTS,
   settlementExtractionDefinitions,
+  FOUNDATIONAL_EXTRACTION_FAMILIES,
+  MUNICIPAL_CAPACITY_TYPES,
   settlementInstitutionRecords,
   settlementMiningRights,
   settlementPlaces,
@@ -30,6 +32,10 @@ test("one settlement seed emits every cross-system record needed by the economy"
     assert.ok(extraction.has(seed.institution.id), `${seed.institution.id} publishes extraction`);
     assert.ok(rights.has(seed.institution.id), `${seed.institution.id} has mining rights`);
     assert.ok(places.has(seed.institution.siteId), `${seed.institution.id} has an authority place`);
+    assert.equal(seed.institution.hubState.populationId, seed.population.id, `${seed.institution.id} links its population`);
+    assert.ok(Array.isArray(seed.institution.hubState.history), `${seed.institution.id} has durable institutional history`);
+    assert.deepEqual(seed.institution.hubState.baseline.extractionFamilies, FOUNDATIONAL_EXTRACTION_FAMILIES);
+    assert.deepEqual(seed.institution.hubState.baseline.commissionableCapacityTypes, MUNICIPAL_CAPACITY_TYPES);
   });
 });
 
@@ -40,6 +46,16 @@ test("live population, extraction, and rights exports are projections of the sam
     INSTITUTION_MINING_RIGHTS.filter((right) => right.institutionId !== "sprc"),
     settlementMiningRights(),
   );
+});
+
+test("broad authority does not pretend unbuilt extraction capacity already exists", () => {
+  FIRST_REACH_SETTLEMENTS.forEach((seed) => {
+    const right = settlementMiningRights().find((entry) => entry.institutionId === seed.institution.id);
+    const installed = settlementExtractionDefinitions().filter((entry) => entry.buyerInstitutionId === seed.institution.id);
+    assert.deepEqual(right.families, FOUNDATIONAL_EXTRACTION_FAMILIES, `${seed.institution.id} may charter any family`);
+    assert.equal(installed.length, 1, `${seed.institution.id} still begins with one actual extraction specialty`);
+    assert.deepEqual(installed[0].miningFamilies, seed.extraction.miningFamilies);
+  });
 });
 
 test("settlement identities are unique before runtime state is created", () => {

@@ -1,7 +1,11 @@
-import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260818-0644-d8d52fb";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260818-0644-d8d52fb";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260818-0644-d8d52fb";
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
+import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260818-2212-559e0fe";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260818-2212-559e0fe";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260818-2212-559e0fe";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
+import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260818-2212-559e0fe";
+import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260818-2212-559e0fe";
+import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260818-2212-559e0fe";
 
 export const INDUSTRIAL_PARTS = Object.freeze(["hull-plate", "machine-part"]);
 
@@ -31,6 +35,8 @@ const MAX_OPEN_PART_ORDERS = 3;
 const SCRAP_PORCH_ID = "scrap-forge";
 const EXPANSION_PRESSURE_SECONDS = 180;
 const FABRICATOR_CAPITAL_COST = 900;
+const FABRICATOR_CONSTRUCTION_SECONDS = 60;
+const FABRICATOR_WORKERS = 4;
 
 export function createInitialIndustrialState() {
   return {
@@ -39,6 +45,7 @@ export function createInitialIndustrialState() {
       ...structuredClone(factory), status: "available", activeRun: null, completedRuns: 0,
     }])),
     expansionPressure: {},
+    constructionProjects: {},
     counters: { order: 0, run: 0 },
   };
 }
@@ -47,7 +54,31 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
   state.industrial ??= createInitialIndustrialState();
   state.industrial.factories ??= createInitialIndustrialState().factories;
   state.industrial.counters ??= { order: 0, run: 0 };
+  state.industrial.constructionProjects ??= {};
   const industrial = state.industrial;
+
+  function finishFactoryConstruction() {
+    Object.values(industrial.constructionProjects).forEach((project) => {
+      if (project.status !== "building" || project.completesAt > now()) return;
+      industrial.factories[project.factory.id] = project.factory;
+      project.status = "completed";
+      project.completedAt = now();
+      if (project.hubProjectId) {
+        transitionHubProject(state, project.institutionId, project.hubProjectId, "completed",
+          { assetId: project.factory.id, operatorId: project.operatorId }, now());
+      }
+      if (project.hubNeedId) {
+        resolveHubNeed(state, project.institutionId, project.hubNeedId,
+          { projectId: project.hubProjectId, assetId: project.factory.id }, now());
+      }
+      state.ledger.recordEvent("industry.factoryCommissioned", {
+        institutionId: project.institutionId, factoryId: project.factory.id, itemId: project.itemId,
+        capitalCost: project.capitalCost, constructionInput: project.constructionInput,
+        constructionUnits: project.constructionUnits, laborAssignmentId: project.laborAssignmentId,
+        operatorId: project.operatorId, locallyAdvantaged: project.locallyAdvantaged,
+      }, { visible: true, message: `${project.hubName} opened its new ${project.itemId.replaceAll("-", " ")} fabricator under ${project.operatorName}'s charter.` });
+    });
+  }
 
   const institutions = () => state.logistics?.institutions ?? {};
   const factoryHub = (factory) => institutions()[factory.institutionId] ?? null;
@@ -66,6 +97,9 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
       factory.activeRun = null;
       factory.status = "available";
       factory.completedRuns += 1;
+      factory.operatingHistory ??= { ordersAccepted: 0, contractedRevenue: 0, firstRunAt: run.startedAt, lastRunAt: null };
+      factory.operatingHistory.firstRunAt ??= run.startedAt;
+      factory.operatingHistory.lastRunAt = now();
       state.ledger.recordEvent("industry.partsProduced", {
         factoryId: factory.id, institutionId: factory.institutionId,
         itemId: run.output, units: run.amount, runId: run.id,
@@ -77,6 +111,44 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
     return openPartOrders(part)
       .filter((order) => order.supplierInstitutionId === factory.institutionId)
       .reduce((sum, order) => sum + Math.max(0, order.units - (order.deliveredUnits ?? 0)), 0);
+  }
+
+  // A spun-out works buys feedstock from its former municipal parent under the
+  // local supply agreement created at independence. This is a real same-site
+  // sale: material and credits both move, the parent keeps a working reserve,
+  // and the business can continue after its opening inventory is consumed.
+  function replenishSpinoutInputs() {
+    Object.values(industrial.factories).filter((factory) => factory.spinoutInstitutionId).forEach((factory) => {
+      const business = factoryHub(factory);
+      const parent = institutions()[factory.formerInstitutionId];
+      if (!business?.accounts?.operating || !parent?.accounts?.operating) return;
+      factory.recipes.forEach((recipe) => Object.entries(recipe.inputs ?? {}).forEach(([itemId, unitsPerRun]) => {
+        const target = unitsPerRun * 4;
+        const onHand = business.inventories?.[itemId] ?? 0;
+        if (onHand >= target) return;
+        const parentAvailable = Math.max(0, (parent.inventories?.[itemId] ?? 0) - unitsPerRun * 2);
+        const unitPrice = Math.max(1, Math.ceil(getResourceTradeValue(itemId) * 1.05));
+        const spendable = Math.max(0, business.accounts.operating.balance
+          - (business.accounts.operating.committed ?? 0) - getActorProtectedCash(state, business.id));
+        const units = Math.min(target - onHand, parentAvailable, Math.floor(spendable / unitPrice));
+        if (units <= 0) return;
+        const payment = units * unitPrice;
+        parent.inventories[itemId] -= units;
+        business.inventories[itemId] = onHand + units;
+        business.accounts.operating.balance -= payment;
+        parent.accounts.operating.balance += payment;
+        business.accounts.operating.transactions ??= [];
+        parent.accounts.operating.transactions ??= [];
+        business.accounts.operating.transactions.push({ id: `SUPPLY-${factory.id}-${itemId}-${now()}-OUT`, at: now(),
+          type: "production-input-purchase", amount: -payment, balance: business.accounts.operating.balance, referenceId: parent.id });
+        parent.accounts.operating.transactions.push({ id: `SUPPLY-${factory.id}-${itemId}-${now()}-IN`, at: now(),
+          type: "production-input-sale", amount: payment, balance: parent.accounts.operating.balance, referenceId: business.id });
+        state.ledger.recordEvent("industry.spinoutInputPurchased", {
+          factoryId: factory.id, buyerInstitutionId: business.id, sellerInstitutionId: parent.id,
+          itemId, units, unitPrice, payment,
+        }, { visible: false });
+      }));
+    });
   }
 
   function startRuns() {
@@ -160,6 +232,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
       const id = `IND-PO-${String(++industrial.counters.order).padStart(4, "0")}`;
       state.hubProcurement.orders[id] = {
         id, orderKind: "industrial-part", buyerInstitutionId: SCRAP_PORCH_ID,
+        factoryId: selected.factory.id,
         supplierInstitutionId: selected.factory.institutionId,
         family: "repair-parts", resourceId: part, units, effectiveUnits: units,
         pricePerUnit, originalPricePerUnit: pricePerUnit, committedPayment, freightBudget,
@@ -168,6 +241,9 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
         createdAt: now(), acceptedAt: now(), shipmentId: null,
       };
       buyer.accounts.operating.committed = (buyer.accounts.operating.committed ?? 0) + committedPayment;
+      selected.factory.operatingHistory ??= { ordersAccepted: 0, contractedRevenue: 0, firstRunAt: null, lastRunAt: null };
+      selected.factory.operatingHistory.ordersAccepted += 1;
+      selected.factory.operatingHistory.contractedRevenue += committedPayment;
       state.ledger.recordEvent("industry.partsOrdered", {
         procurementOrderId: id, buyerId: SCRAP_PORCH_ID, sellerId: selected.factory.institutionId,
         factoryId: selected.factory.id, itemId: part, units, committedPayment, freightBudget,
@@ -188,6 +264,9 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
       const existingOwners = new Set(Object.values(industrial.factories)
         .filter((factory) => factory.recipes.some((recipe) => recipe.output === part))
         .map((factory) => factory.institutionId));
+      Object.values(industrial.constructionProjects)
+        .filter((project) => project.status === "building" && project.itemId === part)
+        .forEach((project) => existingOwners.add(project.institutionId));
       const candidates = Object.values(institutions())
         .filter((hub) => hub.archetypeId === "settlement" && hub.siteId && !existingOwners.has(hub.id)
           && hub.accounts?.operating && (hub.renewableResources?.length ?? 0) > 0)
@@ -198,63 +277,107 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
           const inputUnits = matched ? 3 : 5;
           const protectedCash = hub.protectionPolicy?.protectedCash ?? 0;
           const freeCash = (hub.accounts.operating.balance ?? 0) - (hub.accounts.operating.committed ?? 0) - protectedCash;
-          return { hub, localInput, matched, inputUnits, freeCash };
+          const labor = getPopulationLaborSummary(state, findHubPopulation(state, hub.id));
+          return { hub, localInput, matched, inputUnits, freeCash, availableLabor: labor?.available ?? 0 };
         })
         .filter((candidate) => candidate.freeCash >= FABRICATOR_CAPITAL_COST
-          && (candidate.hub.inventories?.[candidate.localInput] ?? 0) >= candidate.inputUnits)
+          && (candidate.hub.inventories?.[candidate.localInput] ?? 0) >= candidate.inputUnits
+          && candidate.availableLabor >= FABRICATOR_WORKERS)
         .sort((first, second) => Number(second.matched) - Number(first.matched)
           || second.freeCash - first.freeCash
           || first.hub.id.localeCompare(second.hub.id));
       const selected = candidates[0];
       if (!selected) return;
+      const id = `${selected.hub.siteId}-${part}-fabricator`;
+      const projectId = `construction:${id}`;
+      const hubNeedId = `hub-need:${selected.hub.id}:parts-capacity:${part}`;
+      if (!selected.hub.hubState?.needs?.[hubNeedId] || selected.hub.hubState.needs[hubNeedId].status !== "open") {
+        recordHubNeed(state, selected.hub.id, {
+          id: hubNeedId, kind: "industrial-capacity", purpose: "growth", urgency: "urgent", shortage,
+          context: { itemId: part, regionalDemand: shortage, locallyAdvantaged: selected.matched },
+          responseOptions: [
+            { id: `${hubNeedId}:build`, kind: HUB_RESPONSE_KIND.BUILD,
+              capabilityId: "commission-parts-factory", executor: "industry", priority: 100,
+              requirements: { credits: FABRICATOR_CAPITAL_COST, labor: FABRICATOR_WORKERS,
+                materials: { [selected.localInput]: selected.inputUnits }, durationSeconds: FABRICATOR_CONSTRUCTION_SECONDS } },
+            { id: `${hubNeedId}:import`, kind: HUB_RESPONSE_KIND.IMPORT,
+              capabilityId: "procure-input", executor: "procurement", priority: 55,
+              rationale: "Continue importing parts instead of adding permanent local plant." },
+            { id: `${hubNeedId}:subsidize`, kind: HUB_RESPONSE_KIND.SUBSIDIZE,
+              capabilityId: "sponsor-operator", executor: "industry", priority: 45 },
+            { id: `${hubNeedId}:borrow`, kind: HUB_RESPONSE_KIND.BORROW,
+              executor: "finance", priority: 35, allowDebt: false,
+              requirements: { credits: FABRICATOR_CAPITAL_COST } },
+            { id: `${hubNeedId}:delay`, kind: HUB_RESPONSE_KIND.DELAY, priority: 10 },
+            { id: `${hubNeedId}:accept`, kind: HUB_RESPONSE_KIND.ACCEPT_SHORTAGE, priority: 1 },
+          ],
+        }, now());
+      }
+      const hubProject = planHubNeed(state, selected.hub.id, hubNeedId, now());
+      if (hubProject?.responseKind !== HUB_RESPONSE_KIND.BUILD || hubProject.status !== "planned") return;
+      const recruited = recruitPopulationLabor(state, {
+        hubInstitutionId: selected.hub.id, assignmentId: `employment:${id}`, role: "factory-supervisor",
+        workers: FABRICATOR_WORKERS, employerInstitutionId: selected.hub.id, assetId: id, at: now(),
+        charter: { kind: "municipal-industrial-charter", facilityId: id, outputItemId: part },
+      });
+      if (!recruited.ok) {
+        transitionHubProject(state, selected.hub.id, hubProject.id, "blocked", { blocker: recruited.reason }, now());
+        return;
+      }
+      transitionHubProject(state, selected.hub.id, hubProject.id, "building", {}, now());
       selected.hub.accounts.operating.balance -= FABRICATOR_CAPITAL_COST;
       selected.hub.inventories[selected.localInput] -= selected.inputUnits;
-      const id = `${selected.hub.siteId}-${part}-fabricator`;
-      industrial.factories[id] = {
+      const factory = {
         id, name: `${selected.hub.name} ${part === "hull-plate" ? "Plate" : "Parts"} Fabricator`,
         institutionId: selected.hub.id, status: "available", activeRun: null, completedRuns: 0,
+        operatorId: recruited.operator.id, laborAssignmentId: recruited.assignment.id,
         emergedFromPressure: true,
         recipes: [{
           output: part, amount: 1, inputs: { [selected.localInput]: selected.matched ? 2 : 4 },
           credits: selected.matched ? 38 : 64, seconds: selected.matched ? 30 : 45,
         }],
       };
+      industrial.constructionProjects[projectId] = {
+        id: projectId, status: "building", institutionId: selected.hub.id, hubName: selected.hub.name,
+        itemId: part, factory, capitalCost: FABRICATOR_CAPITAL_COST,
+        hubNeedId, hubProjectId: hubProject.id,
+        constructionInput: selected.localInput, constructionUnits: selected.inputUnits,
+        locallyAdvantaged: selected.matched, laborAssignmentId: recruited.assignment.id,
+        operatorId: recruited.operator.id, operatorName: recruited.operator.name,
+        startedAt: now(), completesAt: now() + FABRICATOR_CONSTRUCTION_SECONDS * 1000,
+      };
       pressure.since = null;
       pressure.lastBuiltAt = now();
-      state.ledger.recordEvent("industry.factoryCommissioned", {
+      state.ledger.recordEvent("industry.factoryConstructionStarted", {
         institutionId: selected.hub.id, factoryId: id, itemId: part,
         capitalCost: FABRICATOR_CAPITAL_COST, constructionInput: selected.localInput,
+        constructionUnits: selected.inputUnits, laborAssignmentId: recruited.assignment.id,
+        operatorId: recruited.operator.id, completesAt: now() + FABRICATOR_CONSTRUCTION_SECONDS * 1000,
         locallyAdvantaged: selected.matched,
-      }, { visible: true, message: `${selected.hub.name} commissioned a ${part.replaceAll("-", " ")} fabricator after sustained regional shortages.` });
+      }, { visible: true, message: `${selected.hub.name} funded and staffed a new ${part.replaceAll("-", " ")} fabricator after sustained regional shortages.` });
     });
   }
 
-  // Scrap Porch is Sal's local factor. It takes title through ordinary hub
-  // procurement, then SPRC buys the landed parts across the counter. This keeps
-  // both money movements visible and prevents imported parts teleporting into
-  // a repair reservation.
+  // Scrap Porch takes title through ordinary hub procurement. Moving landed
+  // parts into its SPRC department changes custody, not ownership, so no money
+  // crosses an imaginary counter inside the same institution.
   function transferLocalPartsToSprc() {
     const porch = institutions()[SCRAP_PORCH_ID];
     if (!porch || !state.sprc?.account) return;
     INDUSTRIAL_PARTS.forEach((part) => {
       const available = Math.floor(porch.inventories?.[part] ?? 0);
       if (available <= 0) return;
-      const unitPrice = PART_PRICES[part];
-      const spendable = Math.max(0, state.sprc.account.balance - state.sprc.account.protectedReserve - state.sprc.account.committed);
-      const units = Math.min(available, Math.floor(spendable / unitPrice));
-      if (units <= 0) return;
-      const payment = units * unitPrice;
+      const units = available;
       porch.inventories[part] -= units;
-      porch.accounts.operating.balance += payment;
-      state.sprc.account.balance -= payment;
       state.sprc.inventories.produced[part] = (state.sprc.inventories.produced[part] ?? 0) + units;
       state.ledger.recordEvent("industry.partsTransferred", {
-        sellerId: SCRAP_PORCH_ID, buyerId: "sprc", itemId: part, units, payment,
-      }, { visible: true, message: `Sal bought ${units} imported ${part.replaceAll("-", " ")} from Scrap Porch.` });
+        ownerInstitutionId: SCRAP_PORCH_ID, custodianOperationId: "sprc", itemId: part, units, payment: 0,
+      }, { visible: true, message: `Scrap Porch allocated ${units} imported ${part.replaceAll("-", " ")} to Sal's repair department.` });
     });
   }
 
   function observe() {
+    finishFactoryConstruction();
     finishRuns();
     transferLocalPartsToSprc();
   }
@@ -262,6 +385,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
   function decide() {
     assessFactoryExpansion();
     postPartOrders();
+    replenishSpinoutInputs();
     startRuns();
   }
 

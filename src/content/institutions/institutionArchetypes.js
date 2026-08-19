@@ -23,10 +23,12 @@ export const INSTITUTION_ARCHETYPES = Object.freeze({
   // of which are instance data. A fourth settlement is a seed entry, not a row.
   settlement: Object.freeze({
     id: "settlement",
-    capabilities: ["commission-extraction", "procure-input", "transform-input", "supply-material", "serve-population"],
-    // The kinds of work a settlement can put on a public board. The extraction
-    // offer surface reads this to decide whether an institution may post at all.
-    offerTypes: ["extraction", "purchase", "freight"],
+    // These belong to the ORGANISATION. Mining, trade, fabrication and service
+    // capabilities come from the charters, populations, ships and facilities
+    // in its asset portfolio. Losing an asset can therefore remove a power
+    // without changing what kind of NPC the settlement is.
+    capabilities: ["govern-settlement", "assess-needs", "allocate-capital", "plan-project"],
+    offerTypes: [],
     defaultPolicy: {
       // A settlement keeps a working float back so buying ore never leaves it
       // unable to pay for the production the ore was for. Instances that run
@@ -106,6 +108,18 @@ export const INSTITUTION_ARCHETYPES = Object.freeze({
       expectedWearPerDistance: 0.0002,
       maximumWear: 6,
       referenceServiceCost: 1800,
+    },
+    recipes: [],
+  }),
+
+  "parts-business": Object.freeze({
+    id: "parts-business",
+    capabilities: ["procure-production-input", "manufacture-parts", "price-parts", "sell-parts", "allocate-project"],
+    offerTypes: ["purchase", "sale"],
+    defaultPolicy: {
+      protectedCash: 600,
+      priorityWeights: { routine: 15, urgent: 55, emergency: 100 },
+      purposeWeights: { "fulfill-industrial-orders": 45, "restore-operating-reserve": 25, growth: 20 },
     },
     recipes: [],
   }),

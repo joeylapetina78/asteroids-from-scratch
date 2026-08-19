@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260818-0644-d8d52fb";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260818-0644-d8d52fb";
+import { getNpcName } from "../npcs.js?v=fresh-20260818-2212-559e0fe";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260818-2212-559e0fe";
 
 const COMMON_FRONTIER_ORE_VALUES = Object.freeze({
   "water-ice": 30,
@@ -126,18 +126,22 @@ export const hubServiceDefinitions = {
       organization: "Reach Transit Commission",
       serviceType: "permits",
       label: "Travel Authority",
-      description: "Flight clearances, mining leases, and the Yard Exchange work pass.",
+      description: "Hub jurisdiction work passes.",
       contractIds: [
         "yard-exchange-work-pass",
-        "rtc-copper-drift-flight-permit",
-        "rtc-ore-ridge-flight-permit",
-        "yard-copper-wake-mining-lease",
-        "rtc-the-ledge-docking-permit",
+        "territory-scrap-porch-work-pass",
+        "territory-the-ledge-work-pass",
+        "territory-blue-lantern-work-pass",
+        "territory-morrow-shoal-work-pass",
+        "territory-kiln-crossing-work-pass",
+        "territory-ore-station-one-work-pass",
+        "territory-coldwater-depot-work-pass",
+        "territory-deep-research-work-pass",
       ],
       offersAllContracts: true,
       defaultUnlocked: true,
       greeting:
-        "Reach Transit Commission, Outer Operations — and the Yard Exchange Authority window besides. An operator can put you to work, but only this office clears you to fly and dig the territory. A work pass covers the whole home belt at once, or take the permits piecemeal. What do you need cleared?",
+        "Travel Authority. Each settlement governs its own colored jurisdiction; unclaimed frontier is open. A hub work pass clears mining, docking, transit, and trade inside that hub's boundary. Which jurisdiction do you need?",
     },
     {
       id: yardExchangeServices.supply,

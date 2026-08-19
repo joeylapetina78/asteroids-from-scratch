@@ -23,13 +23,13 @@
 //      system, it does not appear here. Where a total cannot be reconciled the
 //      residual is reported as a residual rather than smoothed away.
 
-import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
-import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260818-0644-d8d52fb";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260818-0644-d8d52fb";
-import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260818-0644-d8d52fb";
-import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260818-0644-d8d52fb";
-import { listActors } from "./actorRegistry.js?v=fresh-20260818-0644-d8d52fb";
-import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260818-0644-d8d52fb";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
+import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260818-2212-559e0fe";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260818-2212-559e0fe";
+import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260818-2212-559e0fe";
+import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
+import { listActors } from "./actorRegistry.js?v=fresh-20260818-2212-559e0fe";
+import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260818-2212-559e0fe";
 
 // 5 s is fast enough to see a repricing (throttled to 60 s) as a step rather
 // than a jump, and slow enough that two hours of history is a few thousand

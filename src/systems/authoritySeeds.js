@@ -1,8 +1,9 @@
-import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260818-0644-d8d52fb";
-import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260818-0644-d8d52fb";
-import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260818-0644-d8d52fb";
-import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260818-0644-d8d52fb";
-import { settlementMiningRights, settlementPlaces } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-0644-d8d52fb";
+import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260818-2212-559e0fe";
+import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260818-2212-559e0fe";
+import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260818-2212-559e0fe";
+import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260818-2212-559e0fe";
+import { settlementMiningRights, settlementPlaces } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-2212-559e0fe";
+import { seedHubTerritories } from "./hubTerritories.js?v=fresh-20260818-2212-559e0fe";
 
 const RIGHT_TO_POWER = Object.freeze({
   [RIGHT_TYPES.TRANSIT]: POWER_TYPES.AUTHORIZE_WORK,
@@ -16,10 +17,10 @@ const RIGHT_TO_POWER = Object.freeze({
 
 // Which resource families each institution may commission EXTRACTION for.
 //
-// This limits mining only. Buying and selling are covered by the separate broad
-// trade right below, so every hub may trade any material with anyone. That
-// split is the point: a hub specializes in what it can pull out of the ground
-// and must trade for everything else it needs.
+// Step three gives each hub foundational authority across every family so it
+// can later charter missing extraction. Authority is not an installed mine:
+// extraction definitions and assets still name current production, preserving
+// real imports and freight outside a hub's specialty.
 //
 // This is the whole rule. Nothing downstream checks a hub by name: the seed
 // turns each row into an ordinary authority grant, and the existing rule
@@ -89,6 +90,7 @@ export function seedAuthorityFoundation(state) {
   });
 
   seedInstitutionMiningRights(state);
+  seedHubTerritories(state);
 }
 
 // Hubs become places so a mining right can be scoped to one, and each

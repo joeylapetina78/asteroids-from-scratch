@@ -1,7 +1,8 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-0644-d8d52fb";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260818-0644-d8d52fb";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260818-0644-d8d52fb";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260818-0644-d8d52fb";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-2212-559e0fe";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260818-2212-559e0fe";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260818-2212-559e0fe";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260818-2212-559e0fe";
+import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260818-2212-559e0fe";
 
 const PATROL_OPENING_BALANCE = 1800;
 const PATROL_COMPONENTS = Object.freeze([
@@ -28,8 +29,8 @@ function applyPatrolSortieWear(craft, hullBefore, hullAfter, now) {
   }, { at: now });
 }
 
-export function createInitialPatrolOperations(now = Date.now()) {
-  return Object.fromEntries(FIRST_REACH_SETTLEMENTS
+export function createInitialPatrolOperations(now = Date.now(), settlements = FIRST_REACH_SETTLEMENTS) {
+  return Object.fromEntries(settlements
     .filter((seed) => seed.institution.protectionPolicy?.mode !== "contract")
     .map((seed, index) => {
     const siteId = seed.institution.siteId;
@@ -76,10 +77,11 @@ export function createInitialPatrolOperations(now = Date.now()) {
 
 export function ensurePatrolOperations(state, now = Date.now()) {
   state.patrolOperations ??= createInitialPatrolOperations(now);
+  const settlements = [...FIRST_REACH_SETTLEMENTS, ...listGeneratedSettlements(state)];
   // Migrate older saves that synthesized a watch for every settlement. Only
   // remove the known generated operation; a separately authored patrol firm at
   // an outsourcing hub is a different institution and remains valid.
-  FIRST_REACH_SETTLEMENTS
+  settlements
     .filter((seed) => seed.institution.protectionPolicy?.mode === "contract")
     .forEach((seed) => {
       const siteId = seed.institution.siteId;
@@ -87,7 +89,7 @@ export function ensurePatrolOperations(state, now = Date.now()) {
         delete state.patrolOperations[siteId];
       }
     });
-  const defaults = createInitialPatrolOperations(now);
+  const defaults = createInitialPatrolOperations(now, settlements);
   Object.entries(defaults).forEach(([siteId, seed]) => {
     state.patrolOperations[siteId] ??= seed;
     const operation = state.patrolOperations[siteId];
@@ -219,7 +221,7 @@ const WATCH_REPLACEMENT_SECONDS = 240;
 export function servicePatrolCraft(state, now = Date.now()) {
   const operations = ensurePatrolOperations(state, now);
   const replaced = [];
-  FIRST_REACH_SETTLEMENTS.forEach((seed) => {
+  [...FIRST_REACH_SETTLEMENTS, ...listGeneratedSettlements(state)].forEach((seed) => {
     const siteId = seed.institution.siteId;
     const craft = operations[siteId]?.craft;
     if (!craft || craft.status !== "destroyed") return;

@@ -91,8 +91,12 @@ const BUILT_IN_SOURCES = Object.freeze([
   },
   {
     id: "population",
-    collect: (state) => Object.entries(state.population?.populations ?? {}).map(([id, record]) =>
-      entry({ id, record, role: ACTOR_ROLE.POPULATION, domain: "population", path: `population.populations.${id}` })),
+    collect: (state) => [
+      ...Object.entries(state.population?.populations ?? {}).map(([id, record]) =>
+        entry({ id, record, role: ACTOR_ROLE.POPULATION, domain: "population", path: `population.populations.${id}` })),
+      ...Object.entries(state.population?.operators ?? {}).map(([id, record]) =>
+        entry({ id, record, role: ACTOR_ROLE.CONTROLLER, domain: "population-labor", path: `population.operators.${id}` })),
+    ],
   },
   {
     // `towing`, not `towService` — the module is named one thing and its state
@@ -166,6 +170,7 @@ function computeSignature(state) {
     state.sprc?.institution?.id ?? "",
     state.sprc?.controller?.id ?? "",
     Object.keys(state.population?.populations ?? {}).length,
+    Object.keys(state.population?.operators ?? {}).length,
     state.towing?.institution?.id ?? "",
     state.towing?.vehicle?.id ?? "",
     state.fleetInsurance?.institution?.id ?? "",

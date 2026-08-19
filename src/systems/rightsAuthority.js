@@ -2,13 +2,21 @@
 //
 // A capital authority (Yard Exchange Authority, to be fleshed out later) controls
 // a bounded territory and sells the rights to operate within it. Its treasury is
-// deliberately kept OUT of the tracked institutional economy for now: permit
-// revenue accrues here visibly, but it is not one of the treasuries the money
-// reconciliation sums, so buying a pass cannot distort the economy's books before
-// the authority is a real participant that spends on patrols, claims, and upkeep.
+// The authority account is a visible clearing ledger. When it represents a hub,
+// the same payment is settled into that hub's real operating treasury so the
+// institutional NPC can eventually spend permit income on patrols, claims and
+// upkeep. The clearing ledger remains outside economy reconciliation.
 
 export const RIGHTS_AUTHORITIES = Object.freeze([
-  { id: "yard-exchange-authority", name: "Yard Exchange Authority", siteId: "yard-exchange" },
+  { id: "yard-exchange-authority", name: "Yard Exchange Authority", siteId: "yard-exchange", beneficiaryInstitutionId: "yard-exchange" },
+  { id: "scrap-porch-authority", name: "Scrap Porch Commons", siteId: "scrap-porch", beneficiaryInstitutionId: "scrap-forge" },
+  { id: "the-ledge-authority", name: "Ledge Works Board", siteId: "the-ledge", beneficiaryInstitutionId: "the-ledge" },
+  { id: "blue-lantern-authority", name: "Blue Lantern Mutual", siteId: "blue-lantern", beneficiaryInstitutionId: "blue-lantern" },
+  { id: "morrow-shoal-authority", name: "Morrow Claimholders' Moot", siteId: "morrow-shoal", beneficiaryInstitutionId: "morrow-shoal" },
+  { id: "kiln-crossing-authority", name: "Kiln Masters' Chapter", siteId: "kiln-crossing", beneficiaryInstitutionId: "kiln-crossing" },
+  { id: "ore-station-one-authority", name: "Ore Station Syndicate", siteId: "ore-station-one", beneficiaryInstitutionId: "ore-station-one" },
+  { id: "coldwater-depot-authority", name: "Coldwater Depot Trust", siteId: "coldwater-depot", beneficiaryInstitutionId: "coldwater-depot" },
+  { id: "deep-research-authority", name: "Deep Research Collegium", siteId: "deep-research", beneficiaryInstitutionId: "deep-research" },
 ]);
 
 export function createInitialRightsAuthorities() {
@@ -18,6 +26,7 @@ export function createInitialRightsAuthorities() {
       id: seed.id,
       name: seed.name,
       siteId: seed.siteId,
+      beneficiaryInstitutionId: seed.beneficiaryInstitutionId,
       account: { balance: 0, transactions: [] },
     };
   });
@@ -45,9 +54,29 @@ export function recordAuthorityRevenue(state, { authorityId, amount, referenceId
     at: now, type: "rights-fee", amount, balance: authority.account.balance, referenceId, description,
   };
   authority.account.transactions.push(transaction);
+  const beneficiary = authority.beneficiaryInstitutionId
+    ? state.logistics?.institutions?.[authority.beneficiaryInstitutionId]
+    : null;
+  const beneficiaryAccount = beneficiary?.accounts?.operating;
+  if (beneficiaryAccount) {
+    beneficiaryAccount.balance += amount;
+    beneficiaryAccount.transactions ??= [];
+    beneficiaryAccount.transactions.push({
+      id: `RIGHTS-${authority.account.transactions.length}`,
+      at: now,
+      type: "territorial-rights-revenue",
+      amount,
+      balance: beneficiaryAccount.balance,
+      referenceId,
+      counterpartyId: authority.id,
+      description,
+    });
+    transaction.settledToInstitutionId = beneficiary.id;
+  }
   state.ledger?.recordEvent?.("authority.feeCollected", {
     authorityId, authorityName: authority.name, amount, referenceId, description,
     balance: authority.account.balance,
+    beneficiaryInstitutionId: beneficiary?.id ?? null,
   }, { visible: true, message: `${authority.name} collected ${amount} cr — ${description || "rights fee"}.` });
   return transaction;
 }

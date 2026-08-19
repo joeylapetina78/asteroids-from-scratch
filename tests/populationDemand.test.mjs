@@ -542,8 +542,9 @@ test("the why-chain runs from the waiting population into the hub's shortage", (
     `the cause should be the hub's shortage, got: ${JSON.stringify(lines)}`);
 });
 
-test("a hub explains that it cannot simply mine what it is missing", () => {
-  // Yard Exchange holds structural rights only, so volatile must be bought.
+test("a hub distinguishes broad extraction authority from installed capacity", () => {
+  // Yard Exchange may charter volatile extraction but has not built it, so the
+  // immediate response remains trade.
   const world = createWorld({ stock: {} });
   const need = POPULATION_NEEDS["life-support-pack"];
   world.advance(need.demandIntervalSeconds);
@@ -552,7 +553,7 @@ test("a hub explains that it cannot simply mine what it is missing", () => {
   const hubRecord = world.state.diagnostics.actors["yard-exchange"];
   assert.ok(hubRecord?.blocker);
   const chain = formatBlockerChain(resolveBlockerChain(world.state, hubRecord.blocker)).map((line) => line.summary).join(" | ");
-  assert.match(chain, /no mining right for volatile|must buy this material/i,
+  assert.match(chain, /no installed volatile extraction capacity|must buy this material/i,
     `the hub should say why it cannot dig it up itself, got: ${chain}`);
 });
 

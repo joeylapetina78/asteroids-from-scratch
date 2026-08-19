@@ -1,20 +1,23 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260818-0644-d8d52fb";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260818-0644-d8d52fb";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260818-0644-d8d52fb";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260818-0644-d8d52fb";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260818-0644-d8d52fb";
-import { adaptShipment } from "./intentions.js?v=fresh-20260818-0644-d8d52fb";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260818-0644-d8d52fb";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260818-0644-d8d52fb";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260818-0644-d8d52fb";
-import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-0644-d8d52fb";
-import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260818-0644-d8d52fb";
-import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260818-0644-d8d52fb";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260818-0644-d8d52fb";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, routineServiceCraft, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260818-0644-d8d52fb";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260818-0644-d8d52fb";
-import { issuerTreasuryRecords, seedIssuerTreasuries } from "./contractTreasury.js?v=fresh-20260818-0644-d8d52fb";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260818-2212-559e0fe";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260818-2212-559e0fe";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260818-2212-559e0fe";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260818-2212-559e0fe";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
+import { adaptShipment } from "./intentions.js?v=fresh-20260818-2212-559e0fe";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260818-2212-559e0fe";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260818-2212-559e0fe";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260818-2212-559e0fe";
+import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-2212-559e0fe";
+import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260818-2212-559e0fe";
+import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260818-2212-559e0fe";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260818-2212-559e0fe";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, routineServiceCraft, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260818-2212-559e0fe";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260818-2212-559e0fe";
+import { issuerTreasuryRecords, seedIssuerTreasuries } from "./contractTreasury.js?v=fresh-20260818-2212-559e0fe";
+import { recruitPopulationLabor, releasePopulationLabor } from "./populationLabor.js?v=fresh-20260818-2212-559e0fe";
+import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260818-2212-559e0fe";
+import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260818-2212-559e0fe";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -320,7 +323,20 @@ export function ensureLogisticsState(state, now = Date.now()) {
   state.logistics.laidUpHaulers ??= {};
   state.logistics.settledSprcRepairs ??= {};
   FIRST_REACH_SETTLEMENTS.forEach((seed) => {
-    state.logistics.institutions[seed.institution.id] ??= JSON.parse(JSON.stringify(seed.institution));
+    const institution = state.logistics.institutions[seed.institution.id] ??= JSON.parse(JSON.stringify(seed.institution));
+    // A settlement saved before institutional agency and asset portfolios were
+    // introduced must become the same NPC as a newly seeded settlement. These
+    // are durable identity/ownership records, not transient operating state, so
+    // fill missing fields without overwriting anything the live world changed.
+    institution.actorKind ??= seed.institution.actorKind;
+    institution.agency ??= structuredClone(seed.institution.agency);
+    institution.assets ??= [];
+    seed.institution.assets.forEach((asset) => {
+      if (!institution.assets.some((existing) => existing.id === asset.id)) institution.assets.push(structuredClone(asset));
+    });
+    institution.hubState ??= structuredClone(seed.institution.hubState);
+    institution.hubState.baseline ??= structuredClone(seed.institution.hubState.baseline);
+    institution.hubState.departments ??= {};
   });
   FIRST_REACH_CARRIERS.forEach((seed) => {
     const institutionId = seed.institution.id;
@@ -1595,6 +1611,14 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       const carrierId = logistics.haulers[shipment.assigneeId].carrierInstitutionId;
       const transaction = recordAccountTransaction(carrierId, shipment.payment, "freight-income", shipment.id, `Completed freight delivery ${shipment.id}`);
       const carrier = logistics.institutions[carrierId];
+      carrier.operatingHistory ??= { completedFreight: 0, lifetimeFreightRevenue: 0, servedSiteIds: [], firstDeliveryAt: null, lastDeliveryAt: null };
+      carrier.operatingHistory.completedFreight += 1;
+      carrier.operatingHistory.lifetimeFreightRevenue += shipment.payment;
+      carrier.operatingHistory.firstDeliveryAt ??= now();
+      carrier.operatingHistory.lastDeliveryAt = now();
+      carrier.operatingHistory.servedSiteIds = [...new Set([
+        ...(carrier.operatingHistory.servedSiteIds ?? []), shipment.originSiteId, shipment.destinationSiteId,
+      ].filter(Boolean))];
       const escrowTarget = carrier.policies?.transportation?.maintenanceEscrowTarget ?? HUB_SPONSORED_MAINTENANCE_ESCROW;
       carrier.maintenanceEscrow = Math.min(escrowTarget, (carrier.maintenanceEscrow ?? 0) + shipment.payment * FREIGHT_MAINTENANCE_ESCROW_SHARE);
       const loanRepayment = repayEmergencyFleetLoan(carrierId, shipment.payment);
@@ -1953,28 +1977,65 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
         }
       }
       const sponsoredCompanies = Object.values(logistics.institutions)
-        .filter((institution) => institution.sponsoredByInstitutionId === hub.id).length;
+        .filter((institution) => institution.archetypeId === "hauling-business"
+          && institution.sponsoredByInstitutionId === hub.id).length;
       if (sponsoredCompanies >= MAX_SPONSORED_HAULERS_PER_HUB) return;
       if (policy.lastSponsoredAt != null && now() - policy.lastSponsoredAt < HUB_SPONSOR_COOLDOWN_SECONDS * 1000) return;
 
+      const needId = `hub-need:${hub.id}:freight-capacity`;
+      if (!hub.hubState?.needs?.[needId] || hub.hubState.needs[needId].status !== "open") {
+        recordHubNeed(state, hub.id, {
+          id: needId, kind: "freight-capacity", purpose: "restore-regional-flow",
+          urgency: persistentlyUnserved ? "urgent" : "routine", shortage: 1,
+          context: { unservedOffers: unserved, regionalFleetSize: operational.length },
+          responseOptions: [
+            { id: `${needId}:commission`, kind: HUB_RESPONSE_KIND.COMMISSION,
+              capabilityId: "commission-freight-operator", executor: "logistics", priority: 100,
+              requirements: { credits: HAULER_COST + HUB_SPONSORED_OPERATING_GRANT, labor: 1,
+                materials: {}, durationSeconds: HUB_SPONSOR_AFTER_UNSERVED_SECONDS } },
+            { id: `${needId}:delay`, kind: HUB_RESPONSE_KIND.DELAY, priority: 10,
+              rationale: "Protect reserves and wait for existing regional freight to cover the hub." },
+            { id: `${needId}:accept`, kind: HUB_RESPONSE_KIND.ACCEPT_SHORTAGE, priority: 1 },
+          ],
+        }, now());
+      }
+      const project = planHubNeed(state, hub.id, needId, now());
+      if (project?.responseKind !== HUB_RESPONSE_KIND.COMMISSION || project.status !== "planned") return;
+
       const protectedCash = getActorProtectedCash(state, hub.id);
       const totalCommitment = HAULER_COST + HUB_SPONSORED_OPERATING_GRANT;
-      if (hub.accounts.operating.balance - totalCommitment < protectedCash) return;
+      if (hub.accounts.operating.balance - totalCommitment < protectedCash) {
+        transitionHubProject(state, hub.id, project.id, "blocked", { blocker: "protected-cash" }, now());
+        return;
+      }
+      transitionHubProject(state, hub.id, project.id, "executing", {}, now());
       const created = sponsorHubHauler(hub, policy);
-      if (!created) return;
+      if (!created) {
+        transitionHubProject(state, hub.id, project.id, "blocked", { blocker: "commission-failed" }, now());
+        return;
+      }
       operational.push([created.id, logistics.haulers[created.id]]);
       policy.unservedSince = null;
       policy.lastSponsoredAt = now();
+      transitionHubProject(state, hub.id, project.id, "completed", { assetId: created.id }, now());
+      resolveHubNeed(state, hub.id, needId, { projectId: project.id, assetId: created.id }, now());
     });
   }
 
   function sponsorHubHauler(hub, policy) {
     const index = (logistics.counters.hauler = (logistics.counters.hauler ?? 0) + 1);
     const carrierId = `carrier:${hub.siteId}-sponsored-${index}`;
-    const operatorId = `person:${hub.siteId}-dispatcher-${index}`;
     const shipId = `hauler-sponsored-${index}`;
     const carrierName = `${hub.name} Cartage ${index}`;
-    const operatorProfile = createSponsoredOperatorProfile(hub, index);
+    const assignmentId = `employment:${carrierId}`;
+    const recruited = recruitPopulationLabor(state, {
+      hubInstitutionId: hub.id, assignmentId, role: "freight-operator", workers: 1,
+      employerInstitutionId: carrierId, assetId: shipId, at: now(),
+      charter: { kind: "municipal-freight-charter", controlsInstitutionId: carrierId, serviceRegion: "first-reach" },
+    });
+    if (!recruited.ok) return null;
+    const operatorId = recruited.operator.id;
+    const operatorProfile = recruited.operator;
     const operatorName = operatorProfile.name;
     const minimumOperatingCash = 1800;
     const templatePolicy = structuredClone(FIRST_REACH_CARRIERS[0]?.policy ?? {});
@@ -1990,15 +2051,16 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       marketKnowledge: {},
       policies: { transportation: { ...templatePolicy, minimumOperatingCash, maintenanceEscrowTarget: HUB_SPONSORED_MAINTENANCE_ESCROW } }, repairOptions,
     };
-    logistics.institutions[operatorId] = {
-      id: operatorId, name: operatorName, archetypeId: "person", controls: [carrierId],
-      traits: operatorProfile.traits, motivation: operatorProfile.motivation, background: operatorProfile.background,
+    Object.assign(operatorProfile, {
+      controls: [carrierId], background: `Recruited from ${hub.name}'s population in response to locally observed freight shortages.`,
       license: { id: `HLC-SPONSORED-${index}`, class: "commercial-hauler", status: "active" },
-    };
+    });
+    logistics.institutions[operatorId] = operatorProfile;
     const created = commissionHauler({ id: shipId, name: `${hub.name} Relief ${index}`, homeSiteId: hub.siteId, seed: 100 + index, carrierInstitutionId: carrierId });
     if (!created) {
       delete logistics.institutions[carrierId];
       delete logistics.institutions[operatorId];
+      releasePopulationLabor(state, assignmentId, { at: now(), reason: "commission-failed" });
       return null;
     }
 
@@ -2020,6 +2082,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     shipById.set(shipId, created);
     state.ledger.recordEvent("hub.haulerSponsored", {
       institutionId: hub.id, institutionName: hub.name, carrierInstitutionId: carrierId,
+      operatorId, populationId: recruited.assignment.populationId, laborAssignmentId: assignmentId,
       haulerId: shipId, hullCost: HAULER_COST, operatingGrant: HUB_SPONSORED_OPERATING_GRANT,
       maintenanceEscrow: HUB_SPONSORED_MAINTENANCE_ESCROW, initialWear,
       regionalFleetSize: Object.keys(logistics.haulers).length,

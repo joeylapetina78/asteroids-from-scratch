@@ -7,7 +7,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_TRAITS, RESOLUTION_SOURCE, describeActorResolution, findActorRecord, getActorAccount, getActorFinances, getActorOfferTypes, getActorProtectedCash, getActorTraits, getArchetypeId, getControllerId, resolveActorProtectedCash } from "../src/systems/actorConfig.js";
+import { DEFAULT_TRAITS, RESOLUTION_SOURCE, describeActorResolution, findActorRecord, getActorAccount, getActorFinances, getActorOfferTypes, getActorProtectedCash, getActorTraits, getArchetypeId, getControllerId, getDecisionActorId, resolveActorProtectedCash, resolveActorTraits } from "../src/systems/actorConfig.js";
 import { evaluateProcurement, evaluateSupplierAsk } from "../src/systems/valuation.js";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
@@ -154,13 +154,13 @@ test("resolution says which layer answered, for everything that decides", () => 
   assert.equal(resolution.controller.resolved, true);
 });
 
-test("a controller that cannot be found is reported, not silently replaced", () => {
+test("an institutional NPC outlives a missing representative without silently changing temperament", () => {
   const state = createFullWorld();
   findActorRecord(state, "the-ledge").controllerInstitutionId = "person:who";
 
   const resolution = describeActorResolution(state, "the-ledge");
-  assert.equal(resolution.traits.source, RESOLUTION_SOURCE.UNRESOLVED);
-  assert.match(resolution.traits.reason, /named but could not be found/);
+  assert.equal(resolution.traits.source, RESOLUTION_SOURCE.INSTITUTIONAL_AGENCY);
+  assert.match(resolution.traits.reason, /enduring organisation/);
   assert.equal(resolution.controller.resolved, false);
 });
 
@@ -198,12 +198,13 @@ test("an institution decides through whoever runs it", () => {
   assert.equal(getControllerId(state, "person:ivo-cinder"), "person:ivo-cinder");
 });
 
-test("traits come from the controller, not from the institution", () => {
+test("a settlement decides as an enduring organisation while retaining a representative", () => {
   const state = createWorld();
   const hub = findActorRecord(state, "the-ledge");
-  assert.equal(hub.traits, undefined, "the settlement itself has no temperament");
-  assert.deepEqual(getActorTraits(state, "the-ledge"), findActorRecord(state, "person:ledge-quartermaster").traits,
-    "it borrows its quartermaster's");
+  assert.equal(getControllerId(state, "the-ledge"), "person:ledge-quartermaster", "Ivry remains its representative");
+  assert.equal(getDecisionActorId(state, "the-ledge"), "the-ledge", "the durable institution is the deciding NPC");
+  assert.deepEqual(getActorTraits(state, "the-ledge"), hub.agency.traits);
+  assert.equal(resolveActorTraits(state, "the-ledge").source, RESOLUTION_SOURCE.INSTITUTIONAL_AGENCY);
 });
 
 test("an actor with nobody running it falls back rather than guessing", () => {
@@ -262,7 +263,7 @@ test("available never goes negative when commitments exceed the balance", () => 
 
 // ── The differentiation this exists to produce ─────────────────────────────
 
-test("two hubs with different quartermasters pay different prices for the same shortage", () => {
+test("two institutional hubs with different policy identities pay different prices for the same shortage", () => {
   const state = createWorld();
   const bid = (hubId) => evaluateProcurement({
     itemId: "water-ice", baseUnitPrice: 300, marketUnitValue: 300,
@@ -291,7 +292,7 @@ test("two carriers with different operators quote the same run differently", () 
     "but temperament never moves the floor — cost is cost");
 });
 
-test("changing only the data changes the decision", () => {
+test("changing only an institutional NPC's policy data changes the decision", () => {
   const state = createWorld();
   const before = getActorTraits(state, "yard-exchange").growthBias;
   const ask = () => evaluateSupplierAsk({
@@ -299,6 +300,6 @@ test("changing only the data changes the decision", () => {
   }).recommendedPrice;
 
   const asked = ask();
-  findActorRecord(state, "person:yard-quartermaster").traits = { ...getActorTraits(state, "yard-exchange"), growthBias: before + 0.5 };
-  assert.ok(ask() > asked, "a greedier quartermaster asks more, with no code change anywhere");
+  findActorRecord(state, "yard-exchange").agency.traits = { ...getActorTraits(state, "yard-exchange"), growthBias: before + 0.5 };
+  assert.ok(ask() > asked, "a more growth-driven institution asks more, with no code change anywhere");
 });

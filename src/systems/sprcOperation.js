@@ -1,18 +1,18 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260818-0644-d8d52fb";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260818-0644-d8d52fb";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260818-0644-d8d52fb";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260818-0644-d8d52fb";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260818-0644-d8d52fb";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260818-0644-d8d52fb";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260818-0644-d8d52fb";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260818-0644-d8d52fb";
-import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260818-0644-d8d52fb";
-import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260818-0644-d8d52fb";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260818-0644-d8d52fb";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260818-0644-d8d52fb";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260818-0644-d8d52fb";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260818-0644-d8d52fb";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260818-0644-d8d52fb";
+import { depositCredits } from "./accounts.js?v=fresh-20260818-2212-559e0fe";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260818-2212-559e0fe";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260818-2212-559e0fe";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260818-2212-559e0fe";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260818-2212-559e0fe";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260818-2212-559e0fe";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260818-2212-559e0fe";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260818-2212-559e0fe";
+import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260818-2212-559e0fe";
+import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260818-2212-559e0fe";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260818-2212-559e0fe";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260818-2212-559e0fe";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260818-2212-559e0fe";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -1661,9 +1661,10 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
   }
 
   function seedSprcWorldRecords(localState) {
-    upsertWorldEntity(localState, { id: SPRC.actorId, type: "organization", name: "Scrap Porch Recovery Cooperative", siteId: SPRC.siteId });
-    upsertWorldEntity(localState, { id: SPRC.facilityId, type: "facility", facilityType: "recovery-mill", name: "The Maw", ownerEntityId: SPRC.actorId, siteId: SPRC.siteId });
-    upsertWorldEntity(localState, { id: SPRC.berthId, type: "facility", facilityType: "repair-berth", name: "Berth Two", ownerEntityId: SPRC.actorId, siteId: SPRC.siteId });
+    upsertWorldEntity(localState, { id: "organization:scrap-forge", type: "organization", name: "Scrap Porch", siteId: SPRC.siteId });
+    upsertWorldEntity(localState, { id: SPRC.actorId, type: "department", name: "Scrap Porch Recovery Cooperative", ownerEntityId: "organization:scrap-forge", siteId: SPRC.siteId });
+    upsertWorldEntity(localState, { id: SPRC.facilityId, type: "facility", facilityType: "recovery-mill", name: "The Maw", ownerEntityId: "organization:scrap-forge", operatorEntityId: SPRC.actorId, siteId: SPRC.siteId });
+    upsertWorldEntity(localState, { id: SPRC.berthId, type: "facility", facilityType: "repair-berth", name: "Berth Two", ownerEntityId: "organization:scrap-forge", operatorEntityId: SPRC.actorId, siteId: SPRC.siteId });
     const hauler = localState.sprc?.haulers?.[SPRC.firstHaulerId];
     if (hauler) {
       upsertWorldEntity(localState, { id: `ship:${hauler.shipVin}`, type: "asset", assetType: "ship", vin: hauler.shipVin, name: hauler.shipName, operatorEntityId: hauler.pilotEntityId });
@@ -1785,7 +1786,8 @@ function getSalActionMessage(type, payload) {
 function formatActionNoun(value) { return String(value ?? "operating").replaceAll("-", " "); }
 
 function seedSprcWorldRecords(state) {
-  upsertWorldEntity(state, { id: SPRC.actorId, type: "organization", name: "Scrap Porch Recovery Cooperative", siteId: SPRC.siteId });
-  upsertWorldEntity(state, { id: SPRC.facilityId, type: "facility", facilityType: "recovery-mill", name: "The Maw", ownerEntityId: SPRC.actorId, siteId: SPRC.siteId });
-  upsertWorldEntity(state, { id: SPRC.berthId, type: "facility", facilityType: "repair-berth", name: "Berth Two", ownerEntityId: SPRC.actorId, siteId: SPRC.siteId });
+  upsertWorldEntity(state, { id: "organization:scrap-forge", type: "organization", name: "Scrap Porch", siteId: SPRC.siteId });
+  upsertWorldEntity(state, { id: SPRC.actorId, type: "department", name: "Scrap Porch Recovery Cooperative", ownerEntityId: "organization:scrap-forge", siteId: SPRC.siteId });
+  upsertWorldEntity(state, { id: SPRC.facilityId, type: "facility", facilityType: "recovery-mill", name: "The Maw", ownerEntityId: "organization:scrap-forge", operatorEntityId: SPRC.actorId, siteId: SPRC.siteId });
+  upsertWorldEntity(state, { id: SPRC.berthId, type: "facility", facilityType: "repair-berth", name: "Berth Two", ownerEntityId: "organization:scrap-forge", operatorEntityId: SPRC.actorId, siteId: SPRC.siteId });
 }

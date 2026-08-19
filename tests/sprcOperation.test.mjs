@@ -172,10 +172,10 @@ test("SPRC response selection carries a score from the shared capability engine"
 
 test("SPRC protected cash policy is authoritative over its compatibility mirror", () => {
   const harness = createHarness();
-  harness.state.sprc.operatingPlan.protectedCashReserve = 16000;
+  harness.state.sprc.operatingPlan.protectedCashReserve = 46000;
   harness.state.sprc.account.protectedReserve = 0;
   harness.operation.update();
-  assert.equal(harness.state.sprc.account.protectedReserve, 16000);
+  assert.equal(harness.state.sprc.account.protectedReserve, 46000);
   assert.equal(Object.values(harness.state.sprc.responses)[0].status, "blocked");
 });
 

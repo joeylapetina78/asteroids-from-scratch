@@ -1,7 +1,9 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260818-0644-d8d52fb";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260818-0644-d8d52fb";
-import { ensureObligations } from "./obligations.js?v=fresh-20260818-0644-d8d52fb";
-import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260818-0644-d8d52fb";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260818-2212-559e0fe";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260818-2212-559e0fe";
+import { ensureObligations } from "./obligations.js?v=fresh-20260818-2212-559e0fe";
+import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260818-2212-559e0fe";
+import { consolidateSprcOwnership } from "./sprcOwnership.js?v=fresh-20260818-2212-559e0fe";
+import { listGeneratedSettlements, materializeSettlementAuthority } from "./settlementSeedPipeline.js?v=fresh-20260818-2212-559e0fe";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 
@@ -76,15 +78,34 @@ export function loadSavedProfile(state) {
     syncActiveHullFromComponents(state);
     mergePlainObject(state.ui, save.ui);
     mergePlainObject(state.worldRecords, save.worldRecords);
+    mergePlainObject(state.authorities, save.authorities);
+    mergePlainObject(state.settlements, save.settlements);
     if (save.wrecks) state.wrecks = cloneJsonSafe(save.wrecks);
     mergePlainObject(state.sprc, save.sprc);
     mergePlainObject(state.logistics, save.logistics);
+    mergePlainObject(state.population, save.population);
+    mergePlainObject(state.hubProcurement, save.hubProcurement);
+    mergePlainObject(state.industrial, save.industrial);
+    mergePlainObject(state.npcDevelopment, save.npcDevelopment);
+    if (save.relationships) state.relationships = cloneJsonSafe(save.relationships);
     mergePlainObject(state.towing, save.towing);
     if (save.fleetInsurance) state.fleetInsurance = cloneJsonSafe(save.fleetInsurance);
     if (save.fleetProtection) state.fleetProtection = cloneJsonSafe(save.fleetProtection);
     // The gate-bounty fund depletes as it pays out, so it has to survive a
     // reload; the live attack reports do not — they are transient and expire.
     if (save.gateBounty) state.gateBounty = cloneJsonSafe(save.gateBounty);
+    // Rebuild derived legal/place projections from the durable source seeds.
+    // Live treasuries and populations remain the restored domain records.
+    listGeneratedSettlements(state).forEach((seed) => materializeSettlementAuthority(state, seed));
+
+    // Old profiles held an independent SPRC treasury. Merge it exactly once;
+    // current profiles merely need their JSON-cloned compatibility account
+    // rebound to Scrap Porch's authoritative account object.
+    consolidateSprcOwnership(state, {
+      mergeLegacyTreasury: !save.sprc?.ownership?.consolidated,
+      legacyTreasury: save.sprc?.account ?? null,
+      at: save.savedAt ?? Date.now(),
+    });
 
     if (!save.ship?.purchasedOfferId && save.components?.merchant?.purchasedOfferId) {
       state.ship.purchasedOfferId = save.components.merchant.purchasedOfferId;
@@ -116,10 +137,17 @@ export function saveProfile({ state, game, cargoHold }) {
     ship: cloneJsonSafe(state.ship),
     ui: cloneJsonSafe(state.ui),
     worldRecords: cloneJsonSafe(state.worldRecords),
+    authorities: cloneJsonSafe(state.authorities),
+    settlements: cloneJsonSafe(state.settlements),
     wrecks: cloneJsonSafe(state.wrecks),
     ledger: state.ledger?.getSaveSnapshot?.() ?? null,
     sprc: cloneJsonSafe(state.sprc),
     logistics: cloneJsonSafe(state.logistics),
+    population: cloneJsonSafe(state.population),
+    hubProcurement: cloneJsonSafe(state.hubProcurement),
+    industrial: cloneJsonSafe(state.industrial),
+    npcDevelopment: cloneJsonSafe(state.npcDevelopment),
+    relationships: cloneJsonSafe(state.relationships),
     towing: cloneJsonSafe(state.towing),
     fleetInsurance: cloneJsonSafe(state.fleetInsurance),
     fleetProtection: cloneJsonSafe(state.fleetProtection),

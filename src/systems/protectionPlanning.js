@@ -1,6 +1,7 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-0644-d8d52fb";
-import { ensurePatrolOperations } from "./patrolOperations.js?v=fresh-20260818-0644-d8d52fb";
-import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js?v=fresh-20260818-0644-d8d52fb";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-2212-559e0fe";
+import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260818-2212-559e0fe";
+import { ensurePatrolOperations } from "./patrolOperations.js?v=fresh-20260818-2212-559e0fe";
+import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js?v=fresh-20260818-2212-559e0fe";
 
 export const PROTECTION_REQUEST_STATUS = Object.freeze({
   INTERNAL: "covered-internally",
@@ -65,7 +66,7 @@ export function evaluateProtectionThreat(state, sites, threat, now = Date.now())
   const planning = ensureProtectionPlanning(state);
   const patrols = ensurePatrolOperations(state, now);
   const created = [];
-  FIRST_REACH_SETTLEMENTS.forEach((seed) => {
+  [...FIRST_REACH_SETTLEMENTS, ...listGeneratedSettlements(state)].forEach((seed) => {
     const site = sites.find((candidate) => candidate.id === seed.institution.siteId);
     if (!site) return;
     const policy = seed.institution.protectionPolicy;

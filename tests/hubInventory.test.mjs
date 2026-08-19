@@ -368,6 +368,9 @@ test("hub-sponsored haulers launch with varied condition and a funded repair cyc
     const operator = world.state.logistics.institutions[carrier.controllerInstitutionId];
     assert.ok(operator?.name && !operator.name.startsWith("Hub Dispatcher"), "the operator has a personal identity");
     assert.ok(operator?.motivation, "the operator has an economic motivation");
+    assert.equal(operator?.homeInstitutionId, carrier.sponsoredByInstitutionId, "the operator comes from the sponsoring hub's population");
+    assert.equal(operator?.charter?.kind, "municipal-freight-charter", "the operator receives authority through an explicit charter");
+    assert.ok(world.state.population.laborAssignments[operator.assignmentId], "the job consumes finite population labor");
   });
   assert.ok([...sponsorsByHub.values()].every((count) => count <= 1), "no hub creates a local swarm");
   assert.equal(new Set(sponsored.map((carrier) => world.state.logistics.institutions[carrier.controllerInstitutionId].name)).size,

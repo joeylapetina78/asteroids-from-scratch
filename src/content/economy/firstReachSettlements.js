@@ -5,14 +5,36 @@
 // orders, and authority seeds. Adding a settlement should begin here; authored
 // geography remains in the transportation network and is referenced by siteId.
 
-const STANDARD_NEEDS = Object.freeze([
-  "settlement-supply-unit",
-  "life-support-pack",
-  "household-goods-unit",
-  "general-materials",
-]);
+import { WORLD_SITES } from "../../systems/worldSites.js?v=fresh-20260818-2212-559e0fe";
+import {
+  FOUNDATIONAL_EXTRACTION_FAMILIES, MUNICIPAL_CAPACITY_TYPES, STANDARD_SETTLEMENT_NEEDS,
+  compileSettlementSeed, settlementExtractionDefinition, settlementMiningRight,
+  settlementPlace, settlementPopulationProfile,
+} from "../../systems/settlementSeedPipeline.js?v=fresh-20260818-2212-559e0fe";
 
-export const FIRST_REACH_SETTLEMENTS = Object.freeze([
+const STANDARD_NEEDS = STANDARD_SETTLEMENT_NEEDS;
+
+// Step-three baseline: every settlement can lawfully rebuild foundational
+// capacity. Its primary extraction record remains its specialty and opening
+// advantage, but is no longer an absolute prohibition on other inputs.
+export { FOUNDATIONAL_EXTRACTION_FAMILIES, MUNICIPAL_CAPACITY_TYPES };
+
+// These describe the enduring NPC, not the person currently speaking for it.
+// A representative can retire or be replaced while the organisation keeps its
+// assets, obligations, relationships, policies and memory.
+const ORGANIZATION_PROFILES = Object.freeze({
+  "yard-exchange": { organizationType: "chartered-market-authority", governance: "merchant council", mandate: "Keep exchange, credit and regional trade open.", values: ["liquidity", "access", "order"] },
+  "scrap-forge": { organizationType: "municipal-recovery-commons", governance: "workshop assembly", mandate: "Keep Scrap Porch inhabitable by recovering and reusing what the Reach discards.", values: ["repair", "reuse", "mutual survival"] },
+  "the-ledge": { organizationType: "chartered-industrial-concession", governance: "appointed works board", mandate: "Turn a difficult industrial foothold into a durable settlement.", values: ["capacity", "discipline", "growth"] },
+  "blue-lantern": { organizationType: "civic-mutual", governance: "resident cooperative", mandate: "Protect the Lantern's households and bargain collectively with the rest of the Reach.", values: ["security", "fair dealing", "continuity"] },
+  "morrow-shoal": { organizationType: "claimant-commonwealth", governance: "claimholders' moot", mandate: "Preserve the Shoal's claims and sell enough ore to keep them independent.", values: ["independence", "stewardship", "solvency"] },
+  "kiln-crossing": { organizationType: "industrial-guild-polity", governance: "masters' chapter", mandate: "Build a permanent manufacturing crossing beyond the inner belt.", values: ["craft", "reserves", "continuity"] },
+  "ore-station-one": { organizationType: "extraction-syndicate", governance: "member directorate", mandate: "Expand the frontier's productive reach without losing control of the station.", values: ["output", "expansion", "autonomy"] },
+  "coldwater-depot": { organizationType: "custodial-depot-trust", governance: "trusteeship", mandate: "Hold the outer water reserve through isolation and disruption.", values: ["reserve", "reliability", "patience"] },
+  "deep-research": { organizationType: "research-order", governance: "collegium", mandate: "Maintain an independent community for work too remote or slow for the inner market.", values: ["inquiry", "patience", "institutional memory"] },
+});
+
+const FIRST_REACH_SETTLEMENT_SEEDS = [
   {
     institution: {
       id: "yard-exchange", name: "Yard Exchange", siteId: "yard-exchange",
@@ -40,7 +62,8 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
     institution: {
       id: "scrap-forge", name: "Scrap Porch", siteId: "scrap-porch",
       archetypeId: "settlement", controllerInstitutionId: "person:porch-quartermaster",
-      accounts: { operating: { balance: 30000, committed: 0 } },
+      // Includes the 18,000 credits formerly held in a second SPRC treasury.
+      accounts: { operating: { id: "account:scrap-forge-operating", balance: 48000, committed: 0, currency: "credits" } },
       inventories: { "water-ice": 6, "iron-nickel": 0, silicate: 0 },
       renewableResources: ["water-ice"],
       protectionPolicy: { mode: "direct", protectedCash: 8000, jurisdictionRadius: 1700, responseThreshold: 0.28 },
@@ -271,47 +294,31 @@ export const FIRST_REACH_SETTLEMENTS = Object.freeze([
       miningFamilies: ["industrial"],
     },
   },
-]);
+];
+
+export const FIRST_REACH_SETTLEMENTS = Object.freeze(
+  FIRST_REACH_SETTLEMENT_SEEDS.map((seed) => compileSettlementSeed({
+    ...seed,
+    geography: WORLD_SITES.find((site) => site.id === seed.institution.siteId),
+  }, { organizationProfile: ORGANIZATION_PROFILES[seed.institution.id], origin: "authored" })),
+);
 
 export function settlementInstitutionRecords() {
   return FIRST_REACH_SETTLEMENTS.flatMap((seed) => [seed.institution, seed.controller]);
 }
 
 export function settlementPopulationProfiles() {
-  return FIRST_REACH_SETTLEMENTS.map((seed) => ({
-    ...seed.population,
-    distressPolicy: seed.population.distressPolicy ? {
-      ...seed.population.distressPolicy,
-      essentialNeedIds: [...seed.population.distressPolicy.essentialNeedIds],
-      deferredNeedIds: [...seed.population.distressPolicy.deferredNeedIds],
-    } : null,
-    hubInstitutionId: seed.institution.id,
-    siteId: seed.institution.siteId,
-    needIds: [...seed.population.needIds],
-  }));
+  return FIRST_REACH_SETTLEMENTS.map(settlementPopulationProfile);
 }
 
 export function settlementExtractionDefinitions() {
-  return FIRST_REACH_SETTLEMENTS.map((seed) => ({
-    ...seed.extraction,
-    siteId: seed.institution.siteId,
-    siteName: seed.institution.name,
-    buyerInstitutionId: seed.institution.id,
-  }));
+  return FIRST_REACH_SETTLEMENTS.map(settlementExtractionDefinition);
 }
 
 export function settlementMiningRights() {
-  return FIRST_REACH_SETTLEMENTS.map((seed) => ({
-    institutionId: seed.institution.id,
-    placeId: `hub:${seed.institution.siteId}`,
-    families: [...seed.extraction.miningFamilies],
-  }));
+  return FIRST_REACH_SETTLEMENTS.map(settlementMiningRight);
 }
 
 export function settlementPlaces() {
-  return FIRST_REACH_SETTLEMENTS.map((seed) => ({
-    id: `hub:${seed.institution.siteId}`,
-    sourceId: seed.institution.siteId,
-    name: seed.institution.name,
-  }));
+  return FIRST_REACH_SETTLEMENTS.map(settlementPlace);
 }
