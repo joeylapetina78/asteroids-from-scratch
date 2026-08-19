@@ -1,7 +1,8 @@
-import { ACTOR_ROLE, getActorRecord, listActors } from "./actorRegistry.js?v=fresh-20260818-2212-559e0fe";
-import { getActorCapabilityPortfolio } from "./assetCapabilities.js?v=fresh-20260818-2212-559e0fe";
-import { getPopulationLaborSummary } from "./populationLabor.js?v=fresh-20260818-2212-559e0fe";
-import { getHubTerritory } from "./hubTerritories.js?v=fresh-20260818-2212-559e0fe";
+import { ACTOR_ROLE, getActorRecord, listActors } from "./actorRegistry.js?v=fresh-20260819-0621-e0ba4c1";
+import { getActorCapabilityPortfolio } from "./assetCapabilities.js?v=fresh-20260819-0621-e0ba4c1";
+import { getPopulationLaborSummary } from "./populationLabor.js?v=fresh-20260819-0621-e0ba4c1";
+import { getHubTerritory } from "./hubTerritories.js?v=fresh-20260819-0621-e0ba4c1";
+import { getHubSimulationRecord } from "./simulationMode.js?v=fresh-20260819-0621-e0ba4c1";
 
 // The coherent settlement actor.
 //
@@ -75,6 +76,7 @@ export function getHubActor(state, hubId, { at = Date.now() } = {}) {
     agency: institution.agency,
     siteId: institution.siteId,
     territory: getHubTerritory(institution.siteId, state),
+    simulation: getHubSimulationRecord(state, hubId),
     representativeIds: institution.agency?.representativeIds ?? [institution.controllerInstitutionId].filter(Boolean),
     treasury: institution.accounts?.operating ?? null,
     inventory: institution.inventories ?? null,

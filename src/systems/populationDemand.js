@@ -23,10 +23,11 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260818-2212-559e0fe";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260818-2212-559e0fe";
-import { settlementExtractionDefinitions, settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-2212-559e0fe";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260819-0621-e0ba4c1";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260819-0621-e0ba4c1";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260819-0621-e0ba4c1";
+import { settlementExtractionDefinitions, settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260819-0621-e0ba4c1";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260819-0621-e0ba4c1";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",
@@ -698,6 +699,7 @@ export function createPopulationOperation({ state, now = () => Date.now() }) {
   // an economic decision rather than a tidying one.
   function decide() {
     Object.values(population.populations).forEach((populationRecord) => {
+      if (isHubAggregated(state, populationRecord.hubInstitutionId)) return;
       const hub = getHub(populationRecord);
       if (!hub) return;
       accrueIncome(populationRecord);

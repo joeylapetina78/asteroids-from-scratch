@@ -1,7 +1,8 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-2212-559e0fe";
-import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260818-2212-559e0fe";
-import { ensurePatrolOperations } from "./patrolOperations.js?v=fresh-20260818-2212-559e0fe";
-import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js?v=fresh-20260818-2212-559e0fe";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260819-0621-e0ba4c1";
+import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260819-0621-e0ba4c1";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260819-0621-e0ba4c1";
+import { ensurePatrolOperations } from "./patrolOperations.js?v=fresh-20260819-0621-e0ba4c1";
+import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js?v=fresh-20260819-0621-e0ba4c1";
 
 export const PROTECTION_REQUEST_STATUS = Object.freeze({
   INTERNAL: "covered-internally",
@@ -67,6 +68,7 @@ export function evaluateProtectionThreat(state, sites, threat, now = Date.now())
   const patrols = ensurePatrolOperations(state, now);
   const created = [];
   [...FIRST_REACH_SETTLEMENTS, ...listGeneratedSettlements(state)].forEach((seed) => {
+    if (isHubAggregated(state, seed.institution.id)) return;
     const site = sites.find((candidate) => candidate.id === seed.institution.siteId);
     if (!site) return;
     const policy = seed.institution.protectionPolicy;

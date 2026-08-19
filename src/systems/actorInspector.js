@@ -4,16 +4,16 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260818-2212-559e0fe";
-import { collectIntentions } from "./intentions.js?v=fresh-20260818-2212-559e0fe";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260818-2212-559e0fe";
-import { describeActorResolution, findActorRecord, getActorFinances } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260818-2212-559e0fe";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260818-2212-559e0fe";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260818-2212-559e0fe";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260818-2212-559e0fe";
-import { getActorCapabilityPortfolio } from "./assetCapabilities.js?v=fresh-20260818-2212-559e0fe";
-import { getHubActor } from "./hubActors.js?v=fresh-20260818-2212-559e0fe";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260819-0621-e0ba4c1";
+import { collectIntentions } from "./intentions.js?v=fresh-20260819-0621-e0ba4c1";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260819-0621-e0ba4c1";
+import { describeActorResolution, findActorRecord, getActorFinances } from "./actorConfig.js?v=fresh-20260819-0621-e0ba4c1";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260819-0621-e0ba4c1";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260819-0621-e0ba4c1";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260819-0621-e0ba4c1";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260819-0621-e0ba4c1";
+import { getActorCapabilityPortfolio } from "./assetCapabilities.js?v=fresh-20260819-0621-e0ba4c1";
+import { getHubActor } from "./hubActors.js?v=fresh-20260819-0621-e0ba4c1";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;

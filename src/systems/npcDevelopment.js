@@ -1,5 +1,6 @@
-import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
-import { appendHubHistory } from "./hubActors.js?v=fresh-20260818-2212-559e0fe";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260819-0621-e0ba4c1";
+import { appendHubHistory } from "./hubActors.js?v=fresh-20260819-0621-e0ba4c1";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260819-0621-e0ba4c1";
 
 export const PROMOTION_SCORE = 100;
 export const PROMOTION_MINIMUM_AGE_MS = 120 * 1000;
@@ -116,6 +117,7 @@ export function trySpinOutFactory(state, factoryId, at = Date.now()) {
   const operator = state.population?.operators?.[factory?.operatorId];
   const parent = state.logistics?.institutions?.[factory?.institutionId];
   if (!factory?.emergedFromPressure || !operator || operator.actorKind !== "bespoke-npc"
+    || isHubAggregated(state, factory.institutionId)
     || parent?.actorKind !== "institutional-npc" || factory.activeRun
     || (factory.completedRuns ?? 0) < FACTORY_SPINOUT_RUNS
     || (factory.operatingHistory?.ordersAccepted ?? 0) < FACTORY_SPINOUT_ORDERS) return null;

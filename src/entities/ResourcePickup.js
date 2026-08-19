@@ -1,7 +1,7 @@
-import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260818-2212-559e0fe";
-import { createRandom, randomRange } from "../systems/random.js?v=fresh-20260818-2212-559e0fe";
-import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
-import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "../systems/rockmossStrains.js?v=fresh-20260818-2212-559e0fe";
+import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260819-0621-e0ba4c1";
+import { createRandom, randomRange } from "../systems/random.js?v=fresh-20260819-0621-e0ba4c1";
+import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260819-0621-e0ba4c1";
+import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "../systems/rockmossStrains.js?v=fresh-20260819-0621-e0ba4c1";
 
 const PICKUP_RADIUS = 10;
 const PICKUP_DRAG = 0.985;

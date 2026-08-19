@@ -10,13 +10,13 @@
 // draws from a family and substitutes freely within it. A hub does not need
 // iron-nickel specifically; it needs structural material.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
-import { recordAcquisition } from "./costBasis.js?v=fresh-20260818-2212-559e0fe";
-import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260818-2212-559e0fe";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260818-2212-559e0fe";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260819-0621-e0ba4c1";
+import { recordAcquisition } from "./costBasis.js?v=fresh-20260819-0621-e0ba4c1";
+import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260819-0621-e0ba4c1";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260819-0621-e0ba4c1";
 // The store only — deliberately not `miningOperation`, which imports THIS
 // module. See `miningOrderBook` for why the derivation lives elsewhere.
-import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260818-2212-559e0fe";
+import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260819-0621-e0ba4c1";
 
 // How many seconds of consumption a hub tries to keep on the shelf. Higher
 // means fatter buffers and less frequent, larger orders.
@@ -32,9 +32,12 @@ export const TRADED_FAMILIES = Object.freeze(["structural", "industrial", "volat
 // evenly across them: each family has to be able to carry its share. A need
 // with a single family (Life-Support Packs, volatile) carries the whole rate,
 // which is why volatile targets come out highest.
-export function getFamilyConsumptionRates(hubInstitutionId) {
+export function getFamilyConsumptionRates(hubInstitutionId, state = null) {
   const rates = Object.fromEntries(TRADED_FAMILIES.map((family) => [family, 0]));
-  const profiles = POPULATION_PROFILES.filter((profile) => profile.hubInstitutionId === hubInstitutionId);
+  const profiles = state
+    ? Object.values(state.population?.populations ?? {}).filter((profile) => profile.hubInstitutionId === hubInstitutionId)
+      .map((profile) => ({ ...profile, needIds: Object.keys(profile.needs ?? {}) }))
+    : POPULATION_PROFILES.filter((profile) => profile.hubInstitutionId === hubInstitutionId);
 
   profiles.forEach((profile) => {
     profile.needIds.forEach((needId) => {

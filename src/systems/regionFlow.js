@@ -1,6 +1,6 @@
-import { TRADED_FAMILIES, getFamilyConsumptionRates } from "./hubInventory.js?v=fresh-20260818-2212-559e0fe";
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
-import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260818-2212-559e0fe";
+import { TRADED_FAMILIES, getFamilyConsumptionRates } from "./hubInventory.js?v=fresh-20260819-0621-e0ba4c1";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260819-0621-e0ba4c1";
+import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260819-0621-e0ba4c1";
 
 // A place simulated as RATES rather than as transactions. Step 4, Phase B.
 //
@@ -27,13 +27,9 @@ import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND, getScaledDemandInterv
 // every blocker. Those are what make a place interesting to watch, and they are
 // exactly what nobody is watching six jumps out.
 //
-// NOT WIRED TO REPLACE ANYTHING, and that is not timidity. A place cannot stop
-// being simulated in detail until that detail can be RESTORED — drop a far
-// settlement to rates today and the moment the player flies out there it has no
-// contracts, no orders, no carrier mid-run, just a number. Restoring it is
-// Phase C's job. So this phase builds the model and measures how far it drifts
-// from the truth, which is the evidence Phase C needs before anything is
-// switched over.
+// Phase C gives this model custody only after a hub's transactional work is
+// quiescent, then writes the result back before detailed simulation resumes.
+// The institutional actor itself is never serialized into this flow or replaced.
 
 export const FLOW_MODEL_VERSION = 1;
 
@@ -42,8 +38,11 @@ export const FLOW_MODEL_VERSION = 1;
 // Everything a settlement's population reliably does per second, from the same
 // authored records the detailed simulation reads. If these disagree with the
 // detailed path, one of them has a bug — they are not two estimates.
-export function deriveDemandRates(institutionId) {
-  const profiles = POPULATION_PROFILES.filter((profile) => profile.hubInstitutionId === institutionId);
+export function deriveDemandRates(institutionId, state = null) {
+  const profiles = state
+    ? Object.values(state.population?.populations ?? {}).filter((profile) => profile.hubInstitutionId === institutionId)
+      .map((profile) => ({ ...profile, needIds: Object.keys(profile.needs ?? {}) }))
+    : POPULATION_PROFILES.filter((profile) => profile.hubInstitutionId === institutionId);
 
   let householdIncomePerSecond = 0;
   let householdSpendPerSecond = 0;
@@ -69,7 +68,7 @@ export function deriveDemandRates(institutionId) {
 
   return {
     // Units of each family leaving the shelf per second.
-    consumption: getFamilyConsumptionRates(institutionId),
+    consumption: getFamilyConsumptionRates(institutionId, state),
     householdIncomePerSecond,
     householdSpendPerSecond,
     productionBurnPerSecond,
@@ -120,14 +119,17 @@ function measureConsumed(first, last, institutionId) {
 // opposite behaviour: the first drains a working hub to empty, the second
 // refuses to advance. A freshly booted world is the second, and reporting it as
 // the first is exactly the kind of false certainty this module exists to avoid.
-export function minimumObservationSeconds(institutionId) {
+export function minimumObservationSeconds(institutionId, state = null) {
   // Read through the SCALED interval, because that is the cycle the settlement
   // actually runs on. A small place waits proportionally longer between wanting
   // things, so watching it for the authored interval would once again be taking
   // a glance and calling it an observation — the exact mistake this floor exists
   // to prevent, just re-introduced by the population scaling.
-  const intervals = POPULATION_PROFILES
-    .filter((profile) => profile.hubInstitutionId === institutionId)
+  const profiles = state
+    ? Object.values(state.population?.populations ?? {}).filter((profile) => profile.hubInstitutionId === institutionId)
+      .map((profile) => ({ ...profile, needIds: Object.keys(profile.needs ?? {}) }))
+    : POPULATION_PROFILES.filter((profile) => profile.hubInstitutionId === institutionId);
+  const intervals = profiles
     .flatMap((profile) => profile.needIds
       .map((needId) => POPULATION_NEEDS[needId])
       .filter(Boolean)
@@ -144,7 +146,7 @@ export function minimumObservationSeconds(institutionId) {
 // Returns null rather than zero when there is not enough history. A region that
 // has never been watched has an UNKNOWN supply rate, and treating unknown as
 // "nothing arrives" would starve it on contact with the aggregate model.
-export function observeSupplyRates(samples, institutionId) {
+export function observeSupplyRates(samples, institutionId, state = null) {
   const seen = samples.filter((sample) => sample?.actors?.[institutionId]);
   if (seen.length < 2) return null;
 
@@ -152,7 +154,7 @@ export function observeSupplyRates(samples, institutionId) {
   const last = seen[seen.length - 1];
   const seconds = (last.t - first.t) / 1000;
   if (!(seconds > 0)) return null;
-  if (seconds < minimumObservationSeconds(institutionId)) return null;
+  if (seconds < minimumObservationSeconds(institutionId, state)) return null;
 
   const consumed = measureConsumed(first, last, institutionId);
   const supply = {};
@@ -167,7 +169,9 @@ export function observeSupplyRates(samples, institutionId) {
     supply[family] = Math.max(0, (to - from + (consumed[family] ?? 0)) / seconds);
   });
 
-  return { supply, observedSeconds: seconds, samples: seen.length, consumed };
+  const earlyCash = first.actors[institutionId].cash ?? 0;
+  const lateCash = last.actors[institutionId].cash ?? 0;
+  return { supply, observedSeconds: seconds, samples: seen.length, consumed, observedCashPerSecond: (lateCash - earlyCash) / seconds };
 }
 
 // ── The flow state ──────────────────────────────────────────────────────────
@@ -177,24 +181,30 @@ export function createRegionFlow(state, institutionId, { samples = [], at = Date
   const stock = Object.fromEntries(TRADED_FAMILIES.map((family) => [family, 0]));
   Object.entries(record?.inventories ?? {}).forEach(([resourceId, units]) => {
     const family = getResourceFamily(resourceId);
-    if (stock[family] !== undefined && units > 0) stock[family] += units;
+    if (stock[family] !== undefined && units > 0) stock[family] += units * getResourceEffectiveYield(resourceId);
   });
 
-  const observed = observeSupplyRates(samples, institutionId);
+  const observed = observeSupplyRates(samples, institutionId, state);
+  const populations = Object.fromEntries(Object.values(state.population?.populations ?? {})
+    .filter((population) => population.hubInstitutionId === institutionId)
+    .map((population) => [population.id, { cash: population.householdCash ?? 0, totalIncome: population.totalIncome ?? 0, totalSpent: population.totalSpent ?? 0 }]));
   return {
     version: FLOW_MODEL_VERSION,
     institutionId,
     at,
     stock,
     cash: record?.accounts?.operating?.balance ?? 0,
-    demand: deriveDemandRates(institutionId),
+    demand: deriveDemandRates(institutionId, state),
     // Null until the region has been watched long enough to know. Advancing a
     // flow with unknown supply is refused rather than assumed.
     supply: observed?.supply ?? null,
+    observedCashPerSecond: observed?.observedCashPerSecond ?? null,
+    populations,
     observedSeconds: observed?.observedSeconds ?? 0,
     // What the aggregate owes the world's books while it runs.
     burnedCumulative: 0,
     createdCumulative: 0,
+    revenueCumulative: 0,
   };
 }
 
@@ -212,6 +222,7 @@ export function advanceRegionFlow(flow, seconds) {
   let wantedTotal = 0;
   let drawnTotal = 0;
 
+  const familyMovement = {};
   TRADED_FAMILIES.forEach((family) => {
     const arriving = (flow.supply[family] ?? 0) * seconds;
     const wanted = (flow.demand.consumption[family] ?? 0) * seconds;
@@ -223,19 +234,42 @@ export function advanceRegionFlow(flow, seconds) {
     shortfall[family] = round2(wanted - drawn);
     wantedTotal += wanted;
     drawnTotal += drawn;
+    familyMovement[family] = { available, wanted, drawn };
   });
 
   // A settlement only pays for what it is actually handed, and a hub only burns
   // production credits on goods it actually finishes. Booking either at the
   // authored rate would have an empty hub quietly earning full revenue, which
   // is precisely the starvation case this world spends most of its time in.
-  const served = wantedTotal > 0 ? drawnTotal / wantedTotal : 1;
-  const revenue = flow.demand.householdSpendPerSecond * seconds * served;
+  const stockServed = wantedTotal > 0 ? drawnTotal / wantedTotal : 1;
+  const populationCash = Object.values(flow.populations ?? {}).reduce((sum, population) => sum + population.cash, 0);
+  const created = flow.demand.householdIncomePerSecond * seconds;
+  const wantedRevenue = flow.demand.householdSpendPerSecond * seconds * stockServed;
+  const payableRevenue = Math.min(wantedRevenue, populationCash + created);
+  const affordableFraction = wantedRevenue > 0 ? payableRevenue / wantedRevenue : 1;
+  const served = stockServed * affordableFraction;
+  const revenue = payableRevenue;
   const burned = flow.demand.productionBurnPerSecond * seconds * served;
+  // Stock reserved for an unaffordable purchase remains on the shelf.
+  Object.entries(familyMovement).forEach(([family, movement]) => {
+    const actuallyDrawn = movement.drawn * affordableFraction;
+    stock[family] = movement.available - actuallyDrawn;
+    shortfall[family] = round2(movement.wanted - actuallyDrawn);
+  });
   // Income is not earned from the shelf — households are paid regardless of
   // whether there is anything to buy, which is why their cash piles up in a
   // starved settlement instead of vanishing with the goods.
-  const created = flow.demand.householdIncomePerSecond * seconds;
+  const populationEntries = Object.entries(flow.populations ?? {});
+  const populationTotal = populationEntries.reduce((sum, [, population]) => sum + population.cash, 0);
+  const populations = Object.fromEntries(populationEntries.map(([id, population]) => {
+    const share = populationTotal > 0 ? population.cash / populationTotal : 1 / Math.max(1, populationEntries.length);
+    return [id, {
+      ...population,
+      cash: Math.max(0, population.cash + created * share - revenue * share),
+      totalIncome: population.totalIncome + created * share,
+      totalSpent: population.totalSpent + revenue * share,
+    }];
+  }));
 
   return {
     ...flow,
@@ -243,9 +277,14 @@ export function advanceRegionFlow(flow, seconds) {
     stock,
     shortfall,
     servedFraction: round2(served),
+    // Observed cash drift is retained as a diagnostic, but is not replayed: it
+    // can contain payments to detailed counterparties and applying only one
+    // side would create or destroy credits at the aggregation boundary.
     cash: flow.cash + revenue - burned,
+    populations,
     burnedCumulative: flow.burnedCumulative + burned,
     createdCumulative: flow.createdCumulative + created,
+    revenueCumulative: (flow.revenueCumulative ?? 0) + revenue,
     blocked: null,
   };
 }
@@ -253,7 +292,7 @@ export function advanceRegionFlow(flow, seconds) {
 // ── Is it close enough to be worth having? ──────────────────────────────────
 
 // How far the model has drifted from what the detailed simulation actually did.
-// The number Phase C has to justify itself against: an aggregate nobody has
+// The number the handoff continues to justify itself against: an aggregate nobody has
 // measured is a guess with extra steps.
 export function compareRegionFlow(flow, snapshot) {
   const actual = snapshot?.actors?.[flow.institutionId];

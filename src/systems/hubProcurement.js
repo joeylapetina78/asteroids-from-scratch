@@ -25,18 +25,19 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260818-2212-559e0fe";
-import { STANDING_MINING_ORDERS, getStandingMiningDefinitions } from "./miningOperation.js?v=fresh-20260818-2212-559e0fe";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260818-2212-559e0fe";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260818-2212-559e0fe";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260818-2212-559e0fe";
-import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260818-2212-559e0fe";
-import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260818-2212-559e0fe";
-import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260818-2212-559e0fe";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260818-2212-559e0fe";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260818-2212-559e0fe";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260819-0621-e0ba4c1";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260819-0621-e0ba4c1";
+import { STANDING_MINING_ORDERS, getStandingMiningDefinitions } from "./miningOperation.js?v=fresh-20260819-0621-e0ba4c1";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260819-0621-e0ba4c1";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260819-0621-e0ba4c1";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260819-0621-e0ba4c1";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260819-0621-e0ba4c1";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260819-0621-e0ba4c1";
+import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260819-0621-e0ba4c1";
+import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260819-0621-e0ba4c1";
+import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260819-0621-e0ba4c1";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260819-0621-e0ba4c1";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260819-0621-e0ba4c1";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -181,6 +182,7 @@ export function evaluateSupplierCandidates(state, {
       && (grant.limits?.resourceFamilies ?? []).includes(candidateFamily));
 
   return definitions
+    .filter((definition) => !isHubAggregated(state, definition.buyerInstitutionId))
     .filter((definition) => getResourceFamily(definition.resourceId) === family)
     .map((definition) => {
       const institutionId = definition.buyerInstitutionId;
@@ -305,7 +307,9 @@ export function getIncomingProcurement(state, buyerInstitutionId, family) {
 // Freight offers derived from orders whose goods actually exist. Shaped like a
 // standing template so the carrier market handles them with no special case.
 export function getProcurementFreightOffers(state) {
-  return listOrders(state, { status: PROCUREMENT_STATUS.READY }).map((order) => ({
+  return listOrders(state, { status: PROCUREMENT_STATUS.READY })
+    .filter((order) => !isHubAggregated(state, order.buyerInstitutionId) && !isHubAggregated(state, order.supplierInstitutionId))
+    .map((order) => ({
     id: `procurement-${order.id}`,
     procurementOrderId: order.id,
     dynamic: true,
@@ -438,6 +442,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   // ── 1 & 2: a gap in a family this hub may not mine becomes an order ──────
   function postNeeds(tick = 0) {
     listSettlementIds(state).forEach((buyerInstitutionId) => {
+      if (isHubAggregated(state, buyerInstitutionId)) return;
       const buyer = institution(buyerInstitutionId);
       if (!buyer) return;
       // How closely this settlement is being simulated. A hub nobody is near
@@ -679,6 +684,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   function updateSupplierAsks() {
     getStandingMiningDefinitions(state).forEach((definition) => {
       const supplierInstitutionId = definition.buyerInstitutionId;
+      if (isHubAggregated(state, supplierInstitutionId)) return;
       if (!institution(supplierInstitutionId)) return;
       const record = askRecord(supplierInstitutionId, definition.resourceId);
       const policy = negotiationPolicy(supplierInstitutionId);

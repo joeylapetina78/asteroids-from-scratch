@@ -1,11 +1,12 @@
-import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260818-2212-559e0fe";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260818-2212-559e0fe";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260818-2212-559e0fe";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260818-2212-559e0fe";
-import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
-import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260818-2212-559e0fe";
-import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260818-2212-559e0fe";
-import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260818-2212-559e0fe";
+import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260819-0621-e0ba4c1";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260819-0621-e0ba4c1";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260819-0621-e0ba4c1";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260819-0621-e0ba4c1";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260819-0621-e0ba4c1";
+import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260819-0621-e0ba4c1";
+import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260819-0621-e0ba4c1";
+import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260819-0621-e0ba4c1";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260819-0621-e0ba4c1";
 
 export const INDUSTRIAL_PARTS = Object.freeze(["hull-plate", "machine-part"]);
 
@@ -59,6 +60,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
 
   function finishFactoryConstruction() {
     Object.values(industrial.constructionProjects).forEach((project) => {
+      if (isHubAggregated(state, project.institutionId)) return;
       if (project.status !== "building" || project.completesAt > now()) return;
       industrial.factories[project.factory.id] = project.factory;
       project.status = "completed";
@@ -89,6 +91,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
 
   function finishRuns() {
     Object.values(industrial.factories).forEach((factory) => {
+      if (isHubAggregated(state, factory.institutionId)) return;
       const run = factory.activeRun;
       if (!run || run.completesAt > now()) return;
       const hub = factoryHub(factory);
@@ -119,6 +122,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
   // and the business can continue after its opening inventory is consumed.
   function replenishSpinoutInputs() {
     Object.values(industrial.factories).filter((factory) => factory.spinoutInstitutionId).forEach((factory) => {
+      if (isHubAggregated(state, factory.institutionId) || isHubAggregated(state, factory.formerInstitutionId)) return;
       const business = factoryHub(factory);
       const parent = institutions()[factory.formerInstitutionId];
       if (!business?.accounts?.operating || !parent?.accounts?.operating) return;
@@ -153,6 +157,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
 
   function startRuns() {
     Object.values(industrial.factories).forEach((factory) => {
+      if (isHubAggregated(state, factory.institutionId)) return;
       if (factory.activeRun) return;
       const hub = factoryHub(factory);
       if (!hub?.accounts?.operating) return;
@@ -199,7 +204,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
 
   function postPartOrders() {
     const buyer = institutions()[SCRAP_PORCH_ID];
-    if (!buyer?.accounts?.operating) return;
+    if (!buyer?.accounts?.operating || isHubAggregated(state, SCRAP_PORCH_ID)) return;
     INDUSTRIAL_PARTS.forEach((part) => {
       const existingOrders = openPartOrders(part);
       if (existingOrders.length >= MAX_OPEN_PART_ORDERS) return;
@@ -207,6 +212,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
       if (shortage <= 0) return;
       const committedSuppliers = new Set(existingOrders.map((order) => order.supplierInstitutionId));
       const candidates = Object.values(industrial.factories)
+        .filter((factory) => !isHubAggregated(state, factory.institutionId))
         .filter((factory) => factory.recipes.some((recipe) => recipe.output === part))
         .filter((factory) => !committedSuppliers.has(factory.institutionId))
         .map((factory) => ({
@@ -269,7 +275,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
         .forEach((project) => existingOwners.add(project.institutionId));
       const candidates = Object.values(institutions())
         .filter((hub) => hub.archetypeId === "settlement" && hub.siteId && !existingOwners.has(hub.id)
-          && hub.accounts?.operating && (hub.renewableResources?.length ?? 0) > 0)
+          && hub.accounts?.operating && (hub.renewableResources?.length ?? 0) > 0 && !isHubAggregated(state, hub.id))
         .map((hub) => {
           const localInput = hub.renewableResources.find((resourceId) => getResourceFamily(resourceId) === preferredFamily)
             ?? hub.renewableResources[0];
@@ -363,7 +369,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
   // crosses an imaginary counter inside the same institution.
   function transferLocalPartsToSprc() {
     const porch = institutions()[SCRAP_PORCH_ID];
-    if (!porch || !state.sprc?.account) return;
+    if (!porch || !state.sprc?.account || isHubAggregated(state, SCRAP_PORCH_ID)) return;
     INDUSTRIAL_PARTS.forEach((part) => {
       const available = Math.floor(porch.inventories?.[part] ?? 0);
       if (available <= 0) return;

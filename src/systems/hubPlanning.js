@@ -1,6 +1,7 @@
-import { actorHasCapability } from "./assetCapabilities.js?v=fresh-20260818-2212-559e0fe";
-import { appendHubHistory, getHubActor, listHubActors, upsertHubProject } from "./hubActors.js?v=fresh-20260818-2212-559e0fe";
-import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
+import { actorHasCapability } from "./assetCapabilities.js?v=fresh-20260819-0621-e0ba4c1";
+import { appendHubHistory, getHubActor, listHubActors, upsertHubProject } from "./hubActors.js?v=fresh-20260819-0621-e0ba4c1";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260819-0621-e0ba4c1";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260819-0621-e0ba4c1";
 
 export const HUB_RESPONSE_KIND = Object.freeze({
   IMPORT: "import",
@@ -118,7 +119,7 @@ export function planHubNeed(state, hubId, needId, at = Date.now()) {
 
 export function createHubPlanningOperation({ state, now = () => Date.now() } = {}) {
   function decide() {
-    listHubActors(state, { at: now() }).forEach((hub) => {
+    listHubActors(state, { at: now() }).filter((hub) => !isHubAggregated(state, hub.id)).forEach((hub) => {
       Object.values(hub.durable.needs).filter((need) => need.status === "open")
         .forEach((need) => planHubNeed(state, hub.id, need.id, now()));
     });

@@ -1,9 +1,9 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260818-2212-559e0fe";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260818-2212-559e0fe";
-import { ensureObligations } from "./obligations.js?v=fresh-20260818-2212-559e0fe";
-import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260818-2212-559e0fe";
-import { consolidateSprcOwnership } from "./sprcOwnership.js?v=fresh-20260818-2212-559e0fe";
-import { listGeneratedSettlements, materializeSettlementAuthority } from "./settlementSeedPipeline.js?v=fresh-20260818-2212-559e0fe";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260819-0621-e0ba4c1";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260819-0621-e0ba4c1";
+import { ensureObligations } from "./obligations.js?v=fresh-20260819-0621-e0ba4c1";
+import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260819-0621-e0ba4c1";
+import { consolidateSprcOwnership } from "./sprcOwnership.js?v=fresh-20260819-0621-e0ba4c1";
+import { listGeneratedSettlements, materializeSettlementAuthority } from "./settlementSeedPipeline.js?v=fresh-20260819-0621-e0ba4c1";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 
@@ -80,6 +80,7 @@ export function loadSavedProfile(state) {
     mergePlainObject(state.worldRecords, save.worldRecords);
     mergePlainObject(state.authorities, save.authorities);
     mergePlainObject(state.settlements, save.settlements);
+    mergePlainObject(state.distantSimulation, save.distantSimulation);
     if (save.wrecks) state.wrecks = cloneJsonSafe(save.wrecks);
     mergePlainObject(state.sprc, save.sprc);
     mergePlainObject(state.logistics, save.logistics);
@@ -139,6 +140,7 @@ export function saveProfile({ state, game, cargoHold }) {
     worldRecords: cloneJsonSafe(state.worldRecords),
     authorities: cloneJsonSafe(state.authorities),
     settlements: cloneJsonSafe(state.settlements),
+    distantSimulation: cloneJsonSafe(state.distantSimulation),
     wrecks: cloneJsonSafe(state.wrecks),
     ledger: state.ledger?.getSaveSnapshot?.() ?? null,
     sprc: cloneJsonSafe(state.sprc),

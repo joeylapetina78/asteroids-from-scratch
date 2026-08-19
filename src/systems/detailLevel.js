@@ -1,5 +1,6 @@
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260818-2212-559e0fe";
-import { getWorldSites } from "./worldSites.js?v=fresh-20260818-2212-559e0fe";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260819-0621-e0ba4c1";
+import { getWorldSites } from "./worldSites.js?v=fresh-20260819-0621-e0ba4c1";
+import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260819-0621-e0ba4c1";
 
 // How closely the world is simulated, place by place.
 //
@@ -62,7 +63,8 @@ export function clearSimulationFocus(state) {
 // treated as NEAR. That is deliberate: something whose position is unknown must
 // not be quietly downgraded, because "I could not place it" is not evidence
 // that nobody is looking at it.
-export function getActorPosition(state, actorId, sites = getWorldSites()) {
+export function getActorPosition(state, actorId, sites = null) {
+  sites ??= getRuntimeSimulationSites(state);
   const record = findActorRecord(state, actorId);
   if (!record) return null;
   if (Number.isFinite(record.position?.x) && Number.isFinite(record.position?.y)) {
@@ -74,7 +76,8 @@ export function getActorPosition(state, actorId, sites = getWorldSites()) {
   return site?.position ? { x: site.position.x, y: site.position.y } : null;
 }
 
-export function resolveDetailLevel(state, actorId, { policy = DETAIL_DEFAULTS, sites = getWorldSites() } = {}) {
+export function resolveDetailLevel(state, actorId, { policy = DETAIL_DEFAULTS, sites = null } = {}) {
+  sites ??= getRuntimeSimulationSites(state);
   const focus = getSimulationFocus(state);
   if (focus.length === 0) return DETAIL.NEAR;
 
@@ -116,7 +119,8 @@ function actorPhase(actorId, everyTicks) {
 }
 
 // Should this actor act on this tick? NEAR always answers true.
-export function shouldActThisTick(state, actorId, { tick = 0, policy = DETAIL_DEFAULTS, sites = getWorldSites(), level = null } = {}) {
+export function shouldActThisTick(state, actorId, { tick = 0, policy = DETAIL_DEFAULTS, sites = null, level = null } = {}) {
+  sites ??= getRuntimeSimulationSites(state);
   const resolved = level ?? resolveDetailLevel(state, actorId, { policy, sites });
   const everyTicks = detailCadence(resolved, policy);
   if (everyTicks <= 1) return true;
@@ -125,7 +129,8 @@ export function shouldActThisTick(state, actorId, { tick = 0, policy = DETAIL_DE
 
 // What the world currently looks like, for diagnostics and for measuring what a
 // detail policy actually buys before trusting it.
-export function summarizeDetail(state, actorIds, { policy = DETAIL_DEFAULTS, sites = getWorldSites() } = {}) {
+export function summarizeDetail(state, actorIds, { policy = DETAIL_DEFAULTS, sites = null } = {}) {
+  sites ??= getRuntimeSimulationSites(state);
   const counts = { [DETAIL.NEAR]: 0, [DETAIL.MID]: 0, [DETAIL.FAR]: 0 };
   actorIds.forEach((actorId) => { counts[resolveDetailLevel(state, actorId, { policy, sites })] += 1; });
   // Expected share of full-detail work, if every actor were equally expensive.
@@ -134,4 +139,9 @@ export function summarizeDetail(state, actorIds, { policy = DETAIL_DEFAULTS, sit
     + counts[DETAIL.MID] / detailCadence(DETAIL.MID, policy)
     + counts[DETAIL.FAR] / detailCadence(DETAIL.FAR, policy)) / total;
   return { counts, total: actorIds.length, workShare };
+}
+
+export function getRuntimeSimulationSites(state) {
+  const generated = listGeneratedSettlements(state).filter((seed) => seed.geography?.position).map((seed) => seed.geography);
+  return [...getWorldSites(), ...generated.filter((site) => !getWorldSites().some((existing) => existing.id === site.id))];
 }
