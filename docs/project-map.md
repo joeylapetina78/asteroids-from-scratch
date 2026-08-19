@@ -103,6 +103,16 @@ state = {
   hulls,            // { activeHullVin, records } - VIN-centered hull/component records
   obligations,      // { records } - loans/debts and future owed duties
   worldRecords,     // { entities, documents, places, authorityGrants, registries, relationships } - generic world facts
+  authorities,      // rights-selling institutional authority treasuries and catalogs
+  settlements,      // durable generated settlement seeds
+  distantSimulation,// per-hub detail mode, regional flow and transition history
+  logistics,        // institutions, haulers, shipments, movements, containers
+  population,       // households, needs, production, operators and labor assignments
+  hubProcurement,   // purchase orders, reservations and supplier state
+  industrial,       // factories, recipes, runs and construction projects
+  npcDevelopment,   // operational careers, bespoke promotions and spinouts
+  relationships,    // live institutional relationship projections
+  sprc, towing,     // repair/recovery and tow operations
   legal,            // { pilotLicense, currentShip, pilotLicenses, shipTitles, registrations, liens, paperwork }
   ship,             // { frameId, name, shape, purchasedOfferId }
   credits,          // compatibility mirror of current cash account balance
@@ -319,6 +329,58 @@ Asteroids are chunk-streamed around the ship. Dynamic fragments remain live unti
 
 [src/systems/saveManager.js](../src/systems/saveManager.js)  temporary browser-local playtest save in `localStorage`. Stores components, credits, debt, contracts, ship frame, journey mission pointer, cargo, world position. Not a durable account system. Save key may be bumped during architecture cleanup.
 
+It now also preserves the live institutional terrarium slices: settlement seeds,
+logistics, population and labor, procurement, industry, NPC development,
+relationships, territories/authority source data, and distant-simulation state.
+Derived authority projections for generated settlements are rebuilt from their
+durable seeds. Browser saves remain test data rather than a compatibility promise.
+
+### Institutional hubs and asset capabilities
+
+[src/systems/hubActors.js](../src/systems/hubActors.js) exposes the one coherent
+live actor surface for each of the nine settlements. It points to domain-owned
+treasury, inventory, population, labor, assets, capabilities, facilities,
+policies, relationships, needs, projects, trade records and durable history.
+
+[src/systems/assetCapabilities.js](../src/systems/assetCapabilities.js) derives
+capabilities and offer types from controlled assets. New domains publish asset
+sources instead of adding actor-type conditionals. [src/systems/hubPlanning.js](../src/systems/hubPlanning.js)
+records general needs and chooses feasible projects; population, money, material
+and time remain real constraints.
+
+[src/systems/populationLabor.js](../src/systems/populationLabor.js) creates finite
+labor assignments and named operational NPCs. [src/systems/npcDevelopment.js](../src/systems/npcDevelopment.js)
+promotes them from career evidence and can spin a proven municipal factory into
+an independent business without cloning its operator, asset or inventory.
+
+[src/systems/settlementSeedPipeline.js](../src/systems/settlementSeedPipeline.js)
+is the common constructor for authored and procedural settlements. Registration
+materializes the same logistics, population, extraction, patrol, actor, place,
+territory and authority projections; it does not prescribe routes or suppliers.
+
+### Territory and rights
+
+[src/systems/hubTerritories.js](../src/systems/hubTerritories.js) derives the nine
+colored institutional jurisdictions from shared geography. [src/systems/operatingRights.js](../src/systems/operatingRights.js)
+and [src/systems/rightsAuthority.js](../src/systems/rightsAuthority.js) connect the
+Travel Authority's hub work passes to real scoped grants and issuing treasuries.
+Unclaimed space and transit are currently open; mining inside a claimed territory
+requires that hub's work pass.
+
+### Distant simulation
+
+[src/systems/detailLevel.js](../src/systems/detailLevel.js) classifies live authored
+and generated geography as NEAR, MID or FAR from the player focus.
+[src/systems/regionFlow.js](../src/systems/regionFlow.js) models a settlement's
+exact population demand against its observed material supply rate.
+
+[src/systems/distantSimulation.js](../src/systems/distantSimulation.js) transfers
+a FAR, quiescent hub to regional flow and restores detailed operation on approach
+around the exact same institutional actor. Open orders, shipments, extraction,
+production, industry and protection block the handoff rather than being dropped.
+[src/systems/simulationMode.js](../src/systems/simulationMode.js) is the small
+dependency-safe gate domain planners read while a hub is aggregate.
+
 ### Patrol And Protection
 
 [src/systems/patrolOperations.js](../src/systems/patrolOperations.js) owns settlement watch institutions and their durable craft. Only direct and hybrid protection policies synthesize local watch capacity; contract-only settlements depend on the protection market.
@@ -346,6 +408,9 @@ Current values: fuel cargo 15 cr, crystal cargo 75 cr, repair 2 cr/hull point, d
 - Mission beat system with beat-range considerations
 - Component panels as ship hardware (non-hardware panels separated)
 - Event ledger as the shared memory spine
+- Nine settlements as preserved institutional NPCs with asset-derived capabilities
+- Authored/procedural settlement convergence through one seed pipeline
+- Quiescent distant economic aggregation and identity-preserving restoration
 
 **Active pressure points:**
 - `game.js` is doing many jobs: simulation loop, collision, docking, particles, economy hooks, title cards, debug. Needs extraction passes.
@@ -353,9 +418,17 @@ Current values: fuel cargo 15 cr, crystal cargo 75 cr, repair 2 cr/hull point, d
 - `requiresCondition` is a JS function in some mission transitions  blocks JSON serialization needed for the mission designer backend. Needs a declarative replacement (e.g. `requiresPayloadField`).
 - Cache-busted `?v=` import strings must be kept aligned manually when changing modules.
 - Event ledger is in-memory only. Future profile saves should decide which stats and how much history persists.
+- Busy distant hubs may remain detailed forever because active obligations correctly block aggregation; measure this before designing transactional checkpoints.
+- Regional supply rates become stale over long absences and need bounded re-observation/re-synchronization.
+- Physical operational craft and ecology do not yet aggregate into regional cohorts.
+- Aggregate-to-aggregate material and credit clearing is not yet a conserved two-sided network.
 
 **Near-term architecture priorities:**
-- General document/authority framework replacing one-off legal systems
+- First-class Observatory visibility for simulation detail, blockers, observation age, transitions and drift
+- Re-synchronization and conserved checkpoints for distant hubs
+- Physical operational-population aggregation with bespoke actors preserved as anchors
+- Procedural surveying and settlement founding through the shared institutional seed pipeline
+- Territorial upkeep, benefits, negotiation and conflict through assets and authority
 - Declarative condition replacements for `requiresCondition` in mission/contract rules
 - Sub-beat sequences for NPC interactions (tow driver, patrol, repair)
 - Contract and hub consideration systems (ambient chatter scoped to active contract or docked hub)

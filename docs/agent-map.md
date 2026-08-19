@@ -1,6 +1,6 @@
 # Agent Map
 
-This is the short re-entry map for future coding passes. Read [HANDOFF.md](HANDOFF.md) first for the August 2026 six-hub checkpoint, then use this file before broad code archaeology.
+This is the short re-entry map for future coding passes. Read [HANDOFF.md](HANDOFF.md) first for the current nine-hub institutional and distant-simulation checkpoint, then use this file before broad code archaeology. The dated August 6 session note is historical context.
 
 ## Current North Star
 
@@ -20,6 +20,10 @@ Asteroids RPG is a world-centric institutional space sim. The player controls on
 - `docs/comms-attention-roadmap.md` is the source of truth for Journey, viewport chatter, target arrows, and visual attention. Read it before adding a prompt, highlight, or UI callout.
 - `docs/tag-registry.md` defines the world-tag vocabulary and its live system readers. Read it before adding or repurposing a zone or region tag.
 - `docs/HANDOFF.md` records the current economy, institution, mining, freight, recovery, corridor, known-risk, and recommended-next-step state.
+- `docs/institutional-npcs-and-assets.md` documents the unified hub actor, asset-derived capability model, population labor, promotion/spinout, and shared settlement seed pipeline.
+- `docs/level-of-detail.md` documents the live NEAR/MID/FAR cadence and distant economic aggregation/restoration boundary.
+- `src/systems/hubActors.js`, `assetCapabilities.js`, `hubPlanning.js`, and `settlementSeedPipeline.js` are the institutional terrarium core.
+- `src/systems/detailLevel.js`, `regionFlow.js`, `simulationMode.js`, and `distantSimulation.js` are the distant-simulation core.
 - `docs/session-2026-08-06.md` records the completed week of six-hub, public-contract, patrol, wear, salvage, observability, substitution, and carrier-capacity work.
 
 ## Important Invariants

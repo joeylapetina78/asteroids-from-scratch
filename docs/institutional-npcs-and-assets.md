@@ -164,11 +164,16 @@ Completed: general project planning; operational-NPC promotion and spinout;
 territorial authority and player access foundation; one authored/generated hub
 seed pipeline.
 
+Completed after the foundation: distant aggregation and restoration around
+preserved institutional actors. See `distantSimulation.js` and
+[level-of-detail.md](level-of-detail.md).
+
 Next:
 
-1. Distant aggregation and restoration around preserved actors.
-2. Territorial surveying, claims, upkeep, negotiation and conflict.
-3. Incremental reintroduction of asymmetry.
+1. Observe and bound long-run aggregate drift and busy-hub blockers.
+2. Aggregate operational/physical populations while keeping bespoke actors as anchors.
+3. Territorial surveying, claims, upkeep, negotiation and conflict.
+4. Incremental reintroduction of asymmetry.
 
 ## Shared settlement seed pipeline
 

@@ -4,7 +4,9 @@ Step 4 of the general-engine direction. The world should be able to grow without
 the cost of simulating it growing with it, which means distant places have to be
 cheaper than near ones without becoming obviously fake when the player arrives.
 
-Three phases. A and B are built; C is not.
+All three original phases are now built. Phase C deliberately begins with a
+quiescent-only handoff; active transactional and physical populations are the
+next expansion of the boundary.
 
 ---
 
@@ -20,13 +22,14 @@ Two properties worth keeping:
 - **Cadence is hash-offset per actor.** Deferred work is spread across ticks
   instead of bunching into one expensive frame every _n_ ticks.
 
-**Phase A is currently inert in the running game: nothing calls
-`setSimulationFocus`.** That is deliberate — see the dependency below.
+`src/main.js` now updates `simulationFocus` from the player ship at the start of
+each world-clock tick. The runtime therefore classifies all nine hubs and any
+registered procedural geography as NEAR, MID or FAR.
 
 Measured saving today: ~7%. Small, because a settlement's per-tick cost is
 already low; the saving that matters is the one Phase C unlocks.
 
-## Phase B — model a place as rates (built, not wired)
+## Phase B — model a place as rates (built and wired conservatively)
 
 `src/systems/regionFlow.js`. A place simulated as flows rather than transactions,
 throwing away negotiation, supplier contention, individual carriers and every
@@ -92,25 +95,49 @@ a number extrapolated from a single old window.
 Reproduce with the measurement harness pattern in
 `tests/regionFlow.test.mjs` ("the model is measured against a real detailed run").
 
-## Phase C — restore detail on approach (not built)
+## Phase C — restore detail on approach (built, quiescent boundary)
 
-**Nothing switches to rates until this exists, and that is the whole reason B is
-unwired.** A place cannot stop being simulated in detail until that detail can be
-put back. Drop a far settlement to rates today and the moment the player flies
-out there it has no contracts, no orders and no carrier mid-run — just a number.
+`src/systems/distantSimulation.js` owns the live handoff and
+`src/systems/simulationMode.js` provides the lightweight gate read by domain
+systems.
 
-What C owes:
+A FAR institutional hub is not collapsed merely because it crossed a radius. It
+must remain far for the policy window, have a sufficiently long observed supply
+history, and have no open procurement orders, active shipments, extraction
+allocations, population production, industrial work or protection requests.
+Only then does its flow take custody and the detailed planners stop acting for
+that hub.
 
-- Materialise plausible detail from a flow state on approach: open orders and
-  in-flight freight consistent with the region's stock and supply rate.
-- Re-observe or re-sync on the timescale the measurement above allows.
-- Preserve the books. `burnedCumulative` / `createdCumulative` exist on a flow so
-  an aggregated region still reconciles against `reconcileMoney` while nobody is
-  watching the transactions that cause it.
+The flow writes material-family stock, treasury cash, household cash, income,
+spending, revenue and production burn back into the live authoritative records.
+Stock is measured in effective material units, so higher-yield substitutes do
+not change quantity during the round trip. Households cannot consume stock they
+could not afford. Observed external cash drift remains diagnostic rather than
+being replayed one-sided across the aggregate boundary.
+
+Approach first advances the flow to the restoration instant, writes it back,
+resets population cadences to avoid a catch-up burst, and switches the same hub
+actor to detailed mode. The institution and its durable `hubState` are never
+reconstructed. Authored and procedurally generated hubs pass through this same
+boundary. Saves retain aggregate state but do not simulate wall-clock time spent
+with the browser closed.
+
+Covered by `tests/distantSimulation.test.mjs`: quiescent entry, obligation
+blocking, live accounting, identity-preserving restoration, procedural-hub
+parity, and household affordability.
+
+What the next phase still owes:
+
+- expose transition state, blockers, observation age and drift in the Observatory;
+- re-observe/re-sync before a measured supply rate becomes stale;
+- checkpoint perpetually active orders and shipments without weakening conservation;
+- aggregate and restore physical haulers, miners, patrols and ecology as regional
+  populations while preserving bespoke actors, title, cargo and condition;
+- represent both sides of aggregate-to-aggregate trade and cash clearing.
 
 ---
 
-## Two content findings surfaced along the way
+## Content findings surfaced along the way
 
 Neither is a bug in the level-of-detail work; both are things aggregation made
 visible, recorded here so they are not rediscovered.
@@ -119,6 +146,7 @@ visible, recorded here so they are not rediscovered.
   settlements carry the same four needs at the same intervals, so derived
   consumption and production burn are byte-identical across the map. Only
   household income differs (6000 / 3000 / 2600 / 2400 per minute).
-- **`population.size` does not affect consumption.** Sizes are authored
-  (140 / 85 / 70 / 60) and read only by `protectionPlanning`. A settlement of 60
-  eats exactly as much as one of 140.
+- **Population size now scales demand cadence.** Yard Exchange remains the
+  reference population; smaller communities wait proportionally longer between
+  needs. The aggregate reads those same scaled intervals rather than maintaining
+  a second appetite estimate.
