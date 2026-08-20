@@ -60,12 +60,40 @@ test("a quiescent far hub aggregates and restores around the same institutional 
   assert.equal(state.distantSimulation.transitions.at(-1).type, "restored");
 });
 
-test("transactional obligations keep a far hub detailed until they clear", () => {
+test("work done TO a far hub no longer keeps it detailed", () => {
+  // Counterparty work — an order somebody else is filling, cargo already in
+  // flight — used to block, because the aggregate would have overwritten the
+  // delivery. It reads live state before writing now, so this can keep running.
   const state = createObservedWorld();
-  state.hubProcurement.orders.blocker = {
-    id: "blocker", buyerInstitutionId: HUB_ID, supplierInstitutionId: "yard-exchange", status: "offered",
+  state.hubProcurement.orders.inbound = {
+    id: "inbound", buyerInstitutionId: HUB_ID, supplierInstitutionId: "yard-exchange", status: "offered",
   };
-  assert.deepEqual(explainAggregationEligibility(state, HUB_ID), { eligible: false, blockers: ["open-orders:1"] });
+  state.logistics.shipments.enroute = {
+    id: "enroute", status: "loaded", destinationInstitutionId: HUB_ID, destinationSiteId: "coldwater-depot",
+  };
+  assert.deepEqual(explainAggregationEligibility(state, HUB_ID), { eligible: true, blockers: [] });
+
+  const operation = createDistantSimulationOperation({
+    state,
+    getFocusPoints: () => [{ x: 380, y: -180 }],
+    now: () => FAR_ENOUGH_HISTORY_MS,
+    policy: { aggregateAfterMs: 0 },
+  });
+  operation.observe();
+  assert.equal(isHubAggregated(state, HUB_ID), true);
+});
+
+test("a hub's own internal work still keeps it detailed", () => {
+  // Production the hub is running itself is work the FLOW also models. Letting
+  // both run would count the same activity twice, so this still blocks until it
+  // has a conserved checkpoint of its own.
+  const state = createObservedWorld();
+  state.population.productionOrders = {
+    run: { id: "run", hubInstitutionId: HUB_ID, status: "producing" },
+  };
+  assert.deepEqual(explainAggregationEligibility(state, HUB_ID), {
+    eligible: false, blockers: ["population-production:1"],
+  });
 
   const operation = createDistantSimulationOperation({
     state,
@@ -75,7 +103,7 @@ test("transactional obligations keep a far hub detailed until they clear", () =>
   });
   operation.observe();
   assert.equal(isHubAggregated(state, HUB_ID), false);
-  assert.deepEqual(state.distantSimulation.hubs[HUB_ID].blockers, ["open-orders:1"]);
+  assert.deepEqual(state.distantSimulation.hubs[HUB_ID].blockers, ["population-production:1"]);
 });
 
 test("a procedural hub uses the same aggregate and restoration boundary", () => {

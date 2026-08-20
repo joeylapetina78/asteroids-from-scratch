@@ -1,6 +1,6 @@
-import { TRADED_FAMILIES, getFamilyConsumptionRates } from "./hubInventory.js?v=fresh-20260819-0621-e0ba4c1";
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260819-0621-e0ba4c1";
-import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260819-0621-e0ba4c1";
+import { TRADED_FAMILIES, getFamilyConsumptionRates } from "./hubInventory.js?v=fresh-20260820-0645-f8c9397";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-0645-f8c9397";
+import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260820-0645-f8c9397";
 
 // A place simulated as RATES rather than as transactions. Step 4, Phase B.
 //
@@ -174,6 +174,25 @@ export function observeSupplyRates(samples, institutionId, state = null) {
   return { supply, observedSeconds: seconds, samples: seen.length, consumed, observedCashPerSecond: (lateCash - earlyCash) / seconds };
 }
 
+// How much history a region actually has, against how much it needs.
+//
+// `observeSupplyRates` answers this with a null, which is the right answer for a
+// caller deciding whether to advance and the wrong one for a reader asking why
+// nothing has happened. "Not enough history" and "how much short am I" are
+// different questions, and only the second one tells you whether to keep
+// waiting or to go and look at something else.
+export function describeObservation(samples, institutionId, state = null) {
+  const seen = samples.filter((sample) => sample?.actors?.[institutionId]);
+  const availableSeconds = seen.length >= 2 ? (seen[seen.length - 1].t - seen[0].t) / 1000 : 0;
+  const requiredSeconds = minimumObservationSeconds(institutionId, state);
+  return {
+    availableSeconds,
+    requiredSeconds,
+    samples: seen.length,
+    sufficient: seen.length >= 2 && availableSeconds >= requiredSeconds,
+  };
+}
+
 // ── The flow state ──────────────────────────────────────────────────────────
 
 export function createRegionFlow(state, institutionId, { samples = [], at = Date.now() } = {}) {
@@ -187,7 +206,16 @@ export function createRegionFlow(state, institutionId, { samples = [], at = Date
   const observed = observeSupplyRates(samples, institutionId, state);
   const populations = Object.fromEntries(Object.values(state.population?.populations ?? {})
     .filter((population) => population.hubInstitutionId === institutionId)
-    .map((population) => [population.id, { cash: population.householdCash ?? 0, totalIncome: population.totalIncome ?? 0, totalSpent: population.totalSpent ?? 0 }]));
+    .map((population) => [population.id, {
+      cash: population.householdCash ?? 0,
+      totalIncome: population.totalIncome ?? 0,
+      totalSpent: population.totalSpent ?? 0,
+      totalDiscarded: population.totalDiscarded ?? 0,
+      // The income faucet's valve. Without it the aggregate keeps creating
+      // credits the detailed path would have discarded, and the two models
+      // disagree about how much money exists.
+      cashCap: population.householdCashCap ?? null,
+    }]));
   return {
     version: FLOW_MODEL_VERSION,
     institutionId,
@@ -204,6 +232,7 @@ export function createRegionFlow(state, institutionId, { samples = [], at = Date
     // What the aggregate owes the world's books while it runs.
     burnedCumulative: 0,
     createdCumulative: 0,
+    discardedCumulative: 0,
     revenueCumulative: 0,
   };
 }
@@ -213,7 +242,17 @@ export function createRegionFlow(state, institutionId, { samples = [], at = Date
 // Refuses rather than guesses when supply is unknown: an aggregate that assumes
 // nothing arrives would drain a working settlement to empty and then report a
 // famine that the detailed simulation never had.
-export function advanceRegionFlow(flow, seconds) {
+// `externalInflow` is material that REALLY arrived at this region since the last
+// step — a hauler that was already carrying its cargo, an extraction allocation
+// finishing, a supplier shipping out. It is netted against the modelled supply
+// rather than added to it.
+//
+// Without netting, a region with live freight still running would be credited
+// twice: once by the rate this model observed, and once by the delivery that
+// actually landed. The observed rate is a description of that same freight, not
+// a second source of it. So reality is counted first and the model only makes up
+// the difference — and when reality covers everything, the model adds nothing.
+export function advanceRegionFlow(flow, seconds, { externalInflow = null } = {}) {
   if (!flow || !(seconds > 0)) return flow;
   if (!flow.supply) return { ...flow, blocked: "supply-rate-unknown" };
 
@@ -224,7 +263,9 @@ export function advanceRegionFlow(flow, seconds) {
 
   const familyMovement = {};
   TRADED_FAMILIES.forEach((family) => {
-    const arriving = (flow.supply[family] ?? 0) * seconds;
+    const modelled = (flow.supply[family] ?? 0) * seconds;
+    // Reality first; the model supplies only the shortfall.
+    const arriving = Math.max(0, modelled - Math.max(0, externalInflow?.[family] ?? 0));
     const wanted = (flow.demand.consumption[family] ?? 0) * seconds;
     const available = stock[family] + arriving;
     // A shelf cannot go below empty, and what could not be consumed was not
@@ -242,10 +283,41 @@ export function advanceRegionFlow(flow, seconds) {
   // authored rate would have an empty hub quietly earning full revenue, which
   // is precisely the starvation case this world spends most of its time in.
   const stockServed = wantedTotal > 0 ? drawnTotal / wantedTotal : 1;
-  const populationCash = Object.values(flow.populations ?? {}).reduce((sum, population) => sum + population.cash, 0);
-  const created = flow.demand.householdIncomePerSecond * seconds;
+  const populationEntries = Object.entries(flow.populations ?? {});
+  const populationCash = populationEntries.reduce((sum, [, population]) => sum + population.cash, 0);
+  const populationTotal = populationCash;
+  const shareOf = (population, index) => (populationTotal > 0
+    ? population.cash / populationTotal
+    : 1 / Math.max(1, populationEntries.length));
+
+  // INCOME IS SETTLED FIRST, and it is settled through the cap.
+  //
+  // The order matters and getting it wrong mints money. Income is credited only
+  // up to each household's cash cap, exactly as the detailed path does, and the
+  // surplus is DISCARDED — never created. What a settlement can then afford has
+  // to be judged against the income it ACTUALLY received, not against the income
+  // the rate would have paid an uncapped household.
+  //
+  // An eight-hour unattended run found the difference. Every household ends up
+  // pinned at its cap; there the affordability test was still reading the
+  // uncapped rate, so hubs were paid revenue out of income their people never
+  // got. A poor household at its cap could be billed 900 while holding 50, and
+  // the missing 850 was minted into the hub's treasury.
+  let discarded = 0;
+  let createdReceived = 0;
+  const incomeByPopulation = populationEntries.map(([id, population], index) => {
+    const income = flow.demand.householdIncomePerSecond * seconds * shareOf(population, index);
+    const room = Number.isFinite(population.cashCap) ? Math.max(0, population.cashCap - population.cash) : income;
+    const receivedIncome = Math.min(income, room);
+    discarded += income - receivedIncome;
+    createdReceived += receivedIncome;
+    return { id, population, receivedIncome, refused: income - receivedIncome, share: shareOf(population, index) };
+  });
+
   const wantedRevenue = flow.demand.householdSpendPerSecond * seconds * stockServed;
-  const payableRevenue = Math.min(wantedRevenue, populationCash + created);
+  // Households can only spend money that exists: what they already hold plus
+  // what the faucet actually gave them.
+  const payableRevenue = Math.min(wantedRevenue, populationCash + createdReceived);
   const affordableFraction = wantedRevenue > 0 ? payableRevenue / wantedRevenue : 1;
   const served = stockServed * affordableFraction;
   const revenue = payableRevenue;
@@ -259,15 +331,14 @@ export function advanceRegionFlow(flow, seconds) {
   // Income is not earned from the shelf — households are paid regardless of
   // whether there is anything to buy, which is why their cash piles up in a
   // starved settlement instead of vanishing with the goods.
-  const populationEntries = Object.entries(flow.populations ?? {});
-  const populationTotal = populationEntries.reduce((sum, [, population]) => sum + population.cash, 0);
-  const populations = Object.fromEntries(populationEntries.map(([id, population]) => {
-    const share = populationTotal > 0 ? population.cash / populationTotal : 1 / Math.max(1, populationEntries.length);
-    return [id, {
-      ...population,
-      cash: Math.max(0, population.cash + created * share - revenue * share),
-      totalIncome: population.totalIncome + created * share,
-      totalSpent: population.totalSpent + revenue * share,
+  const populations = Object.fromEntries(incomeByPopulation.map((entry) => {
+    const spend = revenue * entry.share;
+    return [entry.id, {
+      ...entry.population,
+      cash: Math.max(0, entry.population.cash + entry.receivedIncome - spend),
+      totalIncome: entry.population.totalIncome + entry.receivedIncome,
+      totalSpent: entry.population.totalSpent + spend,
+      totalDiscarded: (entry.population.totalDiscarded ?? 0) + entry.refused,
     }];
   }));
 
@@ -283,7 +354,8 @@ export function advanceRegionFlow(flow, seconds) {
     cash: flow.cash + revenue - burned,
     populations,
     burnedCumulative: flow.burnedCumulative + burned,
-    createdCumulative: flow.createdCumulative + created,
+    createdCumulative: flow.createdCumulative + createdReceived,
+    discardedCumulative: (flow.discardedCumulative ?? 0) + discarded,
     revenueCumulative: (flow.revenueCumulative ?? 0) + revenue,
     blocked: null,
   };
@@ -321,4 +393,58 @@ export function compareRegionFlow(flow, snapshot) {
 
 function round2(value) {
   return Number.isFinite(value) ? Math.round(value * 100) / 100 : null;
+}
+
+// ── How far can this flow be trusted right now? ─────────────────────────────
+//
+// `compareRegionFlow` answers that by MEASURING against a detailed run, which
+// is only possible when a detailed run exists to compare with. A live aggregate
+// has no such twin — that is the entire point of it — so the question it can
+// still answer is "how far past its own evidence is this model being asked to
+// run?".
+//
+// The coefficients are the measurement in docs/level-of-detail.md, not a guess:
+// raced against a real detailed simulation, the model was ~5% off on shelf and
+// ~8% off on cash by the time it had run for as long as it had been observed,
+// and the error accumulated roughly LINEARLY beyond that — four times the span
+// gave about four times the drift. So staleness is the ratio of run to
+// observation, and the estimate is that ratio times the measured per-window
+// error. It is an extrapolation of a measurement and is labelled as one; it is
+// not a claim about this particular hub's actual divergence.
+export const MEASURED_DRIFT_PER_WINDOW = Object.freeze({ stockFraction: 0.05, cashFraction: 0.08 });
+
+// The band names are the decision, not the number. `within-window` is the case
+// the measurement actually covers; everything past it is the model being asked
+// for an answer nobody has checked.
+export const DRIFT_BAND = Object.freeze({
+  WITHIN_WINDOW: "within-window",
+  STRETCHED: "stretched",
+  BEYOND_WINDOW: "beyond-window",
+});
+
+export function driftBand(staleness) {
+  if (!(staleness > 1)) return DRIFT_BAND.WITHIN_WINDOW;
+  if (staleness <= 2) return DRIFT_BAND.STRETCHED;
+  return DRIFT_BAND.BEYOND_WINDOW;
+}
+
+export function estimateFlowDrift(flow, runSeconds) {
+  const observedSeconds = flow?.observedSeconds ?? 0;
+  const ran = Math.max(0, runSeconds ?? 0);
+  // Without an observation window there is no ratio to form. An unobserved flow
+  // is not "zero drift"; it is a flow that should never have taken custody, and
+  // saying so is more useful than printing 0%.
+  if (!(observedSeconds > 0)) {
+    return { observedSeconds: 0, runSeconds: ran, staleness: null, stockFraction: null, cashFraction: null, band: null, estimated: true };
+  }
+  const staleness = ran / observedSeconds;
+  return {
+    observedSeconds,
+    runSeconds: ran,
+    staleness: round2(staleness),
+    stockFraction: round2(staleness * MEASURED_DRIFT_PER_WINDOW.stockFraction),
+    cashFraction: round2(staleness * MEASURED_DRIFT_PER_WINDOW.cashFraction),
+    band: driftBand(staleness),
+    estimated: true,
+  };
 }

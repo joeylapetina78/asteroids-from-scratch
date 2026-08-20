@@ -171,8 +171,12 @@ test("a hub with nothing to sell books no revenue and burns no credits", () => {
     demand: deriveDemandRates(HUB),
     supply: { structural: 0, industrial: 0, volatile: 0 },
     observedSeconds: 100,
+    // Income accrues TO somebody. These households start empty and well under
+    // their cap, so there is room for the faucet to pay them.
+    populations: { people: { cash: 0, cashCap: 1_000_000, totalIncome: 0, totalSpent: 0, totalDiscarded: 0 } },
     burnedCumulative: 0,
     createdCumulative: 0,
+    discardedCumulative: 0,
   };
 
   const advanced = advanceRegionFlow(flow, 300);
@@ -243,15 +247,31 @@ test("a shelf empties rather than going negative", () => {
 // stops being simulated in detail.
 test("an aggregated region still accrues the credit burn the books need", () => {
   const world = createWorld();
-  const flow = { ...createRegionFlow(world.state, HUB, { at: 0 }), supply: { structural: 0, industrial: 0, volatile: 0 } };
+  // Households with room under the cap and cash to spend, so neither the faucet
+  // nor the till is the thing being tested here — the burn is.
+  const base = createRegionFlow(world.state, HUB, { at: 0 });
+  const flow = {
+    ...base,
+    supply: { structural: 0, industrial: 0, volatile: 0 },
+    populations: Object.fromEntries(Object.entries(base.populations).map(([id, population]) => [id,
+      { ...population, cash: 1_000_000, cashCap: 10_000_000 }])),
+  };
   const seconds = 600;
   const advanced = advanceRegionFlow(flow, seconds);
 
   const rates = deriveDemandRates(HUB);
   assert.ok(Math.abs(advanced.burnedCumulative - rates.productionBurnPerSecond * seconds) < 1e-6,
     "credits destroyed by production keep accruing while nobody watches");
-  assert.ok(Math.abs(advanced.createdCumulative - rates.householdIncomePerSecond * seconds) < 1e-6,
-    "and so does the income that creates them");
+
+  // Income accrues too, but through the same valve the detailed path uses: it is
+  // credited only up to each household's cash cap and the surplus is discarded,
+  // never created. What must hold exactly is that the faucet is fully accounted
+  // for — every credit the rate would have made was either created or discarded.
+  const gross = rates.householdIncomePerSecond * seconds;
+  assert.ok(Math.abs((advanced.createdCumulative + advanced.discardedCumulative) - gross) < 1e-6,
+    "every credit the income rate would have made is either created or discarded");
+  assert.ok(advanced.createdCumulative <= gross + 1e-6,
+    "the aggregate never creates more money than the faucet allows");
   assert.ok(advanced.burnedCumulative > 0);
 });
 
