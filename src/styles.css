@@ -3550,3 +3550,22 @@ body.is-viewport-fullscreen .viewport-panel #game {
    and its terms move. Mark them so they are never confused on the board. */
 .rook-job-option[data-job-provenance="generated"] { border-left: 3px solid #4f9dd8; }
 .rook-job-option[data-job-provenance="authored"] { border-left: 3px solid #8a7fd8; }
+
+/* Simulation boundary pane. Colour carries one distinction only — whether a
+   place is still being paid for in full — so the eye finds the blocked rows
+   without having to read the "why" column of every line. */
+.observatory-pane-simulation { grid-row: 2; display: flex; flex-direction: column; min-height: 0; overflow: auto; padding: 0; }
+.sim-summary { padding: 12px 14px; border-bottom: 1px solid rgba(115, 210, 255, 0.16); }
+.sim-stat-row { display: flex; flex-wrap: wrap; gap: 22px; }
+.sim-stat { display: flex; flex-direction: column; gap: 2px; }
+.sim-stat-label { color: #7f8da2; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.07em; }
+.sim-stat-value { color: #dbe6f5; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+.sim-body { flex: 0 0 auto; }
+.sim-table td { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sim-table td:nth-child(7) { white-space: normal; }
+.sim-row-aggregated td:first-child { box-shadow: inset 3px 0 0 rgba(126, 231, 176, 0.7); }
+.sim-row-blocked-by-open-work td:first-child { box-shadow: inset 3px 0 0 rgba(255, 158, 128, 0.8); }
+.sim-row-supply-rate-unknown td:first-child { box-shadow: inset 3px 0 0 rgba(255, 214, 120, 0.8); }
+.sim-transitions { padding: 4px 14px 18px; }
+.sim-transition-list h4 { margin: 12px 0 6px; color: #cdb4ff; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.07em; }
+.sim-transition { margin: 0 0 3px; color: #9fb0c6; font-size: 0.7rem; font-variant-numeric: tabular-nums; }
