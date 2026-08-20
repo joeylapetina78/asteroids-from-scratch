@@ -1,6 +1,6 @@
-import { TRADED_FAMILIES, getFamilyConsumptionRates } from "./hubInventory.js?v=fresh-20260820-0645-f8c9397";
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-0645-f8c9397";
-import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260820-0645-f8c9397";
+import { TRADED_FAMILIES, getFamilyConsumptionRates } from "./hubInventory.js?v=fresh-20260820-0654-6716a5f";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-0654-6716a5f";
+import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260820-0654-6716a5f";
 
 // A place simulated as RATES rather than as transactions. Step 4, Phase B.
 //
@@ -242,6 +242,27 @@ export function createRegionFlow(state, institutionId, { samples = [], at = Date
 // Refuses rather than guesses when supply is unknown: an aggregate that assumes
 // nothing arrives would drain a working settlement to empty and then report a
 // famine that the detailed simulation never had.
+// Blend what actually arrived into the rate, on the timescale the rate was
+// measured over. `observedSeconds` is that timescale by construction, so a
+// region re-learns its own supply at the speed it was originally learned.
+//
+// Returns the rate unchanged when there is nothing to learn from — a step with
+// no inflow measurement at all is not evidence of zero, it is an absence of
+// evidence, and the distinction is the same one `minimumObservationSeconds`
+// exists to protect.
+export function reobserveSupply(flow, seconds, externalInflow) {
+  if (!externalInflow) return flow.supply;
+  const window = Math.max(1, flow.observedSeconds || 0);
+  const weight = Math.min(1, seconds / window);
+  const blended = {};
+  TRADED_FAMILIES.forEach((family) => {
+    const held = flow.supply[family] ?? 0;
+    const measured = Math.max(0, externalInflow[family] ?? 0) / seconds;
+    blended[family] = held + (measured - held) * weight;
+  });
+  return blended;
+}
+
 // `externalInflow` is material that REALLY arrived at this region since the last
 // step — a hauler that was already carrying its cargo, an extraction allocation
 // finishing, a supplier shipping out. It is netted against the modelled supply
@@ -256,6 +277,22 @@ export function advanceRegionFlow(flow, seconds, { externalInflow = null } = {})
   if (!flow || !(seconds > 0)) return flow;
   if (!flow.supply) return { ...flow, blocked: "supply-rate-unknown" };
 
+  // The supply rate is RE-OBSERVED, not held.
+  //
+  // A rate measured once and extrapolated forever is how an eight-hour run ends
+  // with one settlement sitting on 700 units it was never sent and another
+  // starved to nothing: the model kept crediting freight from a trade network
+  // that had stopped running, because every hub in it was aggregated too.
+  //
+  // Reality is the only evidence there is, so it keeps being consulted. Each
+  // step blends what actually arrived into the rate, over the timescale the rate
+  // was originally measured on — long enough that a gap between lumpy deliveries
+  // is not mistaken for a famine, short enough that a supplier which has genuinely
+  // stopped is noticed within a window or two.
+  //
+  // This bounds staleness and cures aggregate-to-aggregate phantom supply with
+  // the same mechanism, and it can only ever reduce invented material.
+  const supply = reobserveSupply(flow, seconds, externalInflow);
   const stock = { ...flow.stock };
   const shortfall = {};
   let wantedTotal = 0;
@@ -263,7 +300,7 @@ export function advanceRegionFlow(flow, seconds, { externalInflow = null } = {})
 
   const familyMovement = {};
   TRADED_FAMILIES.forEach((family) => {
-    const modelled = (flow.supply[family] ?? 0) * seconds;
+    const modelled = (supply[family] ?? 0) * seconds;
     // Reality first; the model supplies only the shortfall.
     const arriving = Math.max(0, modelled - Math.max(0, externalInflow?.[family] ?? 0));
     const wanted = (flow.demand.consumption[family] ?? 0) * seconds;
@@ -345,6 +382,9 @@ export function advanceRegionFlow(flow, seconds, { externalInflow = null } = {})
   return {
     ...flow,
     at: flow.at + seconds * 1000,
+    supply,
+    // Only stamped when the rate was actually re-measured against reality.
+    resyncedAt: externalInflow ? flow.at + seconds * 1000 : (flow.resyncedAt ?? null),
     stock,
     shortfall,
     servedFraction: round2(served),
@@ -430,12 +470,25 @@ export function driftBand(staleness) {
 
 export function estimateFlowDrift(flow, runSeconds) {
   const observedSeconds = flow?.observedSeconds ?? 0;
-  const ran = Math.max(0, runSeconds ?? 0);
+  // A re-observed rate does not keep drifting away from reality: it is an
+  // exponential blend whose time constant IS the observation window, so the
+  // information in it is never older than about one window however long the
+  // region has been aggregated. Staleness saturates instead of growing.
+  //
+  // This is read off the mechanism, not measured. The 5%/8%-per-window
+  // coefficients below were derived against a HELD rate and have not been
+  // re-derived for this mode; what has been checked is the pathology they were
+  // there to catch — a held rate invents 20,000 units of phantom stock over
+  // eight hours and a re-observed one does not move at all.
+  const resynced = Boolean(flow?.resyncedAt);
+  const ran = resynced
+    ? Math.min(Math.max(0, runSeconds ?? 0), observedSeconds)
+    : Math.max(0, runSeconds ?? 0);
   // Without an observation window there is no ratio to form. An unobserved flow
   // is not "zero drift"; it is a flow that should never have taken custody, and
   // saying so is more useful than printing 0%.
   if (!(observedSeconds > 0)) {
-    return { observedSeconds: 0, runSeconds: ran, staleness: null, stockFraction: null, cashFraction: null, band: null, estimated: true };
+    return { observedSeconds: 0, runSeconds: ran, staleness: null, stockFraction: null, cashFraction: null, band: null, estimated: true, resynced };
   }
   const staleness = ran / observedSeconds;
   return {
@@ -446,5 +499,6 @@ export function estimateFlowDrift(flow, runSeconds) {
     cashFraction: round2(staleness * MEASURED_DRIFT_PER_WINDOW.cashFraction),
     band: driftBand(staleness),
     estimated: true,
+    resynced,
   };
 }

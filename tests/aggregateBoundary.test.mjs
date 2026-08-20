@@ -4,7 +4,7 @@ import test from "node:test";
 import { createGameState } from "../src/state/gameState.js";
 import { createDistantSimulationOperation, isHubAggregated } from "../src/systems/distantSimulation.js";
 import { getResourceEffectiveYield } from "../src/systems/resourceDefinitions.js";
-import { advanceRegionFlow } from "../src/systems/regionFlow.js";
+import { DRIFT_BAND, advanceRegionFlow, estimateFlowDrift } from "../src/systems/regionFlow.js";
 
 // What crosses the boundary of an aggregated region.
 //
@@ -188,4 +188,123 @@ test("a hub cannot be paid revenue its households never received", () => {
     `money must be conserved at the cap (hub ${hubDelta.toFixed(2)}, households ${householdDelta.toFixed(2)}, `
     + `created ${created.toFixed(2)}, burned ${burned.toFixed(2)})`);
   assert.equal(created, 0, "a household at its cap receives no income at all");
+});
+
+// ── Re-observation ─────────────────────────────────────────────────────────
+// An eight-hour unattended run ended with every hub aggregated, inter-hub trade
+// stopped dead (32 shipments delivered, none in flight, twelve orders sitting
+// `ready`) — and every flow still crediting itself supply at a rate measured
+// from that trade back when it was running. One settlement sat on 700 units of
+// water ice it was never sent; another was empty with `served: 0`.
+
+function flowWithSupply(rate, observedSeconds = 400) {
+  return {
+    institutionId: "test", at: 0, observedSeconds,
+    stock: { structural: 50, industrial: 50, volatile: 50 },
+    supply: { structural: rate, industrial: rate, volatile: rate },
+    demand: {
+      consumption: { structural: 0, industrial: 0, volatile: 0 },
+      householdIncomePerSecond: 0, householdSpendPerSecond: 0, productionBurnPerSecond: 0,
+    },
+    cash: 1_000,
+    populations: { people: { cash: 1_000, cashCap: 1_000_000, totalIncome: 0, totalSpent: 0, totalDiscarded: 0 } },
+    burnedCumulative: 0, createdCumulative: 0, discardedCumulative: 0, revenueCumulative: 0,
+  };
+}
+
+const ZERO_INFLOW = { structural: 0, industrial: 0, volatile: 0 };
+
+test("a supplier that has stopped is noticed within a window or two", () => {
+  let flow = flowWithSupply(1);
+  const window = flow.observedSeconds;
+
+  // One full observation window of genuinely nothing arriving.
+  for (let elapsed = 0; elapsed < window; elapsed += 10) {
+    flow = advanceRegionFlow(flow, 10, { externalInflow: ZERO_INFLOW });
+  }
+  assert.ok(flow.supply.volatile < 0.5,
+    `after one window of no arrivals the rate is well down (${flow.supply.volatile.toFixed(3)})`);
+
+  for (let elapsed = 0; elapsed < window * 2; elapsed += 10) {
+    flow = advanceRegionFlow(flow, 10, { externalInflow: ZERO_INFLOW });
+  }
+  assert.ok(flow.supply.volatile < 0.06,
+    `after three windows it has all but stopped (${flow.supply.volatile.toFixed(4)})`);
+});
+
+test("a region that is genuinely still supplied keeps its rate", () => {
+  let flow = flowWithSupply(1);
+  const window = flow.observedSeconds;
+  // Deliveries keep landing at exactly the observed rate.
+  for (let elapsed = 0; elapsed < window * 3; elapsed += 10) {
+    flow = advanceRegionFlow(flow, 10, { externalInflow: { structural: 10, industrial: 10, volatile: 10 } });
+  }
+  assert.ok(Math.abs(flow.supply.volatile - 1) < 0.05,
+    `a supplied region holds its rate (${flow.supply.volatile.toFixed(3)})`);
+});
+
+test("a lumpy delivery pattern is not mistaken for a famine", () => {
+  // Supply really does arrive in lots at irregular intervals. A gap between
+  // them must not crash the rate — that is the whole reason the blend runs on
+  // the observation window rather than the step.
+  let flow = flowWithSupply(1);
+  for (let step = 0; step < 40; step += 1) {
+    // 60 units every tenth step of 10s == 1 unit/second on average.
+    const lot = step % 10 === 0 ? 100 : 0;
+    flow = advanceRegionFlow(flow, 10, { externalInflow: { structural: lot, industrial: lot, volatile: lot } });
+  }
+  assert.ok(flow.supply.volatile > 0.6,
+    `a lumpy but real supplier keeps most of its rate (${flow.supply.volatile.toFixed(3)})`);
+});
+
+test("no inflow measurement at all leaves the rate alone", () => {
+  // Absence of evidence is not evidence of zero. A caller that cannot say what
+  // arrived must not silently starve the region.
+  const flow = flowWithSupply(1);
+  const next = advanceRegionFlow(flow, 10);
+  assert.deepEqual(next.supply, flow.supply);
+});
+
+test("eight hours alone does not fill a warehouse nobody delivered to", () => {
+  // The overnight pathology, stated directly. Every hub aggregated, so inter-hub
+  // freight stopped entirely — and each flow kept crediting itself supply at a
+  // rate measured back when that freight was running. Yard Exchange finished the
+  // night holding 315 units of water ice and 207 of iron-nickel with
+  // `served: 1`, none of which any carrier ever moved.
+  const held = flowWithSupply(1);          // 1 effective unit/second, nobody consuming
+  const reobserving = flowWithSupply(1);
+
+  const EIGHT_HOURS = 8 * 60 * 60;
+  let phantom = held;
+  let real = reobserving;
+  for (let elapsed = 0; elapsed < EIGHT_HOURS; elapsed += 30) {
+    // No inflow measurement -> the rate is held, the old behaviour.
+    phantom = advanceRegionFlow(phantom, 30);
+    // Measured, and nothing is arriving, because every supplier is aggregated.
+    real = advanceRegionFlow(real, 30, { externalInflow: ZERO_INFLOW });
+  }
+
+  assert.ok(phantom.stock.volatile > 20_000,
+    `a held rate invents a warehouse (${Math.round(phantom.stock.volatile)} units)`);
+  assert.ok(real.stock.volatile < held.stock.volatile + 500,
+    `a re-observed rate does not (${Math.round(real.stock.volatile)} units, started ${held.stock.volatile})`);
+});
+
+test("a held rate still reports growing staleness; a re-observed one does not", () => {
+  // The distinction the Observatory has to show, because the two modes fail
+  // differently and only one of them is bounded.
+  const window = 400;
+  const held = { observedSeconds: window };
+  const resynced = { observedSeconds: window, resyncedAt: 1 };
+
+  const heldDrift = estimateFlowDrift(held, window * 5);
+  const resyncedDrift = estimateFlowDrift(resynced, window * 5);
+
+  assert.equal(heldDrift.resynced, false);
+  assert.equal(heldDrift.staleness, 5, "a held rate is five windows past its evidence");
+  assert.equal(heldDrift.band, DRIFT_BAND.BEYOND_WINDOW);
+
+  assert.equal(resyncedDrift.resynced, true);
+  assert.equal(resyncedDrift.staleness, 1, "a re-observed rate is never more than a window behind");
+  assert.equal(resyncedDrift.band, DRIFT_BAND.WITHIN_WINDOW);
 });

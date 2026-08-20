@@ -89,9 +89,13 @@ test("an aggregate reports its observation window, its age and its estimated dri
   assert.equal(row.reason, SIMULATION_REASON.AGGREGATED);
   assert.equal(row.observedSeconds, observed);
   assert.equal(Math.round(row.observationAgeSeconds), observed * 2);
-  assert.equal(row.drift.staleness, 2);
-  assert.equal(row.drift.band, DRIFT_BAND.STRETCHED);
-  assert.equal(row.drift.stockFraction, 2 * MEASURED_DRIFT_PER_WINDOW.stockFraction);
+  // The rate is re-observed against reality every step, so its staleness
+  // saturates at one window rather than growing with the age of the aggregate.
+  // Before re-observation this read 2× and climbed forever.
+  assert.equal(row.drift.resynced, true);
+  assert.equal(row.drift.staleness, 1);
+  assert.equal(row.drift.band, DRIFT_BAND.WITHIN_WINDOW);
+  assert.equal(row.drift.stockFraction, MEASURED_DRIFT_PER_WINDOW.stockFraction);
   assert.equal(row.drift.estimated, true);
 });
 

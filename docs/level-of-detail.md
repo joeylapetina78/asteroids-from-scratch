@@ -460,6 +460,75 @@ differently once three hubs stop trading, but that is a hypothesis and it is not
 tested. It deserves its own pass with the Economy tab and the reconciler rather
 than being folded into this one.
 
+## Phase E — the rate is re-observed, not held (2026-08-20)
+
+An eight-hour unattended run is what made this unavoidable, and it is worth
+stating what it looked like because the failure is quiet and plausible.
+
+Eight of nine hubs aggregated, one transition each, no thrashing — the boundary
+itself behaved perfectly. Detailed work fell to 11%. And then:
+
+```text
+shipments: 32 delivered, 0 in flight     orders: 12 sitting `ready`
+Yard Exchange    315 water-ice, 207 iron-nickel   served 1.00
+Deep Research    empty                            served 0.00
+Ore Station One  observed 7m · age 8.5h · 72.98× window · beyond-window
+```
+
+**When every hub aggregates, inter-hub trade stops entirely** — no procurement
+runs for either side of any order. But each flow went on crediting itself supply
+at a rate measured from that trade back when it was running. So one settlement
+sat on hundreds of units no carrier had ever moved, while another starved to
+nothing, and both were "correct" according to their own model.
+
+Two roadmap items — bound stale-rate drift, and represent aggregate-to-aggregate
+trade — turn out to be one problem with one answer.
+
+### Reality is the only evidence, so keep consulting it
+
+`reobserveSupply` blends what ACTUALLY arrived into the rate every step, over the
+timescale the rate was originally measured on:
+
+```js
+const weight = Math.min(1, seconds / flow.observedSeconds);
+blended[family] = held + (measured - held) * weight;
+```
+
+`observedSeconds` is that timescale by construction, so a region re-learns its
+supply at the speed it was originally learned. Long enough that a gap between
+lumpy deliveries is not read as famine; short enough that a supplier which has
+genuinely stopped is noticed within a window or two.
+
+This bounds staleness and cures phantom aggregate-to-aggregate supply with the
+same mechanism, and it can only ever *reduce* invented material.
+
+The measurement, over eight hours of simulated time with nothing arriving:
+
+| supply rate | phantom stock accrued |
+|---|---|
+| held (old) | **> 20,000 units** |
+| re-observed | **0** — within 500 of where it started |
+
+### Absence of evidence is not evidence of zero
+
+`reobserveSupply` returns the rate untouched when the caller passes no inflow
+measurement at all. A step that could not measure is not a step that measured
+nothing — the same distinction `minimumObservationSeconds` exists to protect,
+and the same one that once drained six working settlements to empty.
+
+### What this does to the drift estimate
+
+A re-observed rate is an exponential blend whose time constant IS the observation
+window, so the information in it is never much older than one window however long
+the region has been aggregated. `estimateFlowDrift` therefore saturates staleness
+at one window when `resyncedAt` is set, and the Observatory prints `re-observed`
+or `HELD` beside the band so the two modes are never confused.
+
+**The coefficients have not been re-derived.** The 5%/8%-per-window figures come
+from racing a HELD rate against a detailed run. What has been checked for this
+mode is the pathology they existed to catch, not a new drift curve. Re-race the
+model against a detailed run before quoting a number for a re-observed region.
+
 ---
 
 ## Content findings surfaced along the way

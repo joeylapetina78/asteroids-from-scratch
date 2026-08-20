@@ -290,11 +290,16 @@ that watchdog (count waypoints) was wrong.
    **Still blocking, and still owed a checkpoint:** the hub's own population
    production, factory/construction runs and commissioned protection — the flow
    models those, so both running would double-count.
-4. **Bound stale-rate drift. This is now the next item and it is unblocked.**
-   Live aggregates exist, and the instrument has produced its first real readings
-   (`0.84× window`, `within-window`). Re-observe or re-sync on roughly the
-   observation-window timescale; never let an hour-away hub extrapolate forever
-   from one early rate.
+4. ~~Bound stale-rate drift.~~ Done, together with the first half of item 6 —
+   they were one problem. The supply rate is now RE-OBSERVED every step from what
+   actually arrives, blended over the window it was measured on, so it cannot
+   extrapolate forever and cannot credit freight from suppliers that have
+   themselves stopped. Measured: a held rate invents >20,000 units of phantom
+   stock over eight hours; a re-observed one does not move. See
+   [level-of-detail.md](level-of-detail.md) Phase E.
+   **Still owed:** the drift coefficients were derived against a held rate and
+   have not been re-derived for a re-observed one. Re-race the model against a
+   detailed run before quoting a drift number for a live region.
 4b. **Checkpoint a hub's own internal work.** Population production, factory and
    construction runs, and commissioned protection still block, because the flow
    models them too. With the player at the frontier these are now the ONLY thing
@@ -306,8 +311,12 @@ that watchdog (count waypoints) was wrong.
    miners, patrols and eventually ecology as bounded regional cohorts while keeping
    promoted/bespoke actors as preserved anchors. Restore plausible physical detail
    on approach without cloning title, cargo, condition or commitments.
-6. **Introduce regional clearing.** Model both sides of aggregate inter-hub material
-   and credit flows so distant regions can trade without one-sided money changes.
+6. **Introduce regional clearing.** Re-observation stops an aggregate inventing
+   supply that nobody sent, which is the destructive half. The constructive half
+   is still missing: two aggregated regions cannot presently trade with each
+   other at all, so a fully-aggregated world has no inter-hub commerce rather
+   than cheap inter-hub commerce. Model both sides of aggregate material and
+   credit flow so distant regions keep trading without one-sided money changes.
 7. **Connect procedural expansion.** Let institutional projects survey and found
    new settlement seeds, then pass them through the existing common pipeline.
 8. **Continue territory as an asset.** Add surveying, claims, upkeep, benefits,
