@@ -1,23 +1,23 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260819-0621-e0ba4c1";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260819-0621-e0ba4c1";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260819-0621-e0ba4c1";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260819-0621-e0ba4c1";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260819-0621-e0ba4c1";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260819-0621-e0ba4c1";
-import { adaptShipment } from "./intentions.js?v=fresh-20260819-0621-e0ba4c1";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260819-0621-e0ba4c1";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260819-0621-e0ba4c1";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260819-0621-e0ba4c1";
-import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260819-0621-e0ba4c1";
-import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260819-0621-e0ba4c1";
-import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260819-0621-e0ba4c1";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260819-0621-e0ba4c1";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, routineServiceCraft, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260819-0621-e0ba4c1";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260819-0621-e0ba4c1";
-import { issuerTreasuryRecords, seedIssuerTreasuries } from "./contractTreasury.js?v=fresh-20260819-0621-e0ba4c1";
-import { recruitPopulationLabor, releasePopulationLabor } from "./populationLabor.js?v=fresh-20260819-0621-e0ba4c1";
-import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260819-0621-e0ba4c1";
-import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260819-0621-e0ba4c1";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260820-0645-f8c9397";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260820-0645-f8c9397";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260820-0645-f8c9397";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260820-0645-f8c9397";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260820-0645-f8c9397";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260820-0645-f8c9397";
+import { adaptShipment } from "./intentions.js?v=fresh-20260820-0645-f8c9397";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260820-0645-f8c9397";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260820-0645-f8c9397";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260820-0645-f8c9397";
+import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260820-0645-f8c9397";
+import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260820-0645-f8c9397";
+import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260820-0645-f8c9397";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260820-0645-f8c9397";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, routineServiceCraft, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260820-0645-f8c9397";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260820-0645-f8c9397";
+import { issuerTreasuryRecords, seedIssuerTreasuries } from "./contractTreasury.js?v=fresh-20260820-0645-f8c9397";
+import { recruitPopulationLabor, releasePopulationLabor } from "./populationLabor.js?v=fresh-20260820-0645-f8c9397";
+import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260820-0645-f8c9397";
+import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260820-0645-f8c9397";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -73,6 +73,24 @@ const HUB_SPONSOR_AFTER_UNSERVED_SECONDS = 60;
 const HUB_SPONSOR_COOLDOWN_SECONDS = 240;
 const MAX_SPONSORED_HAULERS_PER_HUB = 1;
 const FREIGHT_MAINTENANCE_ESCROW_SHARE = 0.2;
+// How long a craft may make no headway toward its next waypoint before the
+// world says so.
+//
+// The signal is CLOSING DISTANCE, not waypoint count. Counting waypoints looks
+// right and is wrong: a market circuit to an outer hub is a single leg tens of
+// thousands of units long, and a craft crossing it at full speed can go many
+// minutes without clearing anything. That reads as identical to a deadlock if
+// you only watch the index — the first version of this watchdog flagged a
+// perfectly healthy hauler doing 96 on a legitimate long haul.
+//
+// What a stalled craft cannot do is get closer. So this tracks the best
+// distance-to-waypoint achieved since the target last changed: a craft under
+// way keeps beating its own record, and one circling a point it cannot capture
+// stops improving. That is the exact signature of the deadlock this exists to
+// catch, and it is quiet for long legs.
+const STALLED_NAVIGATION_SECONDS = 60;
+// Ignore jitter; only real headway counts as progress.
+const NAVIGATION_PROGRESS_EPSILON = 25;
 const ROUTINE_HUB_SERVICE_PRICE = 120;
 const ROUTINE_HUB_SERVICE_WEAR = 2.4;
 const ROUTINE_HUB_SERVICE_COOLDOWN_MS = 4 * 60 * 1000;
@@ -582,6 +600,58 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     return true;
   }
 
+  // A craft that is under way must keep clearing waypoints. This watches the
+  // one fact that cannot be faked by any other field — did the route index move
+  // — and reports a stall as a first-class blocker rather than leaving the
+  // world to look perfectly healthy while a ship goes nowhere.
+  function detectStalledNavigation(shipId, hauler, ship) {
+    const underway = ship.operationalStatus === "available" && !ship.dockedSiteId;
+    if (!underway) {
+      hauler.lastRouteProgressAt = null;
+      hauler.stalledRouteIndex = null;
+      hauler.bestWaypointDistance = null;
+      return;
+    }
+    const index = ship.routeIndex ?? 0;
+    const distance = Number.isFinite(ship.lastWaypointDistance) ? ship.lastWaypointDistance : null;
+    if (hauler.stalledRouteIndex !== index) {
+      hauler.stalledRouteIndex = index;
+      hauler.lastRouteProgressAt = now();
+      hauler.bestWaypointDistance = distance;
+      return;
+    }
+    hauler.lastRouteProgressAt ??= now();
+    // Any real improvement on the best approach so far resets the clock.
+    if (distance !== null && (hauler.bestWaypointDistance == null
+      || distance < hauler.bestWaypointDistance - NAVIGATION_PROGRESS_EPSILON)) {
+      hauler.bestWaypointDistance = distance;
+      hauler.lastRouteProgressAt = now();
+      return;
+    }
+    const stalledSeconds = (now() - hauler.lastRouteProgressAt) / 1000;
+    if (stalledSeconds < STALLED_NAVIGATION_SECONDS) return;
+    const waypoint = ship.route?.[index] ?? null;
+    recordBlocker(state, shipId, createBlocker({
+      kind: BLOCKER_KIND.NAVIGATION_STALLED,
+      summary: `${getCarrierContext(shipId).shipName} has not cleared ${waypoint?.name ?? "its next waypoint"} in ${Math.round(stalledSeconds)}s`,
+      subjectId: shipId,
+      objectId: waypoint?.id ?? null,
+      waitingFor: "the craft to reach its next waypoint",
+      wakeOn: ["waypoint-cleared", "route-reassigned"],
+      detail: {
+        routeIndex: index,
+        closestApproach: Math.round(hauler.bestWaypointDistance ?? 0),
+        currentDistance: Math.round(distance ?? 0),
+        routeLength: ship.route?.length ?? 0,
+        laneOffset: ship.laneOffset ?? 0,
+        waypointType: waypoint?.type ?? null,
+        stalledSeconds: Math.round(stalledSeconds),
+        shipmentIds: [...(hauler.activeShipmentIds ?? [])],
+      },
+      at: now(),
+    }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+  }
+
   function reconcilePhysicalHaulerState() {
     Object.entries(logistics.haulers).forEach(([shipId, hauler]) => {
       const ship = shipById.get(shipId);
@@ -623,6 +693,11 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
         hauler.status = "seeking-work";
         clearBlocker(state, shipId, { state: DIAGNOSTIC_STATE.FREE, summary: `${getCarrierContext(shipId).shipName} is available for freight.`, at: now() });
       }
+
+      // Last, so that a craft which is not moving is reported as not moving.
+      // "Available for freight" is a statement about willingness; it must not
+      // overwrite the more specific fact that the craft is going nowhere.
+      detectStalledNavigation(shipId, hauler, ship);
     });
   }
 

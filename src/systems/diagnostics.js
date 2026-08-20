@@ -49,6 +49,7 @@ export const BLOCKER_KIND = Object.freeze({
   UNPAID_SERVICE_DEBT: "unpaid-service-debt",
   FACILITY_OCCUPIED: "facility-occupied",
   MAINTENANCE_POLICY: "maintenance-policy",
+  NAVIGATION_STALLED: "navigation-stalled",
 });
 
 const MAX_EVENT_REFS = 10;
