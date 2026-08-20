@@ -334,3 +334,141 @@ test("comparing against a place that is not in the snapshot says so", () => {
   const flow = createRegionFlow(world.state, "nowhere-at-all", { at: 0 });
   assert.equal(compareRegionFlow(flow, { actors: {} }), null);
 });
+
+// ── Does re-observation actually help against the real thing? ───────────────
+//
+// The 5%/8%-per-window coefficients were derived by racing a HELD rate against a
+// detailed run. Re-observation changes the mechanism, so those numbers do not
+// transfer and the docs say so. This races both modes against the same detailed
+// world and reports what each one is worth.
+//
+// The claim being tested is deliberately weak and the one that matters: a rate
+// that keeps consulting reality is never WORSE than one that stopped. Picking a
+// tight bound here would be inventing an answer again.
+test("a re-observed rate is measured against a real detailed run, and is no worse than a held one", () => {
+  const world = createWorld();
+  const procurement = createHubProcurementOperation({ state: world.state, now: world.now });
+
+  world.state.economyHistory = createInitialEconomyHistory();
+  world.sample();
+  for (let step = 0; step < 60; step += 1) {
+    world.advance(5);
+    procurement.update();
+    world.population.update();
+    world.sample();
+  }
+
+  const observed = getEconomySamples(world.state, { windowMs: Infinity, now: world.now() });
+  const start = createRegionFlow(world.state, HUB, { samples: observed, at: world.now() });
+  assert.ok(start.supply, "watched long enough to know how fast the hub restocks");
+
+  let held = start;
+  let resynced = start;
+
+  const STEP = 5;
+  const STEPS = 48;   // four minutes raced past the observation window
+  for (let step = 0; step < STEPS; step += 1) {
+    const before = readEconomySnapshot(world.state, { now: world.now() }).actors[HUB].byFamily;
+    world.advance(STEP);
+    procurement.update();
+    world.population.update();
+    const after = readEconomySnapshot(world.state, { now: world.now() }).actors[HUB].byFamily;
+
+    // What the world really delivered to this hub over the step.
+    const externalInflow = Object.fromEntries(TRADED_FAMILIES
+      .map((family) => [family, Math.max(0, (after[family] ?? 0) - (before[family] ?? 0))]));
+
+    held = advanceRegionFlow(held, STEP);
+    resynced = advanceRegionFlow(resynced, STEP, { externalInflow });
+  }
+
+  const truth = readEconomySnapshot(world.state, { now: world.now() });
+  const heldDrift = compareRegionFlow(held, truth);
+  const resyncedDrift = compareRegionFlow(resynced, truth);
+
+  assert.ok(heldDrift && resyncedDrift);
+  // Reported so a future reader can see the numbers rather than trust a claim.
+  const report = {
+    racedSeconds: STEP * STEPS,
+    observedSeconds: Math.round(start.observedSeconds),
+    held: { worstStock: heldDrift.worstStockDriftFraction, cash: heldDrift.cashDrift },
+    resynced: { worstStock: resyncedDrift.worstStockDriftFraction, cash: resyncedDrift.cashDrift },
+  };
+  assert.ok(Number.isFinite(report.held.worstStock) && Number.isFinite(report.resynced.worstStock),
+    `drift is measurable for both modes: ${JSON.stringify(report)}`);
+  console.log("drift measurement", JSON.stringify(report));
+
+  assert.ok(resyncedDrift.worstStockDriftFraction <= heldDrift.worstStockDriftFraction + 0.02,
+    `re-observing is not worse than holding: ${JSON.stringify(report)}`);
+});
+
+test("re-observing costs nothing when there was never any supply to unlearn", () => {
+  // An attempt at measuring the overnight case against a real detailed run,
+  // recorded because of what it could NOT show.
+  //
+  // The intent was: watch the hub while freight flows, stop the freight — which
+  // is what happens when every counterparty aggregates — and see the held rate
+  // keep crediting deliveries while the re-observed one notices. What actually
+  // happens is that this harness starts every settlement with a full warehouse,
+  // so the hub never imports anything, its observed supply rate is already ~0,
+  // and there is nothing for re-observation to decay. Both modes land on the
+  // same number.
+  //
+  // That is still worth asserting — re-observation must not make a well-tracked
+  // region worse — but the divergence itself needs a fixture with genuine
+  // ongoing imports, and until there is one the long-tail evidence is the
+  // synthetic eight-hour comparison in tests/aggregateBoundary.test.mjs
+  // (a held rate accrues >20,000 units of phantom stock, a re-observed one does
+  // not move).
+  const world = createWorld();
+  const procurement = createHubProcurementOperation({ state: world.state, now: world.now });
+
+  world.state.economyHistory = createInitialEconomyHistory();
+  world.sample();
+  for (let step = 0; step < 60; step += 1) {
+    world.advance(5);
+    procurement.update();
+    world.population.update();
+    world.sample();
+  }
+
+  const observed = getEconomySamples(world.state, { windowMs: Infinity, now: world.now() });
+  const start = createRegionFlow(world.state, HUB, { samples: observed, at: world.now() });
+  assert.ok(start.supply);
+
+  let held = start;
+  let resynced = start;
+  const STEP = 5;
+  const STEPS = 240;   // twenty minutes, four times the observation window
+
+  for (let step = 0; step < STEPS; step += 1) {
+    const before = readEconomySnapshot(world.state, { now: world.now() }).actors[HUB].byFamily;
+    world.advance(STEP);
+    // NO procurement.update() — every supplier has gone quiet.
+    world.population.update();
+    const after = readEconomySnapshot(world.state, { now: world.now() }).actors[HUB].byFamily;
+    const externalInflow = Object.fromEntries(TRADED_FAMILIES
+      .map((family) => [family, Math.max(0, (after[family] ?? 0) - (before[family] ?? 0))]));
+
+    held = advanceRegionFlow(held, STEP);
+    resynced = advanceRegionFlow(resynced, STEP, { externalInflow });
+  }
+
+  const truth = readEconomySnapshot(world.state, { now: world.now() });
+  const heldDrift = compareRegionFlow(held, truth);
+  const resyncedDrift = compareRegionFlow(resynced, truth);
+  const report = {
+    racedSeconds: STEP * STEPS,
+    observedSeconds: Math.round(start.observedSeconds),
+    heldWorstStock: heldDrift.worstStockDriftFraction,
+    resyncedWorstStock: resyncedDrift.worstStockDriftFraction,
+    heldStock: held.stock, resyncedStock: resynced.stock,
+    truthStock: truth.actors[HUB].byFamily,
+  };
+  console.log("supplier-stop drift", JSON.stringify(report));
+
+  assert.ok(resyncedDrift.worstStockDriftFraction <= heldDrift.worstStockDriftFraction,
+    `re-observing never tracks worse than holding: ${JSON.stringify(report)}`);
+  assert.ok(resyncedDrift.worstStockDriftFraction < 0.1,
+    `both modes stay close to the truth over four observation windows: ${JSON.stringify(report)}`);
+});

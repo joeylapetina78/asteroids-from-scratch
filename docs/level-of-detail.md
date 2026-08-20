@@ -524,10 +524,30 @@ the region has been aggregated. `estimateFlowDrift` therefore saturates stalenes
 at one window when `resyncedAt` is set, and the Observatory prints `re-observed`
 or `HELD` beside the band so the two modes are never confused.
 
-**The coefficients have not been re-derived.** The 5%/8%-per-window figures come
-from racing a HELD rate against a detailed run. What has been checked for this
-mode is the pathology they existed to catch, not a new drift curve. Re-race the
-model against a detailed run before quoting a number for a re-observed region.
+**The coefficients have not been fully re-derived, and the attempt is instructive.**
+The 5%/8%-per-window figures come from racing a HELD rate against a detailed run.
+Racing both modes against a real detailed world now gives:
+
+| raced | observed window | held worst stock | re-observed worst stock |
+|---|---|---|---|
+| 240s | 300s | 1% | 1% |
+| 1200s | 300s | 2% | 2% |
+
+Inside and just past the window the two modes are **indistinguishable**, which is
+the useful half of the answer: re-observation costs nothing in the regime the
+original coefficients describe.
+
+What the harness could not show is the divergence, and the reason is worth
+recording. `createWorld` starts every settlement with a full warehouse, so the
+hub under test never imports anything, its observed supply rate is already ~0,
+and there is nothing for re-observation to decay. Measuring the long tail against
+truth needs a fixture with genuine ongoing imports that can then be cut off.
+
+Until that exists the long-tail evidence is synthetic but unambiguous: over eight
+hours with nothing arriving, a held rate accrues more than 20,000 units of
+phantom stock and a re-observed one does not move. Do not quote a drift
+percentage for a long-aggregated re-observed region; quote the band and the fact
+that the rate is still being re-measured.
 
 ---
 
