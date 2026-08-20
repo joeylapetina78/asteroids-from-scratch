@@ -244,6 +244,53 @@ happened, silently, for a whole session. See
 `navigation-stalled` blocker that now reports it, and why the obvious version of
 that watchdog (count waypoints) was wrong.
 
+## The frontier is unreachable, and that is a content decision
+
+Measured 2026-08-20, and it needs a design call rather than a patch.
+
+A carrier may accept a run only if `currentWear + tripWear + returnWear` stays
+inside `maximumWear - minimumReturnMargin`. With the authored policy that budget
+is `(6 - 0.9) / 0.00016` = **31,875 units of round trip**. The network:
+
+| lane | distance | trip wear | budget |
+|---|---:|---:|---:|
+| inner lanes | 1,875–8,400 | 0.3–1.3 | 5.1 |
+| kiln-crossing → ore-station-one | 37,473 | 6.0 | 5.1 |
+| ore-station-one → coldwater-depot | 76,158 | 12.2 | 5.1 |
+| morrow-shoal → deep-research | 84,953 | 13.6 | 5.1 |
+
+**The shortest lane to an outer hub exceeds the entire round-trip budget on its
+outbound leg alone.** No hull in the game can reach the outer third of the map,
+from full condition, at any price — one order was offered 5,302 credits against a
+carrier ask of 1,387 and still refused. Ore Station One even has its own repair
+facility, so its return leg costs nothing, and it is still out of range.
+
+A fresh run now reports 77 freight declines, **all** `beyond-fleet-range` and
+none `maintenance-policy`. Every one of the 459 declines in the earlier 31-minute
+run was this, not tired ships.
+
+This is why the outer hubs never went quiescent, and — now that a distant region
+re-observes its supply instead of inventing it — it is why they visibly starve.
+The aggregate used to hide the broken trade route behind phantom deliveries.
+
+### The options, none of which should be picked quietly
+
+1. **A long-haul craft class.** Follows the project's own doctrine — capability
+   comes from controlled assets — and makes reaching the frontier an investment
+   somebody decides to make. A hub that cannot get supplied commissions a
+   different hull rather than another identical one. Largest change; best fit.
+2. **Service outposts on the long lanes.** The physically true answer: a long
+   haul is legal if you can service partway. `evaluateTransportPlan` only
+   considers repair reachable from the DESTINATION today, so this needs staging
+   as well as new content.
+3. **Move the outer hubs closer.** Cheapest, and throws away the frontier as a
+   place that is meaningfully far.
+4. **Rebalance wear or hull tolerance.** One number, world-wide consequences for
+   every maintenance decision already tuned around it.
+
+Options 1 and 2 keep distance meaningful and make the frontier a thing the world
+has to solve. 3 and 4 make it stop being a problem by making it stop being far.
+
 ## Known risks and deliberate boundaries
 
 - A busy hub never reaches the current quiescent aggregation gate. This is no
