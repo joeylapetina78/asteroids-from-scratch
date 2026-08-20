@@ -7,16 +7,19 @@ The older August 6 session note is historical context, not the current checkpoin
 
 ## Stable checkpoint
 
-- Branch: `main`, clean and synchronized with `origin/main` at handoff.
+- Branch: `main`. Simulation-boundary observability is in the working tree on
+  top of `f8c9397`; commit and deploy are the operator's call.
 - Institutional terrarium foundation: `e0ba4c1`.
 - Distant aggregation/restoration implementation: `e3369de`.
-- Browser build: `fresh-20260819-0621-e0ba4c1`.
-- Verification: `npm test` reports 852 passing, 0 skipped, 0 failed;
-  `npm run validate:content` passes; local and GitHub Pages browser smoke tests
-  load without warnings or errors.
+- Simulation observability + live-run findings: working tree at `f8c9397`.
+- Browser build: `fresh-20260819-1920-f8c9397`.
+- Verification: `npm test` reports 860 passing, 0 skipped, 0 failed;
+  `npm run validate:content` passes; the local browser smoke test on the bumped
+  build loads with no console warnings or errors. The public build still serves
+  `fresh-20260819-0621-e0ba4c1` until this is deployed.
 - Fresh local URL:
-  `http://localhost:8123/?resetSave=1&devStart=explorer&build=fresh-20260819-0621-e0ba4c1`
-- Remote URL:
+  `http://localhost:8123/?resetSave=1&devStart=explorer&build=fresh-20260819-1920-f8c9397`
+- Remote URL (currently the previous build):
   `https://joeylapetina78.github.io/asteroids-from-scratch/?resetSave=1&devStart=explorer&build=fresh-20260819-0621-e0ba4c1&remote=e3369de`
 - Browser-facing changes require `npm run bump:cache` before final testing.
 
@@ -155,7 +158,9 @@ transactional work becomes quiet. It does not yet serialize arbitrary active
 contracts, in-flight carriers or physical craft into a regional snapshot. It also
 does not yet periodically relearn a supply rate during a very long absence.
 
-Useful live inspection:
+Live inspection: use the Observatory's **Simulation** tab first — it answers
+"which places are aggregated and why not" without a console. The raw state is
+still there when you need it:
 
 ```js
 window.__asteroids.distantSimulation.getState()
@@ -163,11 +168,89 @@ window.__asteroids.clock.getSchedule()
 window.__asteroids.economy
 ```
 
+## Simulation-boundary observability (2026-08-19)
+
+The Observatory has a **Simulation** tab, backed by
+`src/systems/simulationObservatory.js`. For every hub it shows detail level,
+mode, the reason it is in that mode, how long it has been far, how long it has
+been *continuously blocked*, what is holding it, observation history against the
+floor it must clear, aggregate age, estimated drift band and transition count,
+plus a transition log and the share of detailed work still being paid for. It is
+a read model: it never advances a flow or forces a transition.
+
+`estimateFlowDrift`/`describeObservation` live in `regionFlow.js` next to the
+measurement they extrapolate. `distantSimulation.js` now records `blockedSince`,
+which is what separates a hub that is busy from one that is stuck.
+
+### What the fresh remote run found
+
+A 31-minute fresh remote run with the player parked in the inner cluster,
+sampled every five seconds, produced an unambiguous result: **the three outer
+hubs never became eligible to aggregate in a single sample — 0/373, each.** Zero
+transitions in thirty-one minutes. `open-orders` was present in 100% of samples for
+all three, and the nine orders they opened in the first 31 seconds were still
+open at the end.
+
+The cause is not the aggregation gate. Long-haul freight to the outer hubs is
+refused on `maintenance-policy` — 458 declines across the run, against 13 for
+`payer-cannot-fund`. One order was offered 5302 credits against a carrier
+ask of 1387 and still declined: the round trip costs more hull wear than a carrier's
+maintenance policy accepts. So the far hubs' orders reach `ready` and never get
+a shipment, the hub is never quiescent, and it can never be handed over. The
+inner economy meanwhile delivered 55 orders normally over the same period.
+
+Clearing those orders by hand did not break the loop; the hubs re-posted fresh
+emergency orders within ~85 seconds.
+
+The harder half of the result came from parking the player at the frontier,
+which turned the six *inner* hubs FAR. All six were blocked too — by open
+orders, shipments in flight, extraction and population production — with zero
+quiet samples. Those hubs are not stuck; that is the inner economy working. So
+**the outer hubs fail the gate because they are broken and the inner hubs fail
+it because they are healthy.** The only settlements that ever passed were ones
+no freight was reaching at all. A quiescent-only boundary can therefore only
+ever collapse a settlement with nothing going on.
+
+The same move dropped detailed work from 55% to 21% in one step, which is the
+saving the phase exists for and is now readable in the tab.
+
+The aggregate and restore paths themselves are sound: forced open in a
+disposable local world, Ore Station One aggregated, ran for 63 seconds and
+restored around the **same institution object** with treasury, name and
+population identity intact, both transitions logged.
+
+**Conclusion: item 4 of the previous sequence is now confirmed by measurement
+and is the next thing to build.** Do not loosen the quiescent gate. Design a
+conserved checkpoint for open orders and in-flight shipments so a hub with live
+commitments can still be aggregated without corrupting them.
+
+A second gate also became visible: a far hub cannot aggregate until it has been
+watched for one full cycle of its own slowest need, which population scaling
+stretches to 346s / 420s / 490s for the three outer hubs. The tab now shows this
+as progress (`3m / 8m`) rather than a bare `supply-rate-unknown`.
+
+Because nothing aggregated unaided, **no supply rate has yet been observed going
+stale.** Every aggregate seen so far stayed inside `within-window`. The drift
+instrument is built and unit-tested and has not yet had a real chance to
+complain; step 3 is what will give it one.
+
+## Physical navigation
+
+A craft steers at an aim point displaced sideways from its waypoint by a berth
+lane, and arrival is measured against that same aim point — so a lane wider than
+the arrival radius can strand a ship on a road it is driving perfectly. That
+happened, silently, for a whole session. See
+[navigation-lanes.md](navigation-lanes.md) for the invariant, the
+`navigation-stalled` blocker that now reports it, and why the obvious version of
+that watchdog (count waypoints) was wrong.
+
 ## Known risks and deliberate boundaries
 
-- A busy hub may never reach the current quiescent aggregation gate. That is
-  preferable to corrupting an active contract, but long-run blocker frequency
-  must now be measured.
+- A busy hub never reaches the current quiescent aggregation gate. This is no
+  longer a risk to watch for; it was measured on 2026-08-19 and it is universal.
+  Every hub with a live economy stayed blocked for every sample it was far.
+  Refusing is still preferable to corrupting an active contract, so the fix is
+  the checkpoint, not a weaker gate.
 - Regional flow accuracy degrades as its observed supply rate becomes stale.
   Existing measurements show drift increasing roughly linearly beyond the
   observation window.
@@ -191,18 +274,34 @@ window.__asteroids.economy
 
 ## Recommended next sequence
 
-1. **Run a 30–60 minute fresh remote terrarium test.** Record when each FAR hub
-   becomes aggregate, which blocker prevents it, whether transitions repeat, and
-   whether approaching an aggregated hub restores cleanly. Inspect Economy,
-   Blockers, Contracts and Ledger alongside `distantSimulation.getState()`.
-2. **Add first-class aggregation observability.** Put mode, detail level,
-   `farSince`, observation age, blockers, last transition and modeled drift in the
-   Observatory so this does not depend on console inspection.
-3. **Bound stale-rate drift.** Re-observe/re-sync on roughly the observation-window
-   timescale. Never let an hour-away hub extrapolate forever from one early rate.
-4. **Handle perpetually busy hubs deliberately.** If real runs show they never
-   become quiescent, design a conserved checkpoint for active orders and shipments
-   instead of weakening or bypassing the gate.
+1. ~~Run a 30–60 minute fresh remote terrarium test.~~ Done 2026-08-19; findings
+   above. No hub aggregated in the unmodified run, so no supply rate has yet
+   been observed going stale. Aggregation and restoration themselves were
+   verified separately, in a world held quiescent by hand.
+2. ~~Add first-class aggregation observability.~~ Done — Observatory **Simulation**
+   tab, `src/systems/simulationObservatory.js`.
+3. ~~Checkpoint perpetually busy hubs.~~ Largely done, and the diagnosis was
+   different from the plan: the gate demanded silence because the aggregate wrote
+   ABSOLUTE stock and cash over live records, destroying any delivery or payment
+   that landed mid-step. It now reads live state, advances, and writes back only
+   its own delta — and nets real arrivals against modelled supply so the two are
+   never counted twice. Counterparty work (orders, shipments, extraction) no
+   longer blocks. See [level-of-detail.md](level-of-detail.md) Phase D.
+   **Still blocking, and still owed a checkpoint:** the hub's own population
+   production, factory/construction runs and commissioned protection — the flow
+   models those, so both running would double-count.
+4. **Bound stale-rate drift. This is now the next item and it is unblocked.**
+   Live aggregates exist, and the instrument has produced its first real readings
+   (`0.84× window`, `within-window`). Re-observe or re-sync on roughly the
+   observation-window timescale; never let an hour-away hub extrapolate forever
+   from one early rate.
+4b. **Checkpoint a hub's own internal work.** Population production, factory and
+   construction runs, and commissioned protection still block, because the flow
+   models them too. With the player at the frontier these are now the ONLY thing
+   keeping the inner six detailed — several read "eligible in 11s" behind them.
+4c. **Chase the detailed economy's money residual.** ~-9/s before any hub
+   aggregates, ~-27/s after; the aggregated hubs measure zero, so it is not the
+   boundary. Own investigation, with the Economy tab and `reconcileMoney`.
 5. **Aggregate operational/physical populations.** Represent distant haulers,
    miners, patrols and eventually ecology as bounded regional cohorts while keeping
    promoted/bespoke actors as preserved anchors. Restore plausible physical detail

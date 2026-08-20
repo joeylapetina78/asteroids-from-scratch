@@ -168,12 +168,20 @@ Completed after the foundation: distant aggregation and restoration around
 preserved institutional actors. See `distantSimulation.js` and
 [level-of-detail.md](level-of-detail.md).
 
+Completed 2026-08-19: first-class simulation-boundary observability
+(`simulationObservatory.js`, the Observatory's **Simulation** tab), plus the
+30-minute live run that measured the busy-hub blockers. Result: no far hub
+aggregated unaided, because a settlement with a live economy is never
+quiescent. See [level-of-detail.md](level-of-detail.md).
+
 Next:
 
-1. Observe and bound long-run aggregate drift and busy-hub blockers.
-2. Aggregate operational/physical populations while keeping bespoke actors as anchors.
-3. Territorial surveying, claims, upkeep, negotiation and conflict.
-4. Incremental reintroduction of asymmetry.
+1. Checkpoint open orders and in-flight shipments so a busy hub can be
+   aggregated without weakening the quiescent gate. This is the blocking item.
+2. Bound long-run aggregate drift once step 1 produces a live aggregate to watch.
+3. Aggregate operational/physical populations while keeping bespoke actors as anchors.
+4. Territorial surveying, claims, upkeep, negotiation and conflict.
+5. Incremental reintroduction of asymmetry.
 
 ## Shared settlement seed pipeline
 
