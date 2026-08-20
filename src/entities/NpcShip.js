@@ -1,7 +1,7 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260819-0621-e0ba4c1";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260819-0621-e0ba4c1";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260819-0621-e0ba4c1";
-import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260819-0621-e0ba4c1";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260820-0645-f8c9397";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260820-0645-f8c9397";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260820-0645-f8c9397";
+import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260820-0645-f8c9397";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -9,7 +9,12 @@ import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCa
 const MAX_SPEED = 96;
 const MAX_FORCE = 0.34;
 const ARRIVE_RADIUS = 330;
-const WAYPOINT_RADIUS = 150;
+export const WAYPOINT_RADIUS = 150;
+// No lane offset may exceed what the craft can then capture. A berth wider than
+// the arrival radius can leave a ship circling a waypoint it never reaches.
+export const MAX_BERTH_LANE_OFFSET = Math.round(WAYPOINT_RADIUS * 0.94); // 141
+// Corridor gates are ~80 units wide; a berth-sized offset aims beside the road.
+export const CORRIDOR_LANE_LIMIT = 60;
 const AVOID_RADIUS = 245;
 const BODY_RADIUS = 24;
 const STUCK_SPEED = 12;
@@ -754,15 +759,38 @@ function arrive(ship, target) {
   );
 }
 
+// A berth lane is a HUB concept: it stops several haulers converging on one
+// docking line and knotting up. A corridor waypoint is not a berth — it is a
+// narrow gate in the road, and holding a wide berth offset through one aims the
+// craft at a point beside the gate rather than through it.
+//
+// This mattered, and it deadlocked a ship. A hauler carrying a 225-unit offset
+// against a 150-unit capture radius settled into a steering equilibrium 163
+// units from its target on a corridor bend: close enough to keep steering at
+// it, never close enough to register arrival. `routeIndex` stopped advancing,
+// the craft hovered outside Yard Exchange indefinitely, and the shipment it was
+// carrying could never be delivered. Nothing reported a fault, because from
+// every system's point of view it was simply still in transit.
+//
+// So the offset is clamped to what the craft can actually capture, and clamped
+// harder inside a corridor, where the lane is narrow to begin with.
+export function laneOffsetFor(site, laneOffset) {
+  const limit = site?.type === "corridor-waypoint" ? CORRIDOR_LANE_LIMIT : MAX_BERTH_LANE_OFFSET;
+  const magnitude = Math.min(Math.abs(laneOffset ?? 0), limit);
+  return Math.sign(laneOffset ?? 0) * magnitude;
+}
+
 function getLaneWaypoint(route, routeIndex, laneOffset) {
   const previous = route[(routeIndex - 1 + route.length) % route.length].position;
-  const current = route[routeIndex].position;
+  const site = route[routeIndex];
+  const current = site.position;
   const lane = normalize(current.x - previous.x, current.y - previous.y, 1);
   const side = { x: -lane.y, y: lane.x };
+  const offset = laneOffsetFor(site, laneOffset);
 
   return {
-    x: current.x + side.x * laneOffset,
-    y: current.y + side.y * laneOffset,
+    x: current.x + side.x * offset,
+    y: current.y + side.y * offset,
   };
 }
 
