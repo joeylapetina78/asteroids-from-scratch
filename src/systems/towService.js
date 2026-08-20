@@ -1,14 +1,14 @@
-import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260820-0654-6716a5f";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260820-0654-6716a5f";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260820-0654-6716a5f";
-import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260820-0654-6716a5f";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260820-0654-6716a5f";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260820-0654-6716a5f";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260820-0654-6716a5f";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260820-0654-6716a5f";
-import { authorizeWreckSalvage, completeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260820-0654-6716a5f";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent } from "./componentCondition.js?v=fresh-20260820-0654-6716a5f";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260820-0654-6716a5f";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260820-1818-9a1a051";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260820-1818-9a1a051";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260820-1818-9a1a051";
+import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260820-1818-9a1a051";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260820-1818-9a1a051";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260820-1818-9a1a051";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260820-1818-9a1a051";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260820-1818-9a1a051";
+import { authorizeWreckSalvage, completeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260820-1818-9a1a051";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent } from "./componentCondition.js?v=fresh-20260820-1818-9a1a051";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260820-1818-9a1a051";
 
 const REPAIR_SITE_ID = "scrap-porch";
 const RECOVERY_COMPONENTS = Object.freeze([

@@ -38,6 +38,14 @@ export function buildPhysicalTransportationRoute(network, route) {
   return expandTransportationPath(route.path, network.destinations, network.connections, corridors);
 }
 
+// The furthest a hull of this class can be sent and still come back to service.
+// A route longer than this is not expensive, it is impossible.
+export function maximumServiceableDistance(policy = {}) {
+  const wearPerDistance = policy.expectedWearPerDistance ?? 0;
+  if (!(wearPerDistance > 0)) return Infinity;
+  return ((policy.maximumWear ?? Infinity) - (policy.minimumReturnMargin ?? 0)) / wearPerDistance;
+}
+
 export function evaluateTransportPlan({ network, originId, destinationId, payment = 0, currentWear = 0, policy = {}, repairOptions = [] }) {
   const route = findTransportationRoute(network, originId, destinationId, policy.knownDestinationIds);
   if (!route) return { eligible: false, reason: "destination-unreachable", score: -Infinity };
@@ -53,8 +61,37 @@ export function evaluateTransportPlan({ network, originId, destinationId, paymen
   const projectedWear = currentWear + tripWear + returnWear;
   const maximumWear = policy.maximumWear ?? Infinity;
   const minimumReturnMargin = policy.minimumReturnMargin ?? 0;
-  if (projectedWear > maximumWear - minimumReturnMargin) {
-    return { eligible: false, reason: "maintenance-policy", score: -Infinity, route, projectedWear, maintenance };
+  const budget = maximumWear - minimumReturnMargin;
+  if (projectedWear > budget) {
+    // Two very different refusals used to share one name, and the difference is
+    // the difference between "later" and "never":
+    //
+    //   maintenance-policy   this SHIP is too worn for this trip right now.
+    //                        Service it and the same run becomes legal.
+    //   beyond-fleet-range   this ROUTE cannot be survived by a fresh hull of
+    //                        this class at all. No amount of servicing helps;
+    //                        it needs a different craft or a service stop
+    //                        somewhere along the way.
+    //
+    // Reported separately because a world can sit for hours emitting hundreds of
+    // the second kind while every reader assumes it is seeing the first. First
+    // Reach ships a fleet whose budget is 31,875 units of round trip against an
+    // outer lane of 37,473, so its frontier is unreachable rather than expensive.
+    const reason = tripWear + returnWear > budget ? "beyond-fleet-range" : "maintenance-policy";
+    return {
+      eligible: false,
+      reason,
+      score: -Infinity,
+      route,
+      projectedWear,
+      maintenance,
+      tripWear,
+      returnWear,
+      budget,
+      // How far this class of hull could actually serve, for the reader who has
+      // to decide whether to buy a different ship or move the destination.
+      serviceableDistance: wearPerDistance > 0 ? budget / wearPerDistance : Infinity,
+    };
   }
   const distanceCost = route.distance * (policy.operatingCostPerDistance ?? 0);
   return {
@@ -66,4 +103,4 @@ export function evaluateTransportPlan({ network, originId, destinationId, paymen
     score: payment - distanceCost - projectedWear * (policy.wearPenalty ?? 0),
   };
 }
-import { createTransportCorridors, expandTransportationPath } from "./transportCorridors.js?v=fresh-20260820-0654-6716a5f";
+import { createTransportCorridors, expandTransportationPath } from "./transportCorridors.js?v=fresh-20260820-1818-9a1a051";
