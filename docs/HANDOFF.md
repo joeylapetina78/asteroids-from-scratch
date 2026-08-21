@@ -360,9 +360,19 @@ corridor navigation).
    construction runs, and commissioned protection still block, because the flow
    models them too. With the player at the frontier these are now the ONLY thing
    keeping the inner six detailed — several read "eligible in 11s" behind them.
-4c. **Chase the detailed economy's money residual.** ~-9/s before any hub
-   aggregates, ~-27/s after; the aggregated hubs measure zero, so it is not the
-   boundary. Own investigation, with the Economy tab and `reconcileMoney`.
+4c. ~~Chase the detailed economy's money residual.~~ Done, and it was never a
+   leak. `getActorAccount` returns the SAME account object for `sprc` and
+   `scrap-forge` — the compatibility adapters left both ids alive after SPRC's
+   operation was consolidated into Scrap Porch — so the reconciler counted that
+   treasury twice. Every movement of it landed in `money.total` twice while the
+   income and burn that caused it landed once, producing a residual proportional
+   to whatever SPRC was doing, with a sign that flipped as it earned or spent.
+   Measured before: residual 1144 against a 1200 balance delta. After: a -4067
+   delta produces only -190. Purses are now deduplicated by account identity,
+   duplicates flagged rather than dropped so their SHELF still counts.
+   **Remaining:** about -1.15/s, ~0.87% of money created, no longer correlated
+   with any one account. An order of magnitude smaller and unexplained; likely
+   rounding across the sampler's many `round()` calls, but not demonstrated.
 5. **Aggregate operational/physical populations.** Represent distant haulers,
    miners, patrols and eventually ecology as bounded regional cohorts while keeping
    promoted/bespoke actors as preserved anchors. Restore plausible physical detail
