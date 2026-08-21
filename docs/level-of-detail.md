@@ -549,6 +549,91 @@ phantom stock and a re-observed one does not move. Do not quote a drift
 percentage for a long-aggregated re-observed region; quote the band and the fact
 that the rate is still being re-measured.
 
+## Phase F — regions that are not being watched can still trade (2026-08-21)
+
+Re-observation stopped an aggregate inventing supply nobody sent. That was the
+destructive half. The constructive half was missing entirely, and an eight-hour
+run showed the cost: once every hub aggregated, procurement stopped running for
+BOTH sides of every order, so inter-hub commerce did not become cheap — it
+stopped. Yard Exchange finished the night on hundreds of units while Deep
+Research starved at zero served, and neither could reach the other.
+
+`regionalClearing.js` matches surplus against shortage between regions simulated
+as rates, and now across the boundary as well.
+
+### The rule
+
+A cheap simulation of trade is still TRADE:
+
+- every unit that arrives somewhere left somewhere else, in one movement;
+- every credit the buyer pays is received by somebody who exists;
+- the carrier is a real firm with a hull that could actually have made the trip.
+
+Conservation is by construction — material and credits move in the same
+operation, so there is no way to replay one side of a payment.
+
+**Reachability is not waived.** A lane no hull could survive is not traded
+however badly the goods are wanted. If distance stopped mattering the moment
+nobody was watching, it never meant anything.
+
+### Three sizing bugs, all found by running it
+
+None of these broke conservation, and none of them failed a unit test. The
+accounting was right every time; the SIGNAL was wrong.
+
+**One tick is not a shortage.** The first version cleared against
+`flow.shortfall`, which is a single step's unmet demand — about a second of it.
+Live: 0.01 units for two credits, twenty-five rounds, buyer stuck at 37% served.
+A region starving for ten minutes has a large accumulated need and per-tick
+shortfall cannot see it, because it resets every tick. Trade is now sized from
+missing COVER.
+
+**A region must not be both buyer and seller.** With cover-based sizing, two
+neighbours began shipping structural to each other in alternating rounds — 1.74
+out, 1.87 back, 1.67 out — because a hub holding between its sell floor and its
+buy target qualified as both. Both drained; only the carrier gained. There is now
+a dead band: shop below `restockBelowSeconds`, restock to `targetCoverSeconds`,
+sell only above that target.
+
+**Refusing a whole shipment is not a market.** A buyer that cannot fund the full
+load now buys what it can afford, subject to a minimum lot so that partial
+affordability does not decay back into 0.01-unit noise.
+
+### Crossing the boundary
+
+Aggregate-to-aggregate alone was not enough: three poor frontier regions cannot
+feed one another. A detailed hub now sells out of its REAL warehouse, and only
+what is genuinely spare — `getInventoryPosition` already tracks what a hub wants
+for itself and what it has promised elsewhere, so stock under contract is never
+sold twice.
+
+Both halves share one definition of enough cover, `TARGET_COVERAGE_SECONDS`.
+Two halves that disagree about what a surplus is cannot trade, only argue.
+
+Material crosses in the units each side really uses. A warehouse holds whole
+resources at differing yields and cannot always produce the exact effective
+quantity requested, so the seller answers with what it PARTED WITH and the buyer
+receives precisely that. Converting in one direction only is how material gets
+invented.
+
+One trap worth not repeating: `listSellers` originally asked `isHubAggregated`
+about global state instead of reading the records it was handed, so a hub that
+was the BUYER in the current round could also appear as a detailed seller and
+sell to itself. Membership is decided by the round's own inputs now.
+
+### What the map turns out to say
+
+Coldwater Depot is 122,886 units from Yard Exchange — a 245,772 round trip
+against a subspace budget of 212,500. **No hull in the game can supply it
+directly from the inner cluster.** It is fed by relay through Ore Station One or
+not at all, and clearing refuses to invent that trip. There is a test on it.
+
+### Still missing
+
+Aggregated hubs cannot SELL to detailed ones. Procurement still excludes any
+aggregated hub from its offers, and clearing only routes stock toward aggregated
+buyers. The frontier can now be supplied; it cannot yet export.
+
 ---
 
 ## Content findings surfaced along the way
