@@ -41,7 +41,10 @@ export function steerAroundObstacles(craft, obstacles = [], options = {}) {
   const speed = Math.hypot(craft.velocity?.x ?? 0, craft.velocity?.y ?? 0);
   const forward = speed > 0.001
     ? { x: (craft.velocity.x) / speed, y: (craft.velocity.y) / speed }
-    : { x: Math.cos(craft.heading ?? 0), y: Math.sin(craft.heading ?? 0) };
+    // Craft spell their facing differently: `heading` on haulers and patrols,
+    // `angle` on worker hulls. Reading only one silently points a stationary
+    // craft due east and makes its look-ahead meaningless.
+    : (() => { const facing = craft.heading ?? craft.angle ?? 0; return { x: Math.cos(facing), y: Math.sin(facing) }; })();
   const ahead = {
     x: craft.position.x + forward.x * feeler,
     y: craft.position.y + forward.y * feeler,

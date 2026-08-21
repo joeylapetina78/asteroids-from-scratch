@@ -64,3 +64,39 @@ behaviour with a cause — and it makes the cable consistent too, because both e
 are under together. The haul home runs at 2.5x rather than a jump: being
 recovered from the frontier should feel like a long ride, not a punishing one and
 not a teleport.
+
+## What it measures, and what it does not
+
+Measured in a running world, ~4 minutes, sampling only craft that were MOVING
+(a parked craft cannot dodge, see below). Penetration is expressed as a fraction
+of the rock's own radius, because grazing a boulder and passing through a pebble
+are not the same event:
+
+| craft | moving samples | worst | past rock centre | rate |
+|---|---:|---:|---:|---:|
+| hauler | 4592 | 186% | 5 | **0.11%** |
+| patrol | 143 | 141% | 1 | 0.70% |
+| miner | 3755 | 180% | 55 | **1.46%** |
+| subspace hauler | 2608 | 0% | 0 | 0.00% |
+
+**Haulers are the standard, not perfection.** They have the richest navigator in
+the game and still pass through a rock's centre about one moving frame in a
+thousand, with a worst case of 186% of a radius. Anyone tempted to measure this
+work against zero should start there: the bar the world actually holds is
+"occasionally grazes", not "never touches".
+
+**Miners improved from nothing to nearly that.** Before, they had no avoidance at
+all and were measured at 105-138% inside rocks at full cruise on ordinary
+errands. They now route around, at roughly thirteen times the hauler rate. Two
+reasons for the remaining gap, both known:
+
+- they use the simple primitive here, not the haulers' corridor-aware
+  gap-finding with careful mode;
+- **a parked craft cannot dodge.** Most remaining miner penetrations happen at
+  speeds of 4-48 while station-keeping on a rock it is cutting, when a DIFFERENT
+  rock drifts onto it. Steering cannot fix that; only a collision response or a
+  station-keeping nudge could, and neither is in scope here.
+
+The subspace zero is not a triumph of navigation — those craft are off flying
+frontier lanes where no asteroids are spawned. It confirms they never dodge, which
+is the point, but it is not evidence about the field.

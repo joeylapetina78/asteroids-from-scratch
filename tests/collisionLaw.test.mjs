@@ -86,3 +86,37 @@ test("nearby-obstacle check is a cheap pre-filter, not a second opinion", () => 
   assert.equal(hasNearbyObstacle(craft, [{ position: { x: 10_000, y: 0 }, radius: 50 }]), false);
   assert.equal(hasNearbyObstacle(craft, [{ position: { x: 200, y: 0 }, radius: 50 }]), true);
 });
+
+test("a miner keeps its engine lit through an avoidance turn", () => {
+  // The failure this guards was invisible to a unit test and obvious in the
+  // running game: miners were ending up 105% inside rocks at full speed.
+  // Deflecting the heading only changes where a craft POINTS. This hull thrusts
+  // only when roughly aligned, so a sharp late correction rotated the nose while
+  // momentum carried the hull straight on through the rock.
+  const miner = new MiningWorkerShip({ id: "miner-3", name: "Miner", x: 0, y: 0, angle: 0 });
+  const blocker = { position: { x: 900, y: 0 }, radius: 200 };
+  const destination = { x: 3_000, y: 0 };
+
+  let deepest = 0;
+  for (let tick = 0; tick < 1200; tick += 1) {
+    miner.flyTo(1 / 30, destination, 60, null, [blocker]);
+    const gap = Math.hypot(miner.position.x - blocker.position.x, miner.position.y - blocker.position.y);
+    deepest = Math.max(deepest, blocker.radius + miner.radius - gap);
+    if (miner.position.x > destination.x - 100) break;
+  }
+  assert.ok(deepest <= 0,
+    `the miner never entered the rock (deepest penetration ${Math.round(deepest)})`);
+});
+
+test("every errand a miner runs avoids by default", async () => {
+  // Two of six flight call sites were left unwired when avoidance was added, and
+  // the craft ghosted on exactly those errands. `flyToAvoiding` exists so a new
+  // errand cannot forget.
+  const { readFile } = await import("node:fs/promises");
+  const source = await readFile(new URL("../src/entities/MiningWorkerShip.js", import.meta.url), "utf8");
+  const bareCalls = [...source.matchAll(/this\.flyTo\(deltaSeconds,[^;]*?\);/gs)]
+    .map((match) => match[0])
+    .filter((call) => !/world\??\.asteroids/.test(call));
+  assert.deepEqual(bareCalls, [],
+    "every flyTo passes the field it must fly around, or goes through flyToAvoiding");
+});

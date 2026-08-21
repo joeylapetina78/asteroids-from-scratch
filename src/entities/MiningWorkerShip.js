@@ -1,7 +1,7 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260820-2030-c7ec977";
-import { steerAroundObstacles } from "../systems/obstacleNavigation.js?v=fresh-20260820-2030-c7ec977";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260820-2030-c7ec977";
-import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260820-2030-c7ec977";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260820-2041-03ea01d";
+import { steerAroundObstacles } from "../systems/obstacleNavigation.js?v=fresh-20260820-2041-03ea01d";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260820-2041-03ea01d";
+import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260820-2041-03ea01d";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
@@ -13,6 +13,9 @@ const HOLD_RANGE = MINING_RANGE * 0.72;
 // well below 1, so it needs scaling up to compete with a unit direction vector;
 // too low and the craft grazes the rock, too high and it forgets its errand.
 const OBSTACLE_DEFLECTION = 2.6;
+// Wide, because this hull turns before it can push. See flyTo.
+const OBSTACLE_CLEARANCE = 280;
+const OBSTACLE_FEELER = 240;
 const SHOT_SPEED = 300;
 const COLLECT_RANGE = 34;
 const HOME_RANGE = 86;
@@ -114,7 +117,7 @@ export class MiningWorkerShip {
     if (this.serviceReturn) {
       this.state = "returning-service";
       this.targetAsteroid = null;
-      return this.flyTo(deltaSeconds, this.serviceReturn.destination, HOME_RANGE, () => {
+      return this.flyToAvoiding(world, deltaSeconds, this.serviceReturn.destination, HOME_RANGE, () => {
         const request = this.serviceReturn;
         this.serviceReturn = null;
         this.state = "awaiting-service";
@@ -124,7 +127,7 @@ export class MiningWorkerShip {
     if (this.marketVisit) {
       this.state = "market-reposition";
       this.targetAsteroid = null;
-      return this.flyTo(deltaSeconds, this.marketVisit.destination, HOME_RANGE, () => {
+      return this.flyToAvoiding(world, deltaSeconds, this.marketVisit.destination, HOME_RANGE, () => {
         const visit = this.marketVisit;
         this.marketVisit = null;
         this.state = "idle";
@@ -254,6 +257,12 @@ export class MiningWorkerShip {
   // flies by turn-and-thrust. `exempt` is the rock it was actually sent to cut —
   // without it a miner would shove itself away from its own target and never
   // close to firing range.
+  // Every errand this craft runs is flown in normal space, so this is the form
+  // nearly all of them should use.
+  flyToAvoiding(world, deltaSeconds, target, stopRange, onArrival = null, exempt = null) {
+    return this.flyTo(deltaSeconds, target, stopRange, onArrival, world?.asteroids, exempt);
+  }
+
   flyTo(deltaSeconds, target, stopRange, onArrival = null, obstacles = null, exempt = null) {
     const toTarget = { x: target.x - this.position.x, y: target.y - this.position.y };
     const targetDistance = distance(this.position, target);
@@ -264,14 +273,32 @@ export class MiningWorkerShip {
     }
     let headingX = toTarget.x / targetDistance;
     let headingY = toTarget.y / targetDistance;
+    let avoiding = false;
     if (obstacles?.length) {
-      const steer = steerAroundObstacles(this, obstacles, { exempt, side: this.avoidanceSide });
-      headingX += steer.x * OBSTACLE_DEFLECTION;
-      headingY += steer.y * OBSTACLE_DEFLECTION;
+      const steer = steerAroundObstacles(this, obstacles, {
+        exempt,
+        side: this.avoidanceSide,
+        // Start bending well out. This hull only thrusts when it is roughly
+        // pointed where it wants to go, so a late, sharp deflection turns the
+        // nose while momentum carries the craft straight on through the rock.
+        // Turning early keeps the correction gentle and the engine lit.
+        clearance: OBSTACLE_CLEARANCE,
+        feeler: OBSTACLE_FEELER,
+      });
+      if (steer.x !== 0 || steer.y !== 0) {
+        avoiding = true;
+        headingX += steer.x * OBSTACLE_DEFLECTION;
+        headingY += steer.y * OBSTACLE_DEFLECTION;
+      }
     }
     const targetAngle = Math.atan2(headingY, headingX);
     const angleError = wrapAngle(targetAngle - this.angle);
-    advanceFlightBody(this, deltaSeconds, { turn: getTurnTowardAngle(this.angle, targetAngle), thrust: Math.abs(angleError) < 0.62, brake: false }, FLIGHT);
+    // Coasting through an avoidance turn is how a craft ends up inside a rock:
+    // rotating changes where it points, not where it is going. While avoiding,
+    // the engine stays lit through a much wider error so the velocity actually
+    // moves with the nose.
+    const thrustLimit = avoiding ? 1.5 : 0.62;
+    advanceFlightBody(this, deltaSeconds, { turn: getTurnTowardAngle(this.angle, targetAngle), thrust: Math.abs(angleError) < thrustLimit, brake: false }, FLIGHT);
   }
 
   brake(deltaSeconds) {

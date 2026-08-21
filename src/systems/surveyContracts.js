@@ -1,7 +1,7 @@
-﻿import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260820-2030-c7ec977";
-import { getResourceDefinition, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-2030-c7ec977";
-import { getRegionProfile } from "./worldRegions.js?v=fresh-20260820-2030-c7ec977";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260820-2030-c7ec977";
+﻿import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260820-2041-03ea01d";
+import { getResourceDefinition, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-2041-03ea01d";
+import { getRegionProfile } from "./worldRegions.js?v=fresh-20260820-2041-03ea01d";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260820-2041-03ea01d";
 
 // Survey contracts are the contract-reads-world layer: instead of authored
 // resource runs naming a fixed ore and place, the issuing hub surveys the ore
