@@ -1,11 +1,13 @@
-import { createValueNoise } from "./valueNoise.js?v=fresh-20260820-1824-9ef5720";
-import { getRegionProfile } from "./worldRegions.js?v=fresh-20260820-1824-9ef5720";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260820-1824-9ef5720";
+import { createValueNoise } from "./valueNoise.js?v=fresh-20260820-1911-46d9453";
+import { getRegionProfile } from "./worldRegions.js?v=fresh-20260820-1911-46d9453";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260820-1911-46d9453";
 
 const GRID_SIZE = 350;
 const JITTER = 100;
 const PLOT_EDGE_JITTER = 28;
 const HEX_RADIUS = 360;
+// Bias quantisation off exact .5 boundaries. See getPlotVertex.
+const TIE_BREAK = 1e-6;
 const HEX_WIDTH = Math.sqrt(3) * HEX_RADIUS;
 const HEX_ROW_STEP = HEX_RADIUS * 1.5;
 
@@ -317,7 +319,27 @@ export function createClaimField() {
   }
 
   function getPlotVertex(rawX, rawY) {
-    const key = `${Math.round(rawX / 8)},${Math.round(rawY / 8)}`;
+    // Two hexes must agree on the corner they share, and rounding alone does not
+    // guarantee it.
+    //
+    // A corner is computed independently by each hex that touches it, from that
+    // hex's own centre, so the two results differ in the last bits of a double.
+    // Almost always harmless — except when the true value lands exactly on a
+    // rounding tie, and for this lattice one of them always does:
+    // `HEX_RADIUS * sin(30 degrees)` is 180, and 180 / 8 is 22.5 exactly. One hex
+    // computes 180.0 and rounds to 23, its neighbour computes 179.99999999999997
+    // and rounds to 22. They then hold DIFFERENT vertex ids for the same corner,
+    // so `addEdge` never merges their shared edge and both sides record it as an
+    // edge with a single plot.
+    //
+    // Anything reading "one plot on this edge" as "outer boundary" then draws
+    // interior lines: the rights overlay was stroking plot sides in the middle of
+    // a jurisdiction, 13 of 151 edges in one viewport.
+    //
+    // Nudging off the tie by far more than the floating-point disagreement
+    // (~1e-14) and far less than the grid (0.5) makes both neighbours land on the
+    // same side of every boundary, whatever the radius happens to be.
+    const key = `${Math.round(rawX / 8 + TIE_BREAK)},${Math.round(rawY / 8 + TIE_BREAK)}`;
     let vertex = plotVertexCache.get(key);
     if (vertex) return vertex;
 
