@@ -23,13 +23,13 @@
 //      system, it does not appear here. Where a total cannot be reconciled the
 //      residual is reported as a residual rather than smoothed away.
 
-import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-2130-fede47f";
-import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260820-2130-fede47f";
-import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260820-2130-fede47f";
-import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260820-2130-fede47f";
-import { getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260820-2130-fede47f";
-import { listActors } from "./actorRegistry.js?v=fresh-20260820-2130-fede47f";
-import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260820-2130-fede47f";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-2136-3d2a51a";
+import { TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260820-2136-3d2a51a";
+import { STANDING_MINING_ORDERS } from "./miningOperation.js?v=fresh-20260820-2136-3d2a51a";
+import { getSupplierAskPrice, listSettlementIds } from "./hubProcurement.js?v=fresh-20260820-2136-3d2a51a";
+import { getActorAccount, getActorFinances, getArchetypeId } from "./actorConfig.js?v=fresh-20260820-2136-3d2a51a";
+import { listActors } from "./actorRegistry.js?v=fresh-20260820-2136-3d2a51a";
+import { POPULATION_NEEDS } from "./populationDemand.js?v=fresh-20260820-2136-3d2a51a";
 
 // 5 s is fast enough to see a repricing (throttled to 60 s) as a step rather
 // than a jump, and slow enough that two hours of history is a few thousand
@@ -80,19 +80,43 @@ export function ensureEconomyHistory(state) {
 // people and populations out. A person's money is their institution's, and a
 // population's cash is counted separately as household cash — counting either
 // here would double it.
+// Everyone who holds money or material, with each purse counted ONCE.
+//
+// Two actor ids can name the same account. SPRC's operation was consolidated
+// into Scrap Porch, and compatibility adapters kept the old `sprc` id working
+// alongside `scrap-forge` — so `getActorAccount` hands back the very same
+// account object for both. Walking actors and summing balances therefore added
+// that one treasury twice.
+//
+// A doubled balance does not merely inflate a total, it corrupts the RATE: the
+// account's every movement lands in `money.total` twice while the income and
+// burn that caused it are counted once. That is a residual proportional to
+// however much SPRC happened to be moving, with a sign that flips depending on
+// whether it was earning or spending — which is exactly what the money
+// reconciler had been reporting, and it was never a leak in the economy at all.
+//
+// Material is a separate question and must not be deduplicated with it: SPRC
+// keeps its shelf beside the institution, so the duplicate actor still carries
+// inventory the primary record does not have. Duplicates are therefore kept and
+// flagged, not dropped — they contribute stock and not cash.
 export function listAccountHolders(state) {
   const holders = new Map();
+  const countedAccounts = new Set();
 
   listActors(state).forEach(({ id, record }) => {
     if (!id || holders.has(id)) return;
     const finances = getActorFinances(state, id);
     if (!finances) return;
+    const account = getActorAccount(state, id);
+    // The same money under another name.
+    const duplicate = Boolean(account) && countedAccounts.has(account);
+    if (account) countedAccounts.add(account);
     // SPRC keeps its account AND its shelf beside the institution rather than
     // on it, so its stock has to be fetched rather than read off the record.
     const inventories = state.sprc?.institution?.id === id
       ? (state.sprc?.inventories ?? {})
       : (record.inventories ?? {});
-    holders.set(id, { record, finances, inventories });
+    holders.set(id, { record, finances, inventories, countsMoney: !duplicate });
   });
 
   return [...holders.values()];
@@ -116,7 +140,7 @@ export function readEconomySnapshot(state, { now = Date.now() } = {}) {
   let cogsCumulative = 0;
   let unitsSoldCumulative = 0;
 
-  listAccountHolders(state).forEach(({ record: institution, finances, inventories }) => {
+  listAccountHolders(state).forEach(({ record: institution, finances, inventories, countsMoney = true }) => {
     const byFamily = Object.fromEntries(TRADED_FAMILIES.map((family) => [family, 0]));
     const byResource = {};
     let inventoryUnits = 0;
@@ -164,7 +188,9 @@ export function readEconomySnapshot(state, { now = Date.now() } = {}) {
       arrivalInternalFunding: round(institution.arrivalInternalFunding ?? 0),
     };
 
-    institutionCash += finances.balance;
+    // A duplicate name for an already-counted purse adds its shelf but not its
+    // cash. See listAccountHolders.
+    if (countsMoney) institutionCash += finances.balance;
     hubMaterialUnits += inventoryUnits;
     finishedGoodsUnits += finished;
     productionSpendCumulative += trade?.productionSpend ?? 0;

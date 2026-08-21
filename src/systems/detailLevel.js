@@ -1,6 +1,6 @@
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260820-2130-fede47f";
-import { getWorldSites } from "./worldSites.js?v=fresh-20260820-2130-fede47f";
-import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260820-2130-fede47f";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260820-2136-3d2a51a";
+import { getWorldSites } from "./worldSites.js?v=fresh-20260820-2136-3d2a51a";
+import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260820-2136-3d2a51a";
 
 // How closely the world is simulated, place by place.
 //

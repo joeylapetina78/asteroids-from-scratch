@@ -1,7 +1,7 @@
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260820-2130-fede47f";
-import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260820-2130-fede47f";
-import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260820-2130-fede47f";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260820-2130-fede47f";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260820-2136-3d2a51a";
+import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260820-2136-3d2a51a";
+import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260820-2136-3d2a51a";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260820-2136-3d2a51a";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.
