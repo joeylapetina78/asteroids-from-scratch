@@ -1,5 +1,5 @@
-import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260820-1911-46d9453";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260820-1911-46d9453";
+import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260820-1932-a7cfb77";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260820-1932-a7cfb77";
 
 // How an actor moves on price — as a buyer bidding up, and as a seller coming
 // down.

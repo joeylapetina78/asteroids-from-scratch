@@ -1,4 +1,4 @@
-import { getSpendable } from "./valuation.js?v=fresh-20260820-1911-46d9453";
+import { getSpendable } from "./valuation.js?v=fresh-20260820-1932-a7cfb77";
 
 export function createNeedRecord({ id, kind, subject, target = null, current = null, shortage = 0, urgency = "routine", purpose = null, context = {}, createdAt = Date.now() }) {
   return { id, recordType: "need", kind, subject, target, current, shortage, urgency, purpose, context, status: "open", responseIds: [], createdAt };

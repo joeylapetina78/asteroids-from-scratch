@@ -1,23 +1,24 @@
-import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260820-1911-46d9453";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260820-1911-46d9453";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260820-1911-46d9453";
-import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260820-1911-46d9453";
-import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260820-1911-46d9453";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260820-1911-46d9453";
-import { adaptShipment } from "./intentions.js?v=fresh-20260820-1911-46d9453";
-import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260820-1911-46d9453";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260820-1911-46d9453";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260820-1911-46d9453";
-import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260820-1911-46d9453";
-import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260820-1911-46d9453";
-import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260820-1911-46d9453";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260820-1911-46d9453";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, routineServiceCraft, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260820-1911-46d9453";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260820-1911-46d9453";
-import { issuerTreasuryRecords, seedIssuerTreasuries } from "./contractTreasury.js?v=fresh-20260820-1911-46d9453";
-import { recruitPopulationLabor, releasePopulationLabor } from "./populationLabor.js?v=fresh-20260820-1911-46d9453";
-import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260820-1911-46d9453";
-import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260820-1911-46d9453";
+import { createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260820-1932-a7cfb77";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260820-1932-a7cfb77";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260820-1932-a7cfb77";
+import { PROCUREMENT_STATUS, getProcurementFreightOffers, listOrders } from "./hubProcurement.js?v=fresh-20260820-1932-a7cfb77";
+import { getServiceCost, getUnitCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260820-1932-a7cfb77";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260820-1932-a7cfb77";
+import { adaptShipment } from "./intentions.js?v=fresh-20260820-1932-a7cfb77";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluateTransportPlan, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260820-1932-a7cfb77";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260820-1932-a7cfb77";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260820-1932-a7cfb77";
+import { getEffectiveTransportPolicy, getShipDrive, hasSubspaceDrive } from "./shipDrives.js?v=fresh-20260820-1932-a7cfb77";
+import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260820-1932-a7cfb77";
+import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260820-1932-a7cfb77";
+import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260820-1932-a7cfb77";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260820-1932-a7cfb77";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, routineServiceCraft, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260820-1932-a7cfb77";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260820-1932-a7cfb77";
+import { issuerTreasuryRecords, seedIssuerTreasuries } from "./contractTreasury.js?v=fresh-20260820-1932-a7cfb77";
+import { recruitPopulationLabor, releasePopulationLabor } from "./populationLabor.js?v=fresh-20260820-1932-a7cfb77";
+import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260820-1932-a7cfb77";
+import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260820-1932-a7cfb77";
 
 // Until a carrier has actually paid for a repair, assume this much for upkeep.
 const FREIGHT_REFERENCE_SERVICE_COST = 180;
@@ -65,6 +66,11 @@ const HAULER_HIRE_AFTER_BUSY_SECONDS = 60;
 const HAULER_RELEASE_AFTER_IDLE_SECONDS = 120;
 const REACTIVATED_MINIMUM_SERVICE_SECONDS = 300;
 const HAULER_COST = 6000;
+// A subspace hull costs what its reach is worth. Deliberately steep: it is the
+// difference between a settlement being served and being unreachable, and it
+// should be an investment a hub commits to rather than an obvious upgrade
+// everyone takes by default.
+const SUBSPACE_HAULER_COST = 21000;
 const CONVENTIONAL_HIRE_MAINTENANCE_RESERVE = 3000;
 export const REGIONAL_HAULER_FLOOR = 8;
 const HUB_SPONSORED_OPERATING_GRANT = 5000;
@@ -878,6 +884,12 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     ship.conditionSpeedMultiplier = propulsionStage === "failed" ? 0
       : propulsionStage === "emergency" ? 0.72
         : propulsionStage === "degraded" ? 0.9 : 1;
+    // The hull's drive, projected onto the physical craft. Reach was only half
+    // of it: a frontier lane is 76,000 units, so a standard cruise turns a
+    // delivery into a quarter-hour crossing.
+    const drive = getShipDrive(shipInstitution);
+    ship.driveSpeedMultiplier = drive.speedMultiplier;
+    ship.phasesThroughObstacles = drive.phasesThroughObstacles;
   }
 
   function applyFreightTaskUse(shipId, usage) {
@@ -1014,7 +1026,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       // changing how a carrier behaves when work is already local.
       .map(({ template, repositionFrom }) => {
         const rate = getFreightRate(template);
-        const plan = evaluateTransportPlan({ network: transportationNetwork, originId: template.originSiteId, destinationId: template.destinationSiteId, payment: rate, currentWear: shipInstitution.wear ?? 0, policy: carrier.policies?.transportation, repairOptions: carrier.repairOptions });
+        const plan = evaluateTransportPlan({ network: transportationNetwork, originId: template.originSiteId, destinationId: template.destinationSiteId, payment: rate, currentWear: shipInstitution.wear ?? 0, policy: getEffectiveTransportPolicy(carrier.policies?.transportation, shipInstitution), repairOptions: carrier.repairOptions });
         const issuer = logistics.institutions[template.issuerInstitutionId];
         const funding = evaluateAffordability({ account: issuer.accounts.operating, policy: { protectedCash: 0 }, cost: rate });
         // Supplier-side pricing: the carrier totals what the run costs it —
@@ -2078,7 +2090,7 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       if (project?.responseKind !== HUB_RESPONSE_KIND.COMMISSION || project.status !== "planned") return;
 
       const protectedCash = getActorProtectedCash(state, hub.id);
-      const totalCommitment = HAULER_COST + HUB_SPONSORED_OPERATING_GRANT;
+      const totalCommitment = (requiresSubspaceReach(hub) ? SUBSPACE_HAULER_COST : HAULER_COST) + HUB_SPONSORED_OPERATING_GRANT;
       if (hub.accounts.operating.balance - totalCommitment < protectedCash) {
         transitionHubProject(state, hub.id, project.id, "blocked", { blocker: "protected-cash" }, now());
         return;
@@ -2097,6 +2109,28 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     });
   }
 
+  // Can an ordinary hull legally reach this settlement from anywhere at all?
+  //
+  // Not "is it far" — is it SERVICEABLE. A normal-space carrier must finish a run
+  // still able to reach maintenance, so a hub past that limit cannot be supplied
+  // by any standard freighter at any price. Such a hub does not need another
+  // identical ship; it needs a different drive.
+  function requiresSubspaceReach(hub) {
+    const basePolicy = FIRST_REACH_CARRIERS[0]?.policy ?? {};
+    const repairOptions = FIRST_REACH_CARRIERS[0]?.repairOptions ?? [];
+    const origins = Object.values(logistics.institutions)
+      .filter((institution) => institution.archetypeId === "settlement" && institution.siteId && institution.siteId !== hub.siteId);
+    return !origins.some((origin) => evaluateTransportPlan({
+      network: transportationNetwork,
+      originId: origin.siteId,
+      destinationId: hub.siteId,
+      payment: 0,
+      currentWear: 0,
+      policy: basePolicy,
+      repairOptions,
+    }).eligible);
+  }
+
   function sponsorHubHauler(hub, policy) {
     const index = (logistics.counters.hauler = (logistics.counters.hauler ?? 0) + 1);
     const carrierId = `carrier:${hub.siteId}-sponsored-${index}`;
@@ -2113,6 +2147,8 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const operatorProfile = recruited.operator;
     const operatorName = operatorProfile.name;
     const minimumOperatingCash = 1800;
+    const driveId = requiresSubspaceReach(hub) ? "subspace" : "normal-space";
+    const hullCost = driveId === "subspace" ? SUBSPACE_HAULER_COST : HAULER_COST;
     const templatePolicy = structuredClone(FIRST_REACH_CARRIERS[0]?.policy ?? {});
     const repairOptions = structuredClone(FIRST_REACH_CARRIERS[0]?.repairOptions ?? []);
 
@@ -2139,14 +2175,16 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       return null;
     }
 
-    hub.accounts.operating.balance -= HAULER_COST + HUB_SPONSORED_OPERATING_GRANT;
-    hub.capitalSpend = (hub.capitalSpend ?? 0) + HAULER_COST;
+    hub.accounts.operating.balance -= hullCost + HUB_SPONSORED_OPERATING_GRANT;
+    hub.capitalSpend = (hub.capitalSpend ?? 0) + hullCost;
     policy.sponsored += 1;
     const shipInstitutionId = `ship:${shipId}`;
     const initialWear = 0.25 + ((index * 37) % 150) / 100;
     logistics.institutions[shipInstitutionId] = {
       id: shipInstitutionId, name: created.name, referenceId: `HAUL-SPONSORED-${index}`,
       archetypeId: "cargo-ship", controllerInstitutionId: carrierId, wear: initialWear, issueCount: 0,
+      // The drive belongs to the hull. Selling the ship sells the reach.
+      driveId,
     };
     ensureFreightComponents(logistics.institutions[shipInstitutionId]);
     logistics.haulers[shipId] = {
@@ -2158,10 +2196,12 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     state.ledger.recordEvent("hub.haulerSponsored", {
       institutionId: hub.id, institutionName: hub.name, carrierInstitutionId: carrierId,
       operatorId, populationId: recruited.assignment.populationId, laborAssignmentId: assignmentId,
-      haulerId: shipId, hullCost: HAULER_COST, operatingGrant: HUB_SPONSORED_OPERATING_GRANT,
+      haulerId: shipId, hullCost, driveId, operatingGrant: HUB_SPONSORED_OPERATING_GRANT,
       maintenanceEscrow: HUB_SPONSORED_MAINTENANCE_ESCROW, initialWear,
       regionalFleetSize: Object.keys(logistics.haulers).length,
-    }, { visible: true, message: `${hub.name} capitalized ${carrierName} and put ${created.name} into regional freight service.` });
+    }, { visible: true, message: driveId === "subspace"
+        ? `${hub.name} capitalized ${carrierName} and commissioned ${created.name}, a subspace hauler, for ${hullCost} cr — no standard freighter can reach it.`
+        : `${hub.name} capitalized ${carrierName} and put ${created.name} into regional freight service.` });
     return created;
   }
 

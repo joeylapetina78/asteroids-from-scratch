@@ -1,7 +1,7 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260820-1911-46d9453";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260820-1911-46d9453";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260820-1911-46d9453";
-import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260820-1911-46d9453";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260820-1932-a7cfb77";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260820-1932-a7cfb77";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260820-1932-a7cfb77";
+import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260820-1932-a7cfb77";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -178,11 +178,15 @@ export class NpcShip {
       this.lastWaypointDistance = distance(this.position, this.getWaypoint());
     }
 
-    this.updateCarefulMode(deltaSeconds, world.asteroids, waypointDistance);
+    // Underspace has nothing in it to hit, so a phasing craft does not weave,
+    // does not slow down for rocks, and does not enter careful mode. Everything
+    // else shares the lane with the field and must work around it.
+    const obstacles = this.phasesThroughObstacles ? [] : world.asteroids;
+    this.updateCarefulMode(deltaSeconds, obstacles, waypointDistance);
     const corridorCruise = Boolean(this.activeCorridorId);
     this.applySteer(arrive(this, this.getWaypoint()), corridorCruise ? 1.4 : 1);
-    this.applySteer(steerTowardOpenGap(this, this.getWaypoint(), world.asteroids), corridorCruise ? 0.18 : this.isCarefulMode ? 1.15 : 0.62);
-    this.applySteer(avoidAsteroids(this, world.asteroids), this.getAvoidanceWeight());
+    this.applySteer(steerTowardOpenGap(this, this.getWaypoint(), obstacles), corridorCruise ? 0.18 : this.isCarefulMode ? 1.15 : 0.62);
+    this.applySteer(avoidAsteroids(this, obstacles), this.getAvoidanceWeight());
     this.applySteer(separateShips(this, world.npcShips), this.turnSettleTimer > 0 ? 1.05 : 1.3);
     this.updateStuckEscape(deltaSeconds, world.npcShips, world.asteroids);
     this.integrate(deltaSeconds);
@@ -353,7 +357,8 @@ export class NpcShip {
   getMaxSpeed() {
     const carefulMultiplier = this.isCarefulMode ? CAREFUL_SPEED_MULTIPLIER : 1;
     const corridorMultiplier = this.activeCorridorId ? CORRIDOR_CRUISE_SPEED_MULTIPLIER : 1;
-    return MAX_SPEED * corridorMultiplier * carefulMultiplier * this.getTurnSpeedMultiplier() * (this.conditionSpeedMultiplier ?? 1);
+    return MAX_SPEED * corridorMultiplier * carefulMultiplier * this.getTurnSpeedMultiplier()
+      * (this.conditionSpeedMultiplier ?? 1) * (this.driveSpeedMultiplier ?? 1);
   }
 
   getTurnSpeedMultiplier() {
