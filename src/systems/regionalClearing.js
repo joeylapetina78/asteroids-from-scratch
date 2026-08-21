@@ -1,7 +1,7 @@
-import { TRADED_FAMILIES } from "./hubInventory.js?v=fresh-20260820-2144-6027e58";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS, FIRST_REACH_CARRIER_POLICY } from "../content/transportation/firstReachNetwork.js?v=fresh-20260820-2144-6027e58";
-import { createTransportationNetwork, findTransportationRoute, maximumServiceableDistance } from "./transportationPlanning.js?v=fresh-20260820-2144-6027e58";
-import { getEffectiveTransportPolicy } from "./shipDrives.js?v=fresh-20260820-2144-6027e58";
+import { TRADED_FAMILIES } from "./hubInventory.js?v=fresh-20260820-2213-82f8ba2c";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS, FIRST_REACH_CARRIER_POLICY } from "../content/transportation/firstReachNetwork.js?v=fresh-20260820-2213-82f8ba2c";
+import { createTransportationNetwork, findTransportationRoute, maximumServiceableDistance } from "./transportationPlanning.js?v=fresh-20260820-2213-82f8ba2c";
+import { getEffectiveTransportPolicy } from "./shipDrives.js?v=fresh-20260820-2213-82f8ba2c";
 
 // Trade between two regions that are both being simulated as rates.
 //
@@ -20,8 +20,29 @@ import { getEffectiveTransportPolicy } from "./shipDrives.js?v=fresh-20260820-21
 // that could actually have made the trip.
 
 export const CLEARING_DEFAULTS = Object.freeze({
-  // What a region keeps back before it will sell to a neighbour. Selling down to
-  // empty to serve somebody else's shortfall is how one starving hub becomes two.
+  // How much cover a region tries to buy itself. Trade restocks a shelf; it does
+  // not patch one tick.
+  //
+  // The first version cleared against `flow.shortfall`, which is a SINGLE
+  // STEP's unmet demand — about a second of it. The result was real trades of
+  // 0.01 units for two credits, twenty-five times over, while the buyer sat at
+  // 37% served and got no better. A region that has been starving for ten
+  // minutes has a large accumulated need, and per-tick shortfall cannot see it
+  // because it resets every tick.
+  targetCoverSeconds: 600,
+  // A region only goes shopping once it drops below this, and it restocks up to
+  // the target. The gap between the two is a DEAD BAND, and it is what stops the
+  // lane oscillating.
+  //
+  // Without it a region holding between the sell floor and the buy target is
+  // simultaneously a valid buyer and a valid seller, so two neighbours ship the
+  // same family back and forth forever, paying goods and freight in both
+  // directions every round. A live run did exactly that: 1.74 units one way,
+  // 1.87 back, 1.67 out again, draining both hubs to enrich the carrier.
+  restockBelowSeconds: 300,
+  // A region sells only what it holds ABOVE its own target — true surplus, not
+  // merely more than its emergency floor. Selling down to empty to serve
+  // somebody else's shortage is how one starving hub becomes two.
   reserveSeconds: 240,
   // Credits per effective unit. Deliberately a single number: negotiation,
   // contention and relationship pricing are exactly what aggregation exists to
@@ -77,8 +98,24 @@ function familyStock(flow, family) {
 // What a region can spare: stock beyond the buffer it wants for its own people.
 function sellableUnits(flow, family, policy) {
   const consumption = flow?.demand?.consumption?.[family] ?? 0;
-  const reserve = consumption * policy.reserveSeconds;
-  return Math.max(0, familyStock(flow, family) - reserve);
+  // A region with no appetite of its own still keeps its emergency floor; a
+  // region with one sells only above the cover it wants for itself.
+  const floor = consumption > 0
+    ? consumption * Math.max(policy.targetCoverSeconds, policy.reserveSeconds)
+    : consumption * policy.reserveSeconds;
+  return Math.max(0, familyStock(flow, family) - floor);
+}
+
+// What a region is short of holding, not what it failed to serve this instant.
+// A hub with nothing on the shelf and people who eat wants a shelf, and that is
+// the quantity worth hauling across a frontier.
+function wantedUnits(flow, family, policy) {
+  const consumption = flow?.demand?.consumption?.[family] ?? 0;
+  if (!(consumption > 0)) return 0;
+  const stock = familyStock(flow, family);
+  // Only shop once genuinely low. Inside the dead band a region sits tight.
+  if (stock >= consumption * policy.restockBelowSeconds) return 0;
+  return Math.max(0, consumption * policy.targetCoverSeconds - stock);
 }
 
 // One clearing round between the regions currently simulated as rates.
@@ -97,11 +134,11 @@ export function clearRegionalTrade(state, records, { at = Date.now(), policy = C
 
   TRADED_FAMILIES.forEach((family) => {
     const buyers = aggregated
-      .filter((record) => (record.flow.shortfall?.[family] ?? 0) > 0)
-      .sort((first, second) => (second.flow.shortfall[family] ?? 0) - (first.flow.shortfall[family] ?? 0));
+      .filter((record) => wantedUnits(record.flow, family, policy) > 0)
+      .sort((first, second) => wantedUnits(second.flow, family, policy) - wantedUnits(first.flow, family, policy));
 
     buyers.forEach((buyer) => {
-      let wanted = buyer.flow.shortfall[family] ?? 0;
+      let wanted = wantedUnits(buyer.flow, family, policy);
       if (!(wanted > 0)) return;
 
       const sellers = aggregated
@@ -132,7 +169,9 @@ export function clearRegionalTrade(state, records, { at = Date.now(), policy = C
         // Material: leaves one shelf, arrives on the other. One movement.
         seller.flow.stock[family] = familyStock(seller.flow, family) - units;
         buyer.flow.stock[family] = familyStock(buyer.flow, family) + units;
-        buyer.flow.shortfall[family] = Math.max(0, wanted - units);
+        // The shelf just grew, so whatever this region could not serve this
+        // instant is now closer to being servable.
+        buyer.flow.shortfall[family] = Math.max(0, (buyer.flow.shortfall?.[family] ?? 0) - units);
         wanted -= units;
 
         // Credits: the buyer pays and every credit is received by somebody who

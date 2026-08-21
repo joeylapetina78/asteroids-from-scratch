@@ -1,12 +1,12 @@
-import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260820-2144-6027e58";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260820-2144-6027e58";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260820-2144-6027e58";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260820-2144-6027e58";
-import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260820-2144-6027e58";
-import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260820-2144-6027e58";
-import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260820-2144-6027e58";
-import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260820-2144-6027e58";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260820-2144-6027e58";
+import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260820-2213-82f8ba2c";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260820-2213-82f8ba2c";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260820-2213-82f8ba2c";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260820-2213-82f8ba2c";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260820-2213-82f8ba2c";
+import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260820-2213-82f8ba2c";
+import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260820-2213-82f8ba2c";
+import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260820-2213-82f8ba2c";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260820-2213-82f8ba2c";
 
 export const INDUSTRIAL_PARTS = Object.freeze(["hull-plate", "machine-part"]);
 

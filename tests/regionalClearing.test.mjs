@@ -24,21 +24,26 @@ function aggregatedWorld() {
   cash("yard-exchange", 50_000);
   cash("scrap-forge", 50_000);
 
-  const flow = (stock, shortfall) => ({
+  // Consumption is what makes a region WANT a shelf. Trade sizes itself from the
+  // cover a region is missing, not from one tick's unmet demand, so a fixture
+  // with no appetite correctly trades nothing.
+  const flow = (stock, consumption) => ({
     supply: { structural: 1, industrial: 1, volatile: 1 },
     stock: { structural: 0, industrial: 0, volatile: 0, ...stock },
-    shortfall: { structural: 0, industrial: 0, volatile: 0, ...shortfall },
-    demand: { consumption: { structural: 0, industrial: 0, volatile: 0 } },
+    shortfall: { structural: 0, industrial: 0, volatile: 0 },
+    demand: { consumption: { structural: 0, industrial: 0, volatile: 0, ...consumption } },
   });
 
   const records = {
+    // Well stocked and eating slowly: plenty to spare.
     "yard-exchange": {
       institutionId: "yard-exchange", siteId: "yard-exchange", mode: "aggregate",
-      flow: flow({ volatile: 400 }, {}),
+      flow: flow({ volatile: 400 }, { volatile: 0.05 }),
     },
+    // Empty shelf and hungry people.
     "scrap-forge": {
       institutionId: "scrap-forge", siteId: "scrap-porch", mode: "aggregate",
-      flow: flow({}, { volatile: 60 }),
+      flow: flow({}, { volatile: 0.2 }),
     },
   };
   return { state, records };
@@ -56,7 +61,7 @@ test("a region with a surplus supplies a region with a shortfall", () => {
   const result = clearRegionalTrade(state, records, { at: 2_000 });
 
   assert.ok(result.trades.length > 0, "the trade happened");
-  assert.equal(records["scrap-forge"].flow.shortfall.volatile, 0, "the shortfall was met");
+  assert.ok(records["scrap-forge"].flow.stock.volatile > 0, "the empty shelf was restocked");
   assert.ok(records["yard-exchange"].flow.stock.volatile < 400, "it came out of somebody's shelf");
   assert.equal(totalStock(records, "volatile"), before,
     "material is conserved: every unit that arrived left somewhere else");
@@ -87,7 +92,7 @@ test("the carrier that moved it is paid, and is a real firm", () => {
 
 test("a region will not sell itself empty to fix somebody else", () => {
   const { state, records } = aggregatedWorld();
-  // Give the seller real consumption, so most of its shelf is spoken for.
+  // Give the seller a big appetite, so most of its shelf is spoken for.
   records["yard-exchange"].flow.demand.consumption.volatile = 1.5;
   const reserve = 1.5 * CLEARING_DEFAULTS.reserveSeconds;
 
@@ -128,4 +133,55 @@ test("a lane no hull could survive is not traded, however badly it is wanted", (
   const withSubspace = findRegionalCarrier(state, "yard-exchange", "deep-research");
   assert.ok(withSubspace, "a subspace hull can");
   assert.equal(withSubspace.hull.driveId, "subspace");
+});
+
+test("a trade is a shipment, not a rounding error", () => {
+  // The first live run cleared 0.01 units for two credits, twenty-five times,
+  // while the buyer sat at 37% served and never improved. That is what comes of
+  // sizing trade from one tick's unmet demand instead of the cover a region is
+  // actually missing.
+  const { state, records } = aggregatedWorld();
+  const result = clearRegionalTrade(state, records, { at: 2_000 });
+
+  assert.ok(result.trades.length > 0);
+  const [trade] = result.trades;
+  assert.ok(trade.units >= 1, `a trade moves a real quantity, not ${trade.units}`);
+  assert.ok(trade.goods >= 100, `and is worth paying a carrier for, not ${trade.goods} credits`);
+});
+
+test("a restocked region stops asking", () => {
+  // Trade must converge. A buyer topped up to its target should not keep buying
+  // on the next round, or the lane becomes a perpetual motion machine.
+  const { state, records } = aggregatedWorld();
+  clearRegionalTrade(state, records, { at: 2_000 });
+  const afterFirst = records["scrap-forge"].flow.stock.volatile;
+  const second = clearRegionalTrade(state, records, { at: 3_000 });
+
+  assert.ok(afterFirst > 0);
+  assert.equal(second.trades.length, 0, "a full shelf places no order");
+});
+
+test("two regions do not ship the same goods back and forth", () => {
+  // A live run had ore-station-one and coldwater-depot trading structural to
+  // each other in alternating rounds — 1.74 out, 1.87 back, 1.67 out — because a
+  // region holding between the sell floor and the buy target counted as both a
+  // buyer and a seller. Both hubs drained; only the carrier gained.
+  const { state, records } = aggregatedWorld();
+  // Both sit mid-range: comfortable, neither desperate nor overflowing.
+  records["yard-exchange"].flow.demand.consumption.volatile = 0.2;
+  records["yard-exchange"].flow.stock.volatile = 0.2 * 450;
+  records["scrap-forge"].flow.demand.consumption.volatile = 0.2;
+  records["scrap-forge"].flow.stock.volatile = 0.2 * 450;
+
+  const result = clearRegionalTrade(state, records, { at: 2_000 });
+  assert.deepEqual(result.trades, [],
+    "inside the dead band nobody is both a buyer and a seller");
+});
+
+test("a genuine surplus still moves to a genuine shortage", () => {
+  // The dead band must not freeze real trade: one region overflowing, one empty.
+  const { state, records } = aggregatedWorld();
+  const result = clearRegionalTrade(state, records, { at: 2_000 });
+  assert.ok(result.trades.length > 0, "plenty still flows to nothing");
+  assert.equal(result.trades[0].to, "scrap-forge");
 });

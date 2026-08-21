@@ -377,12 +377,26 @@ corridor navigation).
    miners, patrols and eventually ecology as bounded regional cohorts while keeping
    promoted/bespoke actors as preserved anchors. Restore plausible physical detail
    on approach without cloning title, cargo, condition or commitments.
-6. **Introduce regional clearing.** Re-observation stops an aggregate inventing
-   supply that nobody sent, which is the destructive half. The constructive half
-   is still missing: two aggregated regions cannot presently trade with each
-   other at all, so a fully-aggregated world has no inter-hub commerce rather
-   than cheap inter-hub commerce. Model both sides of aggregate material and
-   credit flow so distant regions keep trading without one-sided money changes.
+6. ~~Introduce regional clearing.~~ Aggregate-to-aggregate trade is built:
+   `regionalClearing.js`. Material and credits move in one operation so both
+   sides of every payment are real, the carrier is a firm with a hull that could
+   have made the trip, and a lane no hull could survive is not traded — the
+   frontier stays closed to a standard hull and open to a subspace one, as it is
+   when the trip is flown.
+   Two sizing bugs were found by running it and are worth not repeating:
+   clearing against `flow.shortfall` trades ONE TICK of unmet demand (live: 0.01
+   units, 2 credits, 25 rounds, buyer never improved), and a region whose stock
+   sits between its sell floor and its buy target is both buyer and seller, so
+   two neighbours ship the same family back and forth forever. Fixed by trading
+   against missing COVER, and by a dead band between `restockBelowSeconds` and
+   `targetCoverSeconds`.
+   **Still missing: aggregate-to-DETAILED trade.** Clearing only matches
+   aggregated regions against each other, and procurement still excludes any
+   aggregated hub. So a starving frontier cannot buy from the healthy inner
+   cluster while the player is standing in it — the frontier is no longer
+   isolated from its neighbours, but the two halves of the world still cannot
+   trade across the boundary. Measured: three aggregated frontier hubs at
+   served 0.36 / 0.85 / 0.04, all near-empty, with nothing to sell each other.
 7. **Connect procedural expansion.** Let institutional projects survey and found
    new settlement seeds, then pass them through the existing common pipeline.
 8. **Continue territory as an asset.** Add surveying, claims, upkeep, benefits,
