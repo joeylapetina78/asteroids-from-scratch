@@ -74,10 +74,10 @@ are not the same event:
 
 | craft | moving samples | worst | past rock centre | rate |
 |---|---:|---:|---:|---:|
-| hauler | 4592 | 186% | 5 | **0.11%** |
-| patrol | 143 | 141% | 1 | 0.70% |
-| miner | 3755 | 180% | 55 | **1.46%** |
-| subspace hauler | 2608 | 0% | 0 | 0.00% |
+| hauler | 7997 | 189% | 7 | **0.09%** |
+| patrol | 329 | 141% | 1 | **0.30%** |
+| miner | 5851 | 180% | 92 | **1.57%** |
+| subspace hauler | 4503 | 195% | 18 | **0.40%** |
 
 **Haulers are the standard, not perfection.** They have the richest navigator in
 the game and still pass through a rock's centre about one moving frame in a
@@ -97,6 +97,13 @@ reasons for the remaining gap, both known:
   rock drifts onto it. Steering cannot fix that; only a collision response or a
   station-keeping nudge could, and neither is in scope here.
 
-The subspace zero is not a triumph of navigation — those craft are off flying
-frontier lanes where no asteroids are spawned. It confirms they never dodge, which
-is the point, but it is not evidence about the field.
+**The subspace figure is the law working, not failing.** A shorter window read it
+as 0.00% and the obvious story was "those craft are off on frontier lanes where no
+asteroids spawn". The fuller run put them back among the rocks and they now pass
+through a centre 0.40% of moving frames, with a worst of 195% of a radius. That is
+what phasing looks like from outside: they do not dodge, because there is nothing
+there to dodge. Read this row as confirmation, never as a defect to fix.
+
+**Patrols are fine.** On the short window they looked mid-pack at 0.70% off 143
+samples; with 329 they sit at 0.30%, nearer the haulers than the miners. No tuning
+needed — which is only knowable because the thin number was not trusted.
