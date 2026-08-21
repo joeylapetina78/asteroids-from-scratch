@@ -1,27 +1,28 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260820-2041-03ea01d";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260820-2041-03ea01d";
-import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-2041-03ea01d";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260820-2041-03ea01d";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260820-2041-03ea01d";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260820-2041-03ea01d";
-import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260820-2041-03ea01d";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260820-2041-03ea01d";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260820-2041-03ea01d";
-import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260820-2041-03ea01d";
-import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260820-2041-03ea01d";
-import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260820-2041-03ea01d";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260820-2041-03ea01d";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260820-2041-03ea01d";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260820-2041-03ea01d";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260820-2041-03ea01d";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260820-2041-03ea01d";
-import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260820-2041-03ea01d";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260820-2041-03ea01d";
-import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260820-2041-03ea01d";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260820-2041-03ea01d";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260820-2041-03ea01d";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260820-2041-03ea01d";
-import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260820-2041-03ea01d";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260820-2121-992690e";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260820-2121-992690e";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-2121-992690e";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260820-2121-992690e";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260820-2121-992690e";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260820-2121-992690e";
+import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260820-2121-992690e";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260820-2121-992690e";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260820-2121-992690e";
+import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260820-2121-992690e";
+import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260820-2121-992690e";
+import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260820-2121-992690e";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260820-2121-992690e";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260820-2121-992690e";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260820-2121-992690e";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260820-2121-992690e";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260820-2121-992690e";
+import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260820-2121-992690e";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260820-2121-992690e";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260820-2121-992690e";
+import { recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260820-2121-992690e";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260820-2121-992690e";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260820-2121-992690e";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260820-2121-992690e";
+import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260820-2121-992690e";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -370,10 +371,64 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     });
     operation.ships[defaults.id].wear = operation.ships[defaults.id].aggregateWear;
   });
+  // Somebody is actually flying these.
+  //
+  // Mining craft used to be crewed by nobody: the company paid a
+  // `crewPayPerContract` line and no person existed. That made an entire
+  // vocation invisible to the career system — no operator meant no record, no
+  // record meant no promotion and no skill, so "can this crew handle that
+  // drive?" had no one to ask about.
+  //
+  // Crew are recruited from the company's home settlement through the same
+  // labour market that staffs sponsored freight and factories, so they are real
+  // residents holding a real assignment rather than names attached to a hull.
+  Object.values(operation.ships).forEach((shipRecord) => ensureWorkerCrew(shipRecord));
+
   const sites = new Map(game.worldSites.map((site) => [site.id, site]));
   seedDepositKnowledge();
   const workers = [];
   Object.values(operation.ships).forEach((shipRecord) => addPhysicalWorker(shipRecord));
+
+  function ensureWorkerCrew(shipRecord) {
+    if (shipRecord.operatorId) return shipRecord.operatorId;
+    const assignmentId = `employment:${shipRecord.id}`;
+    // The company's home is a SITE; labour is held by the INSTITUTION that
+    // governs it, and the two ids are not always the same string. Scrap Porch
+    // the place is run by Scrap Forge the settlement, so passing the site id
+    // recruited nobody there while quietly working everywhere the two happen to
+    // coincide — Cinder's three craft flew uncrewed while Flint's two did not.
+    const homeInstitution = Object.values(state.logistics?.institutions ?? {})
+      .find((institution) => institution.archetypeId === "settlement" && institution.siteId === seed.homeSiteId);
+    if (!homeInstitution) return null;
+    const recruited = recruitPopulationLabor(state, {
+      hubInstitutionId: homeInstitution.id,
+      assignmentId,
+      role: "extraction-operator",
+      workers: 1,
+      employerInstitutionId: operation.institution.id,
+      assetId: shipRecord.id,
+      at: now(),
+      charter: { kind: "extraction-crew-charter", controlsInstitutionId: operation.institution.id, serviceRegion: "first-reach" },
+    });
+    // A settlement with no spare labour simply cannot crew the hull. That is a
+    // real answer, not an error: the craft keeps working as it always did and
+    // accrues no career, which the skill layer reports as "no recorded work"
+    // rather than as incompetence.
+    if (!recruited.ok || !recruited.operator) return null;
+    shipRecord.operatorId = recruited.operator.id;
+    shipRecord.operatingHistory ??= { completedExtractions: 0, unitsCut: 0, servedSiteIds: [] };
+    return shipRecord.operatorId;
+  }
+
+  // What this crew has actually done, recorded where the career system can see
+  // it. The same shape freight and factory work already use.
+  function recordCrewWork(shipRecord, { siteId, delivered }) {
+    if (!shipRecord?.operatorId) return;
+    const history = shipRecord.operatingHistory ??= { completedExtractions: 0, unitsCut: 0, servedSiteIds: [] };
+    history.completedExtractions = (history.completedExtractions ?? 0) + 1;
+    history.unitsCut = (history.unitsCut ?? 0) + Math.max(0, delivered ?? 0);
+    if (siteId && !history.servedSiteIds.includes(siteId)) history.servedSiteIds.push(siteId);
+  }
 
   function addPhysicalWorker(shipRecord) {
     const defaults = [...seed.workers, ...(seed.expansionWorker ? [seed.expansionWorker] : [])].find((entry) => entry.id === shipRecord.id)
@@ -1341,6 +1396,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       });
     }
     shipRecord.currentSiteId = siteId;
+    recordCrewWork(shipRecord, { siteId, delivered });
     const workWear = getMiningWorkWear();
     const componentUse = applyCraftUse(shipRecord, {
       structure: workWear * 0.35,

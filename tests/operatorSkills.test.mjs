@@ -144,3 +144,65 @@ test("equipment that states no requirement is open to anyone", () => {
   const rookie = worldWithCarrier();
   assert.equal(canOperateEquipment(rookie, "person:test", { id: "crate" }).ok, true);
 });
+
+// ── Mining: the vocation that had no evidence path ─────────────────────────
+
+function worldWithMiningCrew({ completedExtractions = 0, unitsCut = 0, servedSiteIds = [] } = {}) {
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(1_000);
+  state.miningOperations = {
+    "flint-prospecting": {
+      institution: { id: "miner:flint-prospecting", archetypeId: "mining-contractor" },
+      ships: {
+        "worker:flint-one": {
+          id: "worker:flint-one", name: "Flint One", operatorId: "person:crew",
+          operatingHistory: { completedExtractions, unitsCut, servedSiteIds },
+        },
+      },
+    },
+  };
+  state.population ??= {};
+  state.population.operators = {
+    "person:crew": { id: "person:crew", name: "Flint Crew", employerInstitutionId: "miner:flint-prospecting", role: "extraction-operator" },
+  };
+  return state;
+}
+
+test("a mining crew now has a career, where before it had none", () => {
+  const green = worldWithMiningCrew();
+  const worked = worldWithMiningCrew({ completedExtractions: 30, unitsCut: 400, servedSiteIds: ["a", "b", "c"] });
+
+  assert.equal(getOperatorSkills(green, "person:crew").hasRecord, false,
+    "a crew that has not cut anything has no record");
+  assert.equal(getOperatorSkills(worked, "person:crew").hasRecord, true);
+  assert.ok(getSkillLevel(worked, "person:crew", SKILL.EXTRACTION) > 0,
+    "cutting rock teaches extraction");
+});
+
+test("flying to seams teaches a mining crew to fly", () => {
+  // The point of the whole exercise: an experienced Flint crew can be judged on
+  // handling, so "would they know how to fly it?" finally has an answer.
+  const rookie = worldWithMiningCrew({ completedExtractions: 1, unitsCut: 6 });
+  const veteran = worldWithMiningCrew({ completedExtractions: 120, unitsCut: 1_800, servedSiteIds: ["a", "b", "c", "d"] });
+  const reversing = ENGINE_MODELS["vektor-reversing-drive"];
+
+  const denied = canOperateEquipment(rookie, "person:crew", reversing);
+  const allowed = canOperateEquipment(veteran, "person:crew", reversing);
+
+  assert.equal(denied.ok, false);
+  assert.equal(denied.verdict, SKILL_VERDICT.UNDER_QUALIFIED,
+    "a green crew has a record and is simply not there yet");
+  assert.equal(allowed.ok, true,
+    "a long-serving Flint crew can be trusted with reverse thrust");
+});
+
+test("an uncrewed mining craft reports no record, not incompetence", () => {
+  // A settlement with no spare labour cannot crew a hull. The craft still works;
+  // it just accrues no career. That must read as "never assessed" so nobody
+  // mistakes it for a crew that failed.
+  const state = worldWithMiningCrew({ completedExtractions: 50, unitsCut: 900 });
+  delete state.miningOperations["flint-prospecting"].ships["worker:flint-one"].operatorId;
+  const result = canOperateEquipment(state, "person:crew", ENGINE_MODELS["vektor-reversing-drive"]);
+  assert.equal(result.ok, false);
+  assert.equal(result.verdict, SKILL_VERDICT.NO_RECORD);
+});

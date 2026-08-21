@@ -1,6 +1,6 @@
-import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260820-2041-03ea01d";
-import { appendHubHistory } from "./hubActors.js?v=fresh-20260820-2041-03ea01d";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260820-2041-03ea01d";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260820-2121-992690e";
+import { appendHubHistory } from "./hubActors.js?v=fresh-20260820-2121-992690e";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260820-2121-992690e";
 
 export const PROMOTION_SCORE = 100;
 export const PROMOTION_MINIMUM_AGE_MS = 120 * 1000;
@@ -31,9 +31,34 @@ function findCarrier(state, operator) {
     institution.archetypeId === "hauling-business" && institution.controllerInstitutionId === operator.id) ?? null;
 }
 
+// The craft this person crews, across every mining company in the world.
+//
+// Mining was the one vocation with no evidence path: crews were anonymous, so
+// nothing they did was ever recorded and the whole trade was invisible to
+// promotion and to skill. The craft now carries its crew's id and its own
+// operating history, in the same shape freight and factories already use.
+function findMiningCraft(state, operatorId) {
+  const operations = state.miningOperations ?? (state.miningOperation ? { legacy: state.miningOperation } : {});
+  return Object.values(operations)
+    .flatMap((operation) => Object.values(operation?.ships ?? {}))
+    .find((ship) => ship?.operatorId === operatorId) ?? null;
+}
+
 export function deriveOperatorEvidence(state, operator) {
   const carrier = findCarrier(state, operator);
   const factory = findFactory(state, operator.id);
+  const miningCraft = !carrier && !factory ? findMiningCraft(state, operator.id) : null;
+  if (miningCraft) {
+    const history = miningCraft.operatingHistory ?? {};
+    const runs = history.completedExtractions ?? 0;
+    const units = history.unitsCut ?? 0;
+    const fields = history.servedSiteIds?.length ?? 0;
+    return {
+      vocation: "extraction operator", sourceKind: "extraction", sourceId: miningCraft.id,
+      score: runs * 18 + Math.min(36, units / 4) + fields * 8,
+      measures: { completedExtractions: runs, unitsCut: units, servedSites: fields },
+    };
+  }
   if (carrier) {
     const history = carrier.operatingHistory ?? {};
     const completed = history.completedFreight ?? 0;
