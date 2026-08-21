@@ -1,9 +1,10 @@
-import { DETAIL, resolveDetailLevel, setSimulationFocus } from "./detailLevel.js?v=fresh-20260820-2136-3d2a51a";
-import { getEconomySamples } from "./economySampler.js?v=fresh-20260820-2136-3d2a51a";
-import { advanceRegionFlow, createRegionFlow } from "./regionFlow.js?v=fresh-20260820-2136-3d2a51a";
-import { listHubActors } from "./hubActors.js?v=fresh-20260820-2136-3d2a51a";
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-2136-3d2a51a";
-import { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated } from "./simulationMode.js?v=fresh-20260820-2136-3d2a51a";
+import { DETAIL, resolveDetailLevel, setSimulationFocus } from "./detailLevel.js?v=fresh-20260820-2144-6027e58";
+import { getEconomySamples } from "./economySampler.js?v=fresh-20260820-2144-6027e58";
+import { advanceRegionFlow, createRegionFlow } from "./regionFlow.js?v=fresh-20260820-2144-6027e58";
+import { listHubActors } from "./hubActors.js?v=fresh-20260820-2144-6027e58";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-2144-6027e58";
+import { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated } from "./simulationMode.js?v=fresh-20260820-2144-6027e58";
+import { clearRegionalTrade } from "./regionalClearing.js?v=fresh-20260820-2144-6027e58";
 
 export { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated };
 export const DISTANT_DEFAULTS = Object.freeze({ aggregateAfterMs: 30_000 });
@@ -100,7 +101,20 @@ export function createDistantSimulationOperation({
       }
       enterAggregate(record, flow, at);
     });
+    // Distant regions still trade with each other. Run after every hub has
+    // advanced, so shortfalls and surpluses are all from the same instant.
+    settleRegionalTrade(at);
     return simulation;
+  }
+
+  function settleRegionalTrade(at) {
+    const settlement = clearRegionalTrade(state, simulation.hubs, { at });
+    if (settlement.trades.length === 0) return settlement;
+    simulation.lastClearing = { at, ...settlement };
+    settlement.trades.forEach((trade) => {
+      state.ledger?.recordEvent?.("region.traded", trade, { visible: false });
+    });
+    return settlement;
   }
 
   function enterAggregate(record, flow, at) {
