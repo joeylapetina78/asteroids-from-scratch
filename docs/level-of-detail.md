@@ -628,6 +628,38 @@ against a subspace budget of 212,500. **No hull in the game can supply it
 directly from the inner cluster.** It is fed by relay through Ore Station One or
 not at all, and clearing refuses to invent that trip. There is a test on it.
 
+### What a live run then showed, and the premise it corrected
+
+The mechanism works and fires: thirteen clearing rounds, trades of 1.8-2.2 units
+for around 300 credits, conserved, with a real carrier on a real lane.
+
+**But not one inner-cluster hub ever sold anything, because not one has a
+surplus.** Measured across the whole world after fifteen minutes:
+
+```text
+yard-exchange   volatile   onHand  9 / ownTarget 12 / committed  0  => surplus 0
+scrap-forge     volatile   onHand 12 / ownTarget  8 / committed 11  => surplus 0
+blue-lantern    volatile   onHand 10 / ownTarget 10 / committed  9  => surplus 0
+the-ledge, morrow-shoal, kiln-crossing, deep-research  — empty
+```
+
+Every settlement is at or below the cover it wants for itself, and three hold
+nothing at all. Cross-boundary supply is therefore inert in practice: correct,
+conserved, and with nothing to carry.
+
+**This corrects the premise this phase was built on.** The justification was that
+"the stock existed in the inner cluster", citing the overnight run where Yard
+Exchange finished holding 315 water-ice and 207 iron-nickel. That stock was
+PHANTOM — it was the held-rate bug of Phase E inventing supply from a trade
+network that had stopped running. Once the rate is re-observed nobody accumulates
+it, and the world's real condition is visible: **First Reach is production-limited,
+not distribution-limited.** Nobody is hoarding; there simply is not enough.
+
+That is a balance question about extraction rates, population appetite and hub
+targets, not a plumbing question, and it should be decided deliberately rather
+than patched here. Regional clearing is the right mechanism for when a surplus
+exists; it cannot conjure one.
+
 ### Still missing
 
 Aggregated hubs cannot SELL to detailed ones. Procurement still excludes any

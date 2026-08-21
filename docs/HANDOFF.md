@@ -394,6 +394,14 @@ corridor navigation).
    **Still missing: aggregated hubs cannot SELL to detailed ones.** Procurement
    excludes aggregated hubs from its offers and clearing only routes stock toward
    aggregated buyers, so the frontier can be supplied but cannot export.
+   **And read this before building on it:** a live run fires the mechanism
+   correctly but moves almost nothing across the boundary, because NO settlement
+   in the world has a surplus — every one sits at or below its own target cover
+   and three hold nothing at all. The belief that the inner cluster was rich came
+   from the overnight run's 315 water-ice at Yard Exchange, and that stock was
+   phantom: the held-rate bug fixed in Phase E. First Reach is
+   **production-limited, not distribution-limited.** Clearing is the right
+   mechanism for when a surplus exists and cannot conjure one.
 
 7. **Connect procedural expansion.** Let institutional projects survey and found
    new settlement seeds, then pass them through the existing common pipeline.
@@ -401,6 +409,13 @@ corridor navigation).
    negotiation and conflict only through shared authority and project systems.
 9. **Reintroduce asymmetry one capability at a time** and observe compensation
    before removing another.
+10. **Decide whether the world should produce more.** The measurement above says
+   nobody has anything spare, anywhere, ever — which makes every distribution
+   system in the game correct and idle. This is a balance decision across
+   extraction rates, population appetite and `TARGET_COVERAGE_SECONDS`, and it
+   wants deliberate choices rather than a patch. Suggested first measurement:
+   total units mined per minute against total units consumed per minute, world
+   wide, before changing any number.
 
 ## Handoff checklist
 
