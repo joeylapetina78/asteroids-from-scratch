@@ -1,7 +1,8 @@
-import { TRADED_FAMILIES } from "./hubInventory.js?v=fresh-20260820-2213-82f8ba2c";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS, FIRST_REACH_CARRIER_POLICY } from "../content/transportation/firstReachNetwork.js?v=fresh-20260820-2213-82f8ba2c";
-import { createTransportationNetwork, findTransportationRoute, maximumServiceableDistance } from "./transportationPlanning.js?v=fresh-20260820-2213-82f8ba2c";
-import { getEffectiveTransportPolicy } from "./shipDrives.js?v=fresh-20260820-2213-82f8ba2c";
+import { TARGET_COVERAGE_SECONDS, TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260821-0638-453f3f93";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260821-0638-453f3f93";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS, FIRST_REACH_CARRIER_POLICY } from "../content/transportation/firstReachNetwork.js?v=fresh-20260821-0638-453f3f93";
+import { createTransportationNetwork, findTransportationRoute, maximumServiceableDistance } from "./transportationPlanning.js?v=fresh-20260821-0638-453f3f93";
+import { getEffectiveTransportPolicy } from "./shipDrives.js?v=fresh-20260821-0638-453f3f93";
 
 // Trade between two regions that are both being simulated as rates.
 //
@@ -29,7 +30,11 @@ export const CLEARING_DEFAULTS = Object.freeze({
   // 37% served and got no better. A region that has been starving for ten
   // minutes has a large accumulated need, and per-tick shortfall cannot see it
   // because it resets every tick.
-  targetCoverSeconds: 600,
+  // The same cover a DETAILED hub keeps for itself, deliberately shared rather
+  // than re-picked. If the two halves of the world disagreed about how much
+  // stock is enough, they would disagree about who has a surplus, and trade
+  // across the boundary would be an argument rather than an exchange.
+  targetCoverSeconds: TARGET_COVERAGE_SECONDS,
   // A region only goes shopping once it drops below this, and it restocks up to
   // the target. The gap between the two is a DEAD BAND, and it is what stops the
   // lane oscillating.
@@ -48,6 +53,11 @@ export const CLEARING_DEFAULTS = Object.freeze({
   // contention and relationship pricing are exactly what aggregation exists to
   // stop paying for, and inventing a second pricing model here would be a second
   // source of truth about what things cost.
+  // Below this a shipment is not worth crossing a frontier for. It is the same
+  // lesson the first live run taught in a different form: 0.01 units for two
+  // credits is not trade, it is bookkeeping noise with a carrier attached.
+  // A buyer that can only afford a sliver waits until it can afford a load.
+  minimumLotUnits: 1,
   pricePerUnit: 160,
   freightPerUnitPerDistance: 0.0009,
 });
@@ -89,6 +99,77 @@ export function findRegionalCarrier(state, originSiteId, destinationSiteId) {
       });
   });
   return best;
+}
+
+// A hub that is still simulated in full can sell to one that is not.
+//
+// Clearing began as aggregate-to-aggregate only, and a live run showed the limit
+// of that: three frontier regions at 4%, 36% and 85% served, all near-empty,
+// trading with each other and getting nowhere, because three poor neighbours
+// cannot feed one another. The stock existed — in the healthy inner cluster,
+// which is detailed precisely because the player is standing in it.
+//
+// So the boundary has to be crossable. A detailed hub sells out of its REAL
+// warehouse, and only what is genuinely spare: `getInventoryPosition` already
+// knows what it wants for itself and what it has promised to somebody else, so
+// stock under contract is never sold twice.
+export function detailedSurplus(state, hubInstitutionId, family, policy) {
+  const position = getInventoryPosition(state, hubInstitutionId, family, policy.targetCoverSeconds);
+  if (!position) return 0;
+  return Math.max(0, position.onHand - position.ownTarget - position.committedSales);
+}
+
+// Take effective units off a real shelf and report what was actually taken.
+//
+// Warehouses hold PHYSICAL units of specific resources; a region's flow counts
+// EFFECTIVE units of a family. Converting in only one direction is how material
+// gets invented, so this returns what it removed rather than what it was asked
+// for, and the caller delivers exactly that.
+export function drawFamilyFromHub(hub, family, effectiveUnits) {
+  let remaining = Math.max(0, effectiveUnits);
+  let taken = 0;
+  Object.keys(hub?.inventories ?? {}).forEach((resourceId) => {
+    if (remaining <= 0) return;
+    if (getResourceFamily(resourceId) !== family) return;
+    const held = hub.inventories[resourceId] ?? 0;
+    if (!(held > 0)) return;
+    const yieldRate = getResourceEffectiveYield(resourceId);
+    const availableEffective = getEffectiveMaterialUnits(resourceId, held);
+    const useEffective = Math.min(availableEffective, remaining);
+    const physical = useEffective / yieldRate;
+    hub.inventories[resourceId] = Math.max(0, held - physical);
+    remaining -= useEffective;
+    taken += useEffective;
+  });
+  return taken;
+}
+
+// Every hub that could sell into this round: the aggregated ones out of their
+// modelled shelf, the detailed ones out of their real one.
+function listSellers(state, aggregated, family, policy, buyer) {
+  const fromAggregates = aggregated
+    .filter((record) => record !== buyer && sellableUnits(record.flow, family, policy) > 0)
+    .map((record) => ({
+      kind: "aggregate", record, institutionId: record.institutionId, siteId: record.siteId,
+      spare: sellableUnits(record.flow, family, policy),
+    }));
+
+  // Who counts as "aggregated" is decided by the records this round was handed,
+  // not by consulting global state. Reading `isHubAggregated` here let a hub
+  // that was a buyer in this very round also appear as a detailed seller — it
+  // would have sold to itself — because the caller's records and the global
+  // simulation state are not guaranteed to agree.
+  const aggregatedIds = new Set(aggregated.map((record) => record.institutionId));
+  const fromDetailed = Object.values(state.logistics?.institutions ?? {})
+    .filter((institution) => institution.archetypeId === "settlement" && institution.siteId
+      && !aggregatedIds.has(institution.id) && institution.id !== buyer.institutionId)
+    .map((institution) => ({
+      kind: "detailed", institution, institutionId: institution.id, siteId: institution.siteId,
+      spare: detailedSurplus(state, institution.id, family, policy),
+    }))
+    .filter((seller) => seller.spare > 0);
+
+  return [...fromAggregates, ...fromDetailed].sort((first, second) => second.spare - first.spare);
 }
 
 function familyStock(flow, family) {
@@ -141,42 +222,52 @@ export function clearRegionalTrade(state, records, { at = Date.now(), policy = C
       let wanted = wantedUnits(buyer.flow, family, policy);
       if (!(wanted > 0)) return;
 
-      const sellers = aggregated
-        .filter((record) => record !== buyer && sellableUnits(record.flow, family, policy) > 0)
-        .sort((first, second) => sellableUnits(second.flow, family, policy) - sellableUnits(first.flow, family, policy));
-
-      sellers.forEach((seller) => {
+      listSellers(state, aggregated, family, policy, buyer).forEach((seller) => {
         if (!(wanted > 0)) return;
-        const spare = sellableUnits(seller.flow, family, policy);
-        if (!(spare > 0)) return;
+        if (!(seller.spare > 0)) return;
 
         const haulage = findRegionalCarrier(state, seller.siteId, buyer.siteId);
         // No firm in the world could make this trip, so the trade does not
         // happen — exactly as it would not happen in detail.
         if (!haulage) return;
 
-        const units = Math.min(wanted, spare);
-        const goods = units * policy.pricePerUnit;
-        const freight = units * haulage.route.distance * policy.freightPerUnitPerDistance;
         const buyerInstitution = state.logistics?.institutions?.[buyer.institutionId];
         const sellerInstitution = state.logistics?.institutions?.[seller.institutionId];
         if (!buyerInstitution?.accounts?.operating || !sellerInstitution?.accounts?.operating) return;
 
-        // A region cannot buy what it cannot pay for, and may not go negative
-        // to do it.
-        if (buyerInstitution.accounts.operating.balance < goods + freight) return;
+        const asked = Math.min(wanted, seller.spare);
+        const goodsRate = policy.pricePerUnit;
+        const freightRate = haulage.route.distance * policy.freightPerUnitPerDistance;
+        // A region cannot buy what it cannot pay for, so it buys what it can
+        // afford rather than being refused outright.
+        const affordable = Math.max(0, buyerInstitution.accounts.operating.balance) / (goodsRate + freightRate);
+        const intended = Math.min(asked, affordable);
+        if (intended < policy.minimumLotUnits) return;
 
-        // Material: leaves one shelf, arrives on the other. One movement.
-        seller.flow.stock[family] = familyStock(seller.flow, family) - units;
+        // Material leaves one shelf and arrives on the other, in one movement.
+        // The seller answers with what it ACTUALLY parted with — a real
+        // warehouse holds whole resources at differing yields and cannot always
+        // produce the exact effective quantity asked for — and the buyer
+        // receives precisely that.
+        const units = seller.kind === "aggregate"
+          ? intended
+          : drawFamilyFromHub(sellerInstitution, family, intended);
+        if (!(units > 0)) return;
+        if (seller.kind === "aggregate") {
+          seller.record.flow.stock[family] = familyStock(seller.record.flow, family) - units;
+        }
         buyer.flow.stock[family] = familyStock(buyer.flow, family) + units;
         // The shelf just grew, so whatever this region could not serve this
         // instant is now closer to being servable.
         buyer.flow.shortfall[family] = Math.max(0, (buyer.flow.shortfall?.[family] ?? 0) - units);
         wanted -= units;
+        seller.spare -= units;
 
         // Credits: the buyer pays and every credit is received by somebody who
         // exists. The carrier is a real firm with a hull that could have flown
         // it, so freight is income rather than a hole in the books.
+        const goods = units * goodsRate;
+        const freight = units * freightRate;
         buyerInstitution.accounts.operating.balance -= goods + freight;
         sellerInstitution.accounts.operating.balance += goods;
         haulage.carrier.accounts.operating.balance += freight;
@@ -187,6 +278,7 @@ export function clearRegionalTrade(state, records, { at = Date.now(), policy = C
           family,
           units: Math.round(units * 100) / 100,
           from: seller.institutionId,
+          fromKind: seller.kind,
           to: buyer.institutionId,
           carrierInstitutionId: haulage.carrier.id,
           hullId: haulage.hull.id,

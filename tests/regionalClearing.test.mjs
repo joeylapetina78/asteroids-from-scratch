@@ -185,3 +185,86 @@ test("a genuine surplus still moves to a genuine shortage", () => {
   assert.ok(result.trades.length > 0, "plenty still flows to nothing");
   assert.equal(result.trades[0].to, "scrap-forge");
 });
+
+test("a buyer short of cash takes what it can afford, not nothing", () => {
+  // Refusing a whole shipment because the buyer cannot fund all of it is how a
+  // hub starves next to a full warehouse. It buys a smaller load instead —
+  // provided the load is still worth the trip.
+  const { state, records } = aggregatedWorld();
+  const buyer = state.logistics.institutions["scrap-forge"].accounts.operating;
+  const full = clearRegionalTrade(state, aggregatedWorld().records, { at: 2_000 }).trades[0];
+
+  buyer.balance = Math.round((full.goods + full.freight) * 0.4);
+  const result = clearRegionalTrade(state, records, { at: 2_000 });
+
+  assert.equal(result.trades.length, 1, "a partial load still ships");
+  assert.ok(result.trades[0].units < full.units, "and it is smaller than the full one");
+  assert.ok(buyer.balance >= 0, "it does not go negative to buy");
+});
+
+test("a detailed hub can sell across the boundary to an aggregated one", () => {
+  // The gap this closes: three aggregated frontier regions at 4%, 36% and 85%
+  // served, all near-empty, trading with each other and getting nowhere. The
+  // stock existed in the inner cluster, which is detailed precisely because the
+  // player is standing in it.
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(1_000);
+  const seller = state.logistics.institutions["yard-exchange"];
+  seller.inventories = { ...seller.inventories, "water-ice": 900 };
+
+  // Ore Station One, not Coldwater Depot: Coldwater is 122,886 units from Yard
+  // Exchange, a 245,772 round trip, beyond even a subspace hull's 212,500. It can
+  // only be fed by relay through Ore Station One — a real fact about this map,
+  // and one regional clearing correctly refuses to paper over.
+  const records = {
+    "ore-station-one": {
+      institutionId: "ore-station-one", siteId: "ore-station-one", mode: "aggregate",
+      flow: {
+        supply: { structural: 1, industrial: 1, volatile: 1 },
+        stock: { structural: 0, industrial: 0, volatile: 0 },
+        shortfall: { structural: 0, industrial: 0, volatile: 0 },
+        demand: { consumption: { structural: 0, industrial: 0, volatile: 0.2 } },
+      },
+    },
+    // A second aggregate with nothing to offer, so any supply must come from
+    // across the boundary.
+    "deep-research": {
+      institutionId: "deep-research", siteId: "deep-research", mode: "aggregate",
+      flow: {
+        supply: { structural: 1, industrial: 1, volatile: 1 },
+        stock: { structural: 0, industrial: 0, volatile: 0 },
+        shortfall: { structural: 0, industrial: 0, volatile: 0 },
+        demand: { consumption: { structural: 0, industrial: 0, volatile: 0 } },
+      },
+    },
+  };
+  state.logistics.institutions["ore-station-one"].accounts.operating.balance = 90_000;
+  // Somebody has to be able to make the trip.
+  const hauler = Object.values(state.logistics.haulers)[0];
+  state.logistics.institutions[hauler.shipInstitutionId].driveId = "subspace";
+
+  const beforeStock = seller.inventories["water-ice"];
+  const result = clearRegionalTrade(state, records, { at: 2_000 });
+
+  assert.ok(result.trades.length > 0, "the boundary is crossable");
+  assert.equal(result.trades[0].fromKind, "detailed", "a detailed hub supplied it");
+  assert.ok(seller.inventories["water-ice"] < beforeStock, "out of its real warehouse");
+  assert.ok(records["ore-station-one"].flow.stock.volatile > 0, "onto the aggregate's shelf");
+});
+
+test("the deep frontier is fed by relay, or not at all", () => {
+  // Coldwater Depot sits 122,886 units from Yard Exchange — a 245,772 round trip
+  // against a subspace budget of 212,500. No hull in the game can supply it
+  // directly from the inner cluster, so it depends on Ore Station One in
+  // between. Clearing must not quietly invent that trip.
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(1_000);
+  Object.values(state.logistics.haulers).forEach((hauler) => {
+    state.logistics.institutions[hauler.shipInstitutionId].driveId = "subspace";
+  });
+
+  assert.equal(findRegionalCarrier(state, "yard-exchange", "coldwater-depot"), null,
+    "not even a subspace hull reaches Coldwater from Yard Exchange");
+  assert.ok(findRegionalCarrier(state, "ore-station-one", "coldwater-depot"),
+    "but the relay leg is servable");
+});
