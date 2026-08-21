@@ -1,6 +1,7 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260820-1932-a7cfb77";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260820-1932-a7cfb77";
-import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260820-1932-a7cfb77";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260820-2030-c7ec977";
+import { steerAroundObstacles } from "../systems/obstacleNavigation.js?v=fresh-20260820-2030-c7ec977";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260820-2030-c7ec977";
+import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260820-2030-c7ec977";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
@@ -8,6 +9,10 @@ const MINING_ARC = 0.16;
 // How close a worker parks to the rock it is cutting. Inside this it holds
 // station and keeps rotating to stay on target rather than drifting off aim.
 const HOLD_RANGE = MINING_RANGE * 0.72;
+// How hard an obstacle bends the desired heading. The steering force is capped
+// well below 1, so it needs scaling up to compete with a unit direction vector;
+// too low and the craft grazes the rock, too high and it forgets its errand.
+const OBSTACLE_DEFLECTION = 2.6;
 const SHOT_SPEED = 300;
 const COLLECT_RANGE = 34;
 const HOME_RANGE = 86;
@@ -19,6 +24,9 @@ const TRACTOR_FORCE = 760;
 
 export class MiningWorkerShip {
   constructor({ id, name, institutionId, controllerInstitutionId, publicIdentity = null, x, y, angle = 0, palette = {}, onEvent = () => {}, onDelivery = () => {} }) {
+    // Which way this craft habitually passes a rock. Fixed per hull so it does
+    // not dither left/right against the same obstacle.
+    this.avoidanceSide = (String(id ?? "").length % 2) === 0 ? 1 : -1;
     this.id = id;
     this.name = name;
     this.type = "mining-worker";
@@ -141,7 +149,7 @@ export class MiningWorkerShip {
       const waitingOutRefusal = this.deliveryBlock && this.pulse < this.deliveryBlock.retryAt;
       this.state = waitingOutRefusal ? "delivery-blocked" : "returning";
       this.targetAsteroid = null;
-      return this.flyTo(deltaSeconds, this.assignment.destination, HOME_RANGE, () => this.tryDeliver());
+      return this.flyTo(deltaSeconds, this.assignment.destination, HOME_RANGE, () => this.tryDeliver(), world.asteroids);
     }
 
     const pickup = nearest(world.pickups.filter((item) => this.canRecoverPickup(item) && normalizeResourceType(item.type) === this.assignment.resourceId), this.position);
@@ -155,7 +163,7 @@ export class MiningWorkerShip {
         }
         return;
       }
-      return this.flyTo(deltaSeconds, pickup.position, COLLECT_RANGE);
+      return this.flyTo(deltaSeconds, pickup.position, COLLECT_RANGE, null, world.asteroids);
     }
 
     if (!this.targetAsteroid || !world.asteroids.includes(this.targetAsteroid) || !hasResource(this.targetAsteroid, this.assignment.resourceId)) {
@@ -170,7 +178,7 @@ export class MiningWorkerShip {
         this.assignment.depositCandidates.shift();
         return this.brake(deltaSeconds);
       }
-      return this.flyTo(deltaSeconds, deposit, 280);
+      return this.flyTo(deltaSeconds, deposit, 280, null, world.asteroids);
     }
 
     const targetDistance = distance(this.position, this.targetAsteroid.position);
@@ -184,7 +192,7 @@ export class MiningWorkerShip {
       // nothing, never breaking it, and so never re-targeting either.
       this.holdAndAim(deltaSeconds, targetAngle);
     } else {
-      this.flyTo(deltaSeconds, this.targetAsteroid.position, HOLD_RANGE);
+      this.flyTo(deltaSeconds, this.targetAsteroid.position, HOLD_RANGE, null, world.asteroids, this.targetAsteroid);
     }
     if (targetDistance <= MINING_RANGE && angleError <= MINING_ARC && this.fireCooldown === 0) {
       this.fireCooldown = 0.48;
@@ -240,15 +248,29 @@ export class MiningWorkerShip {
     this.state = "idle";
   }
 
-  flyTo(deltaSeconds, target, stopRange, onArrival = null) {
-    const targetAngle = Math.atan2(target.y - this.position.y, target.x - this.position.x);
+  // A working craft is in normal space: it goes around what is in its way.
+  //
+  // Obstacles deflect the heading rather than adding a force, because this hull
+  // flies by turn-and-thrust. `exempt` is the rock it was actually sent to cut —
+  // without it a miner would shove itself away from its own target and never
+  // close to firing range.
+  flyTo(deltaSeconds, target, stopRange, onArrival = null, obstacles = null, exempt = null) {
+    const toTarget = { x: target.x - this.position.x, y: target.y - this.position.y };
     const targetDistance = distance(this.position, target);
-    const angleError = wrapAngle(targetAngle - this.angle);
     if (targetDistance <= stopRange) {
       this.brake(deltaSeconds);
       onArrival?.();
       return;
     }
+    let headingX = toTarget.x / targetDistance;
+    let headingY = toTarget.y / targetDistance;
+    if (obstacles?.length) {
+      const steer = steerAroundObstacles(this, obstacles, { exempt, side: this.avoidanceSide });
+      headingX += steer.x * OBSTACLE_DEFLECTION;
+      headingY += steer.y * OBSTACLE_DEFLECTION;
+    }
+    const targetAngle = Math.atan2(headingY, headingX);
+    const angleError = wrapAngle(targetAngle - this.angle);
     advanceFlightBody(this, deltaSeconds, { turn: getTurnTowardAngle(this.angle, targetAngle), thrust: Math.abs(angleError) < 0.62, brake: false }, FLIGHT);
   }
 

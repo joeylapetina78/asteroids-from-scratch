@@ -291,6 +291,15 @@ The aggregate used to hide the broken trade route behind phantom deliveries.
 Options 1 and 2 keep distance meaningful and make the frontier a thing the world
 has to solve. 3 and 4 make it stop being a problem by making it stop being far.
 
+## Physical space
+
+Whether a craft can pass through a rock is one rule now, declared on its drive
+rather than implied by its class: normal space works around the field, subspace
+has nothing to work around, and nothing is half of each. See
+[collision-law.md](collision-law.md) for the table of who sits where, and for the
+two things it deliberately leaves alone (damage, and the haulers' richer
+corridor navigation).
+
 ## Known risks and deliberate boundaries
 
 - A busy hub never reaches the current quiescent aggregation gate. This is no
