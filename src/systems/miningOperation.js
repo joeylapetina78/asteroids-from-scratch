@@ -1,28 +1,30 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260820-2121-992690e";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260820-2121-992690e";
-import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-2121-992690e";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260820-2121-992690e";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260820-2121-992690e";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260820-2121-992690e";
-import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260820-2121-992690e";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260820-2121-992690e";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260820-2121-992690e";
-import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260820-2121-992690e";
-import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260820-2121-992690e";
-import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260820-2121-992690e";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260820-2121-992690e";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260820-2121-992690e";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260820-2121-992690e";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260820-2121-992690e";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260820-2121-992690e";
-import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260820-2121-992690e";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260820-2121-992690e";
-import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260820-2121-992690e";
-import { recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260820-2121-992690e";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260820-2121-992690e";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260820-2121-992690e";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260820-2121-992690e";
-import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260820-2121-992690e";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260820-2125-b9237ca";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260820-2125-b9237ca";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260820-2125-b9237ca";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260820-2125-b9237ca";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260820-2125-b9237ca";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260820-2125-b9237ca";
+import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260820-2125-b9237ca";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260820-2125-b9237ca";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260820-2125-b9237ca";
+import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260820-2125-b9237ca";
+import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260820-2125-b9237ca";
+import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260820-2125-b9237ca";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260820-2125-b9237ca";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260820-2125-b9237ca";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260820-2125-b9237ca";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260820-2125-b9237ca";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260820-2125-b9237ca";
+import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260820-2125-b9237ca";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260820-2125-b9237ca";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260820-2125-b9237ca";
+import { recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260820-2125-b9237ca";
+import { canOperateEquipment } from "./operatorSkills.js?v=fresh-20260820-2125-b9237ca";
+import { ENGINE_MODELS } from "../content/ships/engineModels.js?v=fresh-20260820-2125-b9237ca";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260820-2125-b9237ca";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260820-2125-b9237ca";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260820-2125-b9237ca";
+import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260820-2125-b9237ca";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -430,6 +432,41 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     if (siteId && !history.servedSiteIds.includes(siteId)) history.servedSiteIds.push(siteId);
   }
 
+  // Fit a reversing drive to a hull whose crew has earned it.
+  //
+  // Not an upgrade that appears because time passed: the company buys it, out of
+  // its own account, for a crew whose record shows they can fly it. A green crew
+  // is refused and the refusal says which — short of the mark, or never assessed
+  // at all. The cost is declared as capital spend because nobody counted here
+  // receives it, the same way crew wages are.
+  function considerCrewDrive(shipRecord) {
+    if (!shipRecord?.operatorId) return null;
+    if (shipRecord.engineModelId === REVERSING_DRIVE_ID) return null;
+    const drive = ENGINE_MODELS[REVERSING_DRIVE_ID];
+    const verdict = canOperateEquipment(state, shipRecord.operatorId, drive);
+    shipRecord.driveVerdict = verdict.verdict;
+    if (!verdict.ok) return null;
+    const account = operation.institution.accounts.operating;
+    if ((account.balance ?? 0) - REVERSING_DRIVE_COST < 0) return null;
+
+    account.balance -= REVERSING_DRIVE_COST;
+    operation.institution.capitalSpend = (operation.institution.capitalSpend ?? 0) + REVERSING_DRIVE_COST;
+    account.transactions.push({
+      id: `MIN-DRIVE-${now()}-${shipRecord.id}`, at: now(), type: "capital-expense",
+      amount: -REVERSING_DRIVE_COST, balance: account.balance, referenceId: shipRecord.id,
+    });
+    shipRecord.engineModelId = REVERSING_DRIVE_ID;
+    const physical = workers.find((worker) => worker.id === shipRecord.id);
+    if (physical) physical.engineModelId = REVERSING_DRIVE_ID;
+    const operator = state.population?.operators?.[shipRecord.operatorId];
+    record("mining.driveFitted", `${operation.institution.name} fitted ${shipRecord.name} with a ${drive.brand} ${drive.name}; ${operator?.name ?? "its crew"} has the hours to fly it.`, {
+      institutionId: operation.institution.id, shipInstitutionId: shipRecord.id, shipName: shipRecord.name,
+      operatorId: shipRecord.operatorId, engineModelId: REVERSING_DRIVE_ID,
+      cost: REVERSING_DRIVE_COST, skill: verdict.skill, level: verdict.level, required: verdict.required,
+    });
+    return shipRecord.engineModelId;
+  }
+
   function addPhysicalWorker(shipRecord) {
     const defaults = [...seed.workers, ...(seed.expansionWorker ? [seed.expansionWorker] : [])].find((entry) => entry.id === shipRecord.id)
       ?? { offset: { x: 0, y: 0 } };
@@ -452,6 +489,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       onEvent: (type, payload) => recordWorkerEvent(shipRecord, type, payload),
       onDelivery: completeDelivery,
     });
+    worker.engineModelId = shipRecord.engineModelId ?? null;
     game.addWorkerShip(worker);
     workers.push(worker);
     return worker;
@@ -1397,6 +1435,8 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     }
     shipRecord.currentSiteId = siteId;
     recordCrewWork(shipRecord, { siteId, delivered });
+    // The record just grew, so this is the moment the answer can change.
+    considerCrewDrive(shipRecord);
     const workWear = getMiningWorkWear();
     const componentUse = applyCraftUse(shipRecord, {
       structure: workWear * 0.35,
@@ -1636,6 +1676,10 @@ function createInitialState(now, seed = CINDER_MINING_SEED) {
     allocations: {}, history: [{ id: "mining-history-1", type: "institution.instantiated", at: now }], counter: 0, completedContracts: 0, wear: 0, lastMaintenanceEventId: 0,
   };
 }
+
+const REVERSING_DRIVE_ID = "vektor-reversing-drive";
+// What a company pays to re-engine a working hull.
+const REVERSING_DRIVE_COST = 900;
 
 function createWorkerRecord(defaults, ownerInstitutionId = CINDER_MINING_SEED.institution.id) {
   const record = { id: defaults.id, name: defaults.name, archetypeId: "mining-worker", ownerInstitutionId, referenceId: defaults.referenceId, currentSiteId: defaults.currentSiteId, status: "idle", cargo: {}, wear: defaults.initialWear ?? 0, issueCount: 0, pendingIssue: null, pendingComponentId: null, maintenanceStatus: "available", lastDecisionKey: null, capabilities: { miningLaser: true, cargoCollector: true, tractorField: { powered: true, powerSource: "evergreen" } } };

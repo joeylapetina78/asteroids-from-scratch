@@ -1,7 +1,8 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260820-2121-992690e";
-import { steerAroundObstacles } from "../systems/obstacleNavigation.js?v=fresh-20260820-2121-992690e";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260820-2121-992690e";
-import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260820-2121-992690e";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260820-2125-b9237ca";
+import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260820-2125-b9237ca";
+import { steerAroundObstacles } from "../systems/obstacleNavigation.js?v=fresh-20260820-2125-b9237ca";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260820-2125-b9237ca";
+import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260820-2125-b9237ca";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
@@ -30,6 +31,10 @@ export class MiningWorkerShip {
     // Which way this craft habitually passes a rock. Fixed per hull so it does
     // not dither left/right against the same obstacle.
     this.avoidanceSide = (String(id ?? "").length % 2) === 0 ? 1 : -1;
+    // The drive fitted to this hull. A standard drive can only brake; a
+    // reversing drive can push backwards, which is the difference between
+    // retreating and turning away.
+    this.engineModelId = null;
     this.id = id;
     this.name = name;
     this.type = "mining-worker";
@@ -188,12 +193,15 @@ export class MiningWorkerShip {
     const targetAngle = Math.atan2(this.targetAsteroid.position.y - this.position.y, this.targetAsteroid.position.x - this.position.x);
     const angleError = Math.abs(wrapAngle(targetAngle - this.angle));
     this.state = targetDistance <= MINING_RANGE ? "mining" : "outbound";
+    // Crowding the rock is as useless as being far from it, and a hull that can
+    // reverse should ease back rather than shoulder in.
+    const crowding = targetDistance <= HOLD_RANGE * 0.62;
     if (targetDistance <= HOLD_RANGE) {
       // Station-keeping still has to track the rock. Braking alone freezes the
       // heading, and a worker that coasted in sideways could then never satisfy
       // MINING_ARC again: it would sit on a full asteroid forever, firing
       // nothing, never breaking it, and so never re-targeting either.
-      this.holdAndAim(deltaSeconds, targetAngle);
+      this.holdAndAim(deltaSeconds, targetAngle, crowding);
     } else {
       this.flyTo(deltaSeconds, this.targetAsteroid.position, HOLD_RANGE, null, world.asteroids, this.targetAsteroid);
     }
@@ -307,8 +315,33 @@ export class MiningWorkerShip {
 
   // Hold position but keep turning onto the bearing. Asteroids drift, so a
   // worker that stops tracking loses its firing arc even if it arrived aimed.
-  holdAndAim(deltaSeconds, targetAngle) {
-    advanceFlightBody(this, deltaSeconds, { turn: getTurnTowardAngle(this.angle, targetAngle), thrust: false, brake: true }, FLIGHT);
+  get engineModel() {
+    return getEngineModel(this.engineModelId);
+  }
+
+  canReverseThrust() {
+    return this.engineModel.downControl === "reverse-thrust";
+  }
+
+  // Station-keeping on a rock it is cutting.
+  //
+  // A standard drive can only brake, so a worker that ends up too close has one
+  // option: turn around and fly off, which throws away the firing arc it spent
+  // the approach establishing. `MINING_ARC` is unforgiving enough that the code
+  // already warns a craft can end up parked on a full asteroid forever, aimed
+  // at nothing it can break.
+  //
+  // A reversing drive gives it the other option — back off while still pointed
+  // at the seam — which is exactly what the Vektor R/T is for, and exactly the
+  // handling that a crew has to have been shown to possess.
+  holdAndAim(deltaSeconds, targetAngle, tooClose = false) {
+    const reversing = tooClose && this.canReverseThrust();
+    advanceFlightBody(this, deltaSeconds, {
+      turn: getTurnTowardAngle(this.angle, targetAngle),
+      thrust: false,
+      reverseThrust: reversing,
+      brake: !reversing,
+    }, { ...FLIGHT, reverseThrusterMultiplier: this.engineModel.reverseThrusterMultiplier ?? 0.2 });
   }
 
   createShot() {

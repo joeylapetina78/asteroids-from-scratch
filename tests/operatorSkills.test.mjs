@@ -206,3 +206,43 @@ test("an uncrewed mining craft reports no record, not incompetence", () => {
   assert.equal(result.ok, false);
   assert.equal(result.verdict, SKILL_VERDICT.NO_RECORD);
 });
+
+// ── The drive actually does something ──────────────────────────────────────
+import { MiningWorkerShip } from "../src/entities/MiningWorkerShip.js";
+
+test("a standard drive can only brake; a reversing drive can back away", () => {
+  const make = (engineModelId) => {
+    const craft = new MiningWorkerShip({ id: "w", name: "W", x: 0, y: 0, angle: 0 });
+    craft.engineModelId = engineModelId;
+    craft.velocity = { x: 0, y: 0 };
+    return craft;
+  };
+
+  const standard = make(null);
+  const reversing = make("vektor-reversing-drive");
+  assert.equal(standard.canReverseThrust(), false);
+  assert.equal(reversing.canReverseThrust(), true);
+
+  // Both are aimed along +x and asked to hold station while crowding the rock.
+  for (let tick = 0; tick < 90; tick += 1) {
+    standard.holdAndAim(1 / 30, 0, true);
+    reversing.holdAndAim(1 / 30, 0, true);
+  }
+
+  assert.ok(reversing.position.x < -20,
+    `the reversing hull backed off (ended at ${Math.round(reversing.position.x)})`);
+  assert.ok(Math.abs(standard.position.x) < 5,
+    `the standard hull just sat there (ended at ${Math.round(standard.position.x)})`);
+  // The whole point: it retreated WITHOUT giving up its aim.
+  assert.ok(Math.abs(reversing.angle) < 0.1,
+    "it is still pointed at the seam it was cutting");
+});
+
+test("holding station normally still brakes, drive or no drive", () => {
+  const craft = new MiningWorkerShip({ id: "w2", name: "W", x: 0, y: 0, angle: 0 });
+  craft.engineModelId = "vektor-reversing-drive";
+  craft.velocity = { x: 40, y: 0 };
+  for (let tick = 0; tick < 60; tick += 1) craft.holdAndAim(1 / 30, 0, false);
+  assert.ok(Math.hypot(craft.velocity.x, craft.velocity.y) < 5,
+    "a craft at a good distance settles rather than reversing out of range");
+});
