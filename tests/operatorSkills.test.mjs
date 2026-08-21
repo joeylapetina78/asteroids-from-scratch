@@ -246,3 +246,30 @@ test("holding station normally still brakes, drive or no drive", () => {
   assert.ok(Math.hypot(craft.velocity.x, craft.velocity.y) < 5,
     "a craft at a good distance settles rather than reversing out of range");
 });
+
+test("varied fields teach a mining crew what varied ports teach a hauler", () => {
+  // The rule must read the same for both trades, or it is two rules wearing one
+  // name. Grinding a single seam is not the same education as working several.
+  const oneSeam = worldWithMiningCrew({ completedExtractions: 12, unitsCut: 200, servedSiteIds: ["a"] });
+  const wideRange = worldWithMiningCrew({ completedExtractions: 12, unitsCut: 200, servedSiteIds: ["a", "b", "c"] });
+  assert.ok(
+    getSkillLevel(wideRange, "person:crew", SKILL.PRECISION_FLIGHT)
+    > getSkillLevel(oneSeam, "person:crew", SKILL.PRECISION_FLIGHT),
+    "the same runs across more fields is worth more handling",
+  );
+});
+
+test("the reversing drive is earned in a plausible working career", () => {
+  // A bar nobody can clear is the same as no bar. Roughly twenty runs on one
+  // field, or a dozen across three — a real career, not a grind and not a gift.
+  const required = ENGINE_MODELS["vektor-reversing-drive"].requiresSkill.level;
+  const oneField = worldWithMiningCrew({ completedExtractions: 21, unitsCut: 130, servedSiteIds: ["a"] });
+  const threeFields = worldWithMiningCrew({ completedExtractions: 12, unitsCut: 80, servedSiteIds: ["a", "b", "c"] });
+
+  assert.ok(getSkillLevel(oneField, "person:crew", SKILL.PRECISION_FLIGHT) >= required,
+    "a long career on one seam gets there");
+  assert.ok(getSkillLevel(threeFields, "person:crew", SKILL.PRECISION_FLIGHT) >= required,
+    "a broader career gets there sooner");
+  assert.ok(getSkillLevel(worldWithMiningCrew({ completedExtractions: 4, unitsCut: 24, servedSiteIds: ["a"] }),
+    "person:crew", SKILL.PRECISION_FLIGHT) < required, "four runs is not a career");
+});

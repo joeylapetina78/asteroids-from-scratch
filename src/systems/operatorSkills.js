@@ -1,4 +1,4 @@
-import { deriveOperatorEvidence } from "./npcDevelopment.js?v=fresh-20260820-2125-b9237ca";
+import { deriveOperatorEvidence } from "./npcDevelopment.js?v=fresh-20260820-2130-fede47f";
 
 // What a person has actually learned to do.
 //
@@ -79,7 +79,10 @@ export function getOperatorSkills(state, operator) {
     skills[SKILL.CARGO_HANDLING] = curve(measures.ordersAccepted ?? 0, 30);
   } else if (evidence?.sourceKind === "extraction") {
     skills[SKILL.EXTRACTION] = curve((measures.completedExtractions ?? 0) * 2 + (measures.unitsCut ?? 0) / 12, 18);
-    skills[SKILL.PRECISION_FLIGHT] = curve(measures.completedExtractions ?? 0, 26);
+    // Varied fields teach a miner handling for the same reason varied ports
+    // teach a hauler: an unfamiliar approach is the thing being learned, and
+    // grinding one seam is not it. Weighted as the freight branch weights ports.
+    skills[SKILL.PRECISION_FLIGHT] = curve((measures.completedExtractions ?? 0) + (measures.servedSites ?? 0) * 3, 26);
   }
 
   return { skills, evidence, hasRecord };
