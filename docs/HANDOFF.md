@@ -291,6 +291,37 @@ The aggregate used to hide the broken trade route behind phantom deliveries.
 Options 1 and 2 keep distance meaningful and make the frontier a thing the world
 has to solve. 3 and 4 make it stop being a problem by making it stop being far.
 
+### What was built, and the third thing it needed (2026-08-21)
+
+Option 1, in two halves, because one was not enough.
+
+**(a) The hull.** A mining company that keeps losing an order to
+`beyond-fleet-range` prices a counterfactual refit — what would this order be
+worth to this ship with a subspace drive — and buys one at 7,500cr if the answer
+pays. Three refits happened in the first live run, so the investment path works.
+
+**(b) The price.** Every refused frontier order sat pinned at the flat
+`MINING_REPRICE_MAX_MULTIPLE` of 2.5x book, and still did not cover the wear:
+ore-station aluminium paid 750/u and needed ~909, coldwater water-ice paid 750
+and needed ~1,548, kiln carbonaceous paid 200 and needed ~288. The ceiling is
+now scaled by the buyer's own coverage — routine 2.5x, urgent 4x, emergency
+6.5x — so a hub that is actually starving may outbid one that is merely
+restocking. A comfortable hub is capped exactly where it was.
+
+**(c) Keeping what you bought.** Neither of the above delivered anything,
+because the refitted hulls were gone: `mining.workerReleased`, not destroyed.
+The hull that just gained reach is precisely the one idling — waiting for the
+distant work only it can take — so it sorts first for release by longest-idle.
+Flint and Cinder each paid for reach and then stood the reach down. The fleet
+planner now declines to retire the last hull holding a capability no other hull
+has; ships carry a neutral `capability` tag, and `fleetCapacity` still knows
+nothing about what a drive is.
+
+The lesson is the same one this document keeps recording: each fix was correct
+and each was invisible, because the next link in the chain undid it. Do not
+conclude a capability does not pay until you have checked the thing you built is
+still in the world.
+
 ## Physical space
 
 Whether a craft can pass through a rock is one rule now, declared on its drive

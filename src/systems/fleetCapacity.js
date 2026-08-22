@@ -1,5 +1,5 @@
-import { createNeedRecord, planResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260821-2212-92483706";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260821-2212-92483706";
+import { createNeedRecord, planResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260821-2304-60f29300";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260821-2304-60f29300";
 
 // How an operator decides how much fleet to carry.
 //
@@ -135,6 +135,17 @@ export function deriveFleetNeeds({ fleet, policy, now, makeId = (kind, id) => `n
   // iteration, so the floor held implicitly; deriving the needs up front loses
   // that unless the cap is applied to the set. Without it a fleet with three
   // idle ships and a floor of one releases all three and stops existing.
+  // Capabilities held by exactly one hull. A fleet that buys reach and then
+  // stands down the only ship carrying it pays twice and never gets the reach —
+  // and the ship that just gained reach is precisely the one sitting idle,
+  // waiting for the distant work only it can take. Same shape of argument as
+  // the cargo guard below, so it is a guard here rather than a weight.
+  const capabilityHolders = new Map();
+  (fleet.ships ?? []).forEach((ship) => {
+    if (!ship.capability) return;
+    capabilityHolders.set(ship.capability, (capabilityHolders.get(ship.capability) ?? 0) + 1);
+  });
+
   const spare = fleet.size - policy.minFleet;
   if (spare > 0) {
     serviceable
@@ -144,7 +155,9 @@ export function deriveFleetNeeds({ fleet, policy, now, makeId = (kind, id) => `n
         // Never stand down a ship that is still carrying something — the cargo
         // would go with it. A guard, not a preference, so it lives here rather
         // than in the scoring.
-        return (ship.carrying ?? 0) <= 0;
+        if (ship.carrying ?? 0) return false;
+        // The last holder of a capability stays, whatever its idle time.
+        return !(ship.capability && capabilityHolders.get(ship.capability) === 1);
       })
       // Longest-idle first, so which ships go is stable rather than an artefact
       // of fleet ordering when more are idle than can be spared.

@@ -1,8 +1,8 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260821-2212-92483706";
-import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260821-2212-92483706";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260821-2212-92483706";
-import { ensurePatrolOperations } from "./patrolOperations.js?v=fresh-20260821-2212-92483706";
-import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js?v=fresh-20260821-2212-92483706";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260821-2304-60f29300";
+import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260821-2304-60f29300";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260821-2304-60f29300";
+import { ensurePatrolOperations } from "./patrolOperations.js?v=fresh-20260821-2304-60f29300";
+import { allocateProtectionProviders, releaseProtectionContract } from "./protectionProviders.js?v=fresh-20260821-2304-60f29300";
 
 export const PROTECTION_REQUEST_STATUS = Object.freeze({
   INTERNAL: "covered-internally",

@@ -1,29 +1,30 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260821-2212-92483706";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260821-2212-92483706";
-import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260821-2212-92483706";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260821-2212-92483706";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260821-2212-92483706";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260821-2212-92483706";
-import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260821-2212-92483706";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260821-2212-92483706";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260821-2212-92483706";
-import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260821-2212-92483706";
-import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260821-2212-92483706";
-import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260821-2212-92483706";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260821-2212-92483706";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260821-2212-92483706";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260821-2212-92483706";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260821-2212-92483706";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260821-2212-92483706";
-import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260821-2212-92483706";
-import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260821-2212-92483706";
-import { recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260821-2212-92483706";
-import { canOperateEquipment } from "./operatorSkills.js?v=fresh-20260821-2212-92483706";
-import { ENGINE_MODELS } from "../content/ships/engineModels.js?v=fresh-20260821-2212-92483706";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260821-2212-92483706";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260821-2212-92483706";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260821-2212-92483706";
-import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260821-2212-92483706";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260821-2304-60f29300";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260821-2304-60f29300";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260821-2304-60f29300";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260821-2304-60f29300";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260821-2304-60f29300";
+import { getShipDrive } from "./shipDrives.js?v=fresh-20260821-2304-60f29300";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260821-2304-60f29300";
+import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260821-2304-60f29300";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260821-2304-60f29300";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260821-2304-60f29300";
+import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260821-2304-60f29300";
+import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260821-2304-60f29300";
+import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260821-2304-60f29300";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260821-2304-60f29300";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260821-2304-60f29300";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260821-2304-60f29300";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260821-2304-60f29300";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260821-2304-60f29300";
+import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260821-2304-60f29300";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260821-2304-60f29300";
+import { recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260821-2304-60f29300";
+import { canOperateEquipment } from "./operatorSkills.js?v=fresh-20260821-2304-60f29300";
+import { ENGINE_MODELS } from "../content/ships/engineModels.js?v=fresh-20260821-2304-60f29300";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260821-2304-60f29300";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260821-2304-60f29300";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260821-2304-60f29300";
+import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260821-2304-60f29300";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -85,7 +86,27 @@ export function miningRoyaltyPerUnit(resourceId) {
 // being able to fund it. Without this, only the buyer's own inventory urgency
 // pushed the price up; now a rise in what mining COSTS reaches the price too.
 const MINING_REPRICE_INTERVAL_MS = 45 * 1000;
-const MINING_REPRICE_MAX_MULTIPLE = 2.5;   // never above this × the ore's base value
+// How far above an ore's book value a hub may chase it, by how badly it needs it.
+//
+// A flat cap is what stopped desperation reaching the market. Every refused
+// order in a live run was PINNED at 2.5x and still short of what the run cost:
+//
+//   ore-station aluminum   ceiling 750/u   needed ~909/u
+//   coldwater water-ice    ceiling 750/u   needed ~1548/u
+//   kiln carbonaceous      ceiling 200/u   needed ~288/u
+//
+// Kiln Crossing looked like a hub failing to bid; it was maxed out, on cheap ore.
+// A comfortable settlement should not pay far over book value — that is what
+// keeps prices meaningful. A settlement whose shelf is EMPTY is in a different
+// situation, and the alternative to overpaying is going without, so its ceiling
+// rises. Bounded, never unbounded, and still subject to what it can actually
+// fund.
+const MINING_REPRICE_CEILING_BY_URGENCY = Object.freeze({
+  routine: 2.5,
+  urgent: 4,
+  emergency: 6.5,
+});
+const MINING_REPRICE_MAX_MULTIPLE = 2.5;   // routine floor; see the table above
 const MINING_REPRICE_MARGIN = 0.15;        // a reason for the miner to take it, not just break even
 
 // Largest single order a hub will place, so a big gap becomes several runs
@@ -446,6 +467,46 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   // is refused and the refusal says which — short of the mark, or never assessed
   // at all. The cost is declared as capital spend because nobody counted here
   // receives it, the same way crew wages are.
+  // Buy reach when there is work that pays and nothing that can fetch it.
+  //
+  // A subspace hull is not an upgrade a company drifts into; it is what it buys
+  // when the board is showing money it cannot collect. The test is deliberately
+  // the counterfactual: would this same order clear if the wear were a subspace
+  // hull's? If yes, the barrier is the hull and not the price, and a hull is
+  // purchasable.
+  function considerSubspaceHull(shipRecord) {
+    if (!shipRecord || shipRecord.driveId === SUBSPACE_DRIVE_ID) return null;
+    if (Object.values(operation.ships).some((ship) => ship.driveId === SUBSPACE_DRIVE_ID)) return null;
+    const context = offerContext();
+    const offers = filterUncommittedOffers(listExtractionOffers(state, context), context.allocations);
+    const position = shipRecord.position ?? sites.get(shipRecord.currentSiteId)?.position
+      ?? sites.get(seed.homeSiteId)?.position ?? { x: 0, y: 0 };
+
+    const unreachable = offers.find((offer) => {
+      const asStandard = valueOrderForWorker(offer, position, shipRecord);
+      if (asStandard.acceptable) return false;
+      const asSubspace = valueOrderForWorker(offer, position, { ...shipRecord, driveId: SUBSPACE_DRIVE_ID });
+      return asSubspace.acceptable;
+    });
+    if (!unreachable) return null;
+
+    const account = operation.institution.accounts.operating;
+    if ((account.balance ?? 0) - SUBSPACE_REFIT_COST < getActorProtectedCash(state, operation.institution.id)) return null;
+
+    account.balance -= SUBSPACE_REFIT_COST;
+    operation.institution.capitalSpend = (operation.institution.capitalSpend ?? 0) + SUBSPACE_REFIT_COST;
+    account.transactions.push({
+      id: `MIN-SUBSPACE-${now()}-${shipRecord.id}`, at: now(), type: "capital-expense",
+      amount: -SUBSPACE_REFIT_COST, balance: account.balance, referenceId: shipRecord.id,
+    });
+    shipRecord.driveId = SUBSPACE_DRIVE_ID;
+    record("mining.subspaceRefit", `${operation.institution.name} refitted ${shipRecord.name} with a subspace drive for ${SUBSPACE_REFIT_COST} cr — ${unreachable.siteName ?? unreachable.siteId} was posting work nothing in the fleet could reach.`, {
+      institutionId: operation.institution.id, shipInstitutionId: shipRecord.id, shipName: shipRecord.name,
+      cost: SUBSPACE_REFIT_COST, unlockedOfferId: unreachable.id, siteId: unreachable.siteId,
+    });
+    return shipRecord.driveId;
+  }
+
   function considerCrewDrive(shipRecord) {
     if (!shipRecord?.operatorId) return null;
     if (shipRecord.engineModelId === REVERSING_DRIVE_ID) return null;
@@ -722,7 +783,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
 
     Object.values(getMiningOrderBook(state)).forEach((order) => {
       if (order.withheld || !(order.amount > 0) || claimed.has(order.id)) return;
-      const valuations = idleWorkers.map((worker) => valueOrderForWorker(order, worker.position));
+      const valuations = idleWorkers.map((worker) => valueOrderForWorker(order, worker.position, operation.ships[worker.id]));
       // One idle miner willing to take it means it is not underpriced — it will
       // be taken. Only a unanimous refusal is evidence the price is too low.
       if (valuations.some((valuation) => valuation.acceptable)) return;
@@ -739,7 +800,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     if (entry.repricedAt != null && now() - entry.repricedAt < MINING_REPRICE_INTERVAL_MS) return;
     entry.repricedAt = now();
     const current = order.paymentPerUnit;
-    const ceiling = Math.round(getInstitutionalFeedstockTradeValue(order.resourceId) * MINING_REPRICE_MAX_MULTIPLE);
+    // What this buyer may chase, given how short it actually is.
+    const urgency = urgencyFromCoverage(order.inventory ?? {});
+    const multiple = MINING_REPRICE_CEILING_BY_URGENCY[urgency] ?? MINING_REPRICE_MAX_MULTIPLE;
+    const ceiling = Math.round(getInstitutionalFeedstockTradeValue(order.resourceId) * multiple);
     // The miner's cost spread over the load, plus a margin so taking the run
     // beats sitting idle. Capped so a hub never chases an impossible cost to ruin.
     const target = Math.min(ceiling, Math.ceil((minerCostFloor / order.amount) * (1 + MINING_REPRICE_MARGIN)));
@@ -755,6 +819,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     }
     entry.rate = target;
     state.ledger.recordEvent("institution.miningOrderRepriced", {
+      urgency, ceilingMultiple: multiple,
       institutionId: order.buyerInstitutionId, orderId: order.id, siteId: order.siteId,
       resourceId: order.resourceId, resourceName: order.resourceName,
       previousUnitPrice: current, unitPrice: target, minerCostFloor: Math.round(minerCostFloor),
@@ -772,7 +837,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         .filter((offer) => offer.siteId === destinationSiteId)
         .filter((offer) => !worker.commitments.some((entry) => entry.resourceId === offer.resourceId))
         .filter((offer) => (offer.harvestTarget ?? offer.amount) <= worker.remainingCargoCapacity)
-        .map((offer) => ({ offer, valuation: valueOrderForWorker(offer, worker.position) }))
+        .map((offer) => ({ offer, valuation: valueOrderForWorker(offer, worker.position, operation.ships[worker.id]) }))
         .filter((entry) => entry.valuation.acceptable)
         .sort((a, b) => b.valuation.metrics.netValue - a.valuation.metrics.netValue)[0];
       if (!candidate) return;
@@ -971,7 +1036,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         name: worker.name,
         controllerId: operation.institution.id,
         waitingSince: operation.ships[worker.id].waitingSince,
-        bid: (offer) => valueOrderForWorker(offer, worker.position),
+        bid: (offer) => valueOrderForWorker(offer, worker.position, operation.ships[worker.id]),
       }));
   }
 
@@ -991,7 +1056,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     if (candidates.length === 0) return null;
 
     const scored = candidates
-      .map((order) => ({ order, valuation: valueOrderForWorker(order, position) }))
+      .map((order) => ({ order, valuation: valueOrderForWorker(order, position, worker ? operation.ships[worker.id] : null) }))
       .filter((entry) => entry.valuation.acceptable)
       .sort((first, second) => second.valuation.metrics.netValue - first.valuation.metrics.netValue);
     if (scored.length === 0) return null;
@@ -1031,7 +1096,17 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     });
   }
 
-  function valueOrderForWorker(order, position) {
+  // A hull's drive decides what a mile costs IT, so the same run is worth
+  // different things to different craft.
+  //
+  // Wear dominates this valuation — a 48,045-unit round trip costs 4,228 in wear
+  // against 192 in fuel — which is why the frontier posted real orders, at real
+  // prices, and was refused by every miner in the world. Ore Station One missed
+  // by 241 credits. A craft that wears at a fraction of the rate is not a
+  // discount on that decision, it is a different craft, and this is the same rule
+  // freight already follows.
+  function valueOrderForWorker(order, position, shipRecord = null) {
+    const drive = getShipDrive(shipRecord);
     const destination = sites.get(order.siteId)?.position ?? position;
     const deposit = getDepositCandidates(order.resourceId, position)[0] ?? null;
     // Round trip: out to the nearest known deposit, then in to the buyer.
@@ -1057,6 +1132,8 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       // Price wear against what a service REALLY costs now, not a constant —
       // this is how a repair-price rise reaches the miner's own decisions.
       wearCostPerPoint: getServiceCost(state, operation.institution.id, "maintenance", MINING_SERVICE_PRICE),
+      // What this particular hull spends of itself per unit of distance.
+      wearPerDistance: MINING_WEAR_PER_DISTANCE * drive.wearMultiplier,
       fixedOperatingCost: (seed.operatingCosts?.crewPayPerContract ?? 0)
         + (seed.operatingCosts?.consumablesPerContract ?? 0),
       // The rights royalty owed on everything this run would extract. Included
@@ -1182,6 +1259,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         busy: Boolean(worker.assignment),
         carrying: Object.values(worker.cargo ?? {}).reduce((sum, units) => sum + units, 0),
         idleSince: operation.ships[worker.id]?.idleSince ?? null,
+        // What this hull can do that another might not. The fleet planner does
+        // not know what a drive is; it only knows not to retire the last hull
+        // holding a tag.
+        capability: operation.ships[worker.id]?.driveId === SUBSPACE_DRIVE_ID ? "subspace-reach" : null,
       })),
     };
   }
@@ -1455,6 +1536,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     recordCrewWork(shipRecord, { siteId, delivered });
     // The record just grew, so this is the moment the answer can change.
     considerCrewDrive(shipRecord);
+    considerSubspaceHull(shipRecord);
     const workWear = getMiningWorkWear();
     const componentUse = applyCraftUse(shipRecord, {
       structure: workWear * 0.35,
@@ -1695,6 +1777,14 @@ function createInitialState(now, seed = CINDER_MINING_SEED) {
   };
 }
 
+// The authored wear rate for a standard mining hull, previously the valuation's
+// own default. Named here so a drive can scale it.
+const MINING_WEAR_PER_DISTANCE = 0.00004;
+const SUBSPACE_DRIVE_ID = "subspace";
+// What it costs a mining company to put a subspace drive in an existing hull.
+// Steep enough to be a decision, cheap enough that a frontier worth serving pays
+// for it in a handful of runs.
+const SUBSPACE_REFIT_COST = 7500;
 const REVERSING_DRIVE_ID = "vektor-reversing-drive";
 // What a company pays to re-engine a working hull.
 const REVERSING_DRIVE_COST = 900;
