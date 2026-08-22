@@ -1,12 +1,13 @@
-import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260822-1317-stage2";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260822-1317-stage2";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260822-1317-stage2";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260822-1317-stage2";
-import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260822-1317-stage2";
-import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260822-1317-stage2";
-import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260822-1317-stage2";
-import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260822-1317-stage2";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1317-stage2";
+import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260822-1326-partsmkt";
+import { listShipyards, shipyardPartShortage } from "./shipyards.js?v=fresh-20260822-1326-partsmkt";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260822-1326-partsmkt";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260822-1326-partsmkt";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260822-1326-partsmkt";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260822-1326-partsmkt";
+import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260822-1326-partsmkt";
+import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260822-1326-partsmkt";
+import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260822-1326-partsmkt";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1326-partsmkt";
 
 export const INDUSTRIAL_PARTS = Object.freeze(["hull-plate", "machine-part"]);
 
@@ -202,13 +203,37 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
     return findTransportationRoute(network, fromId, toId);
   }
 
+  // Who wants parts, and how badly.
+  //
+  // Repair work was the only buyer this market had ever had. Shipbuilding is the
+  // second, and it competes on the same footing rather than being given a
+  // private supply — which is what makes added demand show up as expansion
+  // pressure on the factories instead of as a quiet shortage nobody can see.
+  function partsBuyers() {
+    const buyers = [{ buyerId: SCRAP_PORCH_ID, reason: "Sal's repair queue", demandFor: partDemand }];
+    listShipyards(state).forEach((yard) => {
+      const ownerId = yard.ownerInstitutionId;
+      if (!ownerId) return;
+      buyers.push({
+        buyerId: ownerId,
+        reason: `${yard.name} has a hull to lay`,
+        demandFor: (part) => shipyardPartShortage(state, yard, part),
+      });
+    });
+    return buyers;
+  }
+
   function postPartOrders() {
-    const buyer = institutions()[SCRAP_PORCH_ID];
-    if (!buyer?.accounts?.operating || isHubAggregated(state, SCRAP_PORCH_ID)) return;
+    partsBuyers().forEach((demand) => postPartOrdersFor(demand));
+  }
+
+  function postPartOrdersFor({ buyerId, reason, demandFor }) {
+    const buyer = institutions()[buyerId];
+    if (!buyer?.accounts?.operating || isHubAggregated(state, buyerId)) return;
     INDUSTRIAL_PARTS.forEach((part) => {
-      const existingOrders = openPartOrders(part);
+      const existingOrders = openPartOrders(part).filter((order) => order.buyerInstitutionId === buyerId);
       if (existingOrders.length >= MAX_OPEN_PART_ORDERS) return;
-      const shortage = partDemand(part);
+      const shortage = demandFor(part);
       if (shortage <= 0) return;
       const committedSuppliers = new Set(existingOrders.map((order) => order.supplierInstitutionId));
       const candidates = Object.values(industrial.factories)
@@ -217,7 +242,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
         .filter((factory) => !committedSuppliers.has(factory.institutionId))
         .map((factory) => ({
           factory,
-          route: routeBetween(factoryHub(factory)?.siteId ?? factory.institutionId, buyer.siteId ?? SCRAP_PORCH_ID),
+          route: routeBetween(factoryHub(factory)?.siteId ?? factory.institutionId, buyer.siteId ?? buyerId),
         }))
         .filter(({ route }) => route)
         .sort((first, second) => {
@@ -237,13 +262,13 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
 
       const id = `IND-PO-${String(++industrial.counters.order).padStart(4, "0")}`;
       state.hubProcurement.orders[id] = {
-        id, orderKind: "industrial-part", buyerInstitutionId: SCRAP_PORCH_ID,
+        id, orderKind: "industrial-part", buyerInstitutionId: buyerId,
         factoryId: selected.factory.id,
         supplierInstitutionId: selected.factory.institutionId,
         family: "repair-parts", resourceId: part, units, effectiveUnits: units,
         pricePerUnit, originalPricePerUnit: pricePerUnit, committedPayment, freightBudget,
         deliveredUnits: 0, status: PROCUREMENT_STATUS.ACCEPTED,
-        reasons: [`SPRC repair demand requires ${shortage} additional ${part}.`, `${selected.factory.name} is the best reachable producer.`],
+        reasons: [`${reason}: ${Math.ceil(shortage)} more ${part} needed.`, `${selected.factory.name} is the best reachable producer.`],
         createdAt: now(), acceptedAt: now(), shipmentId: null,
       };
       buyer.accounts.operating.committed = (buyer.accounts.operating.committed ?? 0) + committedPayment;
@@ -251,9 +276,9 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
       selected.factory.operatingHistory.ordersAccepted += 1;
       selected.factory.operatingHistory.contractedRevenue += committedPayment;
       state.ledger.recordEvent("industry.partsOrdered", {
-        procurementOrderId: id, buyerId: SCRAP_PORCH_ID, sellerId: selected.factory.institutionId,
+        procurementOrderId: id, buyerId, sellerId: selected.factory.institutionId,
         factoryId: selected.factory.id, itemId: part, units, committedPayment, freightBudget,
-      }, { visible: true, message: `Scrap Porch ordered ${units} ${part.replaceAll("-", " ")} from ${selected.factory.name} for Sal's repair queue.` });
+      }, { visible: true, message: `${buyer.name ?? buyerId} ordered ${units} ${part.replaceAll("-", " ")} from ${selected.factory.name} — ${reason}.` });
     });
   }
 

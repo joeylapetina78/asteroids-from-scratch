@@ -14,10 +14,10 @@
 // after this lands is attributable to conservation rather than tangled with a
 // retune. See docs/shipbuilding.md.
 
-import { creditPayee } from "./contractTreasury.js?v=fresh-20260822-1317-stage2";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260822-1317-stage2";
-import { relationshipFactor } from "./valuation.js?v=fresh-20260822-1317-stage2";
-import { countHullStrokes, getHullOutline } from "../content/ships/hullOutlines.js?v=fresh-20260822-1317-stage2";
+import { creditPayee } from "./contractTreasury.js?v=fresh-20260822-1326-partsmkt";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260822-1326-partsmkt";
+import { relationshipFactor } from "./valuation.js?v=fresh-20260822-1326-partsmkt";
+import { countHullStrokes, getHullOutline } from "../content/ships/hullOutlines.js?v=fresh-20260822-1326-partsmkt";
 
 export const SHIPYARD_REFUSAL = Object.freeze({
   NO_YARD: "no-shipyard-in-reach",
@@ -112,6 +112,24 @@ function consumeParts(state, yard, bill) {
   Object.entries(bill).forEach(([partId, units]) => {
     shelf[partId] = (shelf[partId] ?? 0) - units;
   });
+}
+
+// What this yard is short of, for the hull it would lay next.
+//
+// Shipbuilding has to ASK for parts through the same procurement channel repair
+// work uses. It cannot simply take what the factory produces: a live run showed
+// every plate the Yard Plate Works made being reserved against an accepted order
+// the moment it existed, so free stock at the hub was permanently zero and the
+// ways never started. Yard Exchange was selling its own plate to Scrap Porch and
+// had committed to doing so — the answer is to bid for parts, not to break a
+// commitment.
+export function shipyardPartShortage(state, yard, partId) {
+  if (!yard) return 0;
+  const hullClass = nextHullToLay(yard);
+  if (!hullClass) return 0;
+  const needed = getHullBillOfMaterials(hullClass)[partId] ?? 0;
+  if (needed <= 0) return 0;
+  return Math.max(0, needed - heldParts(state, yard, partId));
 }
 
 // The ways, advanced one tick.

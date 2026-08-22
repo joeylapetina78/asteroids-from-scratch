@@ -12,7 +12,7 @@ import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { createMiningOperation } from "../src/systems/miningOperation.js";
 import { CINDER_MINING_SEED } from "../src/content/economy/miningInstitutions.js";
 import { ensureRelationshipProjection } from "../src/systems/relationshipProjections.js";
-import { HULL_BUILD_MS, SHIPYARD_REFUSAL, advanceShipyards, findHullQuote, getBuildProgress, getHullBillOfMaterials, listShipyards, purchaseHull, quoteHull } from "../src/systems/shipyards.js";
+import { HULL_BUILD_MS, SHIPYARD_REFUSAL, advanceShipyards, findHullQuote, getBuildProgress, getHullBillOfMaterials, listShipyards, purchaseHull, quoteHull, shipyardPartShortage } from "../src/systems/shipyards.js";
 
 function createWorld() {
   const state = createGameState();
@@ -281,4 +281,39 @@ test("taking delivery empties that berth in the shed", () => {
 
   const second = quoteHull(state, { shipyardId: YARD, buyerInstitutionId: BUYER, hullClass: "mining-craft" });
   assert.equal(second.available, false, "and the next buyer waits for one to be built");
+});
+
+// ── Shipbuilding competes for parts, it does not get a private supply ──────
+
+// A live run found every plate the Yard Plate Works produced being reserved
+// against an accepted order the instant it existed, so free stock at the hub was
+// permanently zero and the ways never started. Yard Exchange was selling its own
+// plate to Scrap Porch under a commitment it should not break. The fix is that
+// shipbuilding BIDS for parts like everything else.
+test("a yard short of parts reports a shortage the parts market can see", () => {
+  const state = createWorld();
+  const yard = state.logistics.institutions[YARD];
+  yard.readyHulls = {};
+  state.logistics.institutions["yard-exchange"].inventories = { "hull-plate": 0, "machine-part": 0 };
+
+  assert.ok(shipyardPartShortage(state, yard, "hull-plate") > 0, "it wants plate");
+  assert.ok(shipyardPartShortage(state, yard, "machine-part") > 0, "and machine parts");
+});
+
+test("a yard with a full shed asks for nothing", () => {
+  const state = createWorld();
+  const yard = state.logistics.institutions[YARD];
+  yard.readyHulls = { "mining-craft": 9, "freight-craft": 9, "freight-craft-subspace": 9 };
+
+  assert.equal(shipyardPartShortage(state, yard, "hull-plate"), 0,
+    "demand comes from work it intends to do, not from an appetite for stock");
+});
+
+test("a yard already holding the parts asks for nothing more", () => {
+  const state = createWorld();
+  const yard = state.logistics.institutions[YARD];
+  yard.readyHulls = {};
+  state.logistics.institutions["yard-exchange"].inventories = { "hull-plate": 50, "machine-part": 50 };
+
+  assert.equal(shipyardPartShortage(state, yard, "hull-plate"), 0);
 });
