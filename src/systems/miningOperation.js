@@ -1,30 +1,30 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260821-0638-453f3f93";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260821-0638-453f3f93";
-import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260821-0638-453f3f93";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260821-0638-453f3f93";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260821-0638-453f3f93";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260821-0638-453f3f93";
-import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260821-0638-453f3f93";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260821-0638-453f3f93";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260821-0638-453f3f93";
-import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260821-0638-453f3f93";
-import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260821-0638-453f3f93";
-import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260821-0638-453f3f93";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260821-0638-453f3f93";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260821-0638-453f3f93";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260821-0638-453f3f93";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260821-0638-453f3f93";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260821-0638-453f3f93";
-import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260821-0638-453f3f93";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260821-0638-453f3f93";
-import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260821-0638-453f3f93";
-import { recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260821-0638-453f3f93";
-import { canOperateEquipment } from "./operatorSkills.js?v=fresh-20260821-0638-453f3f93";
-import { ENGINE_MODELS } from "../content/ships/engineModels.js?v=fresh-20260821-0638-453f3f93";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260821-0638-453f3f93";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260821-0638-453f3f93";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260821-0638-453f3f93";
-import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260821-0638-453f3f93";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260821-2204-60f29300";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260821-2204-60f29300";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260821-2204-60f29300";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260821-2204-60f29300";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260821-2204-60f29300";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260821-2204-60f29300";
+import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260821-2204-60f29300";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260821-2204-60f29300";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260821-2204-60f29300";
+import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260821-2204-60f29300";
+import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260821-2204-60f29300";
+import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260821-2204-60f29300";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260821-2204-60f29300";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260821-2204-60f29300";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260821-2204-60f29300";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260821-2204-60f29300";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260821-2204-60f29300";
+import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260821-2204-60f29300";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260821-2204-60f29300";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260821-2204-60f29300";
+import { recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260821-2204-60f29300";
+import { canOperateEquipment } from "./operatorSkills.js?v=fresh-20260821-2204-60f29300";
+import { ENGINE_MODELS } from "../content/ships/engineModels.js?v=fresh-20260821-2204-60f29300";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260821-2204-60f29300";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260821-2204-60f29300";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260821-2204-60f29300";
+import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260821-2204-60f29300";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -373,18 +373,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     });
     operation.ships[defaults.id].wear = operation.ships[defaults.id].aggregateWear;
   });
-  // Somebody is actually flying these.
-  //
-  // Mining craft used to be crewed by nobody: the company paid a
-  // `crewPayPerContract` line and no person existed. That made an entire
-  // vocation invisible to the career system — no operator meant no record, no
-  // record meant no promotion and no skill, so "can this crew handle that
-  // drive?" had no one to ask about.
-  //
-  // Crew are recruited from the company's home settlement through the same
-  // labour market that staffs sponsored freight and factories, so they are real
-  // residents holding a real assignment rather than names attached to a hull.
-  Object.values(operation.ships).forEach((shipRecord) => ensureWorkerCrew(shipRecord));
+  // Every craft that enters service is crewed by `addPhysicalWorker` below,
+  // founding fleet and replacements alike, so there is no separate startup pass
+  // to fall out of step with the one that matters.
+
 
   const sites = new Map(game.worldSites.map((site) => [site.id, site]));
   seedDepositKnowledge();
@@ -467,7 +459,18 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     return shipRecord.engineModelId;
   }
 
+  // Crewing belongs with the hull, not with world startup.
+  //
+  // Crews were recruited once, in a pass over the founding fleet. Craft are lost
+  // and replaced constantly — a live run after half an hour held Cinder Eight,
+  // Cinder Ten and a destroyed Flint Two where the original five had been — and
+  // every replacement came aboard UNCREWED. So the career pipeline quietly died
+  // out with the founding hulls: no crew, no record, no skill, no drive.
+  //
+  // Attaching it here means anything that puts a craft into service crews it,
+  // including hires and commissions that do not exist yet.
   function addPhysicalWorker(shipRecord) {
+    ensureWorkerCrew(shipRecord);
     const defaults = [...seed.workers, ...(seed.expansionWorker ? [seed.expansionWorker] : [])].find((entry) => entry.id === shipRecord.id)
       ?? { offset: { x: 0, y: 0 } };
     const home = sites.get(shipRecord.currentSiteId) ?? sites.get(seed.homeSiteId) ?? sites.get("scrap-porch");

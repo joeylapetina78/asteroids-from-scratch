@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
@@ -272,4 +273,21 @@ test("the reversing drive is earned in a plausible working career", () => {
     "a broader career gets there sooner");
   assert.ok(getSkillLevel(worldWithMiningCrew({ completedExtractions: 4, unitsCut: 24, servedSiteIds: ["a"] }),
     "person:crew", SKILL.PRECISION_FLIGHT) < required, "four runs is not a career");
+});
+
+test("a replacement hull is crewed too, not just the founding fleet", () => {
+  // Crews were originally recruited in a one-off pass over the starting ships.
+  // Mining craft are lost and replaced constantly — half an hour into a live run
+  // the fleet was Cinder Eight, Cinder Ten and a destroyed Flint Two, where five
+  // founding hulls had been — and every replacement came aboard UNCREWED. The
+  // career pipeline quietly died out with the hulls it was written for.
+  //
+  // This reads the source rather than the runtime, because the failure is
+  // structural: crewing must hang off the act of putting a craft into service,
+  // not off world startup.
+  const source = readFileSync(new URL("../src/systems/miningOperation.js", import.meta.url), "utf8");
+  const addWorker = source.slice(source.indexOf("function addPhysicalWorker"));
+  const body = addWorker.slice(0, addWorker.indexOf("\n  function "));
+  assert.match(body, /ensureWorkerCrew\(shipRecord\)/,
+    "anything that puts a craft into service crews it");
 });

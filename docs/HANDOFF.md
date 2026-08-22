@@ -409,13 +409,22 @@ corridor navigation).
    negotiation and conflict only through shared authority and project systems.
 9. **Reintroduce asymmetry one capability at a time** and observe compensation
    before removing another.
-10. **Decide whether the world should produce more.** The measurement above says
-   nobody has anything spare, anywhere, ever — which makes every distribution
-   system in the game correct and idle. This is a balance decision across
-   extraction rates, population appetite and `TARGET_COVERAGE_SECONDS`, and it
-   wants deliberate choices rather than a patch. Suggested first measurement:
-   total units mined per minute against total units consumed per minute, world
-   wide, before changing any number.
+10. **Decide whether the world should produce more.** Nobody holds a surplus
+   anywhere, which leaves every distribution system correct and idle. Measured
+   over 33 minutes: authored demand 14.9 units/minute world wide (~490 across the
+   run) against 207 units actually delivered by 39 completed extraction
+   allocations — supply meets roughly 40% of appetite. A balance decision across
+   extraction rates, population appetite and `TARGET_COVERAGE_SECONDS`.
+   **Measure extraction through allocations, not crew career records.** A first
+   attempt at this counted crew records and read a flat zero, which was an
+   artefact of most hulls being uncrewed rather than a famine.
+11. **Frontier settlements are dying, and it is now visible rather than hidden.**
+   A 33-minute run ends with ore-station-one at 0.27 served, coldwater-depot at
+   0.03 and deep-research at 0.00, warehouses empty, observed supply decayed to
+   zero — while each still holds 27k-45k credits and its households 21k-24k. They
+   can afford to buy; there is nothing to buy. Solvent and starving is a
+   deliberate outcome of honest accounting, but it is not a stable world, and it
+   is the clearest argument for item 10.
 
 ## Handoff checklist
 

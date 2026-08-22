@@ -660,6 +660,17 @@ targets, not a plumbing question, and it should be decided deliberately rather
 than patched here. Regional clearing is the right mechanism for when a surplus
 exists; it cannot conjure one.
 
+**How big is the gap, actually.** Measured over a 33-minute run: authored demand
+is 14.9 units/minute world wide, or roughly 490 units across the run, against 207
+units actually delivered by 39 completed extraction allocations. So supply meets
+something like 40% of appetite — a real shortfall, but nothing like the total
+famine a first attempt at this measurement reported.
+
+That first attempt counted mining through CREW CAREER RECORDS and read zero,
+which was an artefact: most hulls turn out to be uncrewed, so the proxy reports
+nothing whether or not any rock is being cut. Measure extraction through
+allocations; crew records only describe the crews that exist.
+
 ### Still missing
 
 Aggregated hubs cannot SELL to detailed ones. Procurement still excludes any
