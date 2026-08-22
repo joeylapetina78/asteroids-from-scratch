@@ -1,30 +1,29 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260821-2204-60f29300";
-import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260821-2204-60f29300";
-import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260821-2204-60f29300";
-import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260821-2204-60f29300";
-import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260821-2204-60f29300";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260821-2204-60f29300";
-import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260821-2204-60f29300";
-import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260821-2204-60f29300";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260821-2204-60f29300";
-import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260821-2204-60f29300";
-import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260821-2204-60f29300";
-import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260821-2204-60f29300";
-import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260821-2204-60f29300";
-import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260821-2204-60f29300";
-import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260821-2204-60f29300";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260821-2204-60f29300";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260821-2204-60f29300";
-import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260821-2204-60f29300";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260821-2204-60f29300";
-import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260821-2204-60f29300";
-import { recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260821-2204-60f29300";
-import { canOperateEquipment } from "./operatorSkills.js?v=fresh-20260821-2204-60f29300";
-import { ENGINE_MODELS } from "../content/ships/engineModels.js?v=fresh-20260821-2204-60f29300";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260821-2204-60f29300";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260821-2204-60f29300";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260821-2204-60f29300";
-import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260821-2204-60f29300";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260821-2212-92483706";
+import { getOreClusterSeedsInRadius } from "./asteroidField.js?v=fresh-20260821-2212-92483706";
+import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260821-2212-92483706";
+import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260821-2212-92483706";
+import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260821-2212-92483706";
+import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260821-2212-92483706";
+import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260821-2212-92483706";
+import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260821-2212-92483706";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260821-2212-92483706";
+import { FLEET_CAPACITY_DEFAULTS, createCommissionCapability, createHireCapability, createReleaseCapability, planFleetCapacity, resolveFleetPolicy } from "./fleetCapacity.js?v=fresh-20260821-2212-92483706";
+import { createWithdrawForServiceCapability, planCraftService, resolveServicePolicy } from "./serviceDecision.js?v=fresh-20260821-2212-92483706";
+import { createSurveyedDeposit, rankDepositCandidates, recordDepositObservation, rememberSurveyedDeposit, resolveProspectingPolicy } from "./depositKnowledge.js?v=fresh-20260821-2212-92483706";
+import { adaptMiningAllocation } from "./intentions.js?v=fresh-20260821-2212-92483706";
+import { createExtractionOffer, filterUncommittedOffers, listExtractionOffers, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260821-2212-92483706";
+import { clearExtractionMarket, getMarketOutbid, registerExtractionMarketParticipant } from "./extractionMarket.js?v=fresh-20260821-2212-92483706";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260821-2212-92483706";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260821-2212-92483706";
+import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260821-2212-92483706";
+import { CINDER_MINING_SEED } from "../content/economy/miningInstitutions.js?v=fresh-20260821-2212-92483706";
+import { recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260821-2212-92483706";
+import { canOperateEquipment } from "./operatorSkills.js?v=fresh-20260821-2212-92483706";
+import { ENGINE_MODELS } from "../content/ships/engineModels.js?v=fresh-20260821-2212-92483706";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260821-2212-92483706";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260821-2212-92483706";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260821-2212-92483706";
+import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260821-2212-92483706";
 
 // Identity only: which hub extracts which material at which site.
 //
@@ -105,7 +104,23 @@ const UNRUN_HUB_TRAITS = Object.freeze({ urgencyBias: 0.5, caution: 0.5, growthB
 export function getPostedMiningOrders(state, at = Date.now()) {
   const posted = {};
   getStandingMiningDefinitions(state).forEach((definition) => {
-    if (isHubAggregated(state, definition.buyerInstitutionId)) return;
+    // A distant hub's HUNGER is still a fact. Its decision-making is suspended
+    // by aggregation; its empty shelf is not.
+    //
+    // Skipping aggregated buyers here cut the frontier out of the mining market
+    // entirely, and a live run showed the result plainly: every standing order
+    // and all 226 delivered units belonged to the six inner hubs, while
+    // ore-station-one, coldwater-depot and deep-research posted nothing, received
+    // nothing, and starved at 0.27, 0.03 and 0.00 served — holding tens of
+    // thousands of credits they had no way to spend. They were not outbid. They
+    // were never asking.
+    //
+    // The gap is computed from live inventory, which the aggregate keeps current,
+    // so it is as true for a modelled region as a watched one. Miners cutting for
+    // it is work done TO the hub by somebody else — the same thing procurement
+    // was allowed to keep doing in Phase D — and the material arrives as
+    // `externalInflow`, which re-observation already nets against modelled supply
+    // rather than counting twice.
     const family = getResourceFamily(definition.resourceId);
     const position = getInventoryPosition(state, definition.buyerInstitutionId, family);
     if (position.gap <= 0) return;

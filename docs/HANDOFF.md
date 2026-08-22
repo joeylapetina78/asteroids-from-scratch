@@ -418,6 +418,36 @@ corridor navigation).
    **Measure extraction through allocations, not crew career records.** A first
    attempt at this counted crew records and read a flat zero, which was an
    artefact of most hulls being uncrewed rather than a famine.
+10b. **The frontier's starvation is now a PRICED decision, not a mystery.**
+   `getPostedMiningOrders` used to skip aggregated buyers, so a hub dropped out of
+   the mining market the moment it was modelled: no orders, no miners cutting for
+   it, nothing arriving, while it sat on tens of thousands of credits. Fixed —
+   aggregation suspends a hub's decisions, not its hunger, and the gap is computed
+   from live inventory the aggregate keeps current.
+   The frontier now posts and is bid on. It is still refused, on economics, and
+   the numbers say exactly why:
+
+   ```text
+   mine-yard-iron             accept  net +2316   travel  4,731u   wear   416
+   mine-ledge-silicate        accept  net  +428   travel  9,725u   wear   856
+   mine-kiln-carbonaceous     REJECT  net  -322   travel 14,755u   wear 1,298
+   mine-ore-station-aluminum  REJECT  net  -241   travel 48,045u   wear 4,228
+   mine-coldwater-water       REJECT  net -3575   travel 84,284u   wear 7,417
+   ```
+
+   Wear-per-distance is the dominant cost, exactly as it was for freight before
+   subspace hulls. Note Kiln Crossing — an INNER hub — is refused too, so this is
+   not only a frontier problem. Ore Station One misses by 241 credits.
+   Three ways out, and this is a balance decision:
+   (a) **subspace mining hulls**, consistent with what already fixed freight —
+       wear x0.15 turns Ore Station's 4,228 into ~634 and the run clears easily;
+       needs `valueOrderForWorker` to know which hull is bidding, which it does
+       not today;
+   (b) **let desperate hubs bid higher** — the model already routes desperation
+       through price and Ore Station already pays 4,500 against Yard Exchange's
+       3,000; it is short, not absent;
+   (c) **soften wear-per-distance**, one number with world-wide consequences for
+       every maintenance decision already tuned around it.
 11. **Frontier settlements are dying, and it is now visible rather than hidden.**
    A 33-minute run ends with ore-station-one at 0.27 served, coldwater-depot at
    0.03 and deep-research at 0.00, warehouses empty, observed supply decayed to

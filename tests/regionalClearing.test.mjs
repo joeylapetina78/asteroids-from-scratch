@@ -268,3 +268,37 @@ test("the deep frontier is fed by relay, or not at all", () => {
   assert.ok(findRegionalCarrier(state, "ore-station-one", "coldwater-depot"),
     "but the relay leg is servable");
 });
+
+// ── A distant hub can still ask ────────────────────────────────────────────
+import { getPostedMiningOrders } from "../src/systems/miningOperation.js";
+import { ensureDistantSimulationState } from "../src/systems/simulationMode.js";
+
+test("an aggregated hub's empty shelf still reaches the mining market", () => {
+  // Aggregation suspends a hub's DECISIONS, not its hunger. Skipping aggregated
+  // buyers cut the frontier out of extraction entirely: in a live run every
+  // standing order and all 226 delivered units belonged to the six inner hubs,
+  // while the three frontier hubs posted nothing and starved at 0.27, 0.03 and
+  // 0.00 served — holding tens of thousands of credits they could not spend.
+  // They were not outbid; they were never asking.
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(1_000);
+  // Empty every warehouse so the gap is unambiguous.
+  Object.values(state.logistics.institutions)
+    .filter((institution) => institution.archetypeId === "settlement")
+    .forEach((institution) => { institution.inventories = {}; });
+
+  const before = Object.values(getPostedMiningOrders(state, 2_000));
+  const frontierBefore = before.filter((order) => order.buyerInstitutionId === "ore-station-one");
+  assert.ok(frontierBefore.length > 0, "a detailed frontier hub posts for what it lacks");
+
+  // Now aggregate it. Its shelf is just as empty.
+  const simulation = ensureDistantSimulationState(state);
+  simulation.hubs["ore-station-one"] = {
+    institutionId: "ore-station-one", siteId: "ore-station-one", mode: "aggregate", flow: null,
+  };
+
+  const after = Object.values(getPostedMiningOrders(state, 2_000));
+  const frontierAfter = after.filter((order) => order.buyerInstitutionId === "ore-station-one");
+  assert.ok(frontierAfter.length > 0,
+    "and it still posts once nobody is watching it — being modelled is not being fed");
+});
