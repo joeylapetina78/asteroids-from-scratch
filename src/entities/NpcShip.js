@@ -1,7 +1,8 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260822-1218-d80c6f63";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260822-1218-d80c6f63";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260822-1218-d80c6f63";
-import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260822-1218-d80c6f63";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260822-1226-8a8ff3f3";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260822-1226-8a8ff3f3";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260822-1226-8a8ff3f3";
+import { DRIVE_KIND } from "../systems/shipDrives.js?v=fresh-20260822-1226-8a8ff3f3";
+import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260822-1226-8a8ff3f3";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -633,6 +634,19 @@ export class NpcShip {
     context.closePath();
     context.fill();
     context.stroke();
+
+    // A subspace hauler carries its drive where you can see it: a ring set into
+    // the nose. These are the only craft that can cross to the far hubs, they
+    // cost three times a standard freighter, and until now they looked exactly
+    // like one.
+    if (this.driveKind === DRIVE_KIND.SUBSPACE || this.phasesThroughObstacles) {
+      context.beginPath();
+      context.arc(9, 0, 5.5, 0, Math.PI * 2);
+      context.stroke();
+      context.beginPath();
+      context.arc(9, 0, 2, 0, Math.PI * 2);
+      context.fill();
+    }
 
     context.restore();
 

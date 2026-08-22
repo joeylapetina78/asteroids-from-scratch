@@ -1,4 +1,4 @@
-﻿import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260822-1218-d80c6f63";
+﻿import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260822-1226-8a8ff3f3";
 
 export const WORLD_SITES = [
   // "" STORY HUBS """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -8,9 +8,13 @@ export const WORLD_SITES = [
     name: storySites.starterHub.name,
     beaconId: "beacon-yard-exchange",
     type: "hub",
+    // The capital. It reads as one on sight: a wider berth to come alongside, a
+    // larger body, and its own mark at the centre rather than the rotated square
+    // every other hub wears.
+    tier: "capital",
     position: { x: 380, y: -180 },
-    radius: 58,
-    interactionRadius: 230,
+    radius: 74,
+    interactionRadius: 330,
     capabilities: ["repair"],
     services: [
       yardExchangeServices.rook,
