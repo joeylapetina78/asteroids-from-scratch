@@ -588,3 +588,25 @@ Known constants that have NOT been through this test and probably should be:
 `MINING_REPRICE_MARGIN`, `MINING_REPRICE_INTERVAL_MS`, the fleet
 `minFleet`/`maxFleet` pair, `REGIONAL_HAULER_FLOOR`, and the clearing defaults in
 `regionalClearing.js`.
+
+### A ship flying out to accept an offer is working (2026-08-22)
+
+`trackFleetClocks` decided "the whole fleet is committed" by counting both an
+assignment and a market visit, then decided each ship's OWN idle clock by
+counting only the assignment. One function, two answers, and nothing anywhere
+said which was meant.
+
+Live consequence, watched in the overnight run: Rhea Flint stood Flint One down
+"after 413s with nothing to do" while it was 26,000 units into a voyage to Ore
+Station One, carrying `mine-ore-station-aluminum` in its `marketVisit`. It was
+the fleet's only subspace hull and it was two thirds of the way to the first
+frontier delivery this project has ever produced.
+
+The bias is systematic, not random: the longer the voyage, the more likely the
+hull is retired before it arrives. It therefore fell hardest on exactly the runs
+the reach work exists to enable, and it would have gone on quietly cancelling
+them no matter how good the price got.
+
+Every place that asks "is this ship working" now agrees — `listBidders`, the
+all-busy clock, the per-ship idle clock, and the fleet view's `busy`. If a
+fourth reader of that question appears, it belongs on the same list.

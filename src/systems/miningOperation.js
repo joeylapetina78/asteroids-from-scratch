@@ -1257,7 +1257,14 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     serviceable.forEach((worker) => {
       const shipRecord = operation.ships[worker.id];
       if (!shipRecord) return;
-      if (worker.assignment) shipRecord.idleSince = null;
+      // A ship flying out to accept an offer is working, exactly as the line
+      // above already counts it. Reading only `assignment` here made a hull on
+      // a market visit look idle, and the longer the voyage the likelier it was
+      // stood down before arriving — which fell hardest on the frontier, whose
+      // runs are the longest in the world. Observed live: Flint One was retired
+      // "after 413s with nothing to do" while it was 26,000 units into a trip to
+      // Ore Station One, carrying that order's id.
+      if (worker.assignment || worker.marketVisit) shipRecord.idleSince = null;
       else shipRecord.idleSince ??= now();
     });
   }
@@ -1290,7 +1297,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       ships: serviceable.map((worker) => ({
         id: worker.id,
         name: operation.ships[worker.id]?.name ?? worker.name,
-        busy: Boolean(worker.assignment),
+        busy: Boolean(worker.assignment || worker.marketVisit),
         carrying: Object.values(worker.cargo ?? {}).reduce((sum, units) => sum + units, 0),
         idleSince: operation.ships[worker.id]?.idleSince ?? null,
         // What the fleet would lose by letting this hull go: open work that
