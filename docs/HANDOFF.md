@@ -708,3 +708,19 @@ named the shape of the answer: **a heavy logistics ship that carries other craft
 (and later industrial plant) out to range. That is how a distant hub comes to
 have a miner of its own, and it connects directly to the Anno-style founding note
 above — a hub exists out there because something carried the means out there.
+
+
+## Ships come from nowhere (2026-08-22)
+
+`hireWorker` subtracts the hull cost from the buyer and credits nobody, then
+mints a hull record. The hauler path does the same. Every fleet growth event is
+a money sink and a hull faucet at once, and the money residual this economy
+cannot account for is NEGATIVE — which is what a sink looks like.
+
+Agreed direction and the full staged plan are in
+[shipbuilding.md](shipbuilding.md). Stage 1, building now: the shipyard as a
+seller, wired as a hub-owned department on the Sal-shop pattern
+(`ownerInstitutionId` the hub, `organizationRole: "department"`, a person with
+delegated authority, the hub operating account shared). Balance deliberately
+held still so any economic change after it lands is attributable to conservation
+alone.
