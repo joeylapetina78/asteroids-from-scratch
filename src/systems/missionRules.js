@@ -1,4 +1,4 @@
-import { resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260822-1334-internal";
+import { resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260822-1344-layout";
 
 export function matchesEventRule(rule, event, { state, flags }) {
   const ruleFlags = flags ?? state.journey.flags;

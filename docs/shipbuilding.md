@@ -267,3 +267,48 @@ every hull built without it.
 material mix -> hull quality -> initial `lifetimeDegradation` -> repair ceiling.
 It is also the foundation for the panel trade, because a secondhand panel is
 exactly a panel with somebody else's degradation already on it.
+
+## Where the chain actually binds (measured 2026-08-22)
+
+Stage 2 is built and the chain runs end to end, but no hull has yet been laid in
+a live run. The constraint has been chased upstream three times, and each move
+was a measurement rather than a guess:
+
+1. **The ways never started.** The yard read free stock, which was permanently
+   zero because every plate was reserved against an accepted order the moment it
+   existed. Fixed by making shipbuilding a BUYER in the parts market rather than
+   a scavenger of spare stock.
+2. **The yard's own order could never complete.** It had bought plate from the
+   works it owns, and the procurement path leaves goods at the seller awaiting
+   freight the buyer arranges — but no carrier runs a route from a site to
+   itself. Fixed by settling internal purchases on the spot.
+3. **Conversion looked slow, so it was made quick** (24s/24s/30s to 8s/8s/10s).
+   This did not help, and the reason it did not help is the finding:
+
+```
+Yard Plate Works     status=available  done=5    <- idle
+Ledge Machine Works  status=available  done=2    <- idle
+Ore Light-Alloy      status=available  done=5    <- idle
+
+yard-exchange: iron-nickel 0, silicate 0
+the-ledge:     silicate 0
+```
+
+**Ore is the binding constraint, not conversion.** All three works converted
+every scrap of feedstock in the world into twelve parts and stopped. A hull
+needs 3-9 plate plus 2-7 machine parts, so twelve parts is roughly one and a
+half hulls' worth of material for the entire world.
+
+### The levers, and why none has been pulled
+
+- **Miners carry more per trip** (`MINING_ALLOCATION_SIZE`, currently 6). Tried
+  at 12 and REVERTED: it changes which jobs clear on net value, and three tests
+  that encode intended behaviour failed — Cinder stopped taking Sal's repair
+  order. A bigger load is not a knob, it re-ranks the whole job market.
+- **Ore yields more parts.** Changes every recipe at once and leaves the mining
+  loop untouched, so the five-ore-errand feel survives.
+- **Fewer hulls destroyed.** The overnight run lost sixteen mining hulls to
+  incursions. This reads as an economy problem but is a protection problem.
+
+All three are real decisions with different consequences, and the honest next
+step is a measured run against ONE of them rather than a tune of all three.

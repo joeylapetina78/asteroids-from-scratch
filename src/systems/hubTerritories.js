@@ -1,9 +1,9 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260822-1334-internal";
-import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260822-1334-internal";
-import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260822-1334-internal";
-import { upsertPlace } from "./placeRegistry.js?v=fresh-20260822-1334-internal";
-import { WORLD_SITES } from "./worldSites.js?v=fresh-20260822-1334-internal";
-import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260822-1334-internal";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260822-1344-layout";
+import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260822-1344-layout";
+import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260822-1344-layout";
+import { upsertPlace } from "./placeRegistry.js?v=fresh-20260822-1344-layout";
+import { WORLD_SITES } from "./worldSites.js?v=fresh-20260822-1344-layout";
+import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260822-1344-layout";
 
 const MIN_TERRITORY_RADIUS = 1400;
 const MAX_TERRITORY_RADIUS = 12000;

@@ -1,31 +1,35 @@
-import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260822-1334-internal";
-import { listShipyards, shipyardPartShortage } from "./shipyards.js?v=fresh-20260822-1334-internal";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260822-1334-internal";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260822-1334-internal";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260822-1334-internal";
-import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260822-1334-internal";
-import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260822-1334-internal";
-import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260822-1334-internal";
-import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260822-1334-internal";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1334-internal";
+import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260822-1344-layout";
+import { listShipyards, shipyardPartShortage } from "./shipyards.js?v=fresh-20260822-1344-layout";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260822-1344-layout";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260822-1344-layout";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260822-1344-layout";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260822-1344-layout";
+import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260822-1344-layout";
+import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260822-1344-layout";
+import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260822-1344-layout";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1344-layout";
 
 export const INDUSTRIAL_PARTS = Object.freeze(["hull-plate", "machine-part"]);
 
 // The first regional industrial triangle. Each works from the material its hub
 // is unusually good at obtaining; auxiliary labor and tooling live in the
 // conversion charge. These are deliberately not identical copies of The Maw.
+// Parts are quick to make. A hull takes 45 seconds and needs up to nine plate,
+// so a plate that took 24 seconds meant the ways spent almost all their time
+// waiting rather than building — the slow thing should be the ship, not the
+// stock it is made from.
 export const FIRST_REACH_PART_FACTORIES = Object.freeze([
   {
     id: "yard-plate-works", name: "Yard Plate Works", institutionId: "yard-exchange",
-    recipes: [{ output: "hull-plate", amount: 1, inputs: { "iron-nickel": 2 }, credits: 28, seconds: 24 }],
+    recipes: [{ output: "hull-plate", amount: 1, inputs: { "iron-nickel": 2 }, credits: 28, seconds: 8 }],
   },
   {
     id: "ledge-machine-works", name: "Ledge Machine Works", institutionId: "the-ledge",
-    recipes: [{ output: "machine-part", amount: 1, inputs: { silicate: 2 }, credits: 34, seconds: 24 }],
+    recipes: [{ output: "machine-part", amount: 1, inputs: { silicate: 2 }, credits: 34, seconds: 8 }],
   },
   {
     id: "ore-light-alloy-works", name: "Ore Light-Alloy Works", institutionId: "ore-station-one",
-    recipes: [{ output: "hull-plate", amount: 2, inputs: { aluminum: 2 }, credits: 44, seconds: 30 }],
+    recipes: [{ output: "hull-plate", amount: 2, inputs: { aluminum: 2 }, credits: 44, seconds: 10 }],
   },
 ]);
 
