@@ -1,6 +1,6 @@
-import { getResourceFamily, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260821-2304-60f29300";
-import { ROCKMOSS_CRAWLER_TYPE } from "./rockmossStrains.js?v=fresh-20260821-2304-60f29300";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./hostileLoot.js?v=fresh-20260821-2304-60f29300";
+import { getResourceFamily, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260821-2344-8ca142c4";
+import { ROCKMOSS_CRAWLER_TYPE } from "./rockmossStrains.js?v=fresh-20260821-2344-8ca142c4";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./hostileLoot.js?v=fresh-20260821-2344-8ca142c4";
 
 // Something else out here is interested in what you left behind.
 //
