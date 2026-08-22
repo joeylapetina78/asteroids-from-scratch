@@ -299,37 +299,58 @@ test("a third mining company gets its own temperament from data alone", () => {
   assert.equal(deriveFleetNeeds({ fleet: busyFleet(50), policy: flint, now: NOW }).filter((need) => need.kind === FLEET_NEED.CAPACITY).length, 0);
 });
 
-// ── The last holder of a capability ─────────────────────────────────────────
+// ── What a hull uniquely lets its owner do ─────────────────────────────────
 
-// Observed in a live run: Flint and Cinder each paid 7,500cr to refit a hull
-// with a subspace drive, and then stood that very hull down. The hull that just
-// gained reach is the one waiting for the distant work only it can take, so it
-// idles longest and sorts first for release. The company pays for reach, loses
-// it, and hires a standard hull in its place.
-test("the last hull holding a capability is never surplus, however long it idles", () => {
+// Observed live: Flint and Cinder each paid 7,500cr to refit a hull with a
+// subspace drive, then stood that very hull down. The hull that just gained
+// reach is the one idling — it is waiting for the distant work only it can
+// take — so it sorted first for release by longest-idle.
+//
+// The answer is NOT a rule that the last long-range hull may never be sold.
+// An operator may decide badly, strand its own hub and leave a derelict; that
+// is content. What was missing is that the decision never weighed what the
+// hull uniquely enables. Now it does, and temperament still decides.
+test("work only one hull can take buys that hull patience", () => {
   const state = createWorld();
   const policy = resolveFleetPolicy(state, "miner:cinder-contracting");
-  const fleet = idleFleet(600);
-  fleet.ships[0].capability = "subspace-reach";
+  const idleSeconds = policy.releaseAfterIdleSeconds + 60;
 
-  const surplus = deriveFleetNeeds({ fleet, policy, now: NOW }).filter((need) => need.kind === FLEET_NEED.SURPLUS);
-  assert.equal(surplus.length, 0, "the only long-range hull stays");
+  const plain = idleFleet(idleSeconds);
+  assert.equal(
+    deriveFleetNeeds({ fleet: plain, policy, now: NOW }).filter((need) => need.kind === FLEET_NEED.SURPLUS).length,
+    1,
+    "a hull that enables nothing special is waste at this idle time",
+  );
+
+  const valuable = idleFleet(idleSeconds);
+  valuable.ships[0].capabilityValue = policy.hireCost * 3;   // reachable work worth three hulls
+  assert.equal(
+    deriveFleetNeeds({ fleet: valuable, policy, now: NOW }).filter((need) => need.kind === FLEET_NEED.SURPLUS).length,
+    0,
+    "the same idle time, but this one is the only ship that can serve open work",
+  );
 });
 
-test("a capability held by a second hull can be trimmed from the first", () => {
+// Patience, not immunity. The operator is allowed to be wrong.
+test("a capability does not make a hull unsellable", () => {
   const state = createWorld();
   const policy = resolveFleetPolicy(state, "miner:cinder-contracting");
-  const fleet = idleFleet(600);
-  fleet.ships[0].capability = "subspace-reach";
-  fleet.ships[1].capability = "subspace-reach";   // busy, but still a holder
+  const fleet = idleFleet(policy.releaseAfterIdleSeconds * 40);
+  fleet.ships[0].capabilityValue = policy.hireCost * 3;
 
   const surplus = deriveFleetNeeds({ fleet, policy, now: NOW }).filter((need) => need.kind === FLEET_NEED.SURPLUS);
-  assert.equal(surplus.length, 1, "reach survives the release, so the idle hull may go");
-  assert.equal(surplus[0].subject.shipId, "ship-0");
+  assert.equal(surplus.length, 1, "waited out and still no work — it goes, and the hub may be stranded");
 });
 
-// The guard must not swallow ordinary releases: an untagged fleet behaves as
-// it did before the tag existed.
+// The same hull, the same work, two operators. Flint is sticky and Cinder is
+// quick, out of traits already authored for them.
+test("two operators weigh the same capability differently", () => {
+  const state = createWorld();
+  const cinder = resolveFleetPolicy(state, "miner:cinder-contracting");
+  const flint = resolveFleetPolicy(state, "miner:flint-prospecting");
+  assert.ok(flint.capabilityPatience > cinder.capabilityPatience, "the cautious operator holds a capability longer");
+});
+
 test("untagged fleets release exactly as before", () => {
   const state = createWorld();
   const policy = resolveFleetPolicy(state, "miner:cinder-contracting");

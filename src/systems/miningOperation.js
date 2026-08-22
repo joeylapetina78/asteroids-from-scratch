@@ -1248,6 +1248,26 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     });
   }
 
+  // Work only this hull can take. An order counts when this ship would accept
+  // it and every other serviceable ship in the fleet refuses — which for a
+  // long-range hull is exactly the distant work the rest cannot reach, and for
+  // an ordinary hull is usually nothing at all. Expressed in credits so the
+  // fleet planner can set it against what a hull costs to replace.
+  function exclusiveWorkValue(worker, serviceable) {
+    const others = serviceable.filter((candidate) => candidate.id !== worker.id);
+    let total = 0;
+    Object.values(getMiningOrderBook(state)).forEach((order) => {
+      if (order.withheld || !(order.amount > 0)) return;
+      const mine = valueOrderForWorker(order, worker.position, operation.ships[worker.id]);
+      if (!mine.acceptable) return;
+      const anyoneElse = others.some((candidate) =>
+        valueOrderForWorker(order, candidate.position, operation.ships[candidate.id]).acceptable);
+      if (anyoneElse) return;
+      total += order.amount * order.paymentPerUnit;
+    });
+    return total;
+  }
+
   function buildFleetView(serviceable, project) {
     return {
       size: workers.length,
@@ -1259,10 +1279,11 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
         busy: Boolean(worker.assignment),
         carrying: Object.values(worker.cargo ?? {}).reduce((sum, units) => sum + units, 0),
         idleSince: operation.ships[worker.id]?.idleSince ?? null,
-        // What this hull can do that another might not. The fleet planner does
-        // not know what a drive is; it only knows not to retire the last hull
-        // holding a tag.
-        capability: operation.ships[worker.id]?.driveId === SUBSPACE_DRIVE_ID ? "subspace-reach" : null,
+        // What the fleet would lose by letting this hull go: open work that
+        // this ship would take and no other ship here can. The planner never
+        // learns what a drive is — it reads a number and weighs it against the
+        // price of a replacement.
+        capabilityValue: exclusiveWorkValue(worker, serviceable),
       })),
     };
   }

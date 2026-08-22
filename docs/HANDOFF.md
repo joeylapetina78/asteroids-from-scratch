@@ -308,14 +308,30 @@ now scaled by the buyer's own coverage — routine 2.5x, urgent 4x, emergency
 6.5x — so a hub that is actually starving may outbid one that is merely
 restocking. A comfortable hub is capped exactly where it was.
 
-**(c) Keeping what you bought.** Neither of the above delivered anything,
+**(c) Valuing what you bought.** Neither of the above delivered anything,
 because the refitted hulls were gone: `mining.workerReleased`, not destroyed.
 The hull that just gained reach is precisely the one idling — waiting for the
-distant work only it can take — so it sorts first for release by longest-idle.
-Flint and Cinder each paid for reach and then stood the reach down. The fleet
-planner now declines to retire the last hull holding a capability no other hull
-has; ships carry a neutral `capability` tag, and `fleetCapacity` still knows
-nothing about what a drive is.
+distant work only it can take — so it sorted first for release by longest-idle.
+
+The first attempt at this was a rule: never retire the last hull holding a
+capability nothing else in the fleet has. That was wrong, and was removed. It
+made the outcome true by decree rather than by decision, which is the opposite
+of how this world is supposed to work. What was actually missing is that the
+release decision never weighed what a hull uniquely lets its owner do.
+
+Now each ship reports `capabilityValue` — credits of open work it would accept
+and no other ship in the fleet would — and that buys it patience against the
+price of replacing a hull, scaled by the operator's own caution. Flint holds a
+capability longer than Cinder because Flint is sticky, out of traits already
+authored. The planner still does not know what a drive is.
+
+**An operator may still be wrong.** Patience is bounded
+(`MAX_CAPABILITY_PATIENCE`); a hull whose work never materialises is sold, and
+the hub it served may be cut off. That is content, not a defect — a derelict hub
+with a bad decision behind it is a thing the player can find. See
+[The frontier is unreachable](#the-frontier-is-unreachable-and-that-is-a-content-decision)
+for why some clusters may simply be too far apart to be economically attached at
+all, and should be reached by a gate rather than by cheaper wear.
 
 The lesson is the same one this document keeps recording: each fix was correct
 and each was invisible, because the next link in the chain undid it. Do not
@@ -499,3 +515,32 @@ corridor navigation).
    and public builds and confirm the displayed build string.
 7. Update this document whenever an ownership, conservation or simulation-detail
    boundary changes.
+
+## Self-sufficiency, distance, and how a hub comes to exist (design, 2026-08-21)
+
+Direction set by the player, recorded here before it is built.
+
+**Distance may be a wall, not a cost.** Some clusters should be too far apart to
+be economically attached at all. The right answer for those is a gate, not
+cheaper wear or shorter lanes — reaching the far cluster becomes a thing the
+world builds, not a number that is quietly relaxed. This retires the temptation
+of options 3 and 4 above for the outer hubs specifically.
+
+**A hub off by itself must be self-sufficient or own its lifeline.** Either it
+produces what it needs locally, or it controls a hauler that can fetch it. That
+follows the existing doctrine — capability comes from controlled assets — and it
+means a distant hub's supply problem is an asset it holds, not a service the
+world guarantees.
+
+**Founding should cost what founding costs (the Anno model).** For a hub to be
+out there, something had to carry the equipment out there. Procedural settlement
+founding should therefore require both the materials and a ship able to deliver
+them — which naturally endows a new distant hub with the vessel that reached it,
+and explains why it has one. This connects the institutional-projects work to
+`settlementSeedPipeline`.
+
+**Bad decisions are allowed to land.** An operator that fails to value its
+long-range hull may sell it and cut its own hub off. The hub then dies, and what
+the player finds later is a derelict — possibly one somebody else has taken over.
+Failure states should be discoverable places, consistent with the no-Game-Over
+ownership ladder already in the design.
