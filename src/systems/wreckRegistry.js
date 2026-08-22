@@ -1,4 +1,4 @@
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260822-1226-8a8ff3f3";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260822-1304-slipway";
 
 const DEFAULT_RECOVERY_FEE = 120;
 const DEFAULT_DISMANTLING_COST = 40;

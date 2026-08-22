@@ -1,10 +1,10 @@
-import { DETAIL, resolveDetailLevel, setSimulationFocus } from "./detailLevel.js?v=fresh-20260822-1226-8a8ff3f3";
-import { getEconomySamples } from "./economySampler.js?v=fresh-20260822-1226-8a8ff3f3";
-import { advanceRegionFlow, createRegionFlow } from "./regionFlow.js?v=fresh-20260822-1226-8a8ff3f3";
-import { listHubActors } from "./hubActors.js?v=fresh-20260822-1226-8a8ff3f3";
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1226-8a8ff3f3";
-import { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1226-8a8ff3f3";
-import { clearRegionalTrade } from "./regionalClearing.js?v=fresh-20260822-1226-8a8ff3f3";
+import { DETAIL, resolveDetailLevel, setSimulationFocus } from "./detailLevel.js?v=fresh-20260822-1304-slipway";
+import { getEconomySamples } from "./economySampler.js?v=fresh-20260822-1304-slipway";
+import { advanceRegionFlow, createRegionFlow } from "./regionFlow.js?v=fresh-20260822-1304-slipway";
+import { listHubActors } from "./hubActors.js?v=fresh-20260822-1304-slipway";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1304-slipway";
+import { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1304-slipway";
+import { clearRegionalTrade } from "./regionalClearing.js?v=fresh-20260822-1304-slipway";
 
 export { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated };
 export const DISTANT_DEFAULTS = Object.freeze({ aggregateAfterMs: 30_000 });

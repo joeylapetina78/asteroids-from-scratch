@@ -1,5 +1,5 @@
-import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260822-1226-8a8ff3f3";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260822-1226-8a8ff3f3";
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260822-1304-slipway";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260822-1304-slipway";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;

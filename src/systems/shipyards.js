@@ -14,9 +14,9 @@
 // after this lands is attributable to conservation rather than tangled with a
 // retune. See docs/shipbuilding.md.
 
-import { creditPayee } from "./contractTreasury.js?v=fresh-20260822-1226-8a8ff3f3";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260822-1226-8a8ff3f3";
-import { relationshipFactor } from "./valuation.js?v=fresh-20260822-1226-8a8ff3f3";
+import { creditPayee } from "./contractTreasury.js?v=fresh-20260822-1304-slipway";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260822-1304-slipway";
+import { relationshipFactor } from "./valuation.js?v=fresh-20260822-1304-slipway";
 
 export const SHIPYARD_REFUSAL = Object.freeze({
   NO_YARD: "no-shipyard-in-reach",
@@ -150,7 +150,10 @@ export function purchaseHull(state, { quote, buyerInstitutionId, buyerAccount, n
   // to show the ways lit; it is state rather than an event subscription because
   // a cosmetic flash is not worth a wire into the game loop.
   const yard = getShipyard(state, quote.shipyardId);
-  if (yard) yard.lastSaleAt = now;
+  if (yard) {
+    yard.lastSaleAt = now;
+    yard.lastSaleClass = quote.hullClass;
+  }
 
   state.ledger?.recordEvent?.("shipyard.hullSold", {
     shipyardId: quote.shipyardId, buyerInstitutionId, hullClass: quote.hullClass,
