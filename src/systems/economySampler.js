@@ -185,6 +185,7 @@ export function readEconomySnapshot(state, { now = Date.now() } = {}) {
       unitsSold: trade?.unitsSold ?? 0,
       productionSpend: round(trade?.productionSpend ?? 0),
       capitalSpend: round(institution.capitalSpend ?? 0),
+      hullSpend: round(institution.hullSpend ?? 0),
       arrivalInternalFunding: round(institution.arrivalInternalFunding ?? 0),
     };
 

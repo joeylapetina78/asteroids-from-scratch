@@ -182,3 +182,23 @@ test("a hub the yard refuses cannot commission a hauler at all", () => {
   });
   assert.equal(quote.available, false, "no yard, no hull, no lifeline — isolation with a cause");
 });
+
+// ── The instrument must not be fooled by the fix ───────────────────────────
+
+// `capitalSpend` means "capital money that left the world" to the economy
+// reconciler — which is exactly what a hull cost WAS, back when it was
+// subtracted and paid to nobody. Now that a hull is bought, counting the same
+// credits as burned would make reconciliation report money appearing from
+// nowhere: the fix breaking the instrument that measures the fix.
+test("buying a hull does not register as money burned", () => {
+  const state = createWorld();
+  const buyer = state.logistics.institutions["yard-exchange"];
+  const buyerAccount = { balance: 30_000, committed: 0, transactions: [] };
+  const capitalBefore = buyer.capitalSpend ?? 0;
+
+  const quote = findHullQuote(state, { buyerInstitutionId: BUYER, hullClass: "mining-craft" });
+  purchaseHull(state, { quote, buyerInstitutionId: BUYER, buyerAccount, now: 2_000 });
+
+  assert.equal(buyer.capitalSpend ?? 0, capitalBefore,
+    "a transfer is not a burn, and the reconciler reads capitalSpend as a burn");
+});

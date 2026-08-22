@@ -160,6 +160,14 @@ The sponsored operating grant was always conserved (it is the new carrier own
 opening balance); only the hull cost was being destroyed, and that is the part
 that changed.
 
+**The instrument had to be corrected with the fix.** `capitalSpend` means
+"capital money that left the world" to `economySampler.reconcile` — which is
+exactly what a hull cost WAS, back when it was subtracted and paid to nobody.
+Leaving hull purchases in that field would have made reconciliation report
+credits appearing from nowhere, i.e. the fix breaking the instrument that
+measures the fix. Hull purchases are tracked as `hullSpend` instead, reported
+per actor but never counted as burned.
+
 Conservation invariants to hold and to test:
 
 - credits: buyer debit == seller credit, every time, no residual

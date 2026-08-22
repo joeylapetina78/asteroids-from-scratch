@@ -2213,7 +2213,9 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       now: now(), referenceId: shipId,
     });
     hub.accounts.operating.balance -= HUB_SPONSORED_OPERATING_GRANT;
-    hub.capitalSpend = (hub.capitalSpend ?? 0) + purchase.price;
+    // Tracked apart from capitalSpend, which the economy reconciler reads as
+    // money burned. A bought hull is money moved, not money destroyed.
+    hub.hullSpend = (hub.hullSpend ?? 0) + purchase.price;
     policy.sponsored += 1;
     const shipInstitutionId = `ship:${shipId}`;
     const initialWear = 0.25 + ((index * 37) % 150) / 100;

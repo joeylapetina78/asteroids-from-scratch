@@ -1413,7 +1413,11 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       operation.hiredCount = index - 1;   // the seat was never filled
       return;
     }
-    operation.institution.capitalSpend = (operation.institution.capitalSpend ?? 0) + purchase.price;
+    // NOT capitalSpend. The economy reconciler reads capitalSpend as money that
+    // LEFT THE WORLD, which is what it used to be when a hull cost was
+    // subtracted and paid to nobody. A purchase is a transfer, so counting it
+    // as burned would make the books show credits appearing from nowhere.
+    operation.institution.hullSpend = (operation.institution.hullSpend ?? 0) + purchase.price;
     const shipRecord = createWorkerRecord(defaults, operation.institution.id);
     // Where this hull came from, and what it was built at. Quality is a Stage 1
     // shorthand: recorded now because it has to be stamped at construction, not
