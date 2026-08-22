@@ -1,5 +1,5 @@
-import { createNeedRecord, planResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260822-1210-0987ae13";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260822-1210-0987ae13";
+import { createNeedRecord, planResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260822-1218-d80c6f63";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260822-1218-d80c6f63";
 
 // How an operator decides how much fleet to carry.
 //

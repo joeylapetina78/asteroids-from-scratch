@@ -1,9 +1,9 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260822-1210-0987ae13";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260822-1210-0987ae13";
-import { ensureObligations } from "./obligations.js?v=fresh-20260822-1210-0987ae13";
-import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260822-1210-0987ae13";
-import { consolidateSprcOwnership } from "./sprcOwnership.js?v=fresh-20260822-1210-0987ae13";
-import { listGeneratedSettlements, materializeSettlementAuthority } from "./settlementSeedPipeline.js?v=fresh-20260822-1210-0987ae13";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260822-1218-d80c6f63";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260822-1218-d80c6f63";
+import { ensureObligations } from "./obligations.js?v=fresh-20260822-1218-d80c6f63";
+import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260822-1218-d80c6f63";
+import { consolidateSprcOwnership } from "./sprcOwnership.js?v=fresh-20260822-1218-d80c6f63";
+import { listGeneratedSettlements, materializeSettlementAuthority } from "./settlementSeedPipeline.js?v=fresh-20260822-1218-d80c6f63";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 
