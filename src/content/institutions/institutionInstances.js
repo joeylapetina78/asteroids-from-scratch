@@ -65,3 +65,49 @@ export function createTaviInstitutionInstance() {
     relationships: [],
   };
 }
+
+// Yard Exchange builds hulls.
+//
+// Wired exactly like SPRC above, because the pattern is the point: the HUB owns
+// the yard, a named person runs it under delegated authority, and the money is
+// the hub's own operating account rather than a fifth treasury nobody
+// reconciles. See docs/shipbuilding.md and the "five hidden treasuries" note
+// before giving this its own account.
+export function createYardShipyardInstitutionInstance(now = Date.now()) {
+  return {
+    id: "yard-shipyard",
+    name: "Yard Exchange Slipway",
+    archetypeId: "shipyard",
+    ownerInstitutionId: "yard-exchange",
+    controllerInstitutionId: "mira-koss",
+    departmentHeadPersonId: "mira-koss",
+    organizationRole: "department",
+    siteId: "yard-exchange",
+    // What it will build, and what it costs the yard to build one. Price to a
+    // BUYER is this plus a margin the relationship decides; the owning hub pays
+    // cost. Stage 2 replaces `buildCost` with real materials.
+    hullCatalog: [
+      { id: "mining-craft", label: "Ore Worker", buildCost: 3500, quality: 1 },
+      { id: "freight-craft", label: "Freighter", buildCost: 6000, quality: 1 },
+    ],
+    inventories: { raw: {}, produced: {}, reserved: { raw: {}, produced: {} } },
+    projects: {},
+    createdAt: now,
+  };
+}
+
+// Runs the slipway for the hub. Authority is delegated, not owned — the same
+// shape as Sal, so the hub remains the thing that owns and the person remains
+// the thing that decides.
+export function createMiraKossInstitutionInstance() {
+  return {
+    id: "mira-koss",
+    name: "Mira Koss",
+    archetypeId: "person",
+    controls: [],
+    delegatedRoles: [{ ownerInstitutionId: "yard-exchange", operationId: "yard-shipyard", role: "slipway-master" }],
+    traits: { caution: 0.5, growthBias: 0.6, urgencyBias: 0.4 },
+    authority: { mayProcure: true, mayScheduleProduction: true, mayFundProjects: false },
+    relationships: [],
+  };
+}

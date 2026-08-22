@@ -61,7 +61,22 @@ export const ASSET_ARCHETYPES = Object.freeze({
       { id: "commission-maintenance-service", scope: { capacityType: "maintenance-service" } },
       { id: "commission-repair-facility", scope: { capacityType: "repair-facility" } },
       { id: "commission-parts-factory", scope: { capacityType: "parts-factory" } },
+      { id: "commission-shipyard", scope: { capacityType: "shipyard" } },
     ],
+  }),
+
+  // A place that builds hulls. Sibling to the parts factory: today it sells what
+  // it builds, and Stage 2 makes it consume that factory output. See
+  // docs/shipbuilding.md.
+  shipyard: Object.freeze({
+    id: "shipyard",
+    capabilities: [
+      { id: "procure-production-input" },
+      { id: "build-craft" },
+      { id: "price-craft" },
+      { id: "sell-craft" },
+    ],
+    offerTypes: ["purchase", "sale"],
   }),
 
   "parts-factory": Object.freeze({

@@ -24,6 +24,7 @@ import { ENGINE_MODELS } from "../content/ships/engineModels.js?v=fresh-20260822
 import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260822-0043-8abca575";
 import { COMPONENT_THRESHOLDS, applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260822-0043-8abca575";
 import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260822-0043-8abca575";
+import { findHullQuote, purchaseHull } from "./shipyards.js?v=fresh-20260822-0043-8abca575";
 import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260822-0043-8abca575";
 
 // Identity only: which hub extracts which material at which site.
@@ -1391,10 +1392,36 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       initialWear: 0.08,
       offset: { x: -120 + (index % 4) * 80, y: 60 + (index % 3) * 40 },
     };
-    account.balance -= hireCost;
-    operation.institution.capitalSpend = (operation.institution.capitalSpend ?? 0) + hireCost;
-    account.transactions.push({ id: `MIN-HIRE-${now()}-${index}`, at: now(), type: "capital-expense", amount: -hireCost, balance: account.balance, referenceId: defaults.id });
+    // Buy the hull from somebody who builds hulls.
+    //
+    // This used to be `account.balance -= hireCost` and a hull record: the money
+    // was destroyed, nobody was paid, and the craft came from nowhere. A yard
+    // that will not deal with this buyer, or a buyer that cannot pay the quoted
+    // price, now means NO SHIP — which is the point. See docs/shipbuilding.md.
+    const quote = findHullQuote(state, { buyerInstitutionId: operation.institution.id, hullClass: "mining-craft" });
+    const purchase = purchaseHull(state, {
+      quote, buyerInstitutionId: operation.institution.id, buyerAccount: account,
+      now: now(), referenceId: defaults.id,
+    });
+    if (!purchase.bought) {
+      recordBlocker(state, operation.institution.id, createBlocker({
+        kind: BLOCKER_KIND.UNAFFORDABLE,
+        summary: `${operation.controller.name} wanted another ore worker and could not buy one: ${purchase.reason}.`,
+        detail: { reason: purchase.reason, quotedPrice: quote?.price ?? null, balance: Math.round(account.balance) },
+        at: now(),
+      }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+      operation.hiredCount = index - 1;   // the seat was never filled
+      return;
+    }
+    operation.institution.capitalSpend = (operation.institution.capitalSpend ?? 0) + purchase.price;
     const shipRecord = createWorkerRecord(defaults, operation.institution.id);
+    // Where this hull came from, and what it was built at. Quality is a Stage 1
+    // shorthand: recorded now because it has to be stamped at construction, not
+    // derived from materials yet.
+    shipRecord.builtBy = purchase.builtBy;
+    shipRecord.builtAt = purchase.builtAt;
+    shipRecord.purchasePrice = purchase.price;
+    shipRecord.quality = purchase.quality;
     operation.ships[shipRecord.id] = shipRecord;
     addPhysicalWorker(shipRecord);
     record("mining.workerHired", `${operation.controller.name} hired ${defaults.name} for ${hireCost} cr — the whole fleet had been committed for a minute with work still waiting.`, {

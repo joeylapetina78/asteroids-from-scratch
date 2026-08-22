@@ -110,7 +110,7 @@ by account identity so a shared account is not counted twice — see the
 "five hidden treasuries" note in the observability memory before adding any new
 treasury.
 
-## Stage 1 — the shipyard as a seller (BUILDING NOW)
+## Stage 1 — the shipyard as a seller (BUILT 2026-08-22, mining path)
 
 The smallest change that makes a hull a thing somebody sold.
 
@@ -127,9 +127,29 @@ The smallest change that makes a hull a thing somebody sold.
   point at which the frontier's isolation bites structurally rather than
   economically.
 
-Deliberately NOT in Stage 1: hulls consuming materials, hull prices moving,
-build queues, build time. Balance is held still so that any economic change
-observed after this lands is attributable to conservation alone.
+**Pricing, as built.** A stranger pays exactly `buildCost` — 3,500 for an ore
+worker, which is precisely what hiring used to cost, so a neutral buyer sees no
+price change at all and balance is genuinely held still. What the relationship
+does is shade around that base:
+
+| buyer | pays |
+| --- | --- |
+| the hub that owns the yard | cost, no margin |
+| a friend of the yard (trust/reliability high) | under book, to about -11% |
+| a stranger | book |
+| somebody it resents but tolerates | over book |
+| an enemy (resentment >= 0.6, or `sell-craft` in `deniedServices`) | refused at any price |
+
+That refusal is the **first enforcement of `access` in
+`relationshipProjections.js`** — the shape had been declared and unused since it
+was written.
+
+Deliberately NOT in Stage 1: hulls consuming materials, a margin over cost, build
+queues, build time. The margin belongs with Stage 2, when "cost" means materials
+the yard actually had to buy.
+
+**Still to wire:** the hauler commissioning path in `logistics.js` still mints
+its hulls. Only the mining hire path buys so far.
 
 Conservation invariants to hold and to test:
 
@@ -190,9 +210,43 @@ Two related ideas, both wanted, neither scoped:
 
 - Does a shipyard sell to anyone, or only to its own hub and hub-sponsored
   operators? (Stage 1 assumes anyone who can pay and can reach it.)
-- Do hulls have condition when sold — is a cheap hull a worn hull? This connects
-  to the existing component-condition system and to the panel trade the player
-  wants eventually.
+- Do hulls have condition when sold — is a cheap hull a worn hull? See the
+  quality section below; the mechanism for this already exists.
 - When a hub commissions a hauler today it also grants operating cash
   (`HUB_SPONSORED_OPERATING_GRANT`). Once hulls are bought rather than conjured,
   is that grant still a grant, or is it the hub buying a hull and lending it out?
+
+
+## Quality and robustness — the half that is already built
+
+The player described wanting ships to carry a robustness derived from their
+materials, which diminishes over time until the thing "can be repaired less and
+less until finally they just need to be replaced".
+
+**That second half already exists**, in `src/systems/panelMaintenance.js`:
+
+```js
+condition.lifetimeDegradation += effectiveWearDelta * LIFETIME_DEGRADATION_PER_WEAR;
+condition.maxRecoverableCondition = Math.max(MIN_RECOVERABLE_CONDITION, 100 - condition.lifetimeDegradation);
+```
+
+A repair restores a panel to `maxRecoverableCondition`, not to 100. Panels
+therefore already become progressively less repairable over their lives and
+eventually have to be replaced. Nothing needs building for that.
+
+The missing piece is only WHERE A HULL STARTS on that curve. A low-quality hull
+should begin with some `lifetimeDegradation` already on the clock, so its repair
+ceiling sits under 100 from the day it is bought. That single number delivers
+both things asked for — less robustness from the beginning, and losing full
+repairability sooner — as one mechanism rather than two.
+
+**Shorthand taken in Stage 1:** a hull records the `quality` it was built at
+(`shipRecord.quality`, currently always 1). Nothing derives quality from
+materials and nothing reads it yet. It exists now because quality has to be
+stamped at the moment of construction — adding the field later means migrating
+every hull built without it.
+
+**Come back to this** when materials feed the yard in Stage 2. The wiring is:
+material mix -> hull quality -> initial `lifetimeDegradation` -> repair ceiling.
+It is also the foundation for the panel trade, because a secondhand panel is
+exactly a panel with somebody else's degradation already on it.

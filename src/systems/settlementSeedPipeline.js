@@ -12,7 +12,7 @@ export const FOUNDATIONAL_EXTRACTION_FAMILIES = Object.freeze([
 
 export const MUNICIPAL_CAPACITY_TYPES = Object.freeze([
   "mining-operator", "freight-operator", "patrol-service",
-  "maintenance-service", "repair-facility", "parts-factory",
+  "maintenance-service", "repair-facility", "parts-factory", "shipyard",
 ]);
 
 export const STANDARD_SETTLEMENT_NEEDS = Object.freeze([

@@ -9,6 +9,7 @@ import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluate
 import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260822-0043-8abca575";
 import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260822-0043-8abca575";
 import { getEffectiveTransportPolicy, getShipDrive, hasSubspaceDrive } from "./shipDrives.js?v=fresh-20260822-0043-8abca575";
+import { createMiraKossInstitutionInstance, createYardShipyardInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260822-0043-8abca575";
 import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260822-0043-8abca575";
 import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260822-0043-8abca575";
 import { DEFAULT_RELATIONSHIP_WEIGHT, rankCarrierBids } from "./carrierSelection.js?v=fresh-20260822-0043-8abca575";
@@ -65,6 +66,8 @@ function freightComponentForIssue(shipInstitution, issueType) {
 const HAULER_HIRE_AFTER_BUSY_SECONDS = 60;
 const HAULER_RELEASE_AFTER_IDLE_SECONDS = 120;
 const REACTIVATED_MINIMUM_SERVICE_SECONDS = 300;
+const YARD_SHIPYARD = createYardShipyardInstitutionInstance();
+const SLIPWAY_MASTER = createMiraKossInstitutionInstance();
 const HAULER_COST = 6000;
 // A subspace hull costs what its reach is worth. Deliberately steep: it is the
 // difference between a settlement being served and being unreachable, and it
@@ -315,6 +318,12 @@ export function createInitialLogisticsState(now = Date.now()) {
       ...issuerRecords,
       [ORE_STATION_SERVICE.id]: structuredClone(ORE_STATION_SERVICE),
       [ORE_STATION_MECHANIC.id]: structuredClone(ORE_STATION_MECHANIC),
+      // The yard that builds hulls, and the person who runs it for the hub that
+      // owns it. In the one actor table like everything else, so the hub
+      // planner, the asset registry and money reconciliation see it without a
+      // special case. See docs/shipbuilding.md.
+      [YARD_SHIPYARD.id]: structuredClone(YARD_SHIPYARD),
+      [SLIPWAY_MASTER.id]: structuredClone(SLIPWAY_MASTER),
       // The people who actually run the three settlements. Their traits are the
       // ONLY thing that makes the hubs price differently from one another —
       // there is no per-hub code anywhere.
@@ -344,6 +353,12 @@ export function ensureLogisticsState(state, now = Date.now()) {
   state.logistics.institutions ??= {};
   state.logistics.institutions[ORE_STATION_SERVICE.id] ??= structuredClone(ORE_STATION_SERVICE);
   state.logistics.institutions[ORE_STATION_MECHANIC.id] ??= structuredClone(ORE_STATION_MECHANIC);
+  // The yard that builds hulls, and the person who runs it. Registered in the
+  // one actor table like everything else so the hub planner, the asset registry
+  // and money reconciliation all see it without a special case. It banks into
+  // its owning hub account rather than opening a fifth treasury.
+  state.logistics.institutions[YARD_SHIPYARD.id] ??= structuredClone(YARD_SHIPYARD);
+  state.logistics.institutions[SLIPWAY_MASTER.id] ??= structuredClone(SLIPWAY_MASTER);
   state.logistics.laidUpHaulers ??= {};
   state.logistics.settledSprcRepairs ??= {};
   FIRST_REACH_SETTLEMENTS.forEach((seed) => {
