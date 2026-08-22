@@ -4,7 +4,7 @@ import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resour
 import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260821-2304-60f29300";
 import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260821-2304-60f29300";
 import { getShipDrive } from "./shipDrives.js?v=fresh-20260821-2304-60f29300";
-import { evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260821-2304-60f29300";
+import { chaseMultiple, evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260821-2304-60f29300";
 import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260821-2304-60f29300";
 import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260821-2304-60f29300";
 import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260821-2304-60f29300";
@@ -101,12 +101,6 @@ const MINING_REPRICE_INTERVAL_MS = 45 * 1000;
 // situation, and the alternative to overpaying is going without, so its ceiling
 // rises. Bounded, never unbounded, and still subject to what it can actually
 // fund.
-const MINING_REPRICE_CEILING_BY_URGENCY = Object.freeze({
-  routine: 2.5,
-  urgent: 4,
-  emergency: 6.5,
-});
-const MINING_REPRICE_MAX_MULTIPLE = 2.5;   // routine floor; see the table above
 const MINING_REPRICE_MARGIN = 0.15;        // a reason for the miner to take it, not just break even
 
 // Largest single order a hub will place, so a big gap becomes several runs
@@ -800,9 +794,15 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     if (entry.repricedAt != null && now() - entry.repricedAt < MINING_REPRICE_INTERVAL_MS) return;
     entry.repricedAt = now();
     const current = order.paymentPerUnit;
-    // What this buyer may chase, given how short it actually is.
-    const urgency = urgencyFromCoverage(order.inventory ?? {});
-    const multiple = MINING_REPRICE_CEILING_BY_URGENCY[urgency] ?? MINING_REPRICE_MAX_MULTIPLE;
+    // What this buyer will chase — its own character against its own hunger,
+    // and how long that hunger has gone unanswered. No fixed ceiling: the bound
+    // below is what it can actually pay.
+    const secondsUnserved = Math.max(0, (now() - (order.at ?? now())) / 1000);
+    const multiple = chaseMultiple({
+      traits: getActorTraits(state, order.buyerInstitutionId),
+      inventory: order.inventory ?? {},
+      secondsUnserved,
+    });
     const ceiling = Math.round(getInstitutionalFeedstockTradeValue(order.resourceId) * multiple);
     // The miner's cost spread over the load, plus a margin so taking the run
     // beats sitting idle. Capped so a hub never chases an impossible cost to ruin.
@@ -819,7 +819,7 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     }
     entry.rate = target;
     state.ledger.recordEvent("institution.miningOrderRepriced", {
-      urgency, ceilingMultiple: multiple,
+      chaseMultiple: Number(multiple.toFixed(2)), secondsUnserved: Math.round(secondsUnserved),
       institutionId: order.buyerInstitutionId, orderId: order.id, siteId: order.siteId,
       resourceId: order.resourceId, resourceName: order.resourceName,
       previousUnitPrice: current, unitPrice: target, minerCostFloor: Math.round(minerCostFloor),

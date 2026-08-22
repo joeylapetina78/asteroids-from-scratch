@@ -39,10 +39,6 @@ export const FLEET_NEED = Object.freeze({
 // numbers below are the numbers that were there before.
 const NEUTRAL = 0.5;
 
-// A capability may buy a hull several times its replacement cost in patience,
-// but not unbounded patience — an operator that never lets anything go is not
-// making a decision either.
-const MAX_CAPABILITY_PATIENCE = 4;
 
 export const FLEET_CAPACITY_DEFAULTS = Object.freeze({
   hireAfterBusySeconds: 60,
@@ -154,15 +150,17 @@ export function deriveFleetNeeds({ fleet, policy, now, makeId = (kind, id) => `n
   // operator waits out the work, a quick one sells and takes the consequence.
   //
   // This is deliberately NOT a rule that the last long-range hull may never be
-  // sold. An operator is allowed to be wrong, strand its own hub, and leave a
-  // derelict behind — that is a decision the world can show the player, not an
-  // invariant the engine has to protect.
+  // sold, and there is no cap on the patience it buys. An operator is allowed to
+  // be wrong, strand its own hub, and leave a derelict behind — that is a
+  // decision the world can show the player, not an invariant to protect.
   const patienceFor = (ship) => {
     const base = policy.releaseAfterIdleSeconds * 1000;
     const worth = Math.max(0, ship.capabilityValue ?? 0);
     if (worth <= 0 || !(policy.hireCost > 0)) return base;
-    const coversReplacement = Math.min(MAX_CAPABILITY_PATIENCE, worth / policy.hireCost);
-    return base * (1 + coversReplacement * (policy.capabilityPatience ?? 1));
+    // No ceiling on this. The number is real credits of real open work, so it
+    // bounds itself — and an operator holding a hull because the work is worth
+    // ten hulls is not being protected, it is being right.
+    return base * (1 + (worth / policy.hireCost) * (policy.capabilityPatience ?? 1));
   };
 
   const spare = fleet.size - policy.minFleet;

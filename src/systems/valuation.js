@@ -52,11 +52,54 @@ export function isKnownUrgency(urgency) {
 // How pressing a shortage is, from the shortage itself. Both hubs and miners
 // graded this with their own ternary; sharing it means one definition of "thin"
 // and one place to argue about it.
+// Shape of the chase curve. These say how a desperate buyer behaves, not how
+// far it is permitted to go — the ceiling itself is whatever it can afford.
+const NEUTRAL_URGENCY = 0.5;
+const MINIMUM_CHASE_REACH = 0.5;      // even a stoic buyer moves off book when empty
+const CHASE_REACH_RANGE = 3.5;        // an anxious one moves seven times as far
+const DESPERATION_DOUBLING_SECONDS = 600;
+
 export function urgencyFromCoverage({ onHand = 0, incoming = 0, target = 0 } = {}) {
   if (target <= 0) return URGENCY.ROUTINE;
   // Nothing on the shelf at all: whatever is asked for next cannot be served.
   if (onHand <= 0) return URGENCY.EMERGENCY;
   return (onHand + incoming) / target < 0.5 ? URGENCY.URGENT : URGENCY.ROUTINE;
+}
+
+// How far above book a buyer will chase work that nobody will take.
+//
+// Not a table of ceilings. Two things move it and both move continuously: how
+// short the buyer actually is, and how long it has been short. A hub that
+// empties and stays empty keeps raising for as long as it stays empty, which is
+// what a desperate buyer does. The three-step version this replaced could only
+// snap between fixed multiples, so a hub that starved AFTER its first reprice
+// was frozen at whichever bucket it happened to be in at that moment — observed
+// live at Ore Station One, priced "routine" while holding 0.7 units against a
+// target of 8, and unable to raise again.
+//
+// `urgencyBias` decides who chases hard. Tolan Reyes at Deep Research is authored
+// at 0.15 — "will not be rushed into paying over the odds" — and should stay
+// hungry longer than Dag Wren at 0.5, who chases supply. That is the character
+// showing up in the price, which is the point.
+//
+// There is deliberately no cap. What stops a buyer is its own money: the caller
+// checks affordability against protected cash, and a buyer that chases itself
+// into ruin is something this world is allowed to contain.
+export function chaseMultiple({ traits = {}, inventory = {}, secondsUnserved = 0 } = {}) {
+  const target = inventory.target ?? 0;
+  if (target <= 0) return 1;
+  const held = (inventory.onHand ?? 0) + (inventory.incoming ?? 0);
+  const shortfall = Math.min(1, Math.max(0, 1 - held / target));
+  if (shortfall <= 0) return 1;
+
+  const urgencyBias = Number.isFinite(traits.urgencyBias) ? traits.urgencyBias : NEUTRAL_URGENCY;
+  // How far this buyer travels per unit of desperation. A stoic buyer barely
+  // leaves book; an anxious one will outbid the whole market.
+  const reach = MINIMUM_CHASE_REACH + CHASE_REACH_RANGE * urgencyBias;
+  // Time compounds shortage rather than adding to it: an hour empty is worse
+  // than an hour merely low, and being low forever is its own emergency.
+  const persistence = 1 + Math.max(0, secondsUnserved) / DESPERATION_DOUBLING_SECONDS;
+  return 1 + reach * shortfall * persistence;
 }
 
 export function createValuationResult({

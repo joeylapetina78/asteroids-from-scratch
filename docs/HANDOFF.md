@@ -300,13 +300,30 @@ Option 1, in two halves, because one was not enough.
 worth to this ship with a subspace drive — and buys one at 7,500cr if the answer
 pays. Three refits happened in the first live run, so the investment path works.
 
-**(b) The price.** Every refused frontier order sat pinned at the flat
-`MINING_REPRICE_MAX_MULTIPLE` of 2.5x book, and still did not cover the wear:
-ore-station aluminium paid 750/u and needed ~909, coldwater water-ice paid 750
-and needed ~1,548, kiln carbonaceous paid 200 and needed ~288. The ceiling is
-now scaled by the buyer's own coverage — routine 2.5x, urgent 4x, emergency
-6.5x — so a hub that is actually starving may outbid one that is merely
-restocking. A comfortable hub is capped exactly where it was.
+**(b) The price.** Every refused frontier order sat pinned at a flat 2.5x book
+and still did not cover the wear: ore-station aluminium paid 750/u and needed
+~909, coldwater water-ice paid 750 and needed ~1,548, kiln carbonaceous paid 200
+and needed ~288.
+
+The first attempt scaled the cap by a three-step urgency bucket. That was still
+a table of authored ceilings, and it produced its own bug live: Ore Station One
+repriced once while it was still stocked, hit that moment's ceiling, and could
+never raise again as it starved to 0.7 units against a target of 8.
+
+There is no ceiling table now. `chaseMultiple` in `valuation.js` moves
+continuously with two things — how short the buyer is, and how long it has been
+short — scaled by the buyer's own authored `urgencyBias`, a trait that already
+existed on every hub and was not being used for this. What bounds a buyer is its
+own money: the affordability check the caller already makes. A buyer that chases
+itself into ruin is something this world is allowed to contain.
+
+The traits were already written as characters and now show up in the prices.
+Dag Wren at Ore Station One (0.5) "chases supply" and covers his aluminium
+inside ten minutes. Sera Okonjo at Coldwater (0.4) "holds its price hard, hoards
+its margin" and takes about fifteen, so Coldwater stays dry longer. Tolan Reyes
+at Deep Research (0.15) "will not be rushed into paying over the odds", and Deep
+Research stays hungry longest of all. None of that is tuned; it falls out of
+authored traits meeting one curve.
 
 **(c) Valuing what you bought.** Neither of the above delivered anything,
 because the refitted hulls were gone: `mining.workerReleased`, not destroyed.
@@ -544,3 +561,30 @@ long-range hull may sell it and cut its own hub off. The hub then dies, and what
 the player finds later is a derelict — possibly one somebody else has taken over.
 Failure states should be discoverable places, consistent with the no-Game-Over
 ownership ladder already in the design.
+
+### On caps, floors and ceilings (2026-08-21)
+
+A standing instruction from the player, recorded because it has now caught two
+separate pieces of work in one sitting:
+
+> "I don't know how I feel about these caps and limits and ceilings and floors
+> that are arbitrary. Different kinds of NPCs based on their traits might have
+> higher or lower things happening. And as desperation increases, those ceilings
+> and floors would continue to move."
+
+The test to apply before writing a constant that bounds a decision:
+
+1. **Is this a shape or a limit?** A curve needs shape parameters and those are
+   fine. A ceiling that decides an outcome is not.
+2. **Whose number is it?** If two different actors should behave differently
+   here, it belongs in traits, not in a module constant.
+3. **Does it move?** A bound that is right at one moment and frozen afterwards
+   will freeze an actor mid-situation. Ore Station One is the worked example.
+4. **What is the natural bound?** Usually something real already in the world —
+   what a buyer can afford, what an asset is actually worth. Prefer it to a
+   number chosen to feel safe.
+
+Known constants that have NOT been through this test and probably should be:
+`MINING_REPRICE_MARGIN`, `MINING_REPRICE_INTERVAL_MS`, the fleet
+`minFleet`/`maxFleet` pair, `REGIONAL_HAULER_FLOOR`, and the clearing defaults in
+`regionalClearing.js`.

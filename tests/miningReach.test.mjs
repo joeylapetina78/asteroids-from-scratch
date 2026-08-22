@@ -82,41 +82,78 @@ test("a standard hull is unchanged by any of this", () => {
     "the authored fleet prices work exactly as it did");
 });
 
-// ── What a hub may chase, by how badly it needs it ─────────────────────────
-import { URGENCY, urgencyFromCoverage } from "../src/systems/valuation.js";
+// ── What a hub may chase, by who it is and how badly it needs it ───────────
+//
+// The version this replaced kept a local copy of the ceiling table in the test
+// file, so it asserted its own fixture and would have passed no matter what the
+// code did. It did exactly that when the table was deleted.
+import { chaseMultiple } from "../src/systems/valuation.js";
 
-const CEILING = { routine: 2.5, urgent: 4, emergency: 6.5 };
-const ceilingFor = (position, baseValue) => baseValue * CEILING[urgencyFromCoverage(position)];
+const DAG_WREN = { urgencyBias: 0.5 };        // Ore Station One: chases supply
+const TOLAN_REYES = { urgencyBias: 0.15 };    // Deep Research: will not be rushed
+const priceFor = (traits, inventory, secondsUnserved, book) =>
+  book * chaseMultiple({ traits, inventory, secondsUnserved });
 
-test("an empty shelf is a different situation from a comfortable one", () => {
-  const comfortable = { onHand: 100, incoming: 0, target: 100 };
-  const short = { onHand: 20, incoming: 0, target: 100 };
-  const empty = { onHand: 0, incoming: 0, target: 100 };
-
-  assert.equal(urgencyFromCoverage(comfortable), URGENCY.ROUTINE);
-  assert.equal(urgencyFromCoverage(short), URGENCY.URGENT);
-  assert.equal(urgencyFromCoverage(empty), URGENCY.EMERGENCY);
-
-  assert.ok(ceilingFor(empty, 300) > ceilingFor(short, 300));
-  assert.ok(ceilingFor(short, 300) > ceilingFor(comfortable, 300));
+test("a stocked buyer does not move off book at all", () => {
+  const stocked = { onHand: 100, incoming: 0, target: 100 };
+  assert.equal(chaseMultiple({ traits: DAG_WREN, inventory: stocked, secondsUnserved: 9_999 }), 1);
 });
 
-test("the raised ceiling covers what the frontier actually needs", () => {
-  // Every refused order in the live run was PINNED at the flat 2.5x cap and
-  // still short of the run's cost. These are the prices they had to be able to
-  // reach, per unit, over six-unit loads.
-  const empty = { onHand: 0, incoming: 0, target: 100 };
-
-  assert.ok(ceilingFor(empty, 300) >= 909, "ore-station aluminum, needing ~909/u");
-  assert.ok(ceilingFor(empty, 300) >= 1_548, "coldwater water-ice, needing ~1548/u");
-  assert.ok(ceilingFor(empty, 80) >= 288, "kiln carbonaceous, needing ~288/u — cheap ore, same bind");
+test("what a buyer will pay rises smoothly with how short it is", () => {
+  const at = (onHand) => chaseMultiple({ traits: DAG_WREN, inventory: { onHand, incoming: 0, target: 100 } });
+  const steps = [80, 60, 40, 20, 0].map(at);
+  steps.forEach((step, index) => {
+    if (index === 0) return;
+    assert.ok(step > steps[index - 1], "no buckets: each step short raises the price");
+  });
 });
 
-test("a comfortable hub still cannot bid the world into inflation", () => {
-  // The cap exists to keep prices meaningful. Only genuine scarcity lifts it,
-  // and even then it is bounded rather than a blank cheque.
-  const comfortable = { onHand: 100, incoming: 0, target: 100 };
-  assert.equal(ceilingFor(comfortable, 300), 750, "book value x 2.5, exactly as before");
-  assert.ok(ceilingFor({ onHand: 0, incoming: 0, target: 100 }, 300) < 300 * 10,
-    "and desperation is bounded, not unbounded");
+// The live freeze this fixes: Ore Station One repriced once while it still had
+// stock, hit that moment's ceiling, and could never raise again while it
+// starved down to 0.7 units against a target of 8.
+test("a buyer that stays hungry keeps raising", () => {
+  const empty = { onHand: 0, incoming: 0, target: 100 };
+  const first = chaseMultiple({ traits: DAG_WREN, inventory: empty, secondsUnserved: 0 });
+  const later = chaseMultiple({ traits: DAG_WREN, inventory: empty, secondsUnserved: 600 });
+  const muchLater = chaseMultiple({ traits: DAG_WREN, inventory: empty, secondsUnserved: 3_600 });
+
+  assert.ok(later > first, "ten minutes unanswered is worse than none");
+  assert.ok(muchLater > later * 1.5, "and an hour is worse again");
+});
+
+test("two buyers in the same trouble do not offer the same price", () => {
+  const empty = { onHand: 0, incoming: 0, target: 100 };
+  const dag = chaseMultiple({ traits: DAG_WREN, inventory: empty, secondsUnserved: 600 });
+  const tolan = chaseMultiple({ traits: TOLAN_REYES, inventory: empty, secondsUnserved: 600 });
+
+  assert.ok(dag > tolan * 1.5,
+    "Dag Wren chases supply; Tolan Reyes waits, and Deep Research stays hungry for it");
+});
+
+// The three orders that sat refused in the live run, and the prices they had to
+// be able to reach per unit. Each had been posted and unanswered for minutes.
+test("a starving frontier hub can reach the price its work actually costs", () => {
+  const oreStation = { onHand: 0.72, incoming: 0, target: 8 };
+  const coldwater = { onHand: 1.7, incoming: 0, target: 15 };
+  const kiln = { onHand: 0, incoming: 0, target: 14.15 };
+  // They do NOT all get there at the same moment, and that is the point.
+  assert.ok(priceFor(DAG_WREN, oreStation, 600, 300) >= 909,
+    "Dag Wren chases supply and covers ore-station aluminum within ten minutes");
+  assert.ok(priceFor({ urgencyBias: 0.25 }, kiln, 600, 80) >= 288,
+    "Kiln Crossing, cheap ore and the same bind, also inside ten minutes");
+
+  // Sera Okonjo holds her price hard in the most isolated place in the world.
+  // She reaches what Coldwater's water ice costs, but she takes her time about
+  // it — so Coldwater stays dry longer than Ore Station does. Character, not a
+  // tuning failure: the curve was not bent to make these land together.
+  assert.ok(priceFor({ urgencyBias: 0.4 }, coldwater, 600, 300) < 1_548, "not yet at ten minutes");
+  assert.ok(priceFor({ urgencyBias: 0.4 }, coldwater, 1_200, 300) >= 1_548, "but she gets there");
+});
+
+// There is no cap, by design — what stops a buyer is its own money, checked by
+// the caller. But the curve must not explode the instant a shelf goes empty.
+test("desperation is a climb, not a cliff", () => {
+  const empty = { onHand: 0, incoming: 0, target: 100 };
+  assert.ok(chaseMultiple({ traits: DAG_WREN, inventory: empty, secondsUnserved: 0 }) < 4,
+    "an empty shelf alone does not justify any price");
 });
