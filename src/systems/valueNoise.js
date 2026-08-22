@@ -1,4 +1,4 @@
-import { hashNumbers } from "./random.js?v=fresh-20260822-1330-factories";
+import { hashNumbers } from "./random.js?v=fresh-20260822-1334-internal";
 
 export function createValueNoise(seed) {
   return function noise(x, y, scale) {

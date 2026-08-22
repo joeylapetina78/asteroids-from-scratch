@@ -1,9 +1,9 @@
-import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260822-1330-factories";
-import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260822-1330-factories";
-import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260822-1330-factories";
-import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260822-1330-factories";
-import { settlementMiningRights, settlementPlaces } from "../content/economy/firstReachSettlements.js?v=fresh-20260822-1330-factories";
-import { seedHubTerritories } from "./hubTerritories.js?v=fresh-20260822-1330-factories";
+import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260822-1334-internal";
+import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260822-1334-internal";
+import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260822-1334-internal";
+import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260822-1334-internal";
+import { settlementMiningRights, settlementPlaces } from "../content/economy/firstReachSettlements.js?v=fresh-20260822-1334-internal";
+import { seedHubTerritories } from "./hubTerritories.js?v=fresh-20260822-1334-internal";
 
 const RIGHT_TO_POWER = Object.freeze({
   [RIGHT_TYPES.TRANSIT]: POWER_TYPES.AUTHORIZE_WORK,

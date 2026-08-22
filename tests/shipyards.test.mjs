@@ -317,3 +317,33 @@ test("a yard already holding the parts asks for nothing more", () => {
 
   assert.equal(shipyardPartShortage(state, yard, "hull-plate"), 0);
 });
+
+// ── A hub buying from its own works ────────────────────────────────────────
+
+// Found live: Yard Exchange ordered hull plate from the Yard Plate Works it
+// owns. The normal procurement path titles the goods to the buyer but leaves
+// them held at the seller awaiting freight the buyer arranges -- and no carrier
+// will ever run a route from a site to itself. The order sat accepted forever
+// while the slipway reported waiting on parts that were already in the building.
+test("goods bought from your own works arrive without freight", async () => {
+  const { createHubProcurementOperation } = await import("../src/systems/hubProcurement.js");
+  const state = createWorld();
+  const hub = state.logistics.institutions["yard-exchange"];
+  hub.inventories = { "hull-plate": 10 };
+
+  const procurement = createHubProcurementOperation({ state, now: () => 5_000 });
+  state.hubProcurement.orders["SELF-1"] = {
+    id: "SELF-1", orderKind: "industrial-part",
+    buyerInstitutionId: "yard-exchange", supplierInstitutionId: "yard-exchange",
+    family: "repair-parts", resourceId: "hull-plate", units: 4, effectiveUnits: 4,
+    pricePerUnit: 125, originalPricePerUnit: 125, committedPayment: 500, freightBudget: 0,
+    deliveredUnits: 0, status: "accepted", createdAt: 1_000, acceptedAt: 1_000, shipmentId: null,
+  };
+
+  procurement.update();
+
+  const order = state.hubProcurement.orders["SELF-1"];
+  assert.equal(order.status, "delivered", "it did not sit waiting for a carrier that cannot exist");
+  assert.equal(order.deliveredUnits, 4);
+  assert.equal(hub.inventories["hull-plate"], 10, "reserved out of stock, then delivered back into it");
+});

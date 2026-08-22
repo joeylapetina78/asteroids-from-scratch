@@ -25,19 +25,19 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1330-factories";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260822-1330-factories";
-import { STANDING_MINING_ORDERS, getStandingMiningDefinitions } from "./miningOperation.js?v=fresh-20260822-1330-factories";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1330-factories";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260822-1330-factories";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260822-1330-factories";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260822-1330-factories";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260822-1330-factories";
-import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260822-1330-factories";
-import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260822-1330-factories";
-import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260822-1330-factories";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260822-1330-factories";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260822-1330-factories";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1334-internal";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260822-1334-internal";
+import { STANDING_MINING_ORDERS, getStandingMiningDefinitions } from "./miningOperation.js?v=fresh-20260822-1334-internal";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1334-internal";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260822-1334-internal";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260822-1334-internal";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260822-1334-internal";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260822-1334-internal";
+import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260822-1334-internal";
+import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260822-1334-internal";
+import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260822-1334-internal";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260822-1334-internal";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260822-1334-internal";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -410,6 +410,30 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
       supplier.accounts.operating.balance += price;
 
       delete reserve[order.id];
+
+      // Goods bought from yourself are already where they are going.
+      //
+      // The normal path leaves them titled to the buyer but held at the seller,
+      // awaiting freight the buyer arranges — which is right when the two are
+      // different places. When a hub buys from its OWN factory the two are one
+      // place, no carrier will ever run a route from a site to itself, and the
+      // order waits forever. Found live: Yard Exchange ordered plate from the
+      // Yard Plate Works it owns, and its slipway sat waiting on parts that were
+      // already in the building.
+      if (order.supplierInstitutionId === order.buyerInstitutionId) {
+        buyer.inventories ??= {};
+        buyer.inventories[order.resourceId] = (buyer.inventories[order.resourceId] ?? 0) + order.units;
+        order.deliveredUnits = (order.deliveredUnits ?? 0) + order.units;
+        order.status = PROCUREMENT_STATUS.DELIVERED;
+        order.paidAt = now();
+        order.deliveredAt = now();
+        emit("procurement.orderDelivered", `${hubName(order.buyerInstitutionId)} took ${order.units} ${order2Label(order.resourceId)} from its own works under ${order.id} — no freight needed.`, {
+          procurementOrderId: order.id, buyerId: order.buyerInstitutionId, sellerId: order.supplierInstitutionId,
+          units: order.units, goodsPayment: price, freightPaid: 0, family: order.family, internal: true,
+        });
+        return;
+      }
+
       const manifestId = `MANIFEST-${order.id}`;
       awaitingPickup(supplier)[order.id] = {
         manifestId,
