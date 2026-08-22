@@ -1,6 +1,6 @@
-import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260821-2344-8ca142c4";
-import { appendHubHistory } from "./hubActors.js?v=fresh-20260821-2344-8ca142c4";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260821-2344-8ca142c4";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260822-0010-4a2fda0d";
+import { appendHubHistory } from "./hubActors.js?v=fresh-20260822-0010-4a2fda0d";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260822-0010-4a2fda0d";
 
 export const PROMOTION_SCORE = 100;
 export const PROMOTION_MINIMUM_AGE_MS = 120 * 1000;
