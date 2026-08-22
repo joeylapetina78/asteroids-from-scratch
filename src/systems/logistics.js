@@ -9,6 +9,7 @@ import { buildPhysicalTransportationRoute, createTransportationNetwork, evaluate
 import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260822-1210-0987ae13";
 import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision, recordDiagnostic, retireDiagnostic } from "./diagnostics.js?v=fresh-20260822-1210-0987ae13";
 import { getEffectiveTransportPolicy, getShipDrive, hasSubspaceDrive } from "./shipDrives.js?v=fresh-20260822-1210-0987ae13";
+import { findHullQuote, purchaseHull } from "./shipyards.js?v=fresh-20260822-1210-0987ae13";
 import { createMiraKossInstitutionInstance, createYardShipyardInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260822-1210-0987ae13";
 import { FIRST_REACH_SETTLEMENTS, settlementInstitutionRecords } from "../content/economy/firstReachSettlements.js?v=fresh-20260822-1210-0987ae13";
 import { FIRST_REACH_CARRIERS, carrierInstitutionRecords } from "../content/transportation/firstReachCarriers.js?v=fresh-20260822-1210-0987ae13";
@@ -2164,6 +2165,21 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     const minimumOperatingCash = 1800;
     const driveId = requiresSubspaceReach(hub) ? "subspace" : "normal-space";
     const hullCost = driveId === "subspace" ? SUBSPACE_HAULER_COST : HAULER_COST;
+    // Somebody has to build this hull. Ask before recruiting a crew and standing
+    // up a carrier: a yard that will not deal with this hub, or a hub that
+    // cannot pay, means no hauler at all — and the half-built carrier that a
+    // late refusal would leave behind is worse than no carrier.
+    const hullClass = driveId === "subspace" ? "freight-craft-subspace" : "freight-craft";
+    const quote = findHullQuote(state, { buyerInstitutionId: hub.id, hullClass });
+    if (!quote.available || (hub.accounts.operating.balance ?? 0) < quote.price + HUB_SPONSORED_OPERATING_GRANT) {
+      state.ledger?.recordEvent?.("logistics.hullUnavailable", {
+        hubInstitutionId: hub.id, hullClass, reason: quote.reason ?? "buyer-cannot-fund-hull",
+        quotedPrice: quote.price ?? null, balance: Math.round(hub.accounts.operating.balance ?? 0),
+      }, { visible: false });
+      releasePopulationLabor(state, assignmentId, { at: now(), reason: "no-hull-available" });
+      return null;
+    }
+
     const templatePolicy = structuredClone(FIRST_REACH_CARRIERS[0]?.policy ?? {});
     const repairOptions = structuredClone(FIRST_REACH_CARRIERS[0]?.repairOptions ?? []);
 
@@ -2190,14 +2206,21 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
       return null;
     }
 
-    hub.accounts.operating.balance -= hullCost + HUB_SPONSORED_OPERATING_GRANT;
-    hub.capitalSpend = (hub.capitalSpend ?? 0) + hullCost;
+    // The grant was already conserved — it is the carrier's opening balance
+    // above. The hull cost was not: it was subtracted here and paid to nobody.
+    const purchase = purchaseHull(state, {
+      quote, buyerInstitutionId: hub.id, buyerAccount: hub.accounts.operating,
+      now: now(), referenceId: shipId,
+    });
+    hub.accounts.operating.balance -= HUB_SPONSORED_OPERATING_GRANT;
+    hub.capitalSpend = (hub.capitalSpend ?? 0) + purchase.price;
     policy.sponsored += 1;
     const shipInstitutionId = `ship:${shipId}`;
     const initialWear = 0.25 + ((index * 37) % 150) / 100;
     logistics.institutions[shipInstitutionId] = {
       id: shipInstitutionId, name: created.name, referenceId: `HAUL-SPONSORED-${index}`,
       archetypeId: "cargo-ship", controllerInstitutionId: carrierId, wear: initialWear, issueCount: 0,
+      builtBy: purchase.builtBy, builtAt: purchase.builtAt, purchasePrice: purchase.price, quality: purchase.quality,
       // The drive belongs to the hull. Selling the ship sells the reach.
       driveId,
     };
@@ -2211,11 +2234,11 @@ export function createLogisticsManager({ state, ships = [], destinations = [], n
     state.ledger.recordEvent("hub.haulerSponsored", {
       institutionId: hub.id, institutionName: hub.name, carrierInstitutionId: carrierId,
       operatorId, populationId: recruited.assignment.populationId, laborAssignmentId: assignmentId,
-      haulerId: shipId, hullCost, driveId, operatingGrant: HUB_SPONSORED_OPERATING_GRANT,
+      haulerId: shipId, hullCost: purchase.price, listPrice: hullCost, builtBy: purchase.builtBy, driveId, operatingGrant: HUB_SPONSORED_OPERATING_GRANT,
       maintenanceEscrow: HUB_SPONSORED_MAINTENANCE_ESCROW, initialWear,
       regionalFleetSize: Object.keys(logistics.haulers).length,
     }, { visible: true, message: driveId === "subspace"
-        ? `${hub.name} capitalized ${carrierName} and commissioned ${created.name}, a subspace hauler, for ${hullCost} cr — no standard freighter can reach it.`
+        ? `${hub.name} capitalized ${carrierName} and commissioned ${created.name}, a subspace hauler, for ${purchase.price} cr — no standard freighter can reach it.`
         : `${hub.name} capitalized ${carrierName} and put ${created.name} into regional freight service.` });
     return created;
   }

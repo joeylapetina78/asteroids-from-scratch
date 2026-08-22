@@ -148,8 +148,17 @@ Deliberately NOT in Stage 1: hulls consuming materials, a margin over cost, buil
 queues, build time. The margin belongs with Stage 2, when "cost" means materials
 the yard actually had to buy.
 
-**Still to wire:** the hauler commissioning path in `logistics.js` still mints
-its hulls. Only the mining hire path buys so far.
+**Both paths buy now.** Mining hires and hub-sponsored hauler commissions both
+go through the yard. The hauler path quotes BEFORE recruiting a crew or standing
+up a carrier, so a refusal costs nothing instead of leaving a half-built carrier
+behind, and it reports the price actually paid rather than the catalogue price.
+The yard also lists a long-haul freighter at 21,000 — the hull a cut-off hub
+depends on — so a distant hub can still buy its lifeline, provided the yard will
+deal with it.
+
+The sponsored operating grant was always conserved (it is the new carrier own
+opening balance); only the hull cost was being destroyed, and that is the part
+that changed.
 
 Conservation invariants to hold and to test:
 

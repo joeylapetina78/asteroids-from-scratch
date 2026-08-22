@@ -89,6 +89,7 @@ export function createYardShipyardInstitutionInstance(now = Date.now()) {
     hullCatalog: [
       { id: "mining-craft", label: "Ore Worker", buildCost: 3500, quality: 1 },
       { id: "freight-craft", label: "Freighter", buildCost: 6000, quality: 1 },
+      { id: "freight-craft-subspace", label: "Long-Haul Freighter", buildCost: 21000, quality: 1 },
     ],
     inventories: { raw: {}, produced: {}, reserved: { raw: {}, produced: {} } },
     projects: {},

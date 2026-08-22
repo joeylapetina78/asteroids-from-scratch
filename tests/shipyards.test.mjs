@@ -159,3 +159,26 @@ test("a mining company growing its fleet buys the hull from the yard", () => {
     assert.equal(buyer.balance + seller.balance, moneyBefore, "and the money supply did not change size");
   }
 });
+
+// ── Haulers come from the same place ───────────────────────────────────────
+
+test("the yard builds long-haul freight, or distant hubs could never buy their lifeline", () => {
+  const state = createWorld();
+  const quote = quoteHull(state, {
+    shipyardId: YARD, buyerInstitutionId: "coldwater-depot", hullClass: "freight-craft-subspace",
+  });
+
+  assert.equal(quote.available, true, "the one hull a cut-off hub actually needs is on the catalogue");
+  assert.equal(quote.price, 21_000, "at the price sponsoring a subspace hauler already cost");
+});
+
+test("a hub the yard refuses cannot commission a hauler at all", () => {
+  const state = createWorld();
+  const projection = ensureRelationshipProjection(state, { fromId: "yard-exchange", toId: "coldwater-depot" });
+  projection.resentment = 0.9;
+
+  const quote = quoteHull(state, {
+    shipyardId: YARD, buyerInstitutionId: "coldwater-depot", hullClass: "freight-craft-subspace",
+  });
+  assert.equal(quote.available, false, "no yard, no hull, no lifeline — isolation with a cause");
+});
