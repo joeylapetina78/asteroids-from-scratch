@@ -610,3 +610,52 @@ them no matter how good the price got.
 Every place that asks "is this ship working" now agrees — `listBidders`, the
 all-busy clock, the per-ship idle clock, and the fleet view's `busy`. If a
 fourth reader of that question appears, it belongs on the same list.
+
+## The frontier was served (2026-08-22, overnight run)
+
+```
+Flint Two delivered 6 aluminum to Ore Station One, earned 4512 cr,
+and completed mine-ore-station-aluminum. Wear is now 0.46.
+```
+
+Ore Station One's aluminium went 0 -> 5.79. This is the first frontier mining
+delivery this world has produced, and it took the whole chain working at once:
+a subspace hull to make the trip legal, a price that climbed until the trip was
+worth taking (909/u), and a fleet planner that stopped retiring the hull halfway
+there. Each of those alone measured as no change.
+
+Standard hulls correctly refused the same run at net 5-76 while the subspace
+hulls valued it at 3,300-3,500. That is the asset doctrine working: the reach
+is the drive, and the drive is a thing somebody bought.
+
+### What it exposed: a market visit is a commitment, not a reservation
+
+Immediately after the price rose, SIX of fourteen ships set out for
+`mine-coldwater-water` at the same time — the most distant hub in the world —
+and the offer was no longer in the offer list by the time they were underway.
+Four of the six were standard hulls; one left at wear 0.91.
+
+The clearing assigns one winner per exclusive offer, but a `marketVisit` is only
+a decision to fly somewhere. `filterUncommittedOffers` excludes offers against
+ALLOCATIONS, which are taken on arrival — so between departure and arrival an
+exclusive offer looks free to everybody. Locally that wastes a short hop and
+nobody notices. At the frontier it is 80,000 units of round trip and a hull worn
+past usefulness, five times over.
+
+**This is a question about what an actor knows, not a rule to add**, which is
+why it is written down rather than fixed. A miner plainly should not fly two
+days to a claim that has already been given to somebody else. But Flint learning
+that Cinder's ship is already on its way is cross-company knowledge, and the
+shared extraction market is the only place that could honestly carry it. The
+options:
+
+1. **Reserve on departure.** The winner's visit marks the offer committed, so
+   the rest never set out. Truthful if you accept that a dispatch is public.
+2. **Let them race.** Physically honest, and the loser eats the trip. Expensive
+   in exactly the place the world can least afford it, and it will keep killing
+   frontier hulls.
+3. **Concurrent frontier offers.** A distant hub that needs 12 units posts work
+   several ships can share, so arriving second is not a wasted voyage.
+
+Option 3 is the most interesting: it makes distance change the SHAPE of an offer
+rather than only its price, and `concurrent` already exists on the offer.
