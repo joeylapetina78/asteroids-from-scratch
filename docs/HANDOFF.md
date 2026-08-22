@@ -5,6 +5,11 @@ maintainer. Read this file first, then [institutional-npcs-and-assets.md](instit
 [level-of-detail.md](level-of-detail.md), and [territorial-authority-roadmap.md](territorial-authority-roadmap.md).
 The older August 6 session note is historical context, not the current checkpoint.
 
+> **New here?** Read [state-of-development.md](state-of-development.md) first.
+> It is a single orientation brief — what the project is trying to be, the rules
+> it holds itself to, what is built, where the work stands, and the specific ways
+> this codebase has repeatedly fooled people who were sure they were right.
+
 ## Stable checkpoint
 
 - Branch: `main`. Simulation-boundary observability is in the working tree on
