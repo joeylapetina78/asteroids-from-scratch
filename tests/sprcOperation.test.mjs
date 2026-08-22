@@ -562,6 +562,54 @@ test("a mining institution delivery conserves material and payment into freight 
   assert.equal(manager.getState().completedContracts, 1);
 });
 
+// The other half of the same rule. A hub can outbid a price it is not meeting;
+// it cannot outbid distance. A refusal because the hull would not survive the
+// trip names a missing industry out at that hub, not a cheap buyer, and raising
+// the offer only feeds more ships into a run that kills them -- which is what
+// happened overnight on 2026-08-22, when both mining companies were emptied
+// chasing frontier prices.
+test("a hub does not raise an order that miners refuse on distance", () => {
+  const clock = 5_000_000;
+  const state = createGameState();
+  state.logistics = createInitialLogisticsState(clock);
+  ["yard-exchange", "scrap-forge", "the-ledge", "blue-lantern"].forEach((id) => {
+    if (state.logistics.institutions[id]) state.logistics.institutions[id].accounts.operating.balance = 50_000;
+  });
+  const game = {
+    worldSites: [
+      { id: "yard-exchange", position: { x: 380, y: -180 } },
+      { id: "scrap-porch", position: { x: -1180, y: 860 } },
+      { id: "the-ledge", position: { x: 7000, y: -4500 } },
+      { id: "blue-lantern", position: { x: 2950, y: 2180 } },
+    ],
+    addWorkerShip: () => {},
+  };
+  const manager = createMiningOperation({ state, game, now: () => clock });
+  // EVERY idle hull has to be out of range, not just the first one: a single
+  // miner still sitting at home would refuse on price and the hub would answer
+  // that refusal instead.
+  manager.workers.forEach((each) => {
+    each.assignment = null;
+    each.marketVisit = null;
+    each.position = { x: 500_000, y: 500_000 };   // no hull survives this
+  });
+  manager.getState().allocations = {};
+  Object.values(manager.getState().ships).forEach((record) => { record.maintenanceStatus = "available"; });
+
+  // It must be an order whose SITE this fixture actually places, or the
+  // distance the miner measures collapses to zero and the refusal is about
+  // price after all.
+  const before = getPostedMiningOrders(state, clock);
+  const target = Object.values(before).find((order) => order.siteId === "yard-exchange" && !order.withheld && order.amount > 0);
+  assert.ok(target, "Yard Exchange is posting something");
+
+  manager.update();
+
+  const raised = state.miningOrderRates?.[target.id];
+  assert.ok(!raised || !(raised.rate > target.paymentPerUnit),
+    "no amount of money shortens the trip, so the hub does not chase it");
+});
+
 test("a hub raises a mining order that no idle miner will extract at the posted price", () => {
   const clock = 5_000_000; // a realistic clock so the reprice throttle behaves
   const state = createGameState();
@@ -580,13 +628,13 @@ test("a hub raises a mining order that no idle miner will extract at the posted 
     addWorkerShip: () => {},
   };
   const manager = createMiningOperation({ state, game, now: () => clock });
-  // Strand the sole miner far from every deposit so serving ANY order costs far
-  // more than it pays. A unanimous refusal by idle capacity is the reprice
-  // trigger — the mining-side mirror of "no carrier will run this freight".
+  // Put the sole miner far enough out that serving any order costs more than it
+  // pays, but still inside what the hull can survive -- the refusal has to be
+  // about PRICE, because that is the only kind a hub can answer with money.
   const worker = manager.worker;
   worker.assignment = null;
   worker.marketVisit = null;
-  worker.position = { x: 500_000, y: 500_000 };
+  worker.position = { x: 5_600, y: 5_600 };   // far enough to be unprofitable, near enough to survive
   manager.getState().allocations = {};
   Object.values(manager.getState().ships).forEach((record) => { record.maintenanceStatus = "available"; });
 

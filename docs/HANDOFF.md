@@ -659,3 +659,52 @@ options:
 
 Option 3 is the most interesting: it makes distance change the SHAPE of an offer
 rather than only its price, and `concurrent` already exists on the offer.
+
+## Miners are not long-range, and reach was the wrong answer (2026-08-22)
+
+Direction from the player, correcting the whole frontier effort:
+
+> "I don't think miner ships should be long range. A hub is going to have to make
+> its own, or a hauler is going to have to move the ships out there. We might
+> even need to make a larger logistics ship for moving other ships (and later
+> other industrial stuff) out to far ranges."
+
+The structural fact behind it: this world has exactly TWO mining companies, homed
+at Scrap Porch and Blue Lantern. Ore Station One, Coldwater Depot and Deep
+Research all post extraction demand that no local extractor exists to serve. The
+only way their ore was ever going to be dug was somebody driving across the map —
+so "the frontier cannot be reached" was never a transport problem. It was a
+missing industry, and the subspace refit made the drive survivable instead of
+asking why the drive was necessary.
+
+What that cost, measured overnight: **every mining hull in the world died.**
+Sixteen of them, wear 1.03 to 1.31, all at or past the component failure
+threshold, while the freight network beside them stayed healthy and serviced
+frontier hubs routinely.
+
+### Why they went, which was the player's question
+
+A carrier refuses work beyond its range (`beyond-fleet-range`) because
+`maximumServiceableDistance` is part of how it decides. A miner had no such
+notion and no maintenance policy at all: it priced wear as a COST IN CREDITS, so
+a rich enough offer made any distance look merely expensive rather than
+impossible. At 870/u a standard hull set out for Coldwater because the money was
+good. The subspace drive was never a gate for a miner — only a 0.15x wear
+multiplier — so nothing in the world distinguished "expensive" from "fatal".
+
+### What changed
+
+- The subspace refit for mining hulls is gone. The drive remains for tow craft.
+- A miner now refuses work beyond what its own hull can survive, read from the
+  same component-condition system that decides when it needs servicing.
+- A hub can outbid a price it is not meeting. It **cannot outbid distance**: a
+  refusal on range names a missing industry, not a cheap buyer, and raising the
+  offer only feeds more ships into a run that kills them.
+
+### What this opens, and has not been built
+
+Getting production to a distant hub is now the live problem, and the player has
+named the shape of the answer: **a heavy logistics ship that carries other craft**
+(and later industrial plant) out to range. That is how a distant hub comes to
+have a miner of its own, and it connects directly to the Anno-style founding note
+above — a hub exists out there because something carried the means out there.

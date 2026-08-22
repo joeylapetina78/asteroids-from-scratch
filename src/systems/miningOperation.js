@@ -4,7 +4,7 @@ import { getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resour
 import { canActorDoAction } from "./ruleChecker.js?v=fresh-20260822-0043-8abca575";
 import { getMiningWorkWear } from "./wearRates.js?v=fresh-20260822-0043-8abca575";
 import { getShipDrive } from "./shipDrives.js?v=fresh-20260822-0043-8abca575";
-import { chaseMultiple, evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260822-0043-8abca575";
+import { VALUATION_DECISION, chaseMultiple, createValuationResult, evaluateMiningJob, evaluateProcurement, urgencyFromCoverage } from "./valuation.js?v=fresh-20260822-0043-8abca575";
 import { getInventoryPosition, sellMaterialToHub } from "./hubInventory.js?v=fresh-20260822-0043-8abca575";
 import { getServiceCost, recordAcquisition, recordServiceCost } from "./costBasis.js?v=fresh-20260822-0043-8abca575";
 import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260822-0043-8abca575";
@@ -22,7 +22,7 @@ import { recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260822-00
 import { canOperateEquipment } from "./operatorSkills.js?v=fresh-20260822-0043-8abca575";
 import { ENGINE_MODELS } from "../content/ships/engineModels.js?v=fresh-20260822-0043-8abca575";
 import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260822-0043-8abca575";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260822-0043-8abca575";
+import { COMPONENT_THRESHOLDS, applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260822-0043-8abca575";
 import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260822-0043-8abca575";
 import { ensureMiningOrderBook, getMiningOrderBook, getPostedMiningOrder, setMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260822-0043-8abca575";
 
@@ -454,52 +454,18 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     if (siteId && !history.servedSiteIds.includes(siteId)) history.servedSiteIds.push(siteId);
   }
 
-  // Fit a reversing drive to a hull whose crew has earned it.
+  // A mining hull does not get a long-range refit.
   //
-  // Not an upgrade that appears because time passed: the company buys it, out of
-  // its own account, for a crew whose record shows they can fly it. A green crew
-  // is refused and the refusal says which — short of the mark, or never assessed
-  // at all. The cost is declared as capital spend because nobody counted here
-  // receives it, the same way crew wages are.
-  // Buy reach when there is work that pays and nothing that can fetch it.
+  // It used to: a company that kept losing an order to distance would price the
+  // counterfactual and buy a subspace drive. That worked — hulls were refitted
+  // and one of them made the first frontier delivery — but it was the wrong
+  // answer to the question. A distant hub that cannot feed itself needs
+  // production out there, or freight bringing goods in. An ore ship crossing the
+  // world and back is a transport hack standing in for a missing industry, and
+  // it emptied both mining companies overnight.
   //
-  // A subspace hull is not an upgrade a company drifts into; it is what it buys
-  // when the board is showing money it cannot collect. The test is deliberately
-  // the counterfactual: would this same order clear if the wear were a subspace
-  // hull's? If yes, the barrier is the hull and not the price, and a hull is
-  // purchasable.
-  function considerSubspaceHull(shipRecord) {
-    if (!shipRecord || shipRecord.driveId === SUBSPACE_DRIVE_ID) return null;
-    if (Object.values(operation.ships).some((ship) => ship.driveId === SUBSPACE_DRIVE_ID)) return null;
-    const context = offerContext();
-    const offers = filterUncommittedOffers(listExtractionOffers(state, context), context.allocations);
-    const position = shipRecord.position ?? sites.get(shipRecord.currentSiteId)?.position
-      ?? sites.get(seed.homeSiteId)?.position ?? { x: 0, y: 0 };
-
-    const unreachable = offers.find((offer) => {
-      const asStandard = valueOrderForWorker(offer, position, shipRecord);
-      if (asStandard.acceptable) return false;
-      const asSubspace = valueOrderForWorker(offer, position, { ...shipRecord, driveId: SUBSPACE_DRIVE_ID });
-      return asSubspace.acceptable;
-    });
-    if (!unreachable) return null;
-
-    const account = operation.institution.accounts.operating;
-    if ((account.balance ?? 0) - SUBSPACE_REFIT_COST < getActorProtectedCash(state, operation.institution.id)) return null;
-
-    account.balance -= SUBSPACE_REFIT_COST;
-    operation.institution.capitalSpend = (operation.institution.capitalSpend ?? 0) + SUBSPACE_REFIT_COST;
-    account.transactions.push({
-      id: `MIN-SUBSPACE-${now()}-${shipRecord.id}`, at: now(), type: "capital-expense",
-      amount: -SUBSPACE_REFIT_COST, balance: account.balance, referenceId: shipRecord.id,
-    });
-    shipRecord.driveId = SUBSPACE_DRIVE_ID;
-    record("mining.subspaceRefit", `${operation.institution.name} refitted ${shipRecord.name} with a subspace drive for ${SUBSPACE_REFIT_COST} cr — ${unreachable.siteName ?? unreachable.siteId} was posting work nothing in the fleet could reach.`, {
-      institutionId: operation.institution.id, shipInstitutionId: shipRecord.id, shipName: shipRecord.name,
-      cost: SUBSPACE_REFIT_COST, unlockedOfferId: unreachable.id, siteId: unreachable.siteId,
-    });
-    return shipRecord.driveId;
-  }
+  // The drive itself is not gone; tow craft still use it. What is gone is the
+  // idea that a miner should ever want one.
 
   function considerCrewDrive(shipRecord) {
     if (!shipRecord?.operatorId) return null;
@@ -789,7 +755,14 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
       // One idle miner willing to take it means it is not underpriced — it will
       // be taken. Only a unanimous refusal is evidence the price is too low.
       if (valuations.some((valuation) => valuation.acceptable)) return;
-      const minFloor = Math.min(...valuations.map((valuation) => valuation.minAcceptablePrice));
+      // A hub can outbid a price it is not meeting. It cannot outbid distance:
+      // a refusal because the hull would not survive the trip names a missing
+      // industry out there, not a cheap buyer, and raising the offer only feeds
+      // more ships into a run that kills them. Those refusals are read and
+      // discarded here.
+      const onPrice = valuations.filter((valuation) => (valuation.minAcceptablePrice ?? 0) > 0);
+      if (onPrice.length === 0) return;
+      const minFloor = Math.min(...onPrice.map((valuation) => valuation.minAcceptablePrice));
       raiseMiningOrder(order, minFloor);
     });
   }
@@ -1119,6 +1092,30 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
   // by 241 credits. A craft that wears at a fraction of the rate is not a
   // discount on that decision, it is a different craft, and this is the same rule
   // freight already follows.
+  // How far this hull can work and still get back for service.
+  //
+  // A carrier has always refused work beyond its range (`beyond-fleet-range`).
+  // A miner had no such notion: it priced wear as a COST IN CREDITS, so a rich
+  // enough offer made any distance look merely expensive rather than impossible,
+  // and a standard hull would set out for Coldwater because the money was good.
+  // Overnight that emptied both companies — sixteen hulls, every one at or past
+  // the component failure threshold.
+  //
+  // The limit is the hull own condition, read from the same component system
+  // that decides when it needs servicing. The bar is survival, not comfort: a
+  // hull may work until a component would actually fail, which is what stops it
+  // setting out on a trip it cannot finish.
+  function serviceableDistanceFor(shipRecord, drive) {
+    // Asked about no particular hull (a hypothetical, or a reader comparing
+    // offers): distance is not the question being put.
+    if (!shipRecord) return Infinity;
+    const worst = getWorstComponent(shipRecord);
+    const spent = worst?.condition?.wear ?? shipRecord?.wear ?? 0;
+    const remaining = COMPONENT_THRESHOLDS.failed - spent;
+    if (remaining <= 0) return 0;
+    return remaining / (MINING_WEAR_PER_DISTANCE * drive.wearMultiplier);
+  }
+
   function valueOrderForWorker(order, position, shipRecord = null) {
     const drive = getShipDrive(shipRecord);
     const destination = sites.get(order.siteId)?.position ?? position;
@@ -1138,11 +1135,22 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     const surplusPayout = surplusUnits * Math.max(1, Math.floor(getInstitutionalFeedstockTradeValue(order.resourceId) * 0.7));
     const payout = contractPayout + surplusPayout;
 
+    const travelDistance = toDeposit + toBuyer;
+    const reach = serviceableDistanceFor(shipRecord, drive);
+    if (shipRecord && travelDistance > reach) {
+      return createValuationResult({
+        acceptable: false,
+        decision: VALUATION_DECISION.DECLINE,
+        reasons: [`${Math.round(travelDistance)} units is further than this hull can work and still come back for service (${Math.round(reach)}).`],
+        metrics: { netValue: 0, travelDistance, serviceableDistance: reach },
+      });
+    }
+
     return evaluateMiningJob({
       jobId: order.id,
       payout,
       units: order.amount,
-      travelDistance: toDeposit + toBuyer,
+      travelDistance,
       // Price wear against what a service REALLY costs now, not a constant —
       // this is how a repair-price rise reaches the miner's own decisions.
       wearCostPerPoint: getServiceCost(state, operation.institution.id, "maintenance", MINING_SERVICE_PRICE),
@@ -1578,7 +1586,10 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     recordCrewWork(shipRecord, { siteId, delivered });
     // The record just grew, so this is the moment the answer can change.
     considerCrewDrive(shipRecord);
-    considerSubspaceHull(shipRecord);
+    // No subspace refit for a mining hull. Reach was the wrong answer to the
+    // frontier: a distant hub that cannot feed itself needs production out
+    // there, or freight bringing the goods in — not an ore ship crossing the
+    // world and back. See the frontier notes in docs/HANDOFF.md.
     const workWear = getMiningWorkWear();
     const componentUse = applyCraftUse(shipRecord, {
       structure: workWear * 0.35,
