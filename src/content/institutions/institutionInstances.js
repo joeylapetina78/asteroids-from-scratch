@@ -92,6 +92,18 @@ export function createYardShipyardInstitutionInstance(now = Date.now()) {
       { id: "freight-craft-subspace", label: "Long-Haul Freighter", buildCost: 21000, quality: 1 },
     ],
     inventories: { raw: {}, produced: {}, reserved: { raw: {}, produced: {} } },
+    // The shed is not empty on the first tick.
+    //
+    // A yard that has been working since before the world started would have
+    // hulls on hand, and the world needs them: its opening fleet is commissioned
+    // immediately, and a yard with nothing built means no haulers at all. This
+    // is the same rule the player set for hubs generally — a place starts owning
+    // what it must have needed to exist.
+    // Sized against what the world commissions on its first tick: the regional
+    // hauler floor is 8, and the three cut-off hubs need long-haul hulls. Short
+    // the shed and the world opens with a freight network it cannot staff.
+    readyHulls: { "mining-craft": 2, "freight-craft": 6, "freight-craft-subspace": 3 },
+    build: null,
     projects: {},
     createdAt: now,
   };

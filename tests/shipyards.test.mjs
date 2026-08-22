@@ -12,7 +12,7 @@ import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { createMiningOperation } from "../src/systems/miningOperation.js";
 import { CINDER_MINING_SEED } from "../src/content/economy/miningInstitutions.js";
 import { ensureRelationshipProjection } from "../src/systems/relationshipProjections.js";
-import { SHIPYARD_REFUSAL, findHullQuote, listShipyards, purchaseHull, quoteHull } from "../src/systems/shipyards.js";
+import { HULL_BUILD_MS, SHIPYARD_REFUSAL, advanceShipyards, findHullQuote, getBuildProgress, getHullBillOfMaterials, listShipyards, purchaseHull, quoteHull } from "../src/systems/shipyards.js";
 
 function createWorld() {
   const state = createGameState();
@@ -201,4 +201,84 @@ test("buying a hull does not register as money burned", () => {
 
   assert.equal(buyer.capitalSpend ?? 0, capitalBefore,
     "a transfer is not a burn, and the reconciler reads capitalSpend as a burn");
+});
+
+// ── Stage 2: a hull is made of something, and takes time ───────────────────
+
+test("the ways are still when there is nothing to build", () => {
+  const state = createWorld();
+  const yard = state.logistics.institutions[YARD];
+  yard.readyHulls = { "mining-craft": 9, "freight-craft": 9, "freight-craft-subspace": 9 };
+
+  advanceShipyards(state, 10_000);
+  assert.equal(yard.build, null, "a full shed does not keep laying keels for the look of it");
+  assert.equal(getBuildProgress(yard, 10_000), null);
+});
+
+test("a yard with no parts cannot lay a keel", () => {
+  const state = createWorld();
+  const yard = state.logistics.institutions[YARD];
+  yard.readyHulls = {};
+  state.logistics.institutions["yard-exchange"].inventories = { "hull-plate": 0, "machine-part": 0 };
+
+  advanceShipyards(state, 10_000);
+  assert.equal(yard.build, null);
+  assert.ok(yard.waitingOnParts, "and it says so, rather than quietly doing nothing");
+});
+
+test("laying a keel consumes real parts from the hub warehouse", () => {
+  const state = createWorld();
+  const yard = state.logistics.institutions[YARD];
+  const hub = state.logistics.institutions["yard-exchange"];
+  yard.readyHulls = {};
+  hub.inventories = { "hull-plate": 20, "machine-part": 20 };
+
+  advanceShipyards(state, 10_000);
+
+  assert.ok(yard.build, "a keel was laid");
+  const bill = getHullBillOfMaterials(yard.build.hullClass);
+  assert.equal(hub.inventories["hull-plate"], 20 - bill["hull-plate"], "plate came off the shelf");
+  assert.equal(hub.inventories["machine-part"], 20 - bill["machine-part"], "so did the machine parts");
+});
+
+test("a hull takes time and then joins the shed", () => {
+  const state = createWorld();
+  const yard = state.logistics.institutions[YARD];
+  const hub = state.logistics.institutions["yard-exchange"];
+  yard.readyHulls = {};
+  hub.inventories = { "hull-plate": 20, "machine-part": 20 };
+
+  advanceShipyards(state, 10_000);
+  const laying = yard.build.hullClass;
+
+  advanceShipyards(state, 10_000 + HULL_BUILD_MS / 2);
+  assert.ok(yard.build, "still on the ways halfway through");
+  assert.ok(getBuildProgress(yard, 10_000 + HULL_BUILD_MS / 2) > 0.4);
+
+  advanceShipyards(state, 10_000 + HULL_BUILD_MS + 1);
+  assert.equal(yard.build, null, "off the ways");
+  assert.equal(yard.readyHulls[laying], 1, "and into the shed");
+});
+
+test("you cannot buy a hull nobody has built", () => {
+  const state = createWorld();
+  state.logistics.institutions[YARD].readyHulls = {};
+
+  const quote = quoteHull(state, { shipyardId: YARD, buyerInstitutionId: BUYER, hullClass: "mining-craft" });
+  assert.equal(quote.available, false);
+  assert.equal(quote.reason, SHIPYARD_REFUSAL.NONE_READY);
+});
+
+test("taking delivery empties that berth in the shed", () => {
+  const state = createWorld();
+  const yard = state.logistics.institutions[YARD];
+  yard.readyHulls = { "mining-craft": 1 };
+  const buyerAccount = { balance: 10_000, committed: 0, transactions: [] };
+
+  const quote = findHullQuote(state, { buyerInstitutionId: BUYER, hullClass: "mining-craft" });
+  assert.equal(purchaseHull(state, { quote, buyerInstitutionId: BUYER, buyerAccount, now: 2_000 }).bought, true);
+  assert.equal(yard.readyHulls["mining-craft"], 0, "the hull left with its buyer");
+
+  const second = quoteHull(state, { shipyardId: YARD, buyerInstitutionId: BUYER, hullClass: "mining-craft" });
+  assert.equal(second.available, false, "and the next buyer waits for one to be built");
 });

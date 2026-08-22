@@ -1,6 +1,6 @@
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260822-1304-slipway";
-import { getWorldSites } from "./worldSites.js?v=fresh-20260822-1304-slipway";
-import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260822-1304-slipway";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260822-1317-stage2";
+import { getWorldSites } from "./worldSites.js?v=fresh-20260822-1317-stage2";
+import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260822-1317-stage2";
 
 // How closely the world is simulated, place by place.
 //

@@ -1,7 +1,7 @@
-import { getRightTypeForAction, isRecordActive, limitsAllowAction } from "./authorityModel.js?v=fresh-20260822-1304-slipway";
-import { actorHasPower, getAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260822-1304-slipway";
-import { isSameOrChildPlace } from "./placeRegistry.js?v=fresh-20260822-1304-slipway";
-import { getWorldDocument } from "./worldRecords.js?v=fresh-20260822-1304-slipway";
+import { getRightTypeForAction, isRecordActive, limitsAllowAction } from "./authorityModel.js?v=fresh-20260822-1317-stage2";
+import { actorHasPower, getAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260822-1317-stage2";
+import { isSameOrChildPlace } from "./placeRegistry.js?v=fresh-20260822-1317-stage2";
+import { getWorldDocument } from "./worldRecords.js?v=fresh-20260822-1317-stage2";
 
 export function canActorDoAction(state, {
   actorId,

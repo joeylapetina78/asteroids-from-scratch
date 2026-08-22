@@ -1,6 +1,6 @@
-import { createValueNoise } from "./valueNoise.js?v=fresh-20260822-1304-slipway";
-import { getRegionProfile } from "./worldRegions.js?v=fresh-20260822-1304-slipway";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260822-1304-slipway";
+import { createValueNoise } from "./valueNoise.js?v=fresh-20260822-1317-stage2";
+import { getRegionProfile } from "./worldRegions.js?v=fresh-20260822-1317-stage2";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260822-1317-stage2";
 
 const GRID_SIZE = 350;
 const JITTER = 100;

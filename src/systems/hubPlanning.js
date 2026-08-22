@@ -1,7 +1,7 @@
-import { actorHasCapability } from "./assetCapabilities.js?v=fresh-20260822-1304-slipway";
-import { appendHubHistory, getHubActor, listHubActors, upsertHubProject } from "./hubActors.js?v=fresh-20260822-1304-slipway";
-import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260822-1304-slipway";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1304-slipway";
+import { actorHasCapability } from "./assetCapabilities.js?v=fresh-20260822-1317-stage2";
+import { appendHubHistory, getHubActor, listHubActors, upsertHubProject } from "./hubActors.js?v=fresh-20260822-1317-stage2";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260822-1317-stage2";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1317-stage2";
 
 export const HUB_RESPONSE_KIND = Object.freeze({
   IMPORT: "import",

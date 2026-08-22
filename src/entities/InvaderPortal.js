@@ -1,4 +1,4 @@
-import { applyCraftUse, ensureCraftComponents } from "../systems/componentCondition.js?v=fresh-20260822-1304-slipway";
+import { applyCraftUse, ensureCraftComponents } from "../systems/componentCondition.js?v=fresh-20260822-1317-stage2";
 
 const PORTAL_COMPONENTS = Object.freeze([
   { id: "rift-core", label: "Rift Core", capabilityIds: ["hold-gate"] },

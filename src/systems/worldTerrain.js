@@ -1,6 +1,6 @@
-import { createRandom, hashNumbers } from "./random.js?v=fresh-20260822-1304-slipway";
-import { createValueNoise } from "./valueNoise.js?v=fresh-20260822-1304-slipway";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260822-1304-slipway";
+import { createRandom, hashNumbers } from "./random.js?v=fresh-20260822-1317-stage2";
+import { createValueNoise } from "./valueNoise.js?v=fresh-20260822-1317-stage2";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260822-1317-stage2";
 
 // A coherent procedural terrain-character field. Low-frequency noise carves
 // broad belts of navigation mood across ALL of space — thick mazes, cluster

@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260822-1304-slipway";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260822-1317-stage2";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;

@@ -14,16 +14,43 @@
 // after this lands is attributable to conservation rather than tangled with a
 // retune. See docs/shipbuilding.md.
 
-import { creditPayee } from "./contractTreasury.js?v=fresh-20260822-1304-slipway";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260822-1304-slipway";
-import { relationshipFactor } from "./valuation.js?v=fresh-20260822-1304-slipway";
+import { creditPayee } from "./contractTreasury.js?v=fresh-20260822-1317-stage2";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260822-1317-stage2";
+import { relationshipFactor } from "./valuation.js?v=fresh-20260822-1317-stage2";
+import { countHullStrokes, getHullOutline } from "../content/ships/hullOutlines.js?v=fresh-20260822-1317-stage2";
 
 export const SHIPYARD_REFUSAL = Object.freeze({
   NO_YARD: "no-shipyard-in-reach",
   NOT_BUILT_HERE: "yard-does-not-build-this",
   REFUSED: "yard-will-not-deal",
   CANNOT_PAY: "buyer-cannot-fund-hull",
+  NONE_READY: "no-hull-ready-on-the-ways",
 });
+
+// What a hull is made of, and how long it takes to lay.
+//
+// Stage 2. Until now a yard sold hulls it had never built out of materials it
+// never held; the price was a number and the ways were an animation. A hull is
+// now assembled from parts the yard has to have, and it takes time, so a buyer
+// can arrive to find nothing ready.
+export const HULL_BILL_OF_MATERIALS = Object.freeze({
+  "mining-craft": Object.freeze({ "hull-plate": 3, "machine-part": 2 }),
+  "freight-craft": Object.freeze({ "hull-plate": 5, "machine-part": 3 }),
+  "freight-craft-subspace": Object.freeze({ "hull-plate": 9, "machine-part": 7 }),
+});
+
+// Wall-clock time to lay one hull, whatever it is made of. Every class takes the
+// same time and differs in what it consumes — a long-haul freighter is expensive
+// because of what goes into it, not because the ways are slower.
+export const HULL_BUILD_MS = 45_000;
+
+// How many finished hulls a yard will hold before it stops laying more. A yard
+// with idle ways builds stock; a yard with a full shed waits for a buyer.
+export const HULL_STOCK_TARGET = 2;
+
+export function getHullBillOfMaterials(hullClass) {
+  return HULL_BILL_OF_MATERIALS[hullClass] ?? HULL_BILL_OF_MATERIALS["freight-craft"];
+}
 
 // A yard will not sell to an enemy. Resentment is the dimension that says so,
 // and `access.deniedServices` is the explicit form of the same refusal — the
@@ -39,6 +66,99 @@ const HOSTILE_RESENTMENT = 0.6;
 // enemy is refused outright. The margin a yard takes over cost belongs with
 // Stage 2, when "cost" means materials it actually had to buy.
 const SELLING_MARGIN = 1;
+
+function ensureYardState(yard) {
+  yard.inventories ??= { raw: {}, produced: {}, reserved: { raw: {}, produced: {} } };
+  yard.inventories.produced ??= {};
+  yard.readyHulls ??= {};
+  yard.build ??= null;
+  return yard;
+}
+
+// Can this yard start the hull it would most like to have on hand?
+function nextHullToLay(yard) {
+  const ready = yard.readyHulls ?? {};
+  const wanted = (yard.hullCatalog ?? []).map((entry) => entry.id);
+  // Keep a spread rather than two of one thing: lay whichever class the shed is
+  // shortest of.
+  return wanted
+    .map((hullClass) => ({ hullClass, held: ready[hullClass] ?? 0 }))
+    .filter((entry) => entry.held < HULL_STOCK_TARGET)
+    .sort((first, second) => first.held - second.held)[0]?.hullClass ?? null;
+}
+
+// A yard draws on its hub warehouse, not a private store. The hub institution
+// is where stock lives in this world — the plate works at Yard Exchange already
+// delivers hull-plate straight into hub.inventories, and a department reaching
+// into the same shelf is the Sal shop pattern applied to materials.
+function ownerWarehouse(state, yard) {
+  const owner = state.logistics?.institutions?.[yard.ownerInstitutionId ?? ""];
+  if (!owner) return null;
+  owner.inventories ??= {};
+  return owner.inventories;
+}
+
+function heldParts(state, yard, partId) {
+  return ownerWarehouse(state, yard)?.[partId] ?? 0;
+}
+
+function canAfford(state, yard, bill) {
+  return Object.entries(bill).every(([partId, units]) => heldParts(state, yard, partId) >= units);
+}
+
+function consumeParts(state, yard, bill) {
+  const shelf = ownerWarehouse(state, yard);
+  if (!shelf) return;
+  Object.entries(bill).forEach(([partId, units]) => {
+    shelf[partId] = (shelf[partId] ?? 0) - units;
+  });
+}
+
+// The ways, advanced one tick.
+//
+// A build starts only when the yard has the parts for it and room in the shed,
+// so the ways are still when there is nothing to do — which is the point. The
+// animation used to run forever and meant nothing.
+export function advanceShipyards(state, now = Date.now()) {
+  const laid = [];
+  listShipyards(state).forEach((raw) => {
+    const yard = ensureYardState(raw);
+
+    if (yard.build) {
+      if (now - yard.build.startedAt < HULL_BUILD_MS) return;
+      yard.readyHulls[yard.build.hullClass] = (yard.readyHulls[yard.build.hullClass] ?? 0) + 1;
+      state.ledger?.recordEvent?.("shipyard.hullLaunched", {
+        shipyardId: yard.id, hullClass: yard.build.hullClass,
+        ready: yard.readyHulls[yard.build.hullClass],
+      }, { visible: true, message: `${getHullOutline(yard.build.hullClass).label} completed at ${yard.siteId} and moved to the shed.` });
+      laid.push({ shipyardId: yard.id, hullClass: yard.build.hullClass });
+      yard.build = null;
+      return;
+    }
+
+    const hullClass = nextHullToLay(yard);
+    if (!hullClass) return;
+    const bill = getHullBillOfMaterials(hullClass);
+    if (!canAfford(state, yard, bill)) {
+      yard.waitingOnParts = hullClass;
+      return;
+    }
+    consumeParts(state, yard, bill);
+    yard.waitingOnParts = null;
+    yard.build = { hullClass, startedAt: now, strokes: countHullStrokes(hullClass) };
+    state.ledger?.recordEvent?.("shipyard.keelLaid", {
+      shipyardId: yard.id, hullClass, consumed: bill,
+    }, { visible: false });
+  });
+  return laid;
+}
+
+// How far along the hull on the ways is, 0..1. Nothing on the ways is null,
+// which the renderer reads as "draw the shed, not a build".
+export function getBuildProgress(yard, now = Date.now()) {
+  if (!yard?.build) return null;
+  return Math.min(1, (now - yard.build.startedAt) / HULL_BUILD_MS);
+}
 
 export function listShipyards(state) {
   return Object.values(state.logistics?.institutions ?? {})
@@ -84,6 +204,14 @@ export function quoteHull(state, { shipyardId, buyerInstitutionId, hullClass }) 
   const standing = assessBuyer(state, shipyard, buyerInstitutionId);
   if (!standing.willDeal) {
     return { available: false, reason: SHIPYARD_REFUSAL.REFUSED, shipyardId, tier: standing.tier };
+  }
+
+  // You cannot buy a hull nobody has built. This is the whole weight of Stage 2:
+  // a fleet that wants to grow now waits on a yard that has to have made the
+  // thing, out of parts somebody had to supply.
+  const ready = (shipyard.readyHulls ?? {})[hullClass] ?? 0;
+  if (ready <= 0) {
+    return { available: false, reason: SHIPYARD_REFUSAL.NONE_READY, shipyardId, hullClass };
   }
 
   const price = Math.round(listing.buildCost * (standing.atCost ? 1 : SELLING_MARGIN * standing.factor));
@@ -138,6 +266,13 @@ export function purchaseHull(state, { quote, buyerInstitutionId, buyerAccount, n
   // A yard owned by its hub banks into the hub's own account, which is the same
   // account SPRC uses. That is deliberate: `economySampler.listAccountHolders`
   // deduplicates by account identity, so a shared account is not double counted.
+  const shipyard = getShipyard(state, quote.shipyardId);
+  if (shipyard) {
+    const held = (shipyard.readyHulls ?? {})[quote.hullClass] ?? 0;
+    if (held <= 0) return { bought: false, reason: SHIPYARD_REFUSAL.NONE_READY };
+    shipyard.readyHulls[quote.hullClass] = held - 1;
+  }
+
   const paid = creditPayee(state, {
     payeeEntityId: quote.ownerInstitutionId,
     amount: quote.price,
@@ -149,10 +284,9 @@ export function purchaseHull(state, { quote, buyerInstitutionId, buyerAccount, n
   // The yard remembers when it last launched something. The renderer reads this
   // to show the ways lit; it is state rather than an event subscription because
   // a cosmetic flash is not worth a wire into the game loop.
-  const yard = getShipyard(state, quote.shipyardId);
-  if (yard) {
-    yard.lastSaleAt = now;
-    yard.lastSaleClass = quote.hullClass;
+  if (shipyard) {
+    shipyard.lastSaleAt = now;
+    shipyard.lastSaleClass = quote.hullClass;
   }
 
   state.ledger?.recordEvent?.("shipyard.hullSold", {

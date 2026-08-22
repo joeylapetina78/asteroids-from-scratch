@@ -1,59 +1,61 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260822-1304-slipway";
-import { steerAroundObstacles } from "./systems/obstacleNavigation.js?v=fresh-20260822-1304-slipway";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260822-1304-slipway";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260822-1304-slipway";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260822-1304-slipway";
-import { Ship } from "./entities/Ship.js?v=fresh-20260822-1304-slipway";
-import { ShipWreck } from "./entities/ShipWreck.js?v=fresh-20260822-1304-slipway";
-import { completeWreckSalvage, registerOwnedWreck } from "./systems/wreckRegistry.js?v=fresh-20260822-1304-slipway";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260822-1304-slipway";
-import { applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260822-1304-slipway";
-import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260822-1304-slipway";
-import { MINER_CONDITION_CONFIG, computeMinerWearPerShot, getMinerStageEffects } from "./systems/minerCondition.js?v=fresh-20260822-1304-slipway";
-import { COLLECTOR_CONDITION_CONFIG, computeCollectorWearPerSecond, getCollectorStageEffects } from "./systems/collectorCondition.js?v=fresh-20260822-1304-slipway";
-import { createCamera } from "./systems/camera.js?v=fresh-20260822-1304-slipway";
-import { createInput } from "./systems/input.js?v=fresh-20260822-1304-slipway";
-import { createAmbientLifeBatch, createGrazerAtFeast, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260822-1304-slipway";
-import { ROCKMOSS_CRAWLER_TYPE, ROCKMOSS_STRAINS, pickRockmossStrain } from "./systems/rockmossStrains.js?v=fresh-20260822-1304-slipway";
-import { GRAZING_DEFAULTS, advanceGrazing, findGrazingClusters, getGrazerSporeYield, isRipe } from "./systems/grazing.js?v=fresh-20260822-1304-slipway";
-import { createRandom, hashNumbers } from "./systems/random.js?v=fresh-20260822-1304-slipway";
-import { HAULER_PALETTES, RELIEF_HAULER_PALETTE, createNpcRouteShips, createRouteShip } from "./systems/npcRoutes.js?v=fresh-20260822-1304-slipway";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260822-1304-slipway";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260822-1304-slipway";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260822-1304-slipway";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260822-1304-slipway";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260822-1304-slipway";
-import { completeInternalProtectionResponse, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, getAvailablePatrolCraft, markPatrolCraftStatus, servicePatrolCraft, startInternalProtectionResponse } from "./systems/patrolOperations.js?v=fresh-20260822-1304-slipway";
-import { createPatrolRuntimeActor } from "./systems/patrolRuntime.js?v=fresh-20260822-1304-slipway";
-import { listPendingPatrolResponses } from "./systems/patrolDispatch.js?v=fresh-20260822-1304-slipway";
-import { closeProtectionRequestsForThreat, evaluateProtectionThreat, getPlayerProtectionJobsForSite, reviewProtectionRequests } from "./systems/protectionPlanning.js?v=fresh-20260822-1304-slipway";
-import { completePlayerProtectionRequest, completeProtectionContract, ensureProtectionProviders, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "./systems/protectionProviders.js?v=fresh-20260822-1304-slipway";
-import { fileAttackReport, nearestActiveReport, resolveAttackReport } from "./systems/securityReports.js?v=fresh-20260822-1304-slipway";
-import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260822-1304-slipway";
-import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260822-1304-slipway";
-import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260822-1304-slipway";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260822-1304-slipway";
-import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260822-1304-slipway";
-import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260822-1304-slipway";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260822-1304-slipway";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260822-1304-slipway";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260822-1304-slipway";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260822-1304-slipway";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260822-1304-slipway";
-import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260822-1304-slipway";
-import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260822-1304-slipway";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260822-1304-slipway";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260822-1304-slipway";
-import { createCommercialCraftPublicIdentity, createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260822-1304-slipway";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260822-1304-slipway";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260822-1304-slipway";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260822-1304-slipway";
-import { getContractGrantedClaimIds, getPlotRestriction } from "./systems/operatingRights.js?v=fresh-20260822-1304-slipway";
-import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260822-1304-slipway";
-import { createGameState } from "./state/gameState.js?v=fresh-20260822-1304-slipway";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260822-1304-slipway";
-import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260822-1304-slipway";
-import { terminateDestroyedActor } from "./systems/actorLifecycle.js?v=fresh-20260822-1304-slipway";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260822-1317-stage2";
+import { steerAroundObstacles } from "./systems/obstacleNavigation.js?v=fresh-20260822-1317-stage2";
+import { getHullOutline } from "./content/ships/hullOutlines.js?v=fresh-20260822-1317-stage2";
+import { getBuildProgress } from "./systems/shipyards.js?v=fresh-20260822-1317-stage2";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260822-1317-stage2";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260822-1317-stage2";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260822-1317-stage2";
+import { Ship } from "./entities/Ship.js?v=fresh-20260822-1317-stage2";
+import { ShipWreck } from "./entities/ShipWreck.js?v=fresh-20260822-1317-stage2";
+import { completeWreckSalvage, registerOwnedWreck } from "./systems/wreckRegistry.js?v=fresh-20260822-1317-stage2";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260822-1317-stage2";
+import { applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260822-1317-stage2";
+import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260822-1317-stage2";
+import { MINER_CONDITION_CONFIG, computeMinerWearPerShot, getMinerStageEffects } from "./systems/minerCondition.js?v=fresh-20260822-1317-stage2";
+import { COLLECTOR_CONDITION_CONFIG, computeCollectorWearPerSecond, getCollectorStageEffects } from "./systems/collectorCondition.js?v=fresh-20260822-1317-stage2";
+import { createCamera } from "./systems/camera.js?v=fresh-20260822-1317-stage2";
+import { createInput } from "./systems/input.js?v=fresh-20260822-1317-stage2";
+import { createAmbientLifeBatch, createGrazerAtFeast, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260822-1317-stage2";
+import { ROCKMOSS_CRAWLER_TYPE, ROCKMOSS_STRAINS, pickRockmossStrain } from "./systems/rockmossStrains.js?v=fresh-20260822-1317-stage2";
+import { GRAZING_DEFAULTS, advanceGrazing, findGrazingClusters, getGrazerSporeYield, isRipe } from "./systems/grazing.js?v=fresh-20260822-1317-stage2";
+import { createRandom, hashNumbers } from "./systems/random.js?v=fresh-20260822-1317-stage2";
+import { HAULER_PALETTES, RELIEF_HAULER_PALETTE, createNpcRouteShips, createRouteShip } from "./systems/npcRoutes.js?v=fresh-20260822-1317-stage2";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260822-1317-stage2";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260822-1317-stage2";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260822-1317-stage2";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260822-1317-stage2";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260822-1317-stage2";
+import { completeInternalProtectionResponse, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, getAvailablePatrolCraft, markPatrolCraftStatus, servicePatrolCraft, startInternalProtectionResponse } from "./systems/patrolOperations.js?v=fresh-20260822-1317-stage2";
+import { createPatrolRuntimeActor } from "./systems/patrolRuntime.js?v=fresh-20260822-1317-stage2";
+import { listPendingPatrolResponses } from "./systems/patrolDispatch.js?v=fresh-20260822-1317-stage2";
+import { closeProtectionRequestsForThreat, evaluateProtectionThreat, getPlayerProtectionJobsForSite, reviewProtectionRequests } from "./systems/protectionPlanning.js?v=fresh-20260822-1317-stage2";
+import { completePlayerProtectionRequest, completeProtectionContract, ensureProtectionProviders, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "./systems/protectionProviders.js?v=fresh-20260822-1317-stage2";
+import { fileAttackReport, nearestActiveReport, resolveAttackReport } from "./systems/securityReports.js?v=fresh-20260822-1317-stage2";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260822-1317-stage2";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260822-1317-stage2";
+import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260822-1317-stage2";
+import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "./content/transportation/firstReachNetwork.js?v=fresh-20260822-1317-stage2";
+import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260822-1317-stage2";
+import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260822-1317-stage2";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260822-1317-stage2";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260822-1317-stage2";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260822-1317-stage2";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260822-1317-stage2";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260822-1317-stage2";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260822-1317-stage2";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260822-1317-stage2";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260822-1317-stage2";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260822-1317-stage2";
+import { createCommercialCraftPublicIdentity, createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260822-1317-stage2";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260822-1317-stage2";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260822-1317-stage2";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260822-1317-stage2";
+import { getContractGrantedClaimIds, getPlotRestriction } from "./systems/operatingRights.js?v=fresh-20260822-1317-stage2";
+import { getNearbyWorldSite, getNearestWorldSite, getWorldSites, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260822-1317-stage2";
+import { createGameState } from "./state/gameState.js?v=fresh-20260822-1317-stage2";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260822-1317-stage2";
+import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260822-1317-stage2";
+import { terminateDestroyedActor } from "./systems/actorLifecycle.js?v=fresh-20260822-1317-stage2";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -8196,25 +8198,24 @@ export class Game {
 
   // The slipway, standing off the hub rather than across it.
   //
-  // It builds. A hull is drawn on the ways one line at a time, in the order a
-  // hull would actually go together — keel first, then bow and stern, then the
-  // deck and the works on top. What it is building is what the yard last sold,
-  // so a long-haul freighter reads longer on the ways than an ore worker. With
-  // nothing recently sold it keeps working anyway on a slow speculative cycle,
-  // the way the Maw keeps undulating: a yard with idle ways is a yard building
-  // stock, not a yard that has stopped.
+  // What is drawn on the ways is the ACTUAL craft being built, stroke by stroke,
+  // from the same outline the flying ship is drawn from — a freighter takes
+  // shape as the triangle every hauler in the world flies, then grows its cargo
+  // boxes; an ore worker grows its six-point body and then its cab. When the
+  // last line is laid the hull moves to the shed, and when somebody buys it, it
+  // leaves.
+  //
+  // The ways are STILL when nothing is being built. The first version animated
+  // forever, which made the yard look busy while it was doing nothing at all.
   drawShipyardFixtures(siteScreenX, siteScreenY) {
     const yard = this.state.logistics?.institutions?.["yard-shipyard"];
     if (!yard) return;
 
     const nowMs = Date.now();
-    const sinceSale = yard.lastSaleAt ? nowMs - yard.lastSaleAt : Infinity;
-    const launching = sinceSale < SHIPYARD_LAUNCH_MS;
-    // A real build races to completion and then holds lit; an idle yard cycles.
-    const progress = launching
-      ? Math.min(1, sinceSale / (SHIPYARD_LAUNCH_MS * 0.55))
-      : (nowMs % SHIPYARD_IDLE_CYCLE_MS) / SHIPYARD_IDLE_CYCLE_MS;
-    const longHull = (yard.lastSaleClass ?? "").includes("subspace");
+    const progress = getBuildProgress(yard, nowMs);
+    const building = progress != null;
+    const justLaunched = yard.lastSaleAt && nowMs - yard.lastSaleAt < SHIPYARD_LAUNCH_MS;
+    const readyCount = Object.values(yard.readyHulls ?? {}).reduce((sum, held) => sum + held, 0);
 
     this.context.save();
     this.context.translate(siteScreenX + SHIPYARD_OFFSET_X, siteScreenY + SHIPYARD_OFFSET_Y);
@@ -8222,58 +8223,73 @@ export class Game {
     this.context.textAlign = "center";
     this.context.lineWidth = 2;
 
-    // The ways themselves: two rails the hull sits across, open to the right so
-    // a finished hull reads as leaving toward the hub.
-    this.context.strokeStyle = launching ? "rgba(255, 210, 122, 0.85)" : "rgba(255, 210, 122, 0.4)";
-    [-16, 16].forEach((y) => {
+    // The ways: two rails and the gantry legs over them.
+    this.context.strokeStyle = building ? "rgba(255, 210, 122, 0.75)" : "rgba(255, 210, 122, 0.3)";
+    [-22, 22].forEach((y) => {
       this.context.beginPath();
-      this.context.moveTo(-62, y);
-      this.context.lineTo(52, y);
+      this.context.moveTo(-58, y);
+      this.context.lineTo(58, y);
       this.context.stroke();
     });
-    // Gantry legs over the ways.
-    [-54, -18, 18].forEach((x) => {
+    [-50, 0, 50].forEach((x) => {
       this.context.beginPath();
       this.context.moveTo(x, -30);
       this.context.lineTo(x, 30);
       this.context.stroke();
     });
 
-    this.drawHullUnderConstruction(progress, longHull, launching);
+    if (building) this.drawCraftUnderConstruction(yard.build.hullClass, progress);
 
-    this.context.fillStyle = launching ? "rgba(255, 240, 210, 0.95)" : "rgba(255, 232, 186, 0.7)";
-    this.context.fillText(launching ? "SLIPWAY \u2014 LAUNCH" : "SLIPWAY", -5, 46);
+    // What is finished and waiting for a buyer, shown as marks under the ways.
+    for (let index = 0; index < readyCount; index += 1) {
+      this.context.strokeStyle = "rgba(158, 232, 255, 0.7)";
+      this.context.beginPath();
+      this.context.arc(-40 + index * 14, 40, 4, 0, Math.PI * 2);
+      this.context.stroke();
+    }
+
+    this.context.fillStyle = building
+      ? "rgba(255, 246, 214, 0.95)"
+      : justLaunched ? "rgba(158, 232, 255, 0.95)" : "rgba(255, 232, 186, 0.55)";
+    const label = building
+      ? `BUILDING ${getHullOutline(yard.build.hullClass).label.toUpperCase()}`
+      : justLaunched ? "DELIVERED"
+      : yard.waitingOnParts ? "SLIPWAY \u2014 AWAITING PARTS"
+      : "SLIPWAY";
+    this.context.fillText(label, 0, -40);
     this.context.restore();
   }
 
-  // The hull itself, revealed a line at a time. Each entry is one stroke; they
-  // appear in build order, and the one currently being laid glows.
-  drawHullUnderConstruction(progress, longHull, launching) {
-    const nose = longHull ? 44 : 32;
-    const lines = [
-      [[-48, 8], [nose, 8]],                    // keel
-      [[-48, 8], [-48, -6]],                    // stern post
-      [[nose, 8], [nose - 10, -6]],             // bow rake
-      [[-48, -6], [nose - 10, -6]],             // main deck
-      [[-30, -6], [-30, -16]],                  // house, forward frame
-      [[-8, -6], [-8, -16]],                    // house, after frame
-      [[-30, -16], [-8, -16]],                  // house roof
-      [[6, -6], [18, -14]],                     // mast
-    ];
+  // The craft itself, revealed one stroke at a time from its real outline. The
+  // stroke currently being laid glows; the ones already down do not.
+  drawCraftUnderConstruction(hullClass, progress) {
+    const outline = getHullOutline(hullClass);
+    const strokes = outline.strokes;
+    const laid = progress * strokes.length;
 
-    const laid = progress * lines.length;
-    lines.forEach((line, index) => {
+    this.context.save();
+    this.context.scale(1.35, 1.35);   // the ways are close work; make it legible
+    strokes.forEach((stroke, index) => {
       if (index > laid) return;
       const fresh = index > laid - 1;
-      this.context.strokeStyle = fresh
-        ? "rgba(255, 246, 214, 0.95)"
-        : launching ? "rgba(255, 210, 122, 0.9)" : "rgba(255, 210, 122, 0.55)";
-      this.context.lineWidth = fresh ? 3 : 2;
+      this.context.strokeStyle = fresh ? "rgba(255, 250, 226, 0.98)" : "rgba(255, 210, 122, 0.85)";
+      this.context.lineWidth = fresh ? 2.4 : 1.6;
+
+      if (stroke === "drive-ring") {
+        this.context.beginPath();
+        this.context.arc(9, 0, 5.5, 0, Math.PI * 2);
+        this.context.stroke();
+        return;
+      }
+
       this.context.beginPath();
-      this.context.moveTo(line[0][0], line[0][1]);
-      this.context.lineTo(line[1][0], line[1][1]);
+      stroke.forEach((point, pointIndex) => {
+        if (pointIndex === 0) this.context.moveTo(point[0], point[1]);
+        else this.context.lineTo(point[0], point[1]);
+      });
       this.context.stroke();
     });
+    this.context.restore();
     this.context.lineWidth = 2;
   }
 

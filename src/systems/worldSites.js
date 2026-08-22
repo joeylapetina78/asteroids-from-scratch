@@ -1,4 +1,4 @@
-﻿import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260822-1304-slipway";
+﻿import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260822-1317-stage2";
 
 export const WORLD_SITES = [
   // "" STORY HUBS """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""

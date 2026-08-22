@@ -1,8 +1,8 @@
-import { ACTOR_ROLE, getActorRecord, listActors } from "./actorRegistry.js?v=fresh-20260822-1304-slipway";
-import { getActorCapabilityPortfolio } from "./assetCapabilities.js?v=fresh-20260822-1304-slipway";
-import { getPopulationLaborSummary } from "./populationLabor.js?v=fresh-20260822-1304-slipway";
-import { getHubTerritory } from "./hubTerritories.js?v=fresh-20260822-1304-slipway";
-import { getHubSimulationRecord } from "./simulationMode.js?v=fresh-20260822-1304-slipway";
+import { ACTOR_ROLE, getActorRecord, listActors } from "./actorRegistry.js?v=fresh-20260822-1317-stage2";
+import { getActorCapabilityPortfolio } from "./assetCapabilities.js?v=fresh-20260822-1317-stage2";
+import { getPopulationLaborSummary } from "./populationLabor.js?v=fresh-20260822-1317-stage2";
+import { getHubTerritory } from "./hubTerritories.js?v=fresh-20260822-1317-stage2";
+import { getHubSimulationRecord } from "./simulationMode.js?v=fresh-20260822-1317-stage2";
 
 // The coherent settlement actor.
 //

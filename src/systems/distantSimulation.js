@@ -1,10 +1,10 @@
-import { DETAIL, resolveDetailLevel, setSimulationFocus } from "./detailLevel.js?v=fresh-20260822-1304-slipway";
-import { getEconomySamples } from "./economySampler.js?v=fresh-20260822-1304-slipway";
-import { advanceRegionFlow, createRegionFlow } from "./regionFlow.js?v=fresh-20260822-1304-slipway";
-import { listHubActors } from "./hubActors.js?v=fresh-20260822-1304-slipway";
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1304-slipway";
-import { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1304-slipway";
-import { clearRegionalTrade } from "./regionalClearing.js?v=fresh-20260822-1304-slipway";
+import { DETAIL, resolveDetailLevel, setSimulationFocus } from "./detailLevel.js?v=fresh-20260822-1317-stage2";
+import { getEconomySamples } from "./economySampler.js?v=fresh-20260822-1317-stage2";
+import { advanceRegionFlow, createRegionFlow } from "./regionFlow.js?v=fresh-20260822-1317-stage2";
+import { listHubActors } from "./hubActors.js?v=fresh-20260822-1317-stage2";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1317-stage2";
+import { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1317-stage2";
+import { clearRegionalTrade } from "./regionalClearing.js?v=fresh-20260822-1317-stage2";
 
 export { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated };
 export const DISTANT_DEFAULTS = Object.freeze({ aggregateAfterMs: 30_000 });

@@ -1,4 +1,4 @@
-import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1304-slipway";
+import { getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1317-stage2";
 
 export const POWER_TYPES = Object.freeze({
   DEFINE_PLACE: "define-place",

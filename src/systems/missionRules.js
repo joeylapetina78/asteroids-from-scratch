@@ -1,4 +1,4 @@
-import { resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260822-1304-slipway";
+import { resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260822-1317-stage2";
 
 export function matchesEventRule(rule, event, { state, flags }) {
   const ruleFlags = flags ?? state.journey.flags;
