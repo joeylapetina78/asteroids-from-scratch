@@ -776,7 +776,15 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     const claimed = new Set(Object.values(round.assignments).map((entry) => entry.offer?.id).filter(Boolean));
 
     Object.values(getMiningOrderBook(state)).forEach((order) => {
-      if (order.withheld || !(order.amount > 0) || claimed.has(order.id)) return;
+      if (order.withheld || !(order.amount > 0)) return;
+      // Somebody is on it: the hunger clock stops. It only ever stops here —
+      // not when a miner merely finds the price acceptable, because a hub whose
+      // order is acceptable and STILL not taken is no less short than before.
+      if (claimed.has(order.id)) {
+        const entry = state.miningOrderRates[order.id];
+        if (entry) entry.unservedSince = null;
+        return;
+      }
       const valuations = idleWorkers.map((worker) => valueOrderForWorker(order, worker.position, operation.ships[worker.id]));
       // One idle miner willing to take it means it is not underpriced — it will
       // be taken. Only a unanimous refusal is evidence the price is too low.
@@ -790,14 +798,20 @@ export function createMiningOperation({ state, game, sprcOperation = null, now =
     // `repricedAt: null` means "never repriced" and is always eligible, so a
     // fresh order can be raised at once regardless of the clock's magnitude —
     // rather than depending on now() being a real wall-clock timestamp.
-    const entry = state.miningOrderRates[order.id] ??= { rate: 0, repricedAt: null };
+    const entry = state.miningOrderRates[order.id] ??= { rate: 0, repricedAt: null, unservedSince: null };
+    // How long this hub has gone unanswered has to be remembered HERE. The order
+    // book is rebuilt on every read, so `order.at` is always the moment of the
+    // read — it measured zero every time, and the chase curve could never leave
+    // its opening offer. This entry survives the rebuild; that is why the price
+    // it carries survives too.
+    entry.unservedSince ??= now();
     if (entry.repricedAt != null && now() - entry.repricedAt < MINING_REPRICE_INTERVAL_MS) return;
     entry.repricedAt = now();
     const current = order.paymentPerUnit;
     // What this buyer will chase — its own character against its own hunger,
     // and how long that hunger has gone unanswered. No fixed ceiling: the bound
     // below is what it can actually pay.
-    const secondsUnserved = Math.max(0, (now() - (order.at ?? now())) / 1000);
+    const secondsUnserved = Math.max(0, (now() - entry.unservedSince) / 1000);
     const multiple = chaseMultiple({
       traits: getActorTraits(state, order.buyerInstitutionId),
       inventory: order.inventory ?? {},
