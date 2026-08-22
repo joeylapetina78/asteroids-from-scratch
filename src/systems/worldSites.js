@@ -1,4 +1,4 @@
-﻿import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260822-1326-partsmkt";
+﻿import { storySites, yardExchangeServices } from "../content/storyWorld.js?v=fresh-20260822-1330-factories";
 
 export const WORLD_SITES = [
   // "" STORY HUBS """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
