@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260822-1344-layout";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260822-1344-layout";
+import { getNpcName } from "../npcs.js?v=fresh-20260906-1546-6ff13f29";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260906-1546-6ff13f29";
 
 const COMMON_FRONTIER_ORE_VALUES = Object.freeze({
   "water-ice": 30,
@@ -227,6 +227,24 @@ export const hubServiceDefinitions = {
           description:
             "Converts collected resources into fuel, charges, or scanergy as they arrive. Set output in the panel.",
           tags: ["Converts resources", "Passive output", "Configurable"],
+        },
+        {
+          id: "rook-standard-braking-drive",
+          stockGroup: "restock-1",
+          componentId: "engine",
+          componentName: "Rook Standard Drive",
+          upgradeId: "rook-standard-drive",
+          price: 650,
+          title: "Rook Standard Braking Drive",
+          description:
+            "Trades reverse thrust for a conventional S-key brake. Simple, forgiving, and easy to service.",
+          tags: ["S brake", "Conventional control", "Complete drive"],
+          apply: {
+            engine: {
+              engineModelId: "rook-standard-drive",
+              thrustMode: "forward",
+            },
+          },
         },
         {
           id: "engine-speed-mk2",

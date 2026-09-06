@@ -15,13 +15,13 @@
 //   WHO IS DOING IT   supplier — null while it is still up for grabs
 //   WHERE IS IT       one of available / taken / done / blocked
 
-import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260822-1344-layout";
-import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260822-1344-layout";
-import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260822-1344-layout";
-import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260822-1344-layout";
-import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js?v=fresh-20260822-1344-layout";
-import { ensureGateBounty } from "./gateBounty.js?v=fresh-20260822-1344-layout";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260906-1546-6ff13f29";
+import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260906-1546-6ff13f29";
+import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260906-1546-6ff13f29";
+import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260906-1546-6ff13f29";
+import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js?v=fresh-20260906-1546-6ff13f29";
+import { ensureGateBounty } from "./gateBounty.js?v=fresh-20260906-1546-6ff13f29";
 
 export const CONTRACT_STATE = Object.freeze({
   AVAILABLE: "available",   // posted, nobody has taken it
@@ -78,7 +78,7 @@ function entry(state, fields) {
     eligibility: null, reservationMode: null, settlementMode: null,
     resourceId: null, family: null,
     units: null, effectiveUnits: null, remainingUnits: null, unitPrice: null, effectiveUnitPrice: null, value: null,
-    goodsPayment: null, servicePayment: null,
+    goodsPayment: null, servicePayment: null, bidDiagnostics: null,
     createdAt: null, closedAt: null,
     detail: null, note: null, at: null,
     ...fields,
@@ -236,6 +236,29 @@ function collectFreight(state) {
   listOrders(state, { status: PROCUREMENT_STATUS.READY })
     .filter((order) => !shippedOrders.has(order.id))
     .forEach((order) => {
+      // Procurement exposes the purchase as HPO-#### while logistics names
+      // the derived freight offer procurement-HPO-####. Accept both because
+      // the board joins the commercial agreement to its transport auction.
+      const market = state.logistics?.carrierBidDiagnostics?.[order.id]
+        ?? state.logistics?.carrierBidDiagnostics?.[`procurement-${order.id}`]
+        ?? null;
+      const bidDiagnostics = (market?.bids ?? []).map((bid) => ({
+        shipId: bid.shipId,
+        shipName: nameFromState(state, bid.shipId) ?? actorLabel(state, bid.shipId),
+        eligible: Boolean(bid.eligible),
+        stage: bid.stage ?? "bid",
+        winner: market.winnerShipId === bid.shipId,
+        rejectionReason: bid.rejectionReason ?? null,
+        committed: Boolean(bid.committed),
+        askingPrice: bid.askingPrice ?? null,
+        offeredPrice: bid.offeredPrice ?? null,
+        costToServe: bid.costToServe ?? null,
+        approachCost: bid.approachCost ?? null,
+        repositionDistance: bid.repositionDistance ?? null,
+        currentWear: bid.currentWear ?? null,
+        sponsorPriority: bid.sponsorPriority ?? null,
+        localSponsoredService: Boolean(bid.localSponsoredService),
+      }));
       rows.push(entry(state, {
         id: `freight:${order.id}`,
         kind: CONTRACT_KIND.FREIGHT,
@@ -254,8 +277,11 @@ function collectFreight(state) {
         remainingUnits: order.units,
         value: order.freightBudget,
         servicePayment: order.freightBudget ?? null,
+        bidDiagnostics,
         createdAt: order.readyAt ?? order.createdAt ?? null,
-        note: `awaiting a carrier · ${order.freightBudget} cr offered`,
+        note: `awaiting a carrier · ${order.freightBudget} cr offered${market
+          ? ` · ${bidDiagnostics.filter((bid) => bid.eligible).length}/${bidDiagnostics.length} eligible${market.winnerShipId ? ` · winner ${nameFromState(state, market.winnerShipId) ?? market.winnerShipId}` : " · no winner"}`
+          : " · not yet auctioned"}`,
         at: order.readyAt ?? null,
       }));
     });

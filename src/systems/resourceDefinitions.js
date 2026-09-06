@@ -22,9 +22,9 @@ export const FAMILIES = {
 // shade within their lane; keep new materials inside their role's lane.
 export const FAMILY_MEMBERS = {
   volatile: [
-    { id: "water-ice",   color: "#b8eaff", weight: 3, value: 30, institutionalFeedstockValue: 30, effectiveYield: 1, processOutputs: { fuel: 250, "hull-repair": 4 } },
-    { id: "methane-ice", color: "#7cd9e8", weight: 2, value: 50, institutionalFeedstockValue: 38, effectiveYield: 1.25, processOutputs: { fuel: 320, "hull-repair": 4 } },
-    { id: "hydrogen",    color: "#6fb5ff", weight: 1, value: 80, processOutputs: { fuel: 400, "hull-repair": 4 } },
+    { id: "water-ice",   color: "#29b6d8", weight: 3, value: 30, institutionalFeedstockValue: 30, effectiveYield: 1, processOutputs: { fuel: 250, "hull-repair": 4 } },
+    { id: "methane-ice", color: "#168ca8", weight: 2, value: 50, institutionalFeedstockValue: 38, effectiveYield: 1.25, processOutputs: { fuel: 320, "hull-repair": 4 } },
+    { id: "hydrogen",    color: "#3274c5", weight: 1, value: 80, processOutputs: { fuel: 400, "hull-repair": 4 } },
   ],
   // Structural is the efficient hull-patch material, and hull-repair yields keep
   // SPRC's structural equivalence ratio (iron-nickel 1 : aluminum 2 : titanium 3)
@@ -32,33 +32,34 @@ export const FAMILY_MEMBERS = {
   // Absolute yields are 4x the original tuning: ~5 iron-nickel now fills the
   // 100-point reserve instead of ~20, making a patch far cheaper in material.
   structural: [
-    { id: "iron-nickel", color: "#ff7452", weight: 3, value: 20, institutionalFeedstockValue: 20, effectiveYield: 1, processOutputs: { ammo: 250, "hull-repair": 20 } },
-    { id: "aluminum",    color: "#f0b46a", weight: 2, value: 35, institutionalFeedstockValue: 30, effectiveYield: 1.5, processOutputs: { ammo: 300, "hull-repair": 40 } },
-    { id: "titanium",    color: "#c07840", weight: 1, value: 60, processOutputs: { ammo: 400, "hull-repair": 60 } },
+    { id: "iron-nickel", color: "#d93b24", weight: 3, value: 20, institutionalFeedstockValue: 20, effectiveYield: 1, processOutputs: { ammo: 250, "hull-repair": 20 } },
+    { id: "aluminum",    color: "#c77222", weight: 2, value: 35, institutionalFeedstockValue: 30, effectiveYield: 1.5, processOutputs: { ammo: 300, "hull-repair": 40 } },
+    { id: "titanium",    color: "#87451f", weight: 1, value: 60, processOutputs: { ammo: 400, "hull-repair": 60 } },
   ],
   industrial: [
-    { id: "silicate",     color: "#d4b896", weight: 3, value: 15, institutionalFeedstockValue: 15, effectiveYield: 1, processOutputs: { ammo: 180, "hull-repair": 8 } },
-    { id: "carbonaceous", color: "#8a7060", weight: 2, value: 25, institutionalFeedstockValue: 8, effectiveYield: 0.65, processOutputs: { ammo: 220, fuel: 100, "hull-repair": 12 } },
+    { id: "silicate",     color: "#9a642e", weight: 3, value: 15, institutionalFeedstockValue: 15, effectiveYield: 1, processOutputs: { ammo: 180, "hull-repair": 8 } },
+    { id: "carbonaceous", color: "#5e382a", weight: 2, value: 25, institutionalFeedstockValue: 8, effectiveYield: 0.65, processOutputs: { ammo: 220, fuel: 100, "hull-repair": 12 } },
   ],
   conductor: [
-    { id: "copper", color: "#a066ff", weight: 3, value: 50, processOutputs: { scanergy: 250, "hull-repair": 4 } },
-    { id: "cobalt", color: "#6a48e0", weight: 2, value: 80, processOutputs: { scanergy: 350, "hull-repair": 4 } },
-    { id: "silver", color: "#cdb4ff", weight: 1, value: 120, processOutputs: { scanergy: 450, "hull-repair": 4 } },
+    { id: "copper", color: "#7a2bd1", weight: 3, value: 50, processOutputs: { scanergy: 250, "hull-repair": 4 } },
+    { id: "cobalt", color: "#4c28a8", weight: 2, value: 80, processOutputs: { scanergy: 350, "hull-repair": 4 } },
+    { id: "silver", color: "#9853c8", weight: 1, value: 120, processOutputs: { scanergy: 450, "hull-repair": 4 } },
   ],
   energy: [
-    { id: "uranium", color: "#a0e040", weight: 2, value: 90, processOutputs: { fuel: 650, "hull-repair": 4 } },
-    { id: "thorium", color: "#60e0a0", weight: 1, value: 160, processOutputs: { fuel: 900, "hull-repair": 4 } },
+    { id: "uranium", color: "#72b51c", weight: 2, value: 90, processOutputs: { fuel: 650, "hull-repair": 4 } },
+    { id: "thorium", color: "#1fa56b", weight: 1, value: 160, processOutputs: { fuel: 900, "hull-repair": 4 } },
   ],
   advanced: [
-    { id: "lithium",    color: "#30f0a0", weight: 3, value: 130, processOutputs: { ammo: 450, scanergy: 300, "hull-repair": 12 } },
-    { id: "rare-earth", color: "#e050d0", weight: 2, value: 220, processOutputs: { scanergy: 700, "hull-repair": 4 } },
-    { id: "platinum",   color: "#d8e8f8", weight: 1, value: 300, processOutputs: { "hull-repair": 4 } },
+    { id: "lithium",    color: "#00b878", weight: 3, value: 130, processOutputs: { ammo: 450, scanergy: 300, "hull-repair": 12 } },
+    { id: "rare-earth", color: "#b21a9a", weight: 2, value: 220, processOutputs: { scanergy: 700, "hull-repair": 4 } },
+    { id: "platinum",   color: "#82909e", weight: 1, value: 300, processOutputs: { "hull-repair": 4 } },
   ],
   strange: [
-    { id: "crystal-matrix", color: "#ff6fd8", weight: 2, value: 200, processOutputs: { "hull-repair": 4 } },
-    { id: "anomaly-shard",  color: "#ff3080", weight: 1, value: 450, processOutputs: { "hull-repair": 4 } },
-    { id: "rift-trophy", color: "#ffd86f", weight: 0, value: 0, processOutputs: {} },
-    { id: "rockmoss-crawler", color: "#72ffc9", weight: 0, value: 0, processOutputs: {} },
+    { id: "crystal-matrix", color: "#cf168e", weight: 2, value: 200, processOutputs: { "hull-repair": 4 } },
+    { id: "anomaly-shard",  color: "#e00056", weight: 1, value: 450, processOutputs: { "hull-repair": 4 } },
+    { id: "stabilized-anomaly-sample", color: "#a31878", weight: 0, value: 100, processOutputs: {} },
+    { id: "rift-trophy", color: "#d49a12", weight: 0, value: 0, processOutputs: {} },
+    { id: "rockmoss-crawler", color: "#22b780", weight: 0, value: 0, processOutputs: {} },
   ],
 };
 

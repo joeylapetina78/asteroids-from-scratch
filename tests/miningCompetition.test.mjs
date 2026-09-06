@@ -3,7 +3,7 @@ import test from "node:test";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { createMiningOperation } from "../src/systems/miningOperation.js";
-import { CINDER_MINING_SEED, FLINT_MINING_SEED } from "../src/content/economy/miningInstitutions.js";
+import { CINDER_MINING_SEED, FLINT_MINING_SEED, FRONTIER_MINING_SEEDS } from "../src/content/economy/miningInstitutions.js";
 import { findActorRecord } from "../src/systems/actorConfig.js";
 import { createExtractionOffer, registerExtractionOfferSource } from "../src/systems/extractionOffers.js";
 
@@ -42,6 +42,16 @@ test("a second mining institution enters the same extraction market from data", 
     .filter((allocation) => allocation.status === "active");
   assert.equal(new Set(allocations.map((allocation) => allocation.orderId)).size, allocations.length,
     "the companies compete for shared work instead of double-booking it");
+});
+
+test("each cut-off frontier hub starts with a physical local extraction operator", () => {
+  assert.deepEqual(FRONTIER_MINING_SEEDS.map((seed) => seed.homeSiteId),
+    ["ore-station-one", "coldwater-depot", "deep-research"]);
+  FRONTIER_MINING_SEEDS.forEach((seed) => {
+    assert.equal(seed.workers.length, 1);
+    assert.equal(seed.workers[0].currentSiteId, seed.homeSiteId);
+    assert.ok(seed.institution.accounts.operating.balance > 0);
+  });
 });
 
 test("an extraction offer declares its physical acceptance and reservation semantics", () => {

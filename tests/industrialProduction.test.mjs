@@ -4,6 +4,7 @@ import { createGameState } from "../src/state/gameState.js";
 import { createIndustrialProductionOperation } from "../src/systems/industrialProduction.js";
 import { createHubProcurementOperation, PROCUREMENT_STATUS } from "../src/systems/hubProcurement.js";
 import { createSprcOperation } from "../src/systems/sprcOperation.js";
+import { getDiagnostic } from "../src/systems/diagnostics.js";
 
 test("regional factories turn their advantaged local feedstock into freightable repair parts", () => {
   const state = createGameState();
@@ -32,6 +33,33 @@ test("regional factories turn their advantaged local feedstock into freightable 
   }
   procurement.decide();
   assert.equal(order.status, PROCUREMENT_STATUS.READY, "produced parts are titled and offered to freight");
+});
+
+test("parts orders report factory production and feedstock instead of pretending parts are mined", () => {
+  const state = createGameState();
+  let clock = 1_000;
+  const industry = createIndustrialProductionOperation({ state, now: () => clock });
+  const procurement = createHubProcurementOperation({ state, now: () => clock });
+  state.logistics.institutions["yard-exchange"].inventories["iron-nickel"] = 20;
+  state.sprc.repairOrders.TEST = {
+    id: "TEST", status: "waiting-stock",
+    requirements: { produced: { "hull-plate": 2 }, raw: {} },
+    reserved: { produced: {}, raw: {} },
+  };
+
+  industry.decide();
+  procurement.settle();
+  const working = getDiagnostic(state, "yard-exchange");
+  assert.equal(working.state, "working");
+  assert.match(working.summary, /plate works is producing hull plate/i);
+  assert.doesNotMatch(working.summary, /mined against/i);
+
+  state.industrial.factories["yard-plate-works"].activeRun = null;
+  state.logistics.institutions["yard-exchange"].inventories["iron-nickel"] = 0;
+  procurement.settle();
+  const starved = getDiagnostic(state, "yard-exchange");
+  assert.equal(starved.blocker.kind, "awaiting-material");
+  assert.match(starved.waitingFor, /iron nickel/i);
 });
 
 test("Sal builds an opening buffer through larger orders spread across independent factories", () => {

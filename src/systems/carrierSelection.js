@@ -33,7 +33,8 @@ export function scoreCarrierBid(bid) {
   const offeredPrice = bid.offeredPrice ?? 0;
   const askingPrice = bid.askingPrice ?? offeredPrice;
   const economicSurplus = offeredPrice - askingPrice;
-  return economicSurplus + relationshipPreference(bid.relationship, bid.relationshipWeight);
+  return economicSurplus + relationshipPreference(bid.relationship, bid.relationshipWeight)
+    + (Number.isFinite(bid.servicePreference) ? bid.servicePreference : 0);
 }
 
 // A stable, arbitrary tiebreak for two bids a ranking values identically.

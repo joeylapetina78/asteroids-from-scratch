@@ -69,6 +69,28 @@ test("unclaimed work reads as available and claimed work reads as taken", () => 
   assert.ok(taken.every((contract) => contract.supplierId), "everything being worked names its worker");
 });
 
+test("an unclaimed freight row exposes every carrier's auction result", () => {
+  const { state } = createWorld();
+  const ready = listOrders(state).find((order) => order.status === PROCUREMENT_STATUS.READY);
+  assert.ok(ready, "seed world includes ready freight");
+  state.logistics.carrierBidDiagnostics ??= {};
+  state.logistics.carrierBidDiagnostics[`procurement-${ready.id}`] = {
+    templateId: `procurement-${ready.id}`,
+    winnerShipId: null,
+    bids: [
+      { shipId: "hauler-one", eligible: false, rejectionReason: "outside-community-territory", askingPrice: 900, offeredPrice: 500, costToServe: 400, approachCost: 120, currentWear: 9 },
+      { shipId: "hauler-two", eligible: true, askingPrice: 450, offeredPrice: 500, costToServe: 300, committed: true },
+    ],
+  };
+
+  const freight = listContracts(state).find((contract) => contract.id === `freight:${ready.id}`);
+  assert.equal(freight.bidDiagnostics.length, 2);
+  assert.equal(freight.bidDiagnostics[0].rejectionReason, "outside-community-territory");
+  assert.equal(freight.bidDiagnostics[1].eligible, true);
+  assert.match(freight.note, /1\/2 eligible/);
+  assert.match(freight.note, /no winner/);
+});
+
 test("a supplier is shown by name, not by id", () => {
   const { state } = createWorld();
   const worked = listContracts(state)

@@ -11,9 +11,13 @@ import {
   GRAZING_DEFAULTS,
   GRAZING_STAGE,
   advanceGrazing,
+  condenseDistantApexGrazers,
+  condenseGrazerPopulation,
+  enforceEcologicalBiomassBudget,
   findGrazingClusters,
   getGrazeFieldRadius,
   getGrazerSporeYield,
+  getGrazerBiomass,
   getGrowthScale,
   isFilterFeeder,
   isEdible,
@@ -67,6 +71,10 @@ test("a fresh drop is not food yet", () => {
 test("nothing is touched while it lies fresh, however hungry the field is", () => {
   const assignments = planGrazing([grazer()], [pickup({ age: 0, x: 10 })], { shipPosition: FAR_FROM_SHIP });
   assert.equal(assignments.length, 0, "cracking a rock and scooping it up is never disturbed");
+});
+
+test("pink anomaly stars are grazer food once abandoned", () => {
+  assert.equal(isEdible(pickup({ type: "anomaly-shard" })), true);
 });
 
 test("assignment planning can be throttled without interrupting an existing meal", () => {
@@ -172,6 +180,118 @@ test("eating fattens the creature, and a fed one eventually goes ripe", () => {
   assert.ok(isRipe(hungry), "fed enough to be worth harvesting");
   assert.ok(getGrazerSporeYield(hungry) > 0, "and carrying spores to show for it");
   assert.ok(getGrowthScale(hungry) > 1, "and visibly bigger than it started");
+});
+
+test("a crowded hungry shoal condenses into fewer, larger grazers", () => {
+  const predator = fedGrazer({ x: 0, fullness: GRAZING_DEFAULTS.maxFullness });
+  const crowd = [predator, ...Array.from({ length: GRAZING_DEFAULTS.predationCrowdSize - 1 },
+    (unused, index) => fedGrazer({ x: 20 + index * 3, seed: index + 2, fullness: index % 3 }))];
+
+  const eaten = condenseGrazerPopulation(crowd, {
+    shipPosition: FAR_FROM_SHIP,
+    maxPredations: 3,
+  });
+
+  assert.equal(eaten.length, 1, "one large grazer takes one neighbour per ecological pulse");
+  assert.equal(eaten[0].prey.isAlive, false);
+  assert.ok(predator.fullness > GRAZING_DEFAULTS.maxFullness, "the survivor carries condensed biomass");
+  assert.ok(getGrowthScale(predator) > GRAZING_DEFAULTS.maxGrowthScale, "and visibly enters its giant stage");
+});
+
+test("large grazers eat one another even while forage remains", () => {
+  const crowd = Array.from({ length: GRAZING_DEFAULTS.predationCrowdSize },
+    (unused, index) => fedGrazer({ x: index * 3, seed: index, fullness: index === 0 ? 9 : 8 }));
+  const eaten = condenseGrazerPopulation(crowd, {
+    shipPosition: FAR_FROM_SHIP,
+    ediblePickupCount: 99,
+    maxPredations: 1,
+  });
+  assert.equal(eaten.length, 1, "resources no longer call a truce between overlapping adults");
+  assert.ok(eaten[0].prey.fullness >= GRAZING_DEFAULTS.ripeAt, "the prey is another large grazer");
+});
+
+test("grazers do not cannibalize under the player's nose", () => {
+  const crowd = Array.from({ length: GRAZING_DEFAULTS.predationCrowdSize },
+    (unused, index) => fedGrazer({ x: index * 3, seed: index, fullness: index === 0 ? 8 : 0 }));
+  assert.deepEqual(condenseGrazerPopulation(crowd, { shipPosition: { x: 0, y: 0 } }), [],
+    "the player can observe a shoal without it silently eating itself nearby");
+});
+
+test("a cannibal must catch its rival before biomass transfers", () => {
+  const predator = fedGrazer({ x: 0, seed: 9, fullness: 9 });
+  const rival = fedGrazer({ x: 500, seed: 2, fullness: 8 });
+  const crowd = [predator, rival, ...Array.from({ length: GRAZING_DEFAULTS.predationCrowdSize - 2 },
+    (unused, index) => fedGrazer({ x: 2000 + index, seed: 20 + index, fullness: 0 }))];
+  const before = predator.fullness;
+  assert.deepEqual(condenseGrazerPopulation(crowd, { shipPosition: FAR_FROM_SHIP }), []);
+  assert.equal(predator.grazerPredationTarget, rival, "the chase is visible in entity steering");
+  assert.equal(predator.fullness, before, "targeting is not eating from across the field");
+});
+
+test("apex growth concentrates ecology without compounding spore wealth", () => {
+  const ordinary = fedGrazer({ fullness: GRAZING_DEFAULTS.maxFullness });
+  const apex = fedGrazer({ fullness: GRAZING_DEFAULTS.apexFullness });
+  assert.equal(getGrazerSporeYield(apex), getGrazerSporeYield(ordinary),
+    "cannibalism changes the creature, not the number of rewards it prints");
+  assert.ok(getGrowthScale(apex) > getGrowthScale(ordinary));
+});
+
+test("grazer growth has no final cap but requires exponentially more biomass", () => {
+  const oldGiant = fedGrazer({ fullness: GRAZING_DEFAULTS.apexFullness });
+  const ancient = fedGrazer({ fullness: GRAZING_DEFAULTS.apexFullness * 20 });
+  const olderStill = fedGrazer({ fullness: GRAZING_DEFAULTS.apexFullness * 200 });
+  assert.ok(getGrowthScale(ancient) > getGrowthScale(oldGiant));
+  assert.ok(getGrowthScale(olderStill) > getGrowthScale(ancient));
+  assert.ok(getGrowthScale(olderStill) - getGrowthScale(ancient)
+    < getGrowthScale(ancient) - getGrowthScale(oldGiant), "each comparable size gain costs much more biomass");
+});
+
+test("cannibal growth diminishes as the predator becomes enormous", () => {
+  const feedOne = (fullness) => {
+    const predator = fedGrazer({ x: 0, seed: 99, fullness });
+    const prey = fedGrazer({ x: 1, seed: 1, fullness: 8 });
+    const crowd = [predator, prey, ...Array.from({ length: GRAZING_DEFAULTS.predationCrowdSize - 2 },
+      (unused, index) => fedGrazer({ x: 2000 + index, seed: 200 + index }))];
+    condenseGrazerPopulation(crowd, { shipPosition: FAR_FROM_SHIP, maxPredations: 1 });
+    return predator.fullness - fullness;
+  };
+  assert.ok(feedOne(12) > feedOne(120), "the same prey adds much less biomass to an old giant");
+});
+
+test("each ecological locality has a hard biomass budget", () => {
+  const herd = Array.from({ length: 40 }, (unused, index) =>
+    fedGrazer({ x: 100 + index, seed: index, fullness: 8 }));
+  const result = enforceEcologicalBiomassBudget(herd, { shipPosition: FAR_FROM_SHIP });
+  const remaining = herd.filter((grazer) => grazer.isAlive)
+    .reduce((sum, grazer) => sum + getGrazerBiomass(grazer), 0);
+  assert.ok(result.culled.length > 0);
+  assert.ok(remaining <= GRAZING_DEFAULTS.localityBiomassBudget);
+});
+
+test("biomass budgets are local rather than one global life ceiling", () => {
+  const first = fedGrazer({ x: 0, fullness: 8 });
+  const second = fedGrazer({ x: GRAZING_DEFAULTS.localitySize + 10, fullness: 8 });
+  const result = enforceEcologicalBiomassBudget([first, second], { shipPosition: FAR_FROM_SHIP });
+  assert.equal(result.localities.length, 2);
+  assert.equal(result.culled.length, 0);
+});
+
+test("distant apex herds become one older giant per locality", () => {
+  const herd = Array.from({ length: 12 }, (unused, index) => fedGrazer({
+    x: 5000 + index * 4, seed: index, fullness: GRAZING_DEFAULTS.apexPersistAt + index,
+  }));
+  const before = Math.max(...herd.map((grazer) => grazer.fullness));
+  const condensed = condenseDistantApexGrazers(herd, { shipPosition: { x: 0, y: 0 } });
+  const survivors = herd.filter((grazer) => grazer.isAlive);
+  assert.equal(condensed.length, herd.length - 1);
+  assert.equal(survivors.length, 1);
+  assert.ok(survivors[0].fullness > before, "the retained actor carries the locality's continuing age");
+});
+
+test("nearby apexes remain detailed actors for visible predation", () => {
+  const pair = [fedGrazer({ x: 10, fullness: 30 }), fedGrazer({ x: 20, fullness: 28 })];
+  assert.deepEqual(condenseDistantApexGrazers(pair, { shipPosition: { x: 0, y: 0 } }), []);
+  assert.ok(pair.every((grazer) => grazer.isAlive));
 });
 
 // The entity does the moving, so a stationary fixture never arrives — which is
@@ -340,13 +460,13 @@ test("a field takes what it passes without claiming it first", () => {
   assert.deepEqual(eaten, [passing]);
 });
 
-test("a full grazer still drags material along but stops swallowing it", () => {
+test("an old grazer keeps swallowing and growing beyond the former fullness threshold", () => {
   const stuffed = fedGrazer({ x: 0, y: 0, fullness: GRAZING_DEFAULTS.maxFullness });
   const spare = pickup({ x: 12, y: 0 });
 
   const { eaten } = advanceGrazing([stuffed], [spare], { deltaSeconds: 1 / 30, shipPosition: FAR_FROM_SHIP });
-  assert.deepEqual(eaten, [], "there is no room left");
-  assert.equal(stuffed.fullness, GRAZING_DEFAULTS.maxFullness, "and it cannot overfill");
+  assert.deepEqual(eaten, [spare], "there is no final satiation point");
+  assert.equal(stuffed.fullness, GRAZING_DEFAULTS.maxFullness + 1, "and growth continues beyond the old cap");
 });
 
 // Everything the small ones respect, the big ones respect too.

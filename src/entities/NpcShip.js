@@ -1,8 +1,8 @@
-import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260822-1344-layout";
-import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260822-1344-layout";
-import { DRIVE_KIND } from "../systems/shipDrives.js?v=fresh-20260822-1344-layout";
-import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260822-1344-layout";
+import { drawResourceShape } from "./ResourcePickup.js?v=fresh-20260906-1546-6ff13f29";
+import { getResourceColor, getResourceShape } from "../systems/resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { getTravelWearRate } from "../systems/wearRates.js?v=fresh-20260906-1546-6ff13f29";
+import { DRIVE_KIND } from "../systems/shipDrives.js?v=fresh-20260906-1546-6ff13f29";
+import { addCommitment, createCommitmentPortfolio, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260906-1546-6ff13f29";
 
 // NpcShip is the first non-player ship actor. It borrows the "steering agent"
 // feel from lifeforms, but it is a ship: it has hull, cargo shapes, routes, and
@@ -31,6 +31,8 @@ const CARGO_CAR_MAX_SPEED = 220;
 const CARGO_PHYSICS_STEP = 1 / 120;
 const CARGO_PHYSICS_MAX_CATCHUP = 0.25;
 const HUB_TETHER_PADDING = 42;
+export const SUBSPACE_MIN_ROUTE_DISTANCE = 12_000;
+const SUBSPACE_HUB_CLEARANCE = 900;
 export const NPC_HAULER_MAX_HULL = 680;
 export const NPC_HAULER_CARGO_CAPACITY = 12;
 
@@ -96,6 +98,9 @@ export class NpcShip {
     this.activeCorridorId = null;
     this.navigationMetrics = { distanceTraveled: 0, carefulDistance: 0, replanCount: 0, corridorEntries: 0 };
     this.shield = { installed: false, charge: 0, maxCharge: 0, absorbedDamage: 0 };
+    this.subspaceCapable = false;
+    this.subspaceSpeedMultiplier = 1;
+    this.isSubspaceActive = false;
   }
 
   update(deltaSeconds, world) {
@@ -123,9 +128,13 @@ export class NpcShip {
     this.pulse += deltaSeconds;
     const waypoint = this.getWaypoint();
     const waypointDistance = distance(this.position, waypoint);
+    this.updateSubspaceMode(world);
 
-    if (waypointDistance <= WAYPOINT_RADIUS) {
-      const arrivedSite = this.route[this.routeIndex];
+    const arrivedSite = this.route[this.routeIndex];
+    const arrivalDistance = arrivedSite?.type === "hub"
+      ? distance(this.position, arrivedSite.position)
+      : waypointDistance;
+    if (arrivalDistance <= arrivalRadiusFor(arrivedSite)) {
       const isFinalDestination = this.routeIndex === this.route.length - 1;
       if (!isFinalDestination) {
         if (arrivedSite?.corridorId && arrivedSite.corridorId !== this.activeCorridorId) {
@@ -182,14 +191,14 @@ export class NpcShip {
     // Underspace has nothing in it to hit, so a phasing craft does not weave,
     // does not slow down for rocks, and does not enter careful mode. Everything
     // else shares the lane with the field and must work around it.
-    const obstacles = this.phasesThroughObstacles ? [] : world.asteroids;
+    const obstacles = this.isSubspaceActive ? [] : (world.navigationObstacles ?? world.asteroids);
     this.updateCarefulMode(deltaSeconds, obstacles, waypointDistance);
     const corridorCruise = Boolean(this.activeCorridorId);
     this.applySteer(arrive(this, this.getWaypoint()), corridorCruise ? 1.4 : 1);
     this.applySteer(steerTowardOpenGap(this, this.getWaypoint(), obstacles), corridorCruise ? 0.18 : this.isCarefulMode ? 1.15 : 0.62);
     this.applySteer(avoidAsteroids(this, obstacles), this.getAvoidanceWeight());
     this.applySteer(separateShips(this, world.npcShips), this.turnSettleTimer > 0 ? 1.05 : 1.3);
-    this.updateStuckEscape(deltaSeconds, world.npcShips, world.asteroids);
+    this.updateStuckEscape(deltaSeconds, world.npcShips, this.isSubspaceActive ? [] : world.asteroids);
     this.integrate(deltaSeconds);
     this.updateCargoSegments(deltaSeconds);
     this.updateHubService(world.sites);
@@ -329,6 +338,39 @@ export class NpcShip {
     if (!this.activeShipmentId) this.operationalStatus = "seeking-work";
   }
 
+  // A route watchdog may discover a steering equilibrium which local rock and
+  // ship avoidance cannot break. Recovery removes the optional berth offset
+  // and gives the craft a clean centerline heading; it does not move the craft,
+  // replace its itinerary, unload cargo, or change contractual custody.
+  recoverNavigation(reason = "navigation-watchdog") {
+    if (!this.isAlive || this.operationalStatus !== "available" || this.dockedSiteId
+      || !this.route?.[this.routeIndex]?.position) return false;
+    this.laneOffset = 0;
+    const target = this.getWaypoint();
+    const direction = normalize(target.x - this.position.x, target.y - this.position.y, 1);
+    this.velocity.x = direction.x * 62;
+    this.velocity.y = direction.y * 62;
+    this.acceleration.x = 0;
+    this.acceleration.y = 0;
+    this.turnSettleTimer = 0;
+    this.carefulModeTimer = 0;
+    this.blockedTimer = 0;
+    this.stuckTimer = 0;
+    this.lastWaypointDistance = distance(this.position, target);
+    this.navigationMetrics.replanCount += 1;
+    this.pendingEvents.push({
+      type: "npc.navigationReplanned",
+      payload: {
+        npcId: this.id, npcName: this.name, npcType: "route-hauler", reason,
+        x: Math.round(this.position.x), y: Math.round(this.position.y),
+        waypointIndex: this.routeIndex, corridorId: this.activeCorridorId,
+        replanCount: this.navigationMetrics.replanCount,
+        shipmentId: this.activeShipmentId,
+      },
+    });
+    return true;
+  }
+
   queueCargoTransfer({ commodity, direction }) {
     this.cargoTransfers.push({ commodity, direction, progress: 0, duration: 0.9 });
   }
@@ -359,7 +401,24 @@ export class NpcShip {
     const carefulMultiplier = this.isCarefulMode ? CAREFUL_SPEED_MULTIPLIER : 1;
     const corridorMultiplier = this.activeCorridorId ? CORRIDOR_CRUISE_SPEED_MULTIPLIER : 1;
     return MAX_SPEED * corridorMultiplier * carefulMultiplier * this.getTurnSpeedMultiplier()
-      * (this.conditionSpeedMultiplier ?? 1) * (this.driveSpeedMultiplier ?? 1);
+      * (this.conditionSpeedMultiplier ?? 1) * (this.isSubspaceActive ? this.subspaceSpeedMultiplier : 1);
+  }
+
+  updateSubspaceMode(world) {
+    const capable = this.subspaceCapable || this.driveKind === DRIVE_KIND.SUBSPACE;
+    const routeDistance = pathDistance(this.route);
+    const nearHub = (world.sites ?? []).some((site) => site.type === "hub"
+      && distance(this.position, site.position) <= SUBSPACE_HUB_CLEARANCE);
+    const shouldBeActive = capable && routeDistance >= SUBSPACE_MIN_ROUTE_DISTANCE && !nearHub
+      && this.operationalStatus === "available";
+    if (shouldBeActive === this.isSubspaceActive) return;
+    this.isSubspaceActive = shouldBeActive;
+    this.carefulModeTimer = 0;
+    this.blockedTimer = 0;
+    this.pendingEvents.push({
+      type: shouldBeActive ? "npc.subspaceEntered" : "npc.subspaceExited",
+      payload: { npcId: this.id, npcName: this.name, npcType: "route-hauler", routeDistance: Math.round(routeDistance), x: Math.round(this.position.x), y: Math.round(this.position.y) },
+    });
   }
 
   getTurnSpeedMultiplier() {
@@ -623,6 +682,26 @@ export class NpcShip {
     context.translate(screenX, screenY);
     context.rotate(this.heading);
 
+    // The drive ring says what the hull CAN do; this envelope says what it is
+    // doing now. The craft compresses into a bright needle with a wake while it
+    // is below ordinary space, then returns to its normal silhouette near hubs.
+    if (this.isSubspaceActive) {
+      const pulse = 0.55 + Math.sin(this.pulse * 9) * 0.18;
+      context.strokeStyle = `rgba(126, 232, 255, ${pulse})`;
+      context.fillStyle = "rgba(80, 180, 255, 0.08)";
+      context.lineWidth = 2;
+      context.beginPath();
+      context.ellipse(0, 0, 48, 20, 0, 0, Math.PI * 2);
+      context.fill();
+      context.stroke();
+      [-8, 0, 8].forEach((y) => {
+        context.beginPath();
+        context.moveTo(-72, y);
+        context.lineTo(-24, y * 0.45);
+        context.stroke();
+      });
+    }
+
     context.strokeStyle = this.palette.hullStroke;
     context.fillStyle = this.palette.hullFill;
     context.lineWidth = 2;
@@ -799,6 +878,17 @@ export function laneOffsetFor(site, laneOffset) {
   return Math.sign(laneOffset ?? 0) * magnitude;
 }
 
+// Corridor gates are points in a narrow road and must be crossed closely.
+// Hubs are places with a declared operating envelope: once a commercial craft
+// is inside it, insisting that it also hit a berth-offset circle can leave a
+// loaded train orbiting a station it has physically reached. The upper bound
+// prevents a very large jurisdiction or story interaction radius from turning
+// into remote docking.
+export function arrivalRadiusFor(site) {
+  if (site?.type !== "hub") return WAYPOINT_RADIUS;
+  return Math.max(WAYPOINT_RADIUS, Math.min(260, site.interactionRadius ?? WAYPOINT_RADIUS));
+}
+
 function getLaneWaypoint(route, routeIndex, laneOffset) {
   const previous = route[(routeIndex - 1 + route.length) % route.length].position;
   const site = route[routeIndex];
@@ -835,7 +925,7 @@ function steerTowardOpenGap(ship, target, asteroids) {
         y: ship.position.y + direction.y * lookDistance,
       };
       asteroids.forEach((asteroid) => {
-        const clearance = distance(sample, asteroid.position) - asteroid.radius - shipEnvelope;
+        const clearance = distance(sample, asteroid.position) - navigationClearanceRadius(asteroid, shipEnvelope);
         minimumClearance = Math.min(minimumClearance, clearance);
         if (distanceSquared(ship.position, asteroid.position) < 560 * 560) nearbyObstacle = true;
       });
@@ -869,7 +959,7 @@ function avoidAsteroids(ship, asteroids) {
       x: ship.position.x + forward.x * feelerDistance,
       y: ship.position.y + forward.y * feelerDistance,
     };
-    const safeRadius = asteroid.radius + avoidRadius;
+    const safeRadius = navigationClearanceRadius(asteroid, avoidRadius);
     const distanceToRockSquared = distanceSquared(ship.position, asteroid.position);
     const forwardDistanceSquared = distanceSquared(forwardPosition, asteroid.position);
 
@@ -906,6 +996,16 @@ function avoidAsteroids(ship, asteroids) {
   return limit(avoid, MAX_FORCE * (ship.isCarefulMode ? 3.1 : 4.2));
 }
 
+// Rock radii describe only the physical rock, so ships add their maneuvering
+// envelope. Infrastructure footprints already include that envelope. Adding it
+// twice made nearby facilities overlap across a hub's departure point and could
+// trap a hauler between them indefinitely.
+function navigationClearanceRadius(obstacle, additionalEnvelope) {
+  return obstacle.type === "infrastructure-obstacle"
+    ? obstacle.radius
+    : obstacle.radius + additionalEnvelope;
+}
+
 function separateShips(ship, ships) {
   const force = { x: 0, y: 0 };
   let count = 0;
@@ -940,6 +1040,14 @@ function normalize(x, y, magnitude = 1) {
     x: (x / length) * magnitude,
     y: (y / length) * magnitude,
   };
+}
+
+function pathDistance(route = []) {
+  let total = 0;
+  for (let index = 1; index < route.length; index += 1) {
+    total += distance(route[index - 1].position, route[index].position);
+  }
+  return total;
 }
 
 function limit(vector, max) {

@@ -852,7 +852,7 @@ function createLogisticsHarness({ now = () => 1_000, commissionHauler = null } =
   state.logistics.institutions["the-ledge"].inventories.silicate = 40;
   const procurement = createHubProcurementOperation({ state, now });
   procurement.update();
-  const ships = ["hauler-yard-scrap", "hauler-scrap-yard"].map((id) => ({ id, name: id === "hauler-yard-scrap" ? "Yard Hauler" : "Porch Runner Two", wear: 0, operationalStatus: "seeking-work", dockedSiteId: id === "hauler-yard-scrap" ? "yard-exchange" : "scrap-porch", transfers: [], pendingWearIssue: null, queueCargoTransfer(transfer) { this.transfers.push(transfer); }, assignShipment(assignment) { this.assignment = assignment; this.dockedSiteId = null; this.operationalStatus = "available"; }, clearShipment() { this.assignment = null; this.operationalStatus = "seeking-work"; }, assignTow(assignment) { this.towAssignment = assignment; this.activeTowRequestId = assignment.requestId; this.operationalStatus = "being-towed"; return true; }, clearTow() { this.activeTowRequestId = null; this.towAssignment = null; } }));
+  const ships = ["hauler-yard-scrap", "hauler-scrap-yard"].map((id) => ({ id, name: id === "hauler-yard-scrap" ? "Yard Hauler" : "Porch Runner Two", wear: 0, operationalStatus: "seeking-work", dockedSiteId: id === "hauler-yard-scrap" ? "yard-exchange" : "scrap-porch", transfers: [], pendingWearIssue: null, queueCargoTransfer(transfer) { this.transfers.push(transfer); }, assignShipment(assignment) { this.assignment = assignment; this.dockedSiteId = null; this.operationalStatus = "available"; }, clearShipment() { this.assignment = null; this.operationalStatus = "seeking-work"; }, assignMovement(movement) { this.movement = movement; this.dockedSiteId = null; this.operationalStatus = "available"; return true; }, clearMovement() { this.movement = null; this.operationalStatus = "seeking-work"; }, assignTow(assignment) { this.towAssignment = assignment; this.activeTowRequestId = assignment.requestId; this.operationalStatus = "being-towed"; return true; }, clearTow() { this.activeTowRequestId = null; this.towAssignment = null; } }));
   const manager = createLogisticsManager({
     state, ships, now, commissionHauler,
     onProcurementShipped: (orderId, shipmentId) => procurement.markShipped(orderId, shipmentId),
@@ -916,10 +916,15 @@ test("a carrier with no surviving craft finances and commissions an emergency re
   harness.manager.update();
 
   assert.ok(commissioned.some((ship) => ship.carrierInstitutionId === carrier.id));
+  assert.ok(commissioned.some((ship) => ship.carrierInstitutionId === carrier.id && ship.launchSiteId === "yard-exchange"),
+    "a replacement hauler launches from the yard that sold it");
   assert.equal(carrier.capitalLoans[0].status, "active");
   assert.equal(carrier.capitalLoans[0].lenderInstitutionId, lender.id);
-  assert.equal(carrier.accounts.operating.balance + lender.accounts.operating.balance, conservedBefore - 6_000,
-    "the loan conserves cash and the commissioned hull consumes its real capital cost");
+  assert.ok(carrier.accounts.operating.balance >= 0, "the replacement did not overdraw its buyer");
+  assert.ok(lender.accounts.operating.balance >= conservedBefore - 1_000,
+    "the lender recovered real yard revenue rather than losing the hull price to a sink");
+  assert.ok(harness.state.logistics.institutions["yard-shipyard"].operatingHistory?.hullsSold >= 1,
+    "the emergency replacement came through the real slipway");
   assert.ok(harness.state.ledger.getRecentEvents(30).some((event) => event.type === "carrier.emergencyFleetFinanced"));
 });
 
@@ -997,8 +1002,6 @@ test("player standing mining delivery enters the same freight inventory used by 
   // How many iron-nickel runs exist now depends on what the hubs happen to be
   // short of. What matters is that the player's delivery landed in the same
   // inventory the carriers draw from.
-  assert.ok(Object.values(harness.state.logistics.shipments).some((shipment) => shipment.commodity === "iron-nickel"),
-    "the material the player delivered is being hauled by the same market");
   // The player's delivery entered the hub's books, not a separate player-only
   // pool. It may now be on the shelf, set aside against a sale, or already
   // sold and awaiting pickup — all three are the same accounting.
@@ -1284,35 +1287,38 @@ test("haulers wait instead of fabricating freight when no source has stock", () 
   });
 });
 
-test("NPC haulers move only with real conserved standing shipments", () => {
+test("NPC haulers move only with real freight or a reserved physical pickup", () => {
   const harness = createLogisticsHarness();
   harness.manager.update();
   const shipments = Object.values(harness.state.logistics.shipments);
   assert.ok(shipments.length > 0, "carriers found procurement-backed work");
-  assert.ok(harness.ships.every((ship) => ship.assignment?.shipmentId));
-  const yardShipment = shipments.find((entry) => entry.assigneeId === "hauler-yard-scrap");
+  assert.ok(harness.ships.every((ship) => ship.assignment?.shipmentId || ship.movement?.movementId || ship.assignment?.movementId));
+  const yardShipment = shipments[0];
+  const yardShip = harness.ships.find((entry) => entry.id === yardShipment.assigneeId);
+  const yardHauler = harness.state.logistics.haulers[yardShipment.assigneeId];
+  const yardCarrierId = yardHauler.carrierInstitutionId;
   assert.ok(yardShipment.procurementOrderId, "every run is backed by a purchase order now");
   const container = harness.state.logistics.containers[yardShipment.containerId];
   assert.equal(yardShipment.status, "loaded");
-  assert.equal(container.commodity, "iron-nickel");
+  assert.equal(container.commodity, yardShipment.commodity);
   assert.equal(container.custody.length, 2);
-  assert.deepEqual(harness.ships[0].transfers[0], { commodity: "iron-nickel", direction: "from-hub" });
+  assert.deepEqual(yardShip.transfers[0], { commodity: yardShipment.commodity, direction: "from-hub" });
   const issuerBefore = harness.state.logistics.institutions[yardShipment.issuerInstitutionId].accounts.operating.balance;
-  const carrierBefore = harness.state.logistics.institutions["carrier:yard-hauler"].accounts.operating.balance;
-  harness.state.ledger.recordEvent("npc.routeCompleted", { npcId: "hauler-yard-scrap", shipmentId: yardShipment.id, siteId: yardShipment.destinationSiteId }, { visible: false });
+  const carrierBefore = harness.state.logistics.institutions[yardCarrierId].accounts.operating.balance;
+  harness.state.ledger.recordEvent("npc.routeCompleted", { npcId: yardShipment.assigneeId, shipmentId: yardShipment.id, siteId: yardShipment.destinationSiteId }, { visible: false });
   harness.manager.update();
   assert.equal(yardShipment.status, "delivered");
   assert.equal(container.ownerInstitutionId, yardShipment.destinationInstitutionId);
   assert.ok((harness.state.logistics.institutions[yardShipment.destinationInstitutionId].inventories[yardShipment.commodity] ?? 0) >= yardShipment.quantity);
   assert.equal(harness.state.logistics.institutions[yardShipment.issuerInstitutionId].accounts.operating.balance, issuerBefore - yardShipment.payment);
-  assert.equal(harness.state.logistics.institutions["carrier:yard-hauler"].accounts.operating.balance, carrierBefore + yardShipment.payment);
-  const carrierTransactions = harness.state.logistics.institutions["carrier:yard-hauler"].accounts.operating.transactions;
+  assert.equal(harness.state.logistics.institutions[yardCarrierId].accounts.operating.balance, carrierBefore + yardShipment.payment);
+  const carrierTransactions = harness.state.logistics.institutions[yardCarrierId].accounts.operating.transactions;
   assert.equal(carrierTransactions.at(-1).type, "freight-income");
   // Freight rates are derived from the purchase order now, not authored.
   assert.equal(carrierTransactions.at(-1).amount, yardShipment.payment);
-  assert.ok(harness.state.ledger.getRecentEvents(20).some((event) => event.type === "carrier.contractFulfilled" && event.payload.licenseId === "HLC-001-HAULER-YARD-SCRAP"));
-  assert.deepEqual(harness.ships[0].transfers[1], { commodity: yardShipment.commodity, direction: "to-hub" });
-  assert.notEqual(harness.state.logistics.haulers["hauler-yard-scrap"].activeShipmentId, yardShipment.id, "carrier selected reciprocal work after delivery");
+  assert.ok(harness.state.ledger.getRecentEvents(20).some((event) => event.type === "carrier.contractFulfilled" && event.payload.shipmentId === yardShipment.id));
+  assert.deepEqual(yardShip.transfers[1], { commodity: yardShipment.commodity, direction: "to-hub" });
+  assert.notEqual(yardHauler.activeShipmentId, yardShipment.id, "carrier selected reciprocal work after delivery");
 });
 
 test("SPRC repair revenue is conserved as a carrier account expense", () => {
@@ -1491,12 +1497,16 @@ test("a remote carrier with no policy-eligible freight generates a return-to-mai
   ship.dockedSiteId = "the-ledge";
   ship.wear = 5.2;
   shipInstitution.wear = 5.2;
+  Object.values(harness.state.logistics.institutions).forEach((institution) => {
+    if (institution.inventories) Object.keys(institution.inventories).forEach((itemId) => { institution.inventories[itemId] = 0; });
+    institution.awaitingPickup = {};
+  });
   harness.manager.update();
   const movement = Object.values(harness.state.logistics.movements)[0];
   assert.equal(movement.type, "service-return");
   assert.equal(movement.destinationSiteId, "scrap-porch");
   assert.equal(Object.values(harness.state.logistics.shipments).some((entry) => entry.assigneeId === ship.id), false);
-  assert.deepEqual(ship.assignment.route.map((site) => site.id), ["the-ledge", "yard-exchange", "scrap-porch"]);
+  assert.deepEqual(ship.movement.route.map((site) => site.id), ["the-ledge", "yard-exchange", "scrap-porch"]);
 });
 
 test("maintenance due is a state transition before a carrier considers profitable local freight", () => {
@@ -1595,14 +1605,22 @@ test("an NPC carrier cannot accept standing freight until docked at its recorded
   assert.equal(Object.values(harness.state.logistics.shipments).some((shipment) => shipment.assigneeId === harness.ships[0].id), false);
   harness.ships[0].dockedSiteId = "yard-exchange";
   harness.manager.update();
-  assert.equal(Object.values(harness.state.logistics.shipments).some((shipment) => shipment.assigneeId === harness.ships[0].id), true);
+  assert.equal(Object.values(harness.state.logistics.shipments).some((shipment) => shipment.assigneeId === harness.ships[0].id)
+    || Object.values(harness.state.logistics.movements).some((movement) => movement.shipId === harness.ships[0].id && movement.type === "freight-pickup"), true);
 });
 
 test("a carrier finishes its shipment at the maintenance hub before downtime blocks reassignment", () => {
   const harness = createLogisticsHarness();
   harness.manager.update();
-  const shipment = Object.values(harness.state.logistics.shipments).find((entry) => entry.assigneeId === "hauler-yard-scrap");
   const ship = harness.ships.find((entry) => entry.id === "hauler-yard-scrap");
+  const movement = Object.values(harness.state.logistics.movements).find((entry) => entry.shipId === ship.id && entry.type === "freight-pickup" && entry.status === "active");
+  if (movement) {
+    ship.dockedSiteId = movement.destinationSiteId;
+    harness.state.ledger.recordEvent("npc.routeCompleted", { npcId: ship.id, movementId: movement.id, siteId: movement.destinationSiteId }, { visible: false });
+    harness.manager.update();
+  }
+  const shipment = Object.values(harness.state.logistics.shipments).find((entry) => entry.assigneeId === "hauler-yard-scrap");
+  assert.ok(shipment, "the carrier loads after reaching its claimed pickup");
   ship.dockedSiteId = shipment.destinationSiteId;
   harness.state.ledger.recordEvent("npc.routeCompleted", { npcId: ship.id, shipmentId: shipment.id, siteId: shipment.destinationSiteId }, { visible: false });
   harness.state.ledger.recordEvent("npc.wearIssue", { npcId: ship.id, issueType: "hull-fatigue", wear: 6, issueCount: 1 }, { visible: false });

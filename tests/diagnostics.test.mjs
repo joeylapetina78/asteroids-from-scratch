@@ -26,7 +26,7 @@ import { createGameState } from "../src/state/gameState.js";
 import { createSprcOperation, SPRC } from "../src/systems/sprcOperation.js";
 import { createMiningOperation } from "../src/systems/miningOperation.js";
 import { createInitialLogisticsState, createLogisticsManager } from "../src/systems/logistics.js";
-import { createHubProcurementOperation } from "../src/systems/hubProcurement.js";
+import { PROCUREMENT_STATUS, createHubProcurementOperation } from "../src/systems/hubProcurement.js";
 import { MiningWorkerShip } from "../src/entities/MiningWorkerShip.js";
 
 // ── Shape and querying ─────────────────────────────────────────────────────
@@ -275,6 +275,13 @@ test("a carrier that finds only below-cost freight records why it refused", () =
   });
   // Sold goods live in awaitingPickup now, which is not the seller's stock.
   Object.values(state.logistics.institutions).forEach((institution) => { institution.awaitingPickup = {}; institution.saleReserve = {}; });
+  // Model a supplier that still owes the cargo, rather than an impossible
+  // READY title with its custody record manually erased. READY custody is now
+  // reconciled by design; ACCEPTED with an empty reserve is the real
+  // out-of-stock state this diagnostic test intends to exercise.
+  Object.values(state.hubProcurement.orders).forEach((order) => {
+    if (order.status === PROCUREMENT_STATUS.READY) order.status = PROCUREMENT_STATUS.ACCEPTED;
+  });
   procurement.update();
   const manager = createLogisticsManager({ state, ships, now: () => 1_000 });
   manager.update();

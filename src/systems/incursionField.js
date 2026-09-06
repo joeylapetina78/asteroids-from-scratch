@@ -1,7 +1,7 @@
-import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260822-1344-layout";
-import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260822-1344-layout";
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260822-1344-layout";
-import { hashNumbers } from "./random.js?v=fresh-20260822-1344-layout";
+import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260906-1546-6ff13f29";
+import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260906-1546-6ff13f29";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260906-1546-6ff13f29";
+import { hashNumbers } from "./random.js?v=fresh-20260906-1546-6ff13f29";
 
 const PORTAL_WAVE_SIZES = [5, 10, 30];
 const BASE_WAVE_SECONDS = 70;
@@ -38,6 +38,7 @@ export function createIncursionField() {
       const portalPacing = getPortalPacing(portal, pacing);
       const spawned = spawnPortalWave(portal, getPacedWaveSize(0, portalPacing), 0);
       portal.recordWaveFabrication(spawned.length);
+      portal.lastWaveSize = spawned.length;
       portal.waveCount = 1;
       portal.nextWaveIn = getNextWaveSeconds(portal, portalPacing);
       portal.isWaveHeld = false;
@@ -45,6 +46,9 @@ export function createIncursionField() {
     },
 
     update(deltaSeconds, lifeforms, pacing = {}) {
+      const livingUnitIds = new Set(
+        lifeforms.filter((lifeform) => lifeform.isAlive && lifeform.sourcePortalId).map((lifeform) => lifeform.id),
+      );
       const livingGuardIds = new Set(
         lifeforms
           .filter((lifeform) => {
@@ -65,24 +69,27 @@ export function createIncursionField() {
           return;
         }
 
-        portal.update(deltaSeconds, livingGuardIds);
+        portal.update(deltaSeconds, livingGuardIds, livingUnitIds);
         if (portal.nextWaveIn > 0) {
           return;
         }
 
         // Hard safety floor: the next wave waits until the previous one is
         // mostly cleared, so a portal can never outrun a struggling player.
-        const previousWaveSize = getPortalWaveSize(Math.max(0, portal.waveCount - 1));
+        const previousWaveSize = portal.lastWaveSize ?? getPortalWaveSize(Math.max(0, portal.waveCount - 1));
         const holdThreshold = Math.max(WAVE_HOLD_MIN_GUARDS, Math.round(previousWaveSize * WAVE_HOLD_GUARD_FRACTION));
 
-        if (portal.guardIds.size > holdThreshold) {
+        // Raiders do not stop costing their gate merely because they crossed
+        // the close shield orbit. Counting only `guardIds` made every roaming
+        // wave look dead and let a single gate accumulate hundreds of units.
+        if (portal.unitIds.size > holdThreshold) {
           portal.nextWaveIn = WAVE_HOLD_RECHECK_SECONDS;
           portal.isWaveHeld = true;
           events.push({
             type: "incursion.waveHeld",
             payload: {
               portalId: portal.id,
-              guardCount: portal.guardIds.size,
+              guardCount: portal.unitIds.size,
               holdThreshold,
             },
             options: { visible: false },
@@ -94,6 +101,7 @@ export function createIncursionField() {
         const waveSize = getPacedWaveSize(portal.waveCount, portalPacing);
         const wave = spawnPortalWave(portal, waveSize, portal.waveCount);
         portal.recordWaveFabrication(wave.length);
+        portal.lastWaveSize = wave.length;
         portal.isWaveHeld = false;
         spawned.push(...wave);
         portal.waveCount += 1;
@@ -197,6 +205,7 @@ function spawnPortalWave(portal, count, waveIndex) {
       enemy.health = 72 + Math.min(24, waveIndex * 5);
     }
     portal.guardIds.add(enemy.id);
+    portal.unitIds.add(enemy.id);
     spawned.push(enemy);
   }
 

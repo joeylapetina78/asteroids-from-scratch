@@ -1,14 +1,14 @@
-import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260822-1344-layout";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260822-1344-layout";
-import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260822-1344-layout";
-import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260822-1344-layout";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260822-1344-layout";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260822-1344-layout";
-import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260822-1344-layout";
-import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260822-1344-layout";
-import { authorizeWreckSalvage, completeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260822-1344-layout";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent } from "./componentCondition.js?v=fresh-20260822-1344-layout";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260822-1344-layout";
+import { buildPhysicalTransportationRoute, createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260906-1546-6ff13f29";
+import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./worldNetworkRegistry.js?v=fresh-20260906-1546-6ff13f29";
+import { evaluateSupplierAsk } from "./valuation.js?v=fresh-20260906-1546-6ff13f29";
+import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260906-1546-6ff13f29";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260906-1546-6ff13f29";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260906-1546-6ff13f29";
+import { getServiceCost, recordServiceCost } from "./costBasis.js?v=fresh-20260906-1546-6ff13f29";
+import { getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260906-1546-6ff13f29";
+import { authorizeWreckSalvage, completeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260906-1546-6ff13f29";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent } from "./componentCondition.js?v=fresh-20260906-1546-6ff13f29";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260906-1546-6ff13f29";
 
 const REPAIR_SITE_ID = "scrap-porch";
 const RECOVERY_COMPONENTS = Object.freeze([
@@ -111,10 +111,20 @@ function applyRecoveryWork(towing, distance, now) {
   }, { at: now });
 }
 
-export function createTowServiceManager({ state, ships = [], destinations = [], now = () => Date.now(), onWreckRecovered = () => {} }) {
+export function createTowServiceManager({ state, ships = [], destinations = [], connections = null, now = () => Date.now(), onWreckRecovered = () => {} }) {
   const towing = ensureTowServiceState(state, now());
   const shipById = new Map(ships.map((ship) => [ship.id, ship]));
-  const network = createTransportationNetwork({ destinations, connections: FIRST_REACH_TRANSPORT_CONNECTIONS });
+  const destinationRecords = new Map(getRuntimeWorldSites(state).map((site) => [site.id, site]));
+  destinations.forEach((site) => destinationRecords.set(site.id, { ...(destinationRecords.get(site.id) ?? {}), ...site }));
+  let observedWorldRevision = state.worldNetwork?.revision ?? 0;
+  let network = createTransportationNetwork({ destinations: [...destinationRecords.values()], connections: connections ?? getRuntimeWorldConnections(state) });
+  function refreshTransportationNetwork() {
+    if (connections || (state.worldNetwork?.revision ?? 0) === observedWorldRevision) return;
+    const sites = new Map(getRuntimeWorldSites(state).map((site) => [site.id, site]));
+    destinations.forEach((site) => sites.set(site.id, { ...(sites.get(site.id) ?? {}), ...site }));
+    network = createTransportationNetwork({ destinations: [...sites.values()], connections: getRuntimeWorldConnections(state) });
+    observedWorldRevision = state.worldNetwork?.revision ?? observedWorldRevision;
+  }
 
   // ── The tick, in phases ─────────────────────────────────────────────────
   //
@@ -128,11 +138,13 @@ export function createTowServiceManager({ state, ships = [], destinations = [], 
   // decisions instead would leave the vehicle held by finished work for a whole
   // tick, so every recovery would cost an extra second of idle vehicle.
   function observe() {
+    refreshTransportationNetwork();
     consumeEvents();
     advanceSalvageWork();
   }
 
   function decide() {
+    refreshTransportationNetwork();
     claimNextSalvageJob();
     Object.values(towing.requests)
       .filter((request) => request.status === "delivered-cargo" && !request.followupRequestId)

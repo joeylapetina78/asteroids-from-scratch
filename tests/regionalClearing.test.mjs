@@ -67,6 +67,17 @@ test("a region with a surplus supplies a region with a shortfall", () => {
     "material is conserved: every unit that arrived left somewhere else");
 });
 
+test("a newly aggregated region can trade before its first flow advance", () => {
+  const { state, records } = aggregatedWorld();
+  delete records["scrap-forge"].flow.shortfall;
+
+  const result = clearRegionalTrade(state, records, { at: 2_000 });
+
+  assert.ok(result.trades.length > 0, "the first clearing round still trades");
+  assert.ok(records["scrap-forge"].flow.shortfall, "clearing initializes its writable shortfall ledger");
+  assert.ok(records["scrap-forge"].flow.stock.volatile > 0);
+});
+
 test("every credit paid is received by somebody who exists", () => {
   const { state, records } = aggregatedWorld();
   const before = totalCash(state);

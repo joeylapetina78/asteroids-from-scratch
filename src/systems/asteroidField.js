@@ -1,20 +1,45 @@
-﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260822-1344-layout";
-import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260822-1344-layout";
-import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260822-1344-layout";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260822-1344-layout";
-import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260822-1344-layout";
+﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260906-1546-6ff13f29";
+import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260906-1546-6ff13f29";
+import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260906-1546-6ff13f29";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260906-1546-6ff13f29";
+import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260906-1546-6ff13f29";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same
 // chunk coordinates always produce the same asteroids (deterministic seed),
 // so the field feels persistent even though most of it is not in memory.
 const CHUNK_LOAD_RADIUS = 3;
-const WORKER_CHUNK_LOAD_RADIUS = 2;
+// A worker only needs its own chunk plus the eight neighbours to navigate and
+// mine continuously. Loading a five-by-five field around every distant worker
+// caused a dozen dispersed ships to retain hundreds of chunks (and thousands
+// of off-screen asteroid bodies) in the live browser simulation.
+const WORKER_CHUNK_LOAD_RADIUS = 1;
+// These are recovery time-scales, not population caps.  The authored chunk is
+// the locality's natural carrying shape; disturbance approaches that shape
+// again only after the field has been left to settle.  Ore takes much longer
+// than loose stone because reforming rubble is not the same thing as replacing
+// material that physically left aboard a miner.
+const RUBBLE_REFORM_MS = 8 * 60 * 1000;
+const RESOURCE_RECOVERY_MS = 30 * 60 * 1000;
+const GEOLOGY_REVIEW_INTERVAL_MS = 10 * 1000;
 
-export function createAsteroidChunks(canvas, resourceField, transportCorridors = []) {
+export function createAsteroidChunks(canvas, resourceField, transportCorridors = [], options = {}) {
   const chunkSize = canvas.width;
-  const loadedChunks = new Map(); // "cx,cy"  Asteroid[]
+  const now = options.now ?? (() => Date.now());
+  const rubbleReformMs = options.rubbleReformMs ?? RUBBLE_REFORM_MS;
+  const resourceRecoveryMs = options.resourceRecoveryMs ?? RESOURCE_RECOVERY_MS;
+  const geologyReviewIntervalMs = options.geologyReviewIntervalMs ?? GEOLOGY_REVIEW_INTERVAL_MS;
+  // A loaded record owns every physical descendant of its seeded rocks, not
+  // merely the pristine objects created by generateChunk().  Before this,
+  // fragments escaped the record and therefore survived every chunk unload.
+  const loadedChunks = new Map(); // "cx,cy" -> { asteroids: Set<Asteroid> }
+  // Geological memory is deliberately much smaller than physical memory: one
+  // entry per disturbed seeded rock.  It records whether mass merely needs to
+  // re-accrete or whether ore actually left the locality and must recover on a
+  // slower terrain-shaped time-scale.
+  const sourceStates = new Map(); // source id -> geological state
+  let nextGeologyReviewAt = now() + geologyReviewIntervalMs;
 
   function toChunkCoords(worldX, worldY) {
     return [Math.floor(worldX / chunkSize), Math.floor(worldY / chunkSize)];
@@ -50,24 +75,54 @@ export function createAsteroidChunks(canvas, resourceField, transportCorridors =
       const baseProfile = resourceField.getProfile(position.x, position.y);
       const asteroid = createRandomAsteroid(position.x, position.y, getOreClusterProfile(position, baseProfile, oreClusterSeeds), hashNumbers(seed, i));
       tuneAsteroidForTerrain(asteroid, terrain, random);
-      if (!getCorridorClearance(asteroid.position, asteroid.radius, transportCorridors)) chunkAsteroids.push(asteroid);
+      if (!getCorridorClearance(asteroid.position, asteroid.radius, transportCorridors)) {
+        tagSeededAsteroid(asteroid, cx, cy, `ore:${i}`);
+        chunkAsteroids.push(asteroid);
+      }
     }
 
     for (let i = 0; i < commonCount; i++) {
       const position = getTerrainPosition({ centerX, centerY, chunkSize, terrain, clusters, random, index: i, count: commonCount });
       const asteroid = createCommonAsteroid(position.x, position.y, hashNumbers(seed, 1000 + i));
       tuneAsteroidForTerrain(asteroid, terrain, random);
-      if (!getCorridorClearance(asteroid.position, asteroid.radius, transportCorridors)) chunkAsteroids.push(asteroid);
+      if (!getCorridorClearance(asteroid.position, asteroid.radius, transportCorridors)) {
+        tagSeededAsteroid(asteroid, cx, cy, `common:${i}`);
+        chunkAsteroids.push(asteroid);
+      }
     }
 
     createAmbientSurvivalDeposits({ centerX, centerY, chunkSize, terrain, tags: profile.tags, random, seed })
       .filter((asteroid) => !getCorridorClearance(asteroid.position, asteroid.radius, transportCorridors))
-      .forEach((asteroid) => chunkAsteroids.push(asteroid));
+      .forEach((asteroid, index) => {
+        tagSeededAsteroid(asteroid, cx, cy, `survival:${index}`);
+        chunkAsteroids.push(asteroid);
+      });
 
     createCorridorShoulders({ centerX, centerY, chunkSize, terrain, corridors: transportCorridors })
-      .forEach((asteroid) => chunkAsteroids.push(asteroid));
+      .forEach((asteroid, index) => {
+        tagSeededAsteroid(asteroid, cx, cy, `shoulder:${index}`);
+        chunkAsteroids.push(asteroid);
+      });
 
     return chunkAsteroids;
+  }
+
+  function tagSeededAsteroid(asteroid, cx, cy, localId) {
+    const chunkKey = makeKey(cx, cy);
+    asteroid.chunkKey = chunkKey;
+    asteroid.geologySourceId = `${chunkKey}:${localId}`;
+  }
+
+  function admittedAsteroids(cx, cy) {
+    const at = now();
+    return generateChunk(cx, cy).filter((asteroid) => {
+      const geological = sourceStates.get(asteroid.geologySourceId);
+      if (!geological) return true;
+      const dueAt = geological.resourceExtracted ? geological.recoverAt : geological.reformAt;
+      if (at < dueAt) return false;
+      sourceStates.delete(asteroid.geologySourceId);
+      return true;
+    });
   }
 
   // Call once per frame with the player's world position. Returns asteroids to
@@ -92,8 +147,8 @@ export function createAsteroidChunks(canvas, resourceField, transportCorridors =
           const key = makeKey(observerCX + dx, observerCY + dy);
           desiredKeys.add(key);
           if (!loadedChunks.has(key)) {
-            const chunkAsteroids = generateChunk(observerCX + dx, observerCY + dy);
-            loadedChunks.set(key, chunkAsteroids);
+            const chunkAsteroids = admittedAsteroids(observerCX + dx, observerCY + dy);
+            loadedChunks.set(key, { asteroids: new Set(chunkAsteroids) });
             added.push(...chunkAsteroids);
           }
         }
@@ -107,14 +162,113 @@ export function createAsteroidChunks(canvas, resourceField, transportCorridors =
     }
 
     for (const key of toUnload) {
-      loadedChunks.get(key).forEach((a) => removedSet.add(a));
+      loadedChunks.get(key).asteroids.forEach((a) => removedSet.add(a));
       loadedChunks.delete(key);
+    }
+
+    if (now() >= nextGeologyReviewAt) {
+      reviewSettledGeology({
+        observers: [{ x: shipX, y: shipY }, ...observerPositions],
+        added,
+        removedSet,
+      });
+      nextGeologyReviewAt = now() + geologyReviewIntervalMs;
     }
 
     return { added, removedSet };
   }
 
-  return { update };
+  // Reformation is physical when somebody could see it and aggregate when
+  // nobody can.  A source whose pieces have lain beyond every observer's local
+  // field is replaced by one deterministic parent after its geological clock
+  // matures.  This is the joining-together step: it lowers object count without
+  // adding ore, and it never pops a rock into existence in front of a ship.
+  function reviewSettledGeology({ observers, added, removedSet }) {
+    const at = now();
+    const dueByChunk = new Map();
+    sourceStates.forEach((state, sourceId) => {
+      const dueAt = state.resourceExtracted ? state.recoverAt : state.reformAt;
+      if (at < dueAt || !loadedChunks.has(state.chunkKey)) return;
+      const due = dueByChunk.get(state.chunkKey) ?? [];
+      due.push({ sourceId, state });
+      dueByChunk.set(state.chunkKey, due);
+    });
+
+    dueByChunk.forEach((due, chunkKey) => {
+      const [cx, cy] = chunkKey.split(",").map(Number);
+      const regeneratedById = new Map(generateChunk(cx, cy).map((asteroid) => [asteroid.geologySourceId, asteroid]));
+      const loaded = loadedChunks.get(chunkKey);
+      due.forEach(({ sourceId }) => {
+        const replacement = regeneratedById.get(sourceId);
+        if (!replacement) return;
+        const descendants = [...loaded.asteroids].filter((asteroid) => asteroid.geologySourceId === sourceId);
+        const bodies = descendants.length > 0 ? descendants : [replacement];
+        const observed = bodies.some((body) => observers.some((observer) =>
+          Math.hypot(body.position.x - observer.x, body.position.y - observer.y) <= chunkSize * 1.8,
+        ));
+        if (observed) return;
+
+        descendants.forEach((asteroid) => {
+          loaded.asteroids.delete(asteroid);
+          removedSet.add(asteroid);
+        });
+        loaded.asteroids.add(replacement);
+        added.push(replacement);
+        sourceStates.delete(sourceId);
+      });
+    });
+  }
+
+  // Replace one physical rock with its children inside the same geological
+  // locality.  The Game still owns the visible array; this record exists so an
+  // unload removes the children too and so a revisit does not conjure the
+  // pristine parent over recently worked rubble.
+  function recordBreak(parent, fragments = [], { resourceExtracted = false } = {}) {
+    const chunkKey = parent?.chunkKey;
+    const sourceId = parent?.geologySourceId;
+    const loaded = chunkKey ? loadedChunks.get(chunkKey) : null;
+    if (!loaded || !sourceId) return false;
+
+    loaded.asteroids.delete(parent);
+    fragments.forEach((fragment) => {
+      fragment.chunkKey = chunkKey;
+      fragment.geologySourceId = sourceId;
+      loaded.asteroids.add(fragment);
+    });
+
+    const at = now();
+    const existing = sourceStates.get(sourceId);
+    sourceStates.set(sourceId, resourceExtracted
+      ? {
+          chunkKey,
+          disturbedAt: existing?.disturbedAt ?? at,
+          depletedAt: at,
+          reformAt: Infinity,
+          recoverAt: at + resourceRecoveryMs,
+          resourceExtracted: true,
+        }
+      : {
+          chunkKey,
+          disturbedAt: existing?.disturbedAt ?? at,
+          reformAt: Math.max(existing?.reformAt ?? 0, at + rubbleReformMs),
+          recoverAt: existing?.recoverAt ?? Infinity,
+          resourceExtracted: Boolean(existing?.resourceExtracted),
+          ...(existing?.resourceExtracted ? existing : {}),
+        });
+    return true;
+  }
+
+  function getGeologySnapshot() {
+    const states = [...sourceStates.values()];
+    return {
+      loadedChunks: loadedChunks.size,
+      trackedAsteroids: [...loadedChunks.values()].reduce((sum, chunk) => sum + chunk.asteroids.size, 0),
+      disturbedSources: states.filter((state) => !state.resourceExtracted).length,
+      depletedSources: states.filter((state) => state.resourceExtracted).length,
+    };
+  }
+
+  return { update, recordBreak, getGeologySnapshot };
 }
 
 function createCorridorShoulders({ centerX, centerY, chunkSize, terrain, corridors }) {

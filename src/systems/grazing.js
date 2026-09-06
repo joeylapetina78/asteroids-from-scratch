@@ -1,6 +1,6 @@
-import { getResourceFamily, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { ROCKMOSS_CRAWLER_TYPE } from "./rockmossStrains.js?v=fresh-20260822-1344-layout";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./hostileLoot.js?v=fresh-20260822-1344-layout";
+import { getResourceFamily, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { ROCKMOSS_CRAWLER_TYPE } from "./rockmossStrains.js?v=fresh-20260906-1546-6ff13f29";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./hostileLoot.js?v=fresh-20260906-1546-6ff13f29";
 
 // Something else out here is interested in what you left behind.
 //
@@ -24,9 +24,9 @@ import { RIFT_TROPHY_RESOURCE_TYPE } from "./hostileLoot.js?v=fresh-20260822-134
 //   field is always somewhere you chose to leave.
 //
 //   GRAZERS ARE ROCK-LIFE, SO THEY EAT ROCK. Volatile, structural and industrial
-//   material is what a rock is made of. Refined and exotic material is not food —
-//   the stars and diamonds you were flying back for are still there — and neither
-//   is a rift trophy, which is a bounty claim rather than a substance.
+//   material is what a rock is made of. Refined material and ordinary trophies
+//   are not food. Pink anomaly shards are the exception: abandoned shards feed
+//   this ecology. A rift trophy remains a bounty claim, not a substance.
 //
 // EATING IS A PERFORMANCE, NOT A DELETION. A drop that simply vanished when a
 // creature touched it would read as a despawn timer wearing a costume. So a
@@ -83,6 +83,21 @@ export const GRAZING_DEFAULTS = Object.freeze({
   // A ripe grazer is visibly fatter; this is the scale at maxFullness.
   maxGrowthScale: 2.1,
 
+  // -- Population condensation --
+  // Once a field has more mouths than forage, ripe grazers turn on smaller
+  // neighbours. Biomass moves upward inefficiently instead of creating another
+  // harvestable resource faucet: a crowded shoal becomes a few memorable old
+  // giants rather than thousands of permanent ripe animals.
+  predationCrowdSize: 8,
+  predationHuntRadius: 760,
+  predationBiteRange: 38,
+  predationBiomassEfficiency: 0.55,
+  apexFullness: 48,
+  apexGrowthScale: 4.2,
+  apexPersistAt: 24,
+  localitySize: 3600,
+  localityBiomassBudget: 180,
+
   // ── The mouth: a grown one stops nibbling and starts filtering ──
   //
   // A small grazer picks at one drop at a time. A big one opens a field and
@@ -119,12 +134,17 @@ export const GRAZING_STAGE = Object.freeze({
 // so a new ore joins the menu by belonging to a family instead of by being added
 // to a list here.
 const EDIBLE_FAMILIES = new Set(["volatile", "structural", "industrial"]);
+const ANOMALY_RESOURCE_TYPE = "anomaly-shard";
 
 export function isEdible(pickup) {
   if (!pickup) return false;
   const type = normalizeResourceType(pickup.type);
   // A living spore is the most obvious meal in the field.
   if (type === ROCKMOSS_CRAWLER_TYPE) return true;
+  // Pink anomaly stars are biological food, not permanent high-value litter.
+  // They remain a strange commodity if somebody reaches them first, but an
+  // abandoned one participates in the same settle-and-feed ecology as ore.
+  if (type === ANOMALY_RESOURCE_TYPE) return true;
   // Not a substance — it is a claim on the authority's bounty fund.
   if (type === RIFT_TROPHY_RESOURCE_TYPE) return false;
   return EDIBLE_FAMILIES.has(getResourceFamily(type));
@@ -140,8 +160,19 @@ export function isRipe(grazer, policy = GRAZING_DEFAULTS) {
 
 // How much bigger a grazer has grown from what it has eaten.
 export function getGrowthScale(grazer, policy = GRAZING_DEFAULTS) {
-  const fed = Math.min(1, (grazer?.fullness ?? 0) / Math.max(1, policy.maxFullness));
-  return 1 + fed * (policy.maxGrowthScale - 1);
+  const fullness = grazer?.fullness ?? 0;
+  const ordinaryFed = Math.min(1, fullness / Math.max(1, policy.maxFullness));
+  const ordinaryScale = 1 + ordinaryFed * (policy.maxGrowthScale - 1);
+  if (fullness <= policy.maxFullness) return ordinaryScale;
+  // There is no final size. Beyond ordinary fullness growth is logarithmic:
+  // an old giant can keep becoming larger forever, but every visible step asks
+  // for substantially more food than the one before it. Calibrate the curve so
+  // the former apex fullness still lands near the former 4.2x visual scale.
+  const excess = Math.max(0, fullness - policy.maxFullness);
+  const calibrationExcess = Math.max(1, policy.apexFullness - policy.maxFullness);
+  const logGain = (policy.apexGrowthScale - policy.maxGrowthScale)
+    / Math.log1p(calibrationExcess / Math.max(1, policy.maxFullness));
+  return ordinaryScale + Math.log1p(excess / Math.max(1, policy.maxFullness)) * logGain;
 }
 
 // How far a grazer's feeding field reaches. Zero until it has grown into one,
@@ -159,12 +190,10 @@ export function isFilterFeeder(grazer, policy = GRAZING_DEFAULTS) {
   return getGrazeFieldRadius(grazer, policy) > 0;
 }
 
-// A stuffed one stops hunting. It still drags material around in its field —
-// that is just physics, and it looks right — but it claims nothing and eats
-// nothing, so it stops competing with hungrier neighbours for a spill it has no
-// room for. Being full is also the point at which it is worth the most to shoot.
+// Grazers never reach a final satiation point. Their appetite and collection
+// field remain active as they age, while growth yields less and less over time.
 export function isSated(grazer, policy = GRAZING_DEFAULTS) {
-  return (grazer?.fullness ?? 0) >= policy.maxFullness;
+  return false;
 }
 
 // What a harvested grazer is carrying.
@@ -177,7 +206,163 @@ export function isSated(grazer, policy = GRAZING_DEFAULTS) {
 export function getGrazerSporeYield(grazer, policy = GRAZING_DEFAULTS) {
   if (!isRipe(grazer, policy)) return 0;
   const over = (grazer.fullness ?? 0) - policy.ripeAt;
-  return 2 + Math.floor(over / 2);
+  // Eating another grazer concentrates the ecology; it must not compound the
+  // harvest faucet. The largest animal is a spectacle, not a sack containing
+  // the drops of every animal it condensed.
+  const ordinaryMaximum = 2 + Math.floor((policy.maxFullness - policy.ripeAt) / 2);
+  return Math.min(ordinaryMaximum, 2 + Math.floor(over / 2));
+}
+
+export function getGrazerBiomass(grazer) {
+  return Math.max(1, 1 + (grazer?.fullness ?? 0));
+}
+
+export function getEcologicalLocalityKey(position, policy = GRAZING_DEFAULTS) {
+  const size = Math.max(1, policy.localitySize);
+  return `${Math.floor((position?.x ?? 0) / size)}:${Math.floor((position?.y ?? 0) / size)}`;
+}
+
+// A locality has finite carrying capacity. Feeding and cannibalism may move
+// biomass between bodies, but they cannot leave an unlimited number of fully
+// simulated animals behind. Apex grazers are retained first; the smallest
+// ordinary bodies are the die-off when a field exceeds its authored budget.
+export function enforceEcologicalBiomassBudget(grazers, {
+  shipPosition = null,
+  policy = GRAZING_DEFAULTS,
+} = {}) {
+  const byLocality = new Map();
+  grazers.filter((grazer) => grazer.isAlive).forEach((grazer) => {
+    const key = getEcologicalLocalityKey(grazer.position, policy);
+    const group = byLocality.get(key) ?? [];
+    group.push(grazer);
+    byLocality.set(key, group);
+  });
+  const culled = [];
+  const summaries = [];
+  byLocality.forEach((group, localityKey) => {
+    let biomass = group.reduce((sum, grazer) => sum + getGrazerBiomass(grazer), 0);
+    const candidates = [...group].sort((first, second) => {
+      const firstProtected = (first.fullness ?? 0) >= policy.apexPersistAt ? 1 : 0;
+      const secondProtected = (second.fullness ?? 0) >= policy.apexPersistAt ? 1 : 0;
+      return firstProtected - secondProtected
+        || getGrazerBiomass(first) - getGrazerBiomass(second);
+    });
+    for (const grazer of candidates) {
+      if (biomass <= policy.localityBiomassBudget) break;
+      if (shipPosition && distanceSquared(grazer.position, shipPosition) <= policy.shipShyRadius ** 2) continue;
+      // The budget limits the swarm, not the age of its survivor. Once a grazer
+      // becomes an apex it may outgrow the locality budget indefinitely; the
+      // smaller bodies around it are what condense and die back.
+      if ((grazer.fullness ?? 0) >= policy.apexPersistAt) continue;
+      grazer.isAlive = false;
+      grazer.grazerPredationTarget = null;
+      biomass -= getGrazerBiomass(grazer);
+      culled.push(grazer);
+    }
+    summaries.push({ localityKey, biomass: Math.max(0, biomass), count: group.length });
+  });
+  return { culled, localities: summaries };
+}
+
+// Detailed predation is only simulated around the player. When several old
+// apex grazers from the same locality are all far outside that simulation
+// envelope, replay the same ecological outcome in aggregate: the largest one
+// absorbs a diminishing share of its rivals and remains as the locality's old
+// giant. This preserves the forever-growth story without retaining thousands
+// of permanently simulated apex actors from every place the player visited.
+export function condenseDistantApexGrazers(grazers, {
+  shipPosition = null,
+  minimumDistance = 3600,
+  policy = GRAZING_DEFAULTS,
+} = {}) {
+  const groups = new Map();
+  grazers.filter((grazer) => grazer.isAlive && (grazer.fullness ?? 0) >= policy.apexPersistAt)
+    .filter((grazer) => !shipPosition || distanceSquared(grazer.position, shipPosition) > minimumDistance ** 2)
+    .forEach((grazer) => {
+      const key = getEcologicalLocalityKey(grazer.position, policy);
+      const group = groups.get(key) ?? [];
+      group.push(grazer);
+      groups.set(key, group);
+    });
+  const condensed = [];
+  groups.forEach((group, localityKey) => {
+    if (group.length < 2) return;
+    group.sort((first, second) => (second.fullness ?? 0) - (first.fullness ?? 0)
+      || String(first.seed).localeCompare(String(second.seed)));
+    const survivor = group[0];
+    group.slice(1).forEach((prey) => {
+      const resistance = 1 + (survivor.fullness ?? 0) / Math.max(1, policy.maxFullness);
+      const gain = getGrazerBiomass(prey) * policy.predationBiomassEfficiency / resistance;
+      survivor.fullness = (survivor.fullness ?? 0) + gain;
+      prey.isAlive = false;
+      clearMeal(prey);
+      condensed.push({ localityKey, survivor, prey, gain });
+    });
+  });
+  return condensed;
+}
+
+// Condense one crowded local shoal. This is intentionally budgeted by the
+// caller and linearithmic: the bug this replaces involved thousands of grazers,
+// so a neighbour-against-every-neighbour hunt would merely trade one hitch for
+// another. Large animals get first choice of the nearest smaller prey.
+export function condenseGrazerPopulation(grazers, {
+  shipPosition = null,
+  policy = GRAZING_DEFAULTS,
+  maxPredations = 8,
+} = {}) {
+  if (grazers.length < policy.predationCrowdSize || maxPredations <= 0) {
+    grazers.forEach((grazer) => { grazer.grazerPredationTarget = null; });
+    return [];
+  }
+
+  const shipSafe = (grazer) => !shipPosition
+    || distanceSquared(grazer.position, shipPosition) > policy.shipShyRadius * policy.shipShyRadius;
+  const predators = grazers
+    .filter((grazer) => grazer.isAlive && isRipe(grazer, policy) && shipSafe(grazer))
+    .sort((first, second) => (second.fullness ?? 0) - (first.fullness ?? 0)
+      || String(first.seed).localeCompare(String(second.seed)));
+  const prey = new Set(grazers.filter((grazer) => grazer.isAlive && shipSafe(grazer)));
+  const eaten = [];
+  const huntRadiusSquared = policy.predationHuntRadius * policy.predationHuntRadius;
+  const biteRangeSquared = policy.predationBiteRange * policy.predationBiteRange;
+
+  for (const predator of predators) {
+    if (eaten.length >= maxPredations || prey.size === 0) break;
+    const held = predator.grazerPredationTarget;
+    if (held && (!held.isAlive || !prey.has(held))) predator.grazerPredationTarget = null;
+    let nearest = null;
+    let nearestDistance = Infinity;
+    for (const candidate of prey) {
+      if (candidate === predator) continue;
+      const predatorMass = predator.fullness ?? 0;
+      const candidateMass = candidate.fullness ?? 0;
+      if (candidateMass > predatorMass
+        || (candidateMass === predatorMass && String(candidate.seed) < String(predator.seed))) continue;
+      const separation = distanceSquared(predator.position, candidate.position);
+      if (separation <= huntRadiusSquared && separation < nearestDistance) {
+        nearest = candidate;
+        nearestDistance = separation;
+      }
+    }
+    const target = predator.grazerPredationTarget && prey.has(predator.grazerPredationTarget)
+      ? predator.grazerPredationTarget : nearest;
+    if (!target) continue;
+    predator.grazerPredationTarget = target;
+    if (distanceSquared(predator.position, target.position) > biteRangeSquared) continue;
+    const victim = target;
+    victim.isAlive = false;
+    prey.delete(victim);
+    clearMeal(victim);
+    predator.grazerPredationTarget = null;
+    const predatorMass = Math.max(0, predator.fullness ?? 0);
+    const preyBiomass = Math.max(1, (victim.fullness ?? 0) + 1);
+    const resistance = 1 + predatorMass / Math.max(1, policy.maxFullness);
+    predator.fullness = predatorMass + preyBiomass * policy.predationBiomassEfficiency / resistance;
+    predator.lastPredationAt = predator.age ?? 0;
+    eaten.push({ predator, prey: victim });
+  }
+  return eaten;
 }
 
 function distanceSquared(first, second) {
@@ -311,7 +496,7 @@ function applyGrazeFields(grazers, pickups, { deltaSeconds, guarded, policy }) {
     const radius = getGrazeFieldRadius(grazer, policy);
     if (radius <= 0 || guarded(grazer.position)) return;
     const radiusSquared = radius * radius;
-    let room = policy.maxFullness - (grazer.fullness ?? 0);
+    let room = Infinity;
 
     pickups.forEach((pickup) => {
       if (swallowed.has(pickup) || !isEdible(pickup) || !isSettled(pickup, policy)) return;
@@ -348,7 +533,7 @@ function applyGrazeFields(grazers, pickups, { deltaSeconds, guarded, policy }) {
         // `room` gates the swallow rather than the pull.
         if (room <= 0) return;
         swallowed.add(pickup);
-        grazer.fullness = Math.min(policy.maxFullness, (grazer.fullness ?? 0) + policy.fullnessPerMeal);
+        grazer.fullness = (grazer.fullness ?? 0) + policy.fullnessPerMeal;
         room -= policy.fullnessPerMeal;
         return;
       }
@@ -417,7 +602,7 @@ export function advanceGrazing(grazers, pickups, {
 
       if (distance <= (pickup.grazeReach ?? policy.nibbleRange)) {
         eaten.push(pickup);
-        grazer.fullness = Math.min(policy.maxFullness, (grazer.fullness ?? 0) + policy.fullnessPerMeal);
+        grazer.fullness = (grazer.fullness ?? 0) + policy.fullnessPerMeal;
         clearMeal(grazer);
         return;
       }
@@ -479,7 +664,7 @@ export function advanceGrazing(grazers, pickups, {
     if (grazer.grazingStageSeconds < policy.finishSeconds) return;
 
     eaten.push(pickup);
-    grazer.fullness = Math.min(policy.maxFullness, (grazer.fullness ?? 0) + policy.fullnessPerMeal);
+    grazer.fullness = (grazer.fullness ?? 0) + policy.fullnessPerMeal;
     clearMeal(grazer);
   });
 

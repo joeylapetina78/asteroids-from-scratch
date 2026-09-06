@@ -1,4 +1,4 @@
-import { applyCraftUse, ensureCraftComponents } from "../systems/componentCondition.js?v=fresh-20260822-1344-layout";
+import { applyCraftUse, ensureCraftComponents } from "../systems/componentCondition.js?v=fresh-20260906-1546-6ff13f29";
 
 const PORTAL_COMPONENTS = Object.freeze([
   { id: "rift-core", label: "Rift Core", capabilityIds: ["hold-gate"] },
@@ -26,15 +26,20 @@ export class InvaderPortal {
     this.waveCount = 0;
     this.nextWaveIn = 0;
     this.guardIds = new Set();
+    // Every living unit fabricated by this gate, including raiders that have
+    // ranged beyond the close shield orbit. `guardIds` remains the nearby
+    // shield screen; this registry is the gate's actual outstanding force.
+    this.unitIds = new Set();
     this.devices = [];
     this.isWaveHeld = false;
     this.isAlive = true;
     ensureCraftComponents(this, PORTAL_COMPONENTS);
   }
 
-  update(deltaSeconds, livingGuards) {
+  update(deltaSeconds, livingGuards, livingUnits = livingGuards) {
     this.age += deltaSeconds;
     this.guardIds = new Set([...this.guardIds].filter((id) => livingGuards.has(id)));
+    this.unitIds = new Set([...this.unitIds].filter((id) => livingUnits.has(id)));
     this.nextWaveIn = Math.max(0, this.nextWaveIn - deltaSeconds);
     this.devices.forEach((device) => {
       device.pulse = (device.pulse ?? 0) + deltaSeconds;

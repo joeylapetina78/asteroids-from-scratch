@@ -10,13 +10,14 @@
 // draws from a family and substitutes freely within it. A hub does not need
 // iron-nickel specifically; it needs structural material.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { recordAcquisition } from "./costBasis.js?v=fresh-20260822-1344-layout";
-import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260822-1344-layout";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260822-1344-layout";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { recordAcquisition } from "./costBasis.js?v=fresh-20260906-1546-6ff13f29";
+import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260906-1546-6ff13f29";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260906-1546-6ff13f29";
+import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260906-1546-6ff13f29";
 // The store only — deliberately not `miningOperation`, which imports THIS
 // module. See `miningOrderBook` for why the derivation lives elsewhere.
-import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260822-1344-layout";
+import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260906-1546-6ff13f29";
 
 // How many seconds of consumption a hub tries to keep on the shelf. Higher
 // means fatter buffers and less frequent, larger orders.
@@ -25,6 +26,12 @@ export const TARGET_COVERAGE_SECONDS = 600;
 // The families a hub trades in at all. A flexible need with no family
 // restriction is spread across these.
 export const TRADED_FAMILIES = Object.freeze(["structural", "industrial", "volatile"]);
+export const ANOMALY_SHARD_TYPE = "anomaly-shard";
+export const STABILIZED_ANOMALY_SAMPLE_TYPE = "stabilized-anomaly-sample";
+export const ANOMALY_SHARDS_PER_SAMPLE = 5;
+export const ANOMALY_SAMPLE_PRICE = 100;
+export const ANOMALY_SITE_SESSION_QUOTA = 25;
+const ANOMALY_RESEARCH_SITES = new Set(["yard-exchange", "deep-research"]);
 
 // Consumption rate per family, in units per second, for one hub.
 //
@@ -58,8 +65,8 @@ export function getFamilyConsumptionRates(hubInstitutionId, state = null) {
   return rates;
 }
 
-export function getFamilyTargets(hubInstitutionId, coverageSeconds = TARGET_COVERAGE_SECONDS) {
-  const rates = getFamilyConsumptionRates(hubInstitutionId);
+export function getFamilyTargets(hubInstitutionId, coverageSeconds = TARGET_COVERAGE_SECONDS, state = null) {
+  const rates = getFamilyConsumptionRates(hubInstitutionId, state);
   return Object.fromEntries(Object.entries(rates).map(([family, rate]) => [family, Math.ceil(rate * coverageSeconds)]));
 }
 
@@ -114,24 +121,63 @@ export function getCommittedSales(state, hubInstitutionId, family) {
     }, 0);
 }
 
+// Raw feedstock required to honor accepted manufactured-parts orders.
+//
+// A parts order used to raise the factory's output target but never the hub's
+// input target. The works would consume its opening ore, stop, and miners would
+// truthfully see no raw-material demand. Translate the remaining production
+// commitment into its recipes here so extraction and import procurement can
+// see the plant's need through the same inventory position as population use.
+export function getIndustrialInputCommitment(state, hubInstitutionId, family) {
+  const hub = state.logistics?.institutions?.[hubInstitutionId];
+  if (!hub) return 0;
+  const factories = Object.values(state.industrial?.factories ?? {})
+    .filter((factory) => factory.institutionId === hubInstitutionId);
+
+  return factories.reduce((total, factory) => {
+    return total + (factory.recipes ?? []).reduce((recipeTotal, recipe) => {
+      const orders = Object.values(state.hubProcurement?.orders ?? {})
+        .filter((order) => order.orderKind === "industrial-part"
+          && order.supplierInstitutionId === hubInstitutionId
+          && order.resourceId === recipe.output
+          && ["accepted", "ready"].includes(order.status));
+      if (orders.length === 0) return recipeTotal;
+      const reserved = orders.reduce((sum, order) => sum + (hub.saleReserve?.[order.id] ?? 0), 0);
+      const owed = orders.reduce((sum, order) => sum + Math.max(0, (order.units ?? 0) - (order.deliveredUnits ?? 0)), 0);
+      const produced = hub.inventories?.[recipe.output] ?? 0;
+      const inProcess = factory.activeRun?.output === recipe.output ? (factory.activeRun.amount ?? 0) : 0;
+      const outputNeeded = Math.max(0, owed - reserved - produced - inProcess);
+      const runsNeeded = Math.ceil(outputNeeded / Math.max(1, recipe.amount ?? 1));
+      const familyInputs = Object.entries(recipe.inputs ?? {})
+        .filter(([resourceId]) => getResourceFamily(resourceId) === family)
+        .reduce((sum, [resourceId, units]) => sum + getEffectiveMaterialUnits(resourceId, units * runsNeeded), 0);
+      return recipeTotal + familyInputs;
+    }, 0);
+  }, 0);
+}
+
 // The full picture for one hub and one family: what it holds, what is coming,
 // what it owes, what it wants, and the gap that justifies an order.
 export function getInventoryPosition(state, hubInstitutionId, family, coverageSeconds = TARGET_COVERAGE_SECONDS) {
   const hub = state.logistics?.institutions?.[hubInstitutionId] ?? null;
-  const ownTarget = getFamilyTargets(hubInstitutionId, coverageSeconds)[family] ?? 0;
+  const ownTarget = getFamilyTargets(hubInstitutionId, coverageSeconds, state)[family] ?? 0;
   const committedSales = getCommittedSales(state, hubInstitutionId, family);
-  const target = ownTarget + committedSales;
+  const industrialInputs = getIndustrialInputCommitment(state, hubInstitutionId, family);
+  const target = ownTarget + committedSales + industrialInputs;
   const onHand = getFamilyOnHand(hub, family);
   const incoming = getFamilyIncoming(state, hubInstitutionId, family);
-  return { family, target, ownTarget, committedSales, onHand, incoming, gap: Math.max(0, target - onHand - incoming) };
+  return { family, target, ownTarget, committedSales, industrialInputs, onHand, incoming, gap: Math.max(0, target - onHand - incoming) };
 }
 
 // Families this hub may commission extraction for.
-export function getMinedFamilies(hubInstitutionId) {
+export function getMinedFamilies(hubInstitutionId, state = null) {
   // Authority says what a hub MAY establish; an extraction definition says
   // what it has actually installed. Procurement must read capacity or a broad
   // enabling charter would make the hub behave as though every mine existed.
-  return Array.from(new Set(settlementExtractionDefinitions()
+  const definitions = state
+    ? [...settlementExtractionDefinitions(), ...listGeneratedExtractionDefinitions(state)]
+    : settlementExtractionDefinitions();
+  return Array.from(new Set(definitions
     .filter((order) => order.buyerInstitutionId === hubInstitutionId)
     .flatMap((order) => order.miningFamilies ?? [getResourceFamily(order.resourceId)])));
 }
@@ -139,7 +185,7 @@ export function getMinedFamilies(hubInstitutionId) {
 // Families a hub needs but may not mine, so it has to buy them. This is the
 // list a procurement order will eventually be built from.
 export function getImportFamilies(state, hubInstitutionId, coverageSeconds = TARGET_COVERAGE_SECONDS) {
-  const mined = getMinedFamilies(hubInstitutionId);
+  const mined = getMinedFamilies(hubInstitutionId, state);
   return TRADED_FAMILIES
     .filter((family) => !mined.includes(family))
     .map((family) => getInventoryPosition(state, hubInstitutionId, family, coverageSeconds))
@@ -148,7 +194,7 @@ export function getImportFamilies(state, hubInstitutionId, coverageSeconds = TAR
 
 // Every family position for a hub, for diagnostics and inspection.
 export function getInventoryPositions(state, hubInstitutionId, coverageSeconds = TARGET_COVERAGE_SECONDS) {
-  const mined = getMinedFamilies(hubInstitutionId);
+  const mined = getMinedFamilies(hubInstitutionId, state);
   return TRADED_FAMILIES.map((family) => ({
     ...getInventoryPosition(state, hubInstitutionId, family, coverageSeconds),
     canMine: mined.includes(family),
@@ -212,6 +258,45 @@ export function sellMaterialToHub(state, {
   }
   if (offered <= 0) {
     return { acceptedUnits: 0, payment: 0, unitPrice: 0, buyerId, reason: "nothing-offered" };
+  }
+
+  // Raw anomaly shards are not industrial ore and no supply desk has unlimited
+  // appetite for them. Authorized research desks stabilize five shards into one
+  // sample, pay for the sample rather than every glittering fragment, and close
+  // intake after a small session quota. This preserves the discovery without
+  // letting an unattended field drain every hub treasury.
+  if (resourceId === ANOMALY_SHARD_TYPE) {
+    if (!ANOMALY_RESEARCH_SITES.has(siteId)) {
+      return { acceptedUnits: 0, payment: 0, unitPrice: 0, buyerId, buyer, reason: "specialist-buyer-required" };
+    }
+    state.anomalyExchange ??= { acceptedBySite: {} };
+    const alreadyAccepted = state.anomalyExchange.acceptedBySite[siteId] ?? 0;
+    const remainingQuota = Math.max(0, ANOMALY_SITE_SESSION_QUOTA - alreadyAccepted);
+    const affordableSamples = Math.floor(Math.max(0, buyer.accounts.operating.balance ?? 0) / ANOMALY_SAMPLE_PRICE);
+    const acceptedUnits = Math.min(offered - (offered % ANOMALY_SHARDS_PER_SAMPLE),
+      remainingQuota - (remainingQuota % ANOMALY_SHARDS_PER_SAMPLE),
+      affordableSamples * ANOMALY_SHARDS_PER_SAMPLE);
+    if (acceptedUnits <= 0) {
+      return { acceptedUnits: 0, payment: 0, unitPrice: ANOMALY_SAMPLE_PRICE / ANOMALY_SHARDS_PER_SAMPLE,
+        buyerId, buyer, reason: remainingQuota < ANOMALY_SHARDS_PER_SAMPLE ? "research-quota-filled" : "insufficient-sample" };
+    }
+    const samples = acceptedUnits / ANOMALY_SHARDS_PER_SAMPLE;
+    const payment = samples * ANOMALY_SAMPLE_PRICE;
+    buyer.inventories[STABILIZED_ANOMALY_SAMPLE_TYPE] = (buyer.inventories[STABILIZED_ANOMALY_SAMPLE_TYPE] ?? 0) + samples;
+    buyer.accounts.operating.balance -= payment;
+    state.anomalyExchange.acceptedBySite[siteId] = alreadyAccepted + acceptedUnits;
+    buyer.accounts.operating.transactions ??= [];
+    buyer.accounts.operating.transactions.push({
+      id: `ANOMALY-INTAKE-${now}-${siteId}`, at: now, type: "research-intake",
+      amount: -payment, balance: buyer.accounts.operating.balance, referenceId: source,
+    });
+    recordAcquisition(state, { institutionId: buyer.id ?? buyerId, itemId: STABILIZED_ANOMALY_SAMPLE_TYPE,
+      units: samples, totalCost: payment, source: "anomaly-stabilization", at: now });
+    state.ledger?.recordEvent?.("anomaly.sampleStabilized", { siteId, buyerId, shards: acceptedUnits, samples, payment },
+      { visible: true, message: `${acceptedUnits} anomaly shards stabilized into ${samples} research sample${samples === 1 ? "" : "s"}.` });
+    return { acceptedUnits, payment, unitPrice: ANOMALY_SAMPLE_PRICE / ANOMALY_SHARDS_PER_SAMPLE,
+      buyerId, buyer, convertedUnits: samples, convertedResourceId: STABILIZED_ANOMALY_SAMPLE_TYPE,
+      reason: acceptedUnits < offered ? "research-intake-limited" : null };
   }
 
   const price = Math.max(1, Math.floor(unitPrice ?? getHubWholesalePrice(resourceId)));

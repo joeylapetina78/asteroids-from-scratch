@@ -1,8 +1,8 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260822-1344-layout";
-import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260822-1344-layout";
-import { steerAroundObstacles } from "../systems/obstacleNavigation.js?v=fresh-20260822-1344-layout";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260822-1344-layout";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260906-1546-6ff13f29";
+import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260906-1546-6ff13f29";
+import { steerAroundObstacles } from "../systems/obstacleNavigation.js?v=fresh-20260906-1546-6ff13f29";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260906-1546-6ff13f29";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
@@ -99,13 +99,14 @@ export class MiningWorkerShip {
   get commitments() { return this.commitmentPortfolio.entries; }
   get remainingCargoCapacity() { return remainingCapacity(this.commitmentPortfolio); }
 
-  assign({ allocationId, contractId, resourceId, quantity, harvestTargetQuantity = quantity, destination, destinationSiteId = null, depositCandidates = [] }) {
+  assign({ allocationId, contractId, resourceId, quantity, harvestTargetQuantity = quantity, destination, destinationSiteId = null, depositCandidates = [], recoveryOnly = false, recoveryField = null }) {
     if (quantity <= 0) return false;
     const commitment = {
       id: allocationId ?? contractId,
       allocationId, contractId, resourceId: normalizeResourceType(resourceId), quantity,
       harvestTargetQuantity: Math.max(quantity, harvestTargetQuantity), destination, destinationSiteId,
-      depositCandidates: [...depositCandidates], reservedCapacity: Math.max(quantity, harvestTargetQuantity),
+      depositCandidates: [...depositCandidates], recoveryOnly, recoveryField,
+      reservedCapacity: Math.max(quantity, harvestTargetQuantity),
     };
     const accepted = addCommitment(this.commitmentPortfolio, commitment, {
       compatible: (existing, candidate) => destinationsMatch(existing, candidate),
@@ -172,6 +173,19 @@ export class MiningWorkerShip {
         return;
       }
       return this.flyTo(deltaSeconds, pickup.position, COLLECT_RANGE, null, world.asteroids);
+    }
+
+    if (this.assignment.recoveryOnly) {
+      if (this.cargoAmount() > 0) {
+        this.state = "returning-recovery";
+        return this.flyTo(deltaSeconds, this.assignment.destination, HOME_RANGE, () => this.tryDeliver(), world.asteroids);
+      }
+      this.state = "ecological-recovery";
+      const field = this.assignment.recoveryField;
+      if (field && distance(this.position, field) > 240) {
+        return this.flyTo(deltaSeconds, field, 220, null, world.asteroids);
+      }
+      return this.brake(deltaSeconds);
     }
 
     if (!this.targetAsteroid || !world.asteroids.includes(this.targetAsteroid) || !hasResource(this.targetAsteroid, this.assignment.resourceId)) {

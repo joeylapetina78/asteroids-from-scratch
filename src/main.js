@@ -1,70 +1,75 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260822-1344-layout";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260822-1344-layout";
-import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260822-1344-layout";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260822-1344-layout";
-import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260822-1344-layout";
-import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260822-1344-layout";
-import { ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260822-1344-layout";
-import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260822-1344-layout";
-import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260822-1344-layout";
-import { DEFAULT_ENGINE_MODEL_ID, getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260822-1344-layout";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260822-1344-layout";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260822-1344-layout";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260822-1344-layout";
-import { Game } from "./game.js?v=fresh-20260822-1344-layout";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260822-1344-layout";
-import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260822-1344-layout";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260822-1344-layout";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260822-1344-layout";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260822-1344-layout";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260906-1546-6ff13f29";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260906-1546-6ff13f29";
+import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260906-1546-6ff13f29";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260906-1546-6ff13f29";
+import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260906-1546-6ff13f29";
+import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260906-1546-6ff13f29";
+import { ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260906-1546-6ff13f29";
+import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260906-1546-6ff13f29";
+import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260906-1546-6ff13f29";
+import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260906-1546-6ff13f29";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260906-1546-6ff13f29";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260906-1546-6ff13f29";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260906-1546-6ff13f29";
+import { Game } from "./game.js?v=fresh-20260906-1546-6ff13f29";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260906-1546-6ff13f29";
+import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260906-1546-6ff13f29";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260906-1546-6ff13f29";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260906-1546-6ff13f29";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260906-1546-6ff13f29";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260822-1344-layout";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260822-1344-layout";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260822-1344-layout";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260822-1344-layout";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260822-1344-layout";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260822-1344-layout";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260822-1344-layout";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260822-1344-layout";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260822-1344-layout";
-import { Processor } from "./systems/processor.js?v=fresh-20260822-1344-layout";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260822-1344-layout";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260822-1344-layout";
-import { createGameState } from "./state/gameState.js?v=fresh-20260822-1344-layout";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260822-1344-layout";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260822-1344-layout";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260822-1344-layout";
-import { createLogisticsManager, REGIONAL_HAULER_FLOOR } from "./systems/logistics.js?v=fresh-20260822-1344-layout";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260822-1344-layout";
-import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260822-1344-layout";
-import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260822-1344-layout";
-import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260822-1344-layout";
-import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260822-1344-layout";
-import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260822-1344-layout";
-import { FLINT_MINING_SEED } from "./content/economy/miningInstitutions.js?v=fresh-20260822-1344-layout";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260822-1344-layout";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260822-1344-layout";
-import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260822-1344-layout";
-import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260822-1344-layout";
-import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260822-1344-layout";
-import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260822-1344-layout";
-import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260822-1344-layout";
-import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260822-1344-layout";
-import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260822-1344-layout";
-import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260822-1344-layout";
-import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260822-1344-layout";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260822-1344-layout";
-import { inspectActor, listInspectableActors } from "./systems/actorInspector.js?v=fresh-20260822-1344-layout";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260822-1344-layout";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260822-1344-layout";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260822-1344-layout";
-import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260822-1344-layout";
-import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260822-1344-layout";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260906-1546-6ff13f29";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260906-1546-6ff13f29";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260906-1546-6ff13f29";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260906-1546-6ff13f29";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260906-1546-6ff13f29";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260906-1546-6ff13f29";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260906-1546-6ff13f29";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260906-1546-6ff13f29";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260906-1546-6ff13f29";
+import { Processor } from "./systems/processor.js?v=fresh-20260906-1546-6ff13f29";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260906-1546-6ff13f29";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260906-1546-6ff13f29";
+import { createGameState } from "./state/gameState.js?v=fresh-20260906-1546-6ff13f29";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260906-1546-6ff13f29";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260906-1546-6ff13f29";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260906-1546-6ff13f29";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260906-1546-6ff13f29";
+import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260906-1546-6ff13f29";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260906-1546-6ff13f29";
+import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260906-1546-6ff13f29";
+import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260906-1546-6ff13f29";
+import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260906-1546-6ff13f29";
+import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260906-1546-6ff13f29";
+import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260906-1546-6ff13f29";
+import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260906-1546-6ff13f29";
+import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS } from "./content/economy/miningInstitutions.js?v=fresh-20260906-1546-6ff13f29";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260906-1546-6ff13f29";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260906-1546-6ff13f29";
+import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260906-1546-6ff13f29";
+import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260906-1546-6ff13f29";
+import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260906-1546-6ff13f29";
+import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260906-1546-6ff13f29";
+import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260906-1546-6ff13f29";
+import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260906-1546-6ff13f29";
+import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260906-1546-6ff13f29";
+import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260906-1546-6ff13f29";
+import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260906-1546-6ff13f29";
+import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260906-1546-6ff13f29";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260906-1546-6ff13f29";
+import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260906-1546-6ff13f29";
+import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260906-1546-6ff13f29";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260906-1546-6ff13f29";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260906-1546-6ff13f29";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260906-1546-6ff13f29";
+import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260906-1546-6ff13f29";
+import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260906-1546-6ff13f29";
+import { COCKPIT_MODULE_IDS, COCKPIT_PRESETS, applyCockpitPreset, createCockpitLayoutState } from "./systems/cockpitLayout.js?v=fresh-20260906-1546-6ff13f29";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -269,9 +274,11 @@ const journeyStatus = document.querySelector("#journey-status");
 const merchantCredits = document.querySelector("#merchant-credits");
 const minerArmed = document.querySelector("#miner-armed");
 const powerButton = document.querySelector("#ship-power");
+const powerButtonState = document.querySelector("#ship-power-state");
 const processorCanvas = document.querySelector("#processor");
 const processorOutputPanel = document.querySelector(".processor-outputs");
 const scanButton = document.querySelector("#ship-scan");
+const beaconLocatorFace = document.querySelector(".beacon-locator-panel .system-readout");
 const scanTrigger = document.querySelector("#scan-trigger");
 const beaconTracking = document.querySelector("#beacon-tracking");
 const beaconBayButtons = [...document.querySelectorAll("[data-beacon-bay]")];
@@ -305,11 +312,8 @@ const shieldCharges = document.querySelector("#shield-charges");
 const shieldStatus = document.querySelector("#shield-status");
 const cloakButton = document.querySelector("#cloak-button");
 const cloakStatus = document.querySelector("#cloak-status");
-const engineStrafeHint = document.querySelector("#engine-strafe-hint");
-const engineBoostHint = document.querySelector("#engine-boost-hint");
-const engineModelSelect = document.querySelector("#engine-model-select");
-const engineDownControlHint = document.querySelector("#engine-down-control-hint");
-const thrustModeToggle = document.querySelector("#thrust-mode-toggle");
+const engineModelName = document.querySelector("#engine-model-name");
+const engineHelpButton = document.querySelector("#engine-help");
 const viewportRegion = document.querySelector("#viewport-region");
 const zoomInButton = document.querySelector("#zoom-in");
 const zoomOutButton = document.querySelector("#zoom-out");
@@ -331,6 +335,7 @@ const worldDebugFields = {
   oreBias: document.querySelector("#debug-ore-bias"),
   lifeBias: document.querySelector("#debug-life-bias"),
   asteroids: document.querySelector("#debug-asteroids"),
+  geology: document.querySelector("#debug-geology"),
   hunters: document.querySelector("#debug-hunters"),
   lifeforms: document.querySelector("#debug-lifeforms"),
   activeLifeforms: document.querySelector("#debug-active-lifeforms"),
@@ -352,7 +357,6 @@ const _hud = {
   tractorActive: null,
   shieldKey: null,
   cloakKey: null,
-  hasLateralThrusters: null,
   towCableKey: null,
   mossHarvesterKey: null,
   mossSeederKey: null,
@@ -363,6 +367,7 @@ const _hud = {
   minerArmed: null,
 };
 const state = createGameState();
+compileOldUniverseHistory(state);
 
 // Rights overlay toggle on the pilot license. The viewport reads
 // state.ui.rightsOverlayEnabled live each frame, so this only mirrors and flips
@@ -390,8 +395,36 @@ if (shouldResetSave() || initialDevStart || peekSavedDevStartId()) {
 const savedProfile = loadSavedProfile(state);
 const audio = createGameAudio();
 wireAudioUnlockGestures();
-const processor = new Processor(processorCanvas, processUnit, { enableCompaction: true, getUnitFlags: getResourceUnitFlags });
-const cargoHold = new Processor(cargoCanvas, handleCargoUnitClick, { isClickable: true, getUnitFlags: getCargoUnitFlags });
+const getViewportCenterInChamber = (chamberCanvas) => {
+  const viewportBounds = canvas.getBoundingClientRect();
+  const chamberBounds = chamberCanvas.getBoundingClientRect();
+  if (!viewportBounds.height || !chamberBounds.height) return chamberCanvas.height / 2;
+  const centerInCssPixels = viewportBounds.top + viewportBounds.height / 2 - chamberBounds.top;
+  return centerInCssPixels * chamberCanvas.height / chamberBounds.height;
+};
+const processor = new Processor(processorCanvas, processUnit, {
+  enableCompaction: true,
+  getUnitFlags: getResourceUnitFlags,
+  spawnFromLeft: true,
+  floorSpread: true,
+  inletSide: "right",
+  getInletCenterY: () => getViewportCenterInChamber(processorCanvas),
+  transparentBackground: true,
+  unitScale: 1.7,
+});
+const cargoHold = new Processor(cargoCanvas, handleCargoUnitClick, {
+  isClickable: true,
+  getUnitFlags: getCargoUnitFlags,
+  spawnFromLeft: true,
+  // Cargo should behave like loose material behind glass. The left inlet gives
+  // each unit one rightward shove; after that, collisions and floor friction
+  // settle it wherever it lands instead of an invisible sorter pulling it left.
+  floorSpread: false,
+  inletSide: "left",
+  getInletCenterY: () => getViewportCenterInChamber(cargoCanvas),
+  transparentBackground: true,
+  unitScale: 1.7,
+});
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio, updateLedgerDrivenSystems);
 let activeHubServiceId = null;
 const procurementManager = createHubProcurementOperation({ state });
@@ -407,7 +440,6 @@ const logisticsManager = createLogisticsManager({
   // A carrier turning freight away can put another ship into service; one with
   // nothing to carry lays one up. The world builds and drops the actual hull.
   commissionHauler: (spec) => game.commissionHauler(spec),
-  regionalHaulerFloor: REGIONAL_HAULER_FLOOR,
 });
 const towServiceManager = createTowServiceManager({
   state, ships: game.npcShips, destinations: game.worldSites,
@@ -450,8 +482,16 @@ window.__asteroids.sprc = sprcManager;
 sprcManager.update();
 const miningManager = createMiningOperation({ state, game, sprcOperation: sprcManager });
 const flintMiningManager = createMiningOperation({ state, game, sprcOperation: sprcManager, seed: FLINT_MINING_SEED });
+const frontierMiningManagers = FRONTIER_MINING_SEEDS.map((seed) =>
+  createMiningOperation({ state, game, sprcOperation: sprcManager, seed }));
+const historicalMiningManagers = getHistoricalMiningSeeds(state).map((seed) =>
+  createMiningOperation({ state, game, sprcOperation: sprcManager, seed }));
+const ecologicalRecoveryManager = createEcologicalRecoveryOperation({ state, game });
 window.__asteroids.mining = miningManager;
 window.__asteroids.miningCompetitor = flintMiningManager;
+window.__asteroids.frontierMining = frontierMiningManagers;
+window.__asteroids.historicalMining = historicalMiningManagers;
+window.__asteroids.ecologicalRecovery = ecologicalRecoveryManager;
 window.__asteroids.procurement = procurementManager;
 window.__asteroids.industry = industrialManager;
 window.__asteroids.hubPlanning = hubPlanningManager;
@@ -511,10 +551,28 @@ const journeyDirector = createJourneyDirector({
   setViewportLayout: applyViewportLayout,
 });
 const commsDirector = createCommsDirector({ state, journeyDirector });
+engineHelpButton?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  const model = getEngineModel(state.components.engine);
+  const isVektor = model.id === "vektor-reversing-drive";
+  const text = isVektor
+    ? "VEKTOR R/T OWNER'S BRIEF — POWER ON arms the drive. W commands forward thrust; S delivers controlled reverse thrust without surrendering your heading; A/D rotates the hull. POWER OFF isolates the drive for docking, service, or any moment when an accidental burn would waste fuel or position. Vektor: keep your eyes on the work and your nose toward it."
+    : "ROOK STANDARD DRIVE OWNER'S BRIEF — POWER ON arms the drive. W commands forward thrust; A/D rotates the hull; S applies the braking system. POWER OFF isolates the drive for docking, service, or any moment when an accidental burn would waste fuel or position. Rook Industries: simple control, honest stopping distance.";
+  commsDirector.say({
+    source: COMMS_SOURCES.serviceNpc,
+    speaker: isVektor ? "Vektor Flight Systems" : "Rook Industries",
+    text,
+    priority: 95,
+  });
+  journeyPanel?.classList.add("is-cockpit-expanded");
+  document.querySelector("#cockpit-objective")?.setAttribute("aria-expanded", "true");
+});
 let bringPanelToFront = () => {};
 let positionPanelById = () => {};
 let movePaperPanelToDesk = () => {};
 let movePaperPanelToDrawer = () => {};
+let cockpitLayoutInitialized = false;
+let closeFloatingCockpitPanels = () => {};
 let contractPulledFromDrawer = false;
 let renderedLedgerVersion = -1;
 let renderedLedgerEventsKey = "";
@@ -566,7 +624,8 @@ function updateShipPowerDisplay() {
 
   const engineStage = engine.condition?.stage ?? "healthy";
 
-  powerButton.textContent = engine.powered ? "Power Down" : "Power Ship";
+  powerButtonState.textContent = engine.powered ? "Off" : "On";
+  powerButton.setAttribute("aria-label", engine.powered ? "Power off" : "Power on");
   powerButton.setAttribute("aria-pressed", String(engine.powered));
   powerButton.disabled = !engine.installed || state.components.hull.integrity <= 0 || engine.powerLocked || (!engine.powered && isOutOfFuel);
   shipStatus.textContent =
@@ -608,12 +667,6 @@ towButton.addEventListener("click", () => {
   game.emergencyTow();
   updateTowEstimateDisplay();
   updateHudDisplay();
-});
-
-document.querySelectorAll("input[name='thrust-mode']").forEach((control) => {
-  control.addEventListener("change", () => {
-    state.components.engine.thrustMode = control.value;
-  });
 });
 
 minerArmed.addEventListener("change", () => {
@@ -702,6 +755,18 @@ mossSeederFireButton?.addEventListener("click", () => {
 scanButton.addEventListener("click", () => {
   game.cycleBeacon();
 });
+
+if (beaconLocatorFace) {
+  beaconLocatorFace.setAttribute("role", "button");
+  beaconLocatorFace.setAttribute("tabindex", "0");
+  beaconLocatorFace.setAttribute("aria-label", "Select next navigation beacon");
+  beaconLocatorFace.addEventListener("click", () => game.cycleBeacon());
+  beaconLocatorFace.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    game.cycleBeacon();
+  });
+}
 
 beaconBayButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -932,6 +997,8 @@ worldClock.register("protection-observe", () => fleetProtectionManager.observe()
 worldClock.register("mining-observe", () => {
   miningManager.observe();
   flintMiningManager.observe();
+  frontierMiningManagers.forEach((manager) => manager.observe());
+  historicalMiningManagers.forEach((manager) => manager.observe());
 }, { phase: TICK_PHASE.OBSERVE });
 
 // DECIDE — commit: choose work, place orders, dispatch.
@@ -951,7 +1018,10 @@ worldClock.register("logistics", () => logisticsManager.decide());
 worldClock.register("mining", () => {
   miningManager.decide();
   flintMiningManager.decide();
+  frontierMiningManagers.forEach((manager) => manager.decide());
+  historicalMiningManagers.forEach((manager) => manager.decide());
 });
+worldClock.register("ecological-recovery", () => ecologicalRecoveryManager.update(), { everyTicks: 5 });
 worldClock.register("towing", () => towServiceManager.decide());
 // The only DECIDING half of the two fleet services: offering hardware to craft
 // physically at Scrap Porch.
@@ -974,12 +1044,20 @@ worldClock.register("procurement-settle", () => procurementManager.settle(), { p
 // One full ordered pass at boot, then every second. The staggered version gave
 // each system its own first run somewhere in the first 750ms; this gives the
 // world a single coherent first tick instead.
+// Explorer/panorama observe an established economy. Seed that prior-cycle state
+// before the coherent first tick, or tick one creates the cold-start crisis the
+// warm start exists to avoid.
+if (isFreePlayStart) {
+  state._devStartId = initialDevStart;
+  seedDevOperatingContinuity(state);
+}
 worldClock.tick();
 worldClock.start();
 registerStarterDeliveryShipRecords(state);
 clearOldPanelLayouts();
 setInitialPaperworkLocations();
 makePanelsDraggable();
+setupCockpitLayout();
 setupPaperworkControls();
 renderResourceGuide();
 wirePanelControlSounds();
@@ -1021,32 +1099,34 @@ game.start();
 processor.start();
 cargoHold.start();
 
-new ResizeObserver(() => {
-  if (!document.body.classList.contains("is-viewport-fullscreen")) return;
+new ResizeObserver(syncCanvasResolutionToDisplay).observe(canvas);
+const processorCanvasObserver = new ResizeObserver(() => {
+  processor.resizeToDisplay();
+  cargoHold.resizeToDisplay();
+});
+processorCanvasObserver.observe(processorCanvas);
+processorCanvasObserver.observe(cargoCanvas);
+
+function syncCanvasResolutionToDisplay() {
+  // Keep the drawing buffer at the size actually shown on screen. The overlay
+  // cockpit is wider than the original 960px console; stretching that old
+  // buffer made vector lines soft and made the world appear artificially
+  // enlarged. Resizing the buffer reveals more space at the authored scale.
   const w = canvas.offsetWidth;
   const h = canvas.offsetHeight;
   if (w > 0 && h > 0 && (canvas.width !== w || canvas.height !== h)) {
     canvas.width = w;
     canvas.height = h;
   }
-}).observe(canvas);
+}
 window.addEventListener("beforeunload", () => saveNow());
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") saveNow();
 });
 
-engineModelSelect.addEventListener("change", () => {
-  state.components.engine.engineModelId = engineModelSelect.value || DEFAULT_ENGINE_MODEL_ID;
-  if (getEngineModel(state.components.engine).downControl === "reverse-thrust") {
-    state.components.engine.thrustMode = "forward";
-    const forward = document.querySelector("input[name='thrust-mode'][value='forward']");
-    if (forward) forward.checked = true;
-  }
-  updateHudDisplay();
-});
-
 function updateHudDisplay() {
   updateAttentionCallouts();
+  updateCockpitDisplay();
   renderProcessorOutputs();
   renderShipOffers();
   const activeService = currentSiteState?.dockedSite && activeHubServiceId ? getHubService(currentSiteState.dockedSite.id, activeHubServiceId) : null;
@@ -1083,7 +1163,7 @@ function updateHudDisplay() {
   }
   if (fuelFraction !== _hud.fuelFraction) {
     _hud.fuelFraction = fuelFraction;
-    fuelFill.style.transform = `scaleX(${fuelFraction})`;
+    setSegmentedMeter(fuelFill, fuelFraction, 16);
   }
 
   setTowAvailable(isStranded);
@@ -1124,24 +1204,10 @@ function updateHudDisplay() {
     cloakButton.disabled = !state.components.engine.powered || state.components.engine.fuel <= 0;
   }
 
-  const hasLateralThrusters = state.components.engine.upgrades?.includes("lateral-thrusters-mk1") ?? false;
-  if (hasLateralThrusters !== _hud.hasLateralThrusters) {
-    _hud.hasLateralThrusters = hasLateralThrusters;
-    engineStrafeHint.hidden = !hasLateralThrusters;
-  }
-
-  const hasForwardBoost = state.components.engine.upgrades?.includes("forward-boost-mk1") ?? false;
-  if (hasForwardBoost !== _hud.hasForwardBoost) {
-    _hud.hasForwardBoost = hasForwardBoost;
-    engineBoostHint.hidden = !hasForwardBoost;
-  }
-
   const engineModel = getEngineModel(state.components.engine);
   if (engineModel.id !== _hud.engineModelId) {
     _hud.engineModelId = engineModel.id;
-    engineModelSelect.value = engineModel.id;
-    engineDownControlHint.textContent = engineModel.downControlLabel;
-    thrustModeToggle.hidden = engineModel.downControl === "reverse-thrust";
+    if (engineModelName) engineModelName.textContent = `${engineModel.brand} ${engineModel.name}`;
   }
 
   const towCableDisplay = game.getTowCableDisplay();
@@ -1182,7 +1248,7 @@ function updateHudDisplay() {
   }
   if (hullFraction !== _hud.hullFraction) {
     _hud.hullFraction = hullFraction;
-    hullFill.style.transform = `scaleX(${hullFraction})`;
+    setSegmentedMeter(hullFill, hullFraction, 12);
   }
 
   const hull = state.components.hull;
@@ -1196,7 +1262,7 @@ function updateHudDisplay() {
       hullReserveCount.textContent = `${reserveValue} / ${maxReserve}`;
     }
     if (hullReserveFill) {
-      hullReserveFill.style.transform = `scaleX(${getMeterFraction(reserveValue, maxReserve)})`;
+      setSegmentedMeter(hullReserveFill, getMeterFraction(reserveValue, maxReserve), 12);
     }
     if (hullRepairStatus) {
       hullRepairStatus.hidden = !isPatching;
@@ -1276,7 +1342,7 @@ function updateBeaconBayDisplay() {
   const recovery = bayState?.recovery;
   if (!recovery) {
     beaconRecoveryMeter.hidden = true;
-    beaconRecoveryFill.style.transform = "scaleX(0)";
+    setSegmentedMeter(beaconRecoveryFill, 0, 12);
     return;
   }
 
@@ -1284,7 +1350,7 @@ function updateBeaconBayDisplay() {
   const progress = Math.min(1, Math.max(0, recovery.progress ?? 0));
   beaconRecoveryMeter.hidden = false;
   beaconRecoveryLabel.textContent = `Recovering ${bay?.label ?? "beacon"}`;
-  beaconRecoveryFill.style.transform = `scaleX(${progress})`;
+  setSegmentedMeter(beaconRecoveryFill, progress, 12);
 }
 
 function setTowAvailable(isAvailable) {
@@ -1339,6 +1405,23 @@ function getMeterFraction(value, maxValue) {
   }
 
   return Math.max(0, Math.min(1, value / maxValue));
+}
+
+function setSegmentedMeter(fill, fraction, segmentCount = 12) {
+  if (!fill) return;
+  if (fill.children.length !== segmentCount) {
+    fill.replaceChildren(...Array.from({ length: segmentCount }, (_, index) => {
+      const segment = document.createElement("i");
+      segment.style.setProperty("--meter-step", String(index));
+      segment.style.setProperty("--fuel-step", String(index));
+      return segment;
+    }));
+  }
+  fill.classList.add("is-segmented-meter");
+  fill.style.removeProperty("transform");
+  fill.style.removeProperty("clip-path");
+  const litCount = Math.round(Math.max(0, Math.min(1, fraction)) * segmentCount);
+  [...fill.children].forEach((segment, index) => segment.classList.toggle("is-lit", index < litCount));
 }
 
 function scheduleSave() {
@@ -1438,29 +1521,18 @@ function applyDevStart(devStartId) {
 
 function applyViewportLayout(layout) {
   state.ui.viewportLayout = layout;
-  document.body.classList.toggle("is-viewport-fullscreen", layout === "fullscreen-background");
+  const isPanorama = layout === "fullscreen-background";
+  document.body.classList.toggle("is-viewport-fullscreen", isPanorama);
+  if (isPanorama) {
+    // Panorama is the minimal-HUD version of the same stage. Do not carry a
+    // collection of open cockpit inspectors into it; their compact launchers
+    // remain available and can open one flyout when needed.
+    closeFloatingCockpitPanels();
+  }
+  window.requestAnimationFrame(syncCanvasResolutionToDisplay);
   updateZoomLabel();
   updateAlphaLabel();
-
-  if (layout === "fullscreen-background") {
-    const savedLayout = loadPanelLayout();
-    Object.entries(PANORAMA_PANEL_OVERRIDES).forEach(([panelId, pos]) => {
-      const saved = getSavedPanelLayout(savedLayout, panelId, "panorama");
-      const isCurrentPanoramaLayout = saved?.layoutVersion === PANORAMA_LAYOUT_VERSION;
-      const position = isCurrentPanoramaLayout ? saved : pos;
-      const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
-
-      if (panel && Number.isFinite(position.z)) {
-        panel.style.zIndex = String(position.z);
-      }
-
-      positionPanelById(panelId, position);
-
-      if (!isCurrentPanoramaLayout && panel) {
-        savePanelLayout(panel, position, { layoutVersion: PANORAMA_LAYOUT_VERSION });
-      }
-    });
-  }
+  updateCockpitDisplay();
 }
 
 function updateZoomLabel() {
@@ -1528,6 +1600,8 @@ function setupExplorerStart() {
   Object.assign(state.components.engine, {
     installed: true,
     powered: false,
+    engineModelId: "vektor-reversing-drive",
+    thrustMode: "forward",
     fuel: 2000,
     maxFuel: 2000,
     thrustPower: 160,
@@ -1574,8 +1648,8 @@ function setupExplorerStart() {
   state.components.beaconBay.installed = true;
   state.components.mossSeeder.installed = true;
 
-  state.ship.frameId = "explorer";
-  state.ship.shape = "explorer";
+  state.ship.frameId = "classic";
+  state.ship.shape = "classic";
   state.ship.name = "Explorer";
 
   issuePilotLicense(state, {
@@ -3313,6 +3387,7 @@ function updateWorldDebugDisplay(debug) {
   worldDebugFields.oreBias.textContent = formatZoneResourceBias(zone);
   worldDebugFields.lifeBias.textContent = `H ${zone.hunterBias.toFixed(2)} / A ${zone.ambientLifeBias.toFixed(2)}`;
   worldDebugFields.asteroids.textContent = String(debug.asteroidCount);
+  worldDebugFields.geology.textContent = `${debug.geology.disturbedSources} disturbed / ${debug.geology.depletedSources} depleted`;
   worldDebugFields.hunters.textContent = `${debug.hunterCount} / ${debug.activeHunterCount} active`;
   worldDebugFields.lifeforms.textContent = String(debug.lifeformCount);
   worldDebugFields.activeLifeforms.textContent = String(debug.activeLifeformCount);
@@ -4859,6 +4934,7 @@ function processUnit(type, unit = {}) {
       output,
       reason: "incompatible-resource-output",
     }, { visible: false });
+    pulseProcessorRoute(output, false);
     return false;
   }
 
@@ -4870,10 +4946,12 @@ function processUnit(type, unit = {}) {
       output,
       reason: "output-full",
     }, { visible: false });
+    pulseProcessorRoute(output, false);
     return false;
   }
 
   state.components.processor.output = output;
+  pulseProcessorRoute(output, true);
   audio.playCargoTransfer(type);
   state.ledger.recordEvent("resource.processed", {
     resourceType: type,
@@ -4900,6 +4978,26 @@ function processUnit(type, unit = {}) {
 
   updateHudDisplay();
   game.updateSiteReadout();
+}
+
+function pulseProcessorRoute(output, accepted) {
+  const panelId = {
+    fuel: "engine",
+    ammo: "miner",
+    scanergy: "scanner",
+    "hull-repair": "hull",
+    cargo: "cargo",
+  }[output];
+  const claw = document.querySelector(".processor-claw");
+  const destination = panelId && document.querySelector(`[data-panel-id='${panelId}']`);
+  const className = accepted ? "is-route-pulse" : "is-route-rejected";
+  [claw, destination].forEach((element) => {
+    if (!element) return;
+    element.classList.remove("is-route-pulse", "is-route-rejected");
+    void element.offsetWidth;
+    element.classList.add(className);
+    window.setTimeout(() => element.classList.remove(className), accepted ? 420 : 300);
+  });
 }
 
 function receiveCollectedResource(resource) {
@@ -5765,6 +5863,581 @@ function renderProcessorOutputs() {
   });
 }
 
+function setupCockpitLayout() {
+  if (cockpitLayoutInitialized) {
+    return;
+  }
+  cockpitLayoutInitialized = true;
+  document.body.classList.add("is-cockpit-layout");
+  state.ui.cockpit = createCockpitLayoutState(state.ui.cockpit);
+
+  const presetSelect = document.querySelector("#cockpit-preset");
+  const configureButton = document.querySelector("#cockpit-configure");
+  const resetButton = document.querySelector("#cockpit-reset");
+  const configPanel = document.querySelector("#cockpit-config-panel");
+  const configDoneButton = document.querySelector("#cockpit-config-done");
+  const configList = document.querySelector("#cockpit-config-list");
+  const phosphorColorInput = document.querySelector("#cockpit-phosphor-color");
+  const defaultModeButton = document.querySelector("#cockpit-mode-default");
+  const panoramaModeButton = document.querySelector("#cockpit-mode-panorama");
+  const objectiveButton = document.querySelector("#cockpit-objective");
+  const spacePanel = document.querySelector(".space-panel");
+  const previousBringPanelToFront = bringPanelToFront;
+  const launchers = new Map();
+  const chamberIds = new Set(["processor", "cargo"]);
+  const halfWidthIds = new Set(["beacon-locator", "scanner"]);
+  const trayPanelOrder = [
+    "hull", "engine", "beacon-locator", "tow-cable", "moss-seeder",
+    "beacon-bay", "miner", "collector", "scanner",
+  ];
+  let floatingPanelZ = 600;
+  const shortLabels = {
+    engine: "ENG", hull: "HULL", scanner: "SCAN", "beacon-locator": "NAV",
+    "beacon-bay": "BAY", miner: "MINE", collector: "PULL", processor: "PROC",
+    cargo: "CARGO", "tow-cable": "TOW", "moss-harvester": "FARM",
+    "moss-seeder": "SEED", shield: "SHLD", cloak: "CLAK",
+  };
+
+  const moduleTray = document.createElement("aside");
+  const trayToggle = document.createElement("button");
+  const trayHeader = document.createElement("header");
+  const trayList = document.createElement("div");
+  const cargoRouteTarget = document.createElement("div");
+  moduleTray.className = "cockpit-module-tray";
+  moduleTray.setAttribute("aria-label", "Module bay");
+  trayToggle.type = "button";
+  trayToggle.className = "cockpit-module-tray-tab";
+  trayToggle.setAttribute("aria-expanded", "false");
+  trayToggle.setAttribute("aria-label", "Open module bay");
+  trayToggle.textContent = "MODULES";
+  trayHeader.className = "cockpit-module-tray-header";
+  trayHeader.innerHTML = "<strong>MODULE BAY</strong><span>SELECT / ROUTE</span>";
+  trayList.className = "cockpit-module-tray-list";
+  cargoRouteTarget.className = "cockpit-tray-cargo-socket";
+  cargoRouteTarget.dataset.cockpitRouteTarget = "cargo";
+  cargoRouteTarget.innerHTML = "<span><b>CARGO</b><small>PROCESSOR INPUT</small></span><i aria-hidden=\"true\"></i>";
+  moduleTray.append(trayToggle, trayHeader, trayList, cargoRouteTarget);
+  spacePanel?.append(moduleTray);
+
+  const setTrayOpen = (isOpen) => {
+    moduleTray.classList.toggle("is-open", isOpen);
+    trayToggle.setAttribute("aria-expanded", String(isOpen));
+    trayToggle.setAttribute("aria-label", `${isOpen ? "Close" : "Open"} module bay`);
+  };
+  trayToggle.onclick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setTrayOpen(!moduleTray.classList.contains("is-open"));
+  };
+
+  function applyPhosphorColor(color) {
+    state.ui.cockpit.phosphorColor = color;
+    spacePanel?.style.setProperty("--cockpit-phosphor", color);
+    if (phosphorColorInput) phosphorColorInput.value = color;
+  }
+
+  applyPhosphorColor(state.ui.cockpit.phosphorColor);
+
+  COCKPIT_MODULE_IDS.forEach((panelId) => {
+    const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
+    const title = panel?.querySelector(".component-panel-title");
+    const titleBody = title?.querySelector("div") ?? title;
+    if (!panel || !title || !titleBody) return;
+
+    panel.classList.add("is-cockpit-module");
+    panel.classList.add(halfWidthIds.has(panelId) ? "is-panel-half" : "is-panel-full");
+    panel.style.removeProperty("transform");
+    panel.style.removeProperty("z-index");
+    title.setAttribute("role", "button");
+    title.setAttribute("tabindex", "0");
+    title.setAttribute("aria-label", `Toggle ${panel.querySelector("strong")?.textContent?.trim() || panelId} panel`);
+    title.setAttribute("aria-expanded", "false");
+
+    if (!title.querySelector(".cockpit-module-summary")) {
+      const summary = document.createElement("span");
+      summary.className = "cockpit-module-summary";
+      summary.textContent = "Ready";
+      titleBody.append(summary);
+    }
+    if (!title.querySelector(".cockpit-module-code")) {
+      const code = document.createElement("span");
+      code.className = "cockpit-module-code";
+      code.textContent = shortLabels[panelId] ?? panelId.slice(0, 4).toUpperCase();
+      titleBody.prepend(code);
+    }
+
+    if (chamberIds.has(panelId)) {
+      panel.classList.add("is-cockpit-chamber", "is-cockpit-expanded");
+      title.removeAttribute("role");
+      title.removeAttribute("tabindex");
+      title.removeAttribute("aria-label");
+      title.removeAttribute("aria-expanded");
+      return;
+    }
+
+    const launcher = document.createElement("button");
+    const launcherCode = document.createElement("span");
+    const launcherName = document.createElement("span");
+    launcher.type = "button";
+    launcher.className = "cockpit-module-launcher";
+    launcher.dataset.panelId = panelId;
+    launcher.dataset.cockpitRouteTarget = panelId;
+    launcher.setAttribute("aria-label", `Toggle ${panel.querySelector("strong")?.textContent?.trim() || panelId} instrument`);
+    launcherCode.className = "cockpit-module-launcher-code";
+    launcherCode.textContent = shortLabels[panelId] ?? panelId.slice(0, 4).toUpperCase();
+    launcherName.textContent = panel.querySelector("strong")?.textContent?.trim() || panelId;
+    launcher.append(launcherCode, launcherName);
+    launcher.addEventListener("click", () => toggleCockpitPanel(panel, false));
+    launchers.set(panelId, launcher);
+
+    let drag = null;
+    title.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || !panel.classList.contains("is-cockpit-floating") || event.target.closest("button, input, select, a")) return;
+      const left = Number.parseFloat(panel.style.left) || 0;
+      const top = Number.parseFloat(panel.style.top) || 0;
+      drag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, left, top, moved: false };
+      floatingPanelZ += 1;
+      panel.style.setProperty("--cockpit-float-z", String(floatingPanelZ));
+      panel.classList.add("is-dragging");
+      title.setPointerCapture(event.pointerId);
+    });
+    title.addEventListener("pointermove", (event) => {
+      if (!drag || drag.pointerId !== event.pointerId || !spacePanel) return;
+      const dx = event.clientX - drag.startX;
+      const dy = event.clientY - drag.startY;
+      if (Math.hypot(dx, dy) > 4) drag.moved = true;
+      positionFloatingPanel(panel, drag.left + dx, drag.top + dy);
+    });
+    title.addEventListener("pointerup", finishFloatingDrag);
+    title.addEventListener("pointercancel", finishFloatingDrag);
+
+    function finishFloatingDrag(event) {
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      panel.classList.remove("is-dragging");
+      if (drag.moved) {
+        panel.dataset.cockpitSuppressClickUntil = String(performance.now() + 180);
+        state.ui.cockpit.floatingPositions[panelId] = {
+          x: Math.round(Number.parseFloat(panel.style.left) || 0),
+          y: Math.round(Number.parseFloat(panel.style.top) || 0),
+        };
+        saveNow();
+        audio.playPanelDrop();
+      }
+      drag = null;
+    }
+
+    const toggle = (event) => {
+      if (event?.target?.closest?.("button, input, select, a")) return;
+      if (performance.now() < Number(panel.dataset.cockpitSuppressClickUntil || 0)) return;
+      toggleCockpitPanel(panel);
+    };
+    title.addEventListener("click", toggle);
+    title.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      toggleCockpitPanel(panel);
+    });
+  });
+
+  function toggleCockpitPanel(panel, force = null) {
+    const shouldOpen = force ?? !panel.classList.contains("is-cockpit-expanded");
+    if (shouldOpen) {
+      floatCockpitPanel(panel);
+      audio.playPanelDrop();
+    } else {
+      dockFloatingPanel(panel);
+    }
+  }
+
+  function floatCockpitPanel(panel) {
+    if (!spacePanel || panel.classList.contains("is-cockpit-floating")) return;
+    const panelId = panel.dataset.panelId;
+    const launcher = launchers.get(panelId);
+    const origin = panel.getBoundingClientRect();
+    const spaceRect = spacePanel.getBoundingClientRect();
+    if (launcher) trayList.insertBefore(launcher, panel);
+    panel.dataset.cockpitSlot = "tray";
+    spacePanel.append(panel);
+    panel.classList.add("is-cockpit-expanded", "is-cockpit-floating");
+    floatingPanelZ += 1;
+    panel.style.setProperty("--cockpit-float-z", String(floatingPanelZ));
+    const saved = state.ui.cockpit.floatingPositions?.[panelId];
+    const panelRect = panel.getBoundingClientRect();
+    const trayRect = moduleTray.getBoundingClientRect();
+    const defaultPosition = {
+      x: Math.max(36, trayRect.right - spaceRect.left + 14),
+      y: Math.max(94, Math.min(origin.top - spaceRect.top, spaceRect.height - panelRect.height - 48)),
+    };
+    const resolvedDefault = findAvailableFloatingPosition(panel, defaultPosition, "tray");
+    positionFloatingPanel(
+      panel,
+      saved?.x ?? resolvedDefault.x,
+      saved?.y ?? resolvedDefault.y,
+    );
+    panel.querySelector(".component-panel-title")?.setAttribute("aria-expanded", "true");
+  }
+
+  function dockFloatingPanel(panel) {
+    const panelId = panel.dataset.panelId;
+    const launcher = launchers.get(panelId);
+    panel.classList.remove("is-cockpit-expanded", "is-cockpit-floating", "is-dragging");
+    panel.style.removeProperty("left");
+    panel.style.removeProperty("top");
+    panel.style.removeProperty("--cockpit-float-z");
+    if (launcher?.isConnected) launcher.replaceWith(panel);
+    else if (panel.parentElement !== trayList) trayList.append(panel);
+    panel.dataset.cockpitSlot = "tray";
+    panel.querySelector(".component-panel-title")?.setAttribute("aria-expanded", "false");
+  }
+
+  function positionFloatingPanel(panel, requestedX, requestedY) {
+    if (!spacePanel) return;
+    const spaceRect = spacePanel.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const toolbarHeight = document.querySelector(".cockpit-toolbar")?.getBoundingClientRect().height ?? 0;
+    const minY = toolbarHeight + 10;
+    const maxX = Math.max(4, spaceRect.width - panelRect.width - 4);
+    const paperworkClearance = 42;
+    const maxY = Math.max(minY, spaceRect.height - panelRect.height - paperworkClearance);
+    panel.style.left = `${Math.round(Math.min(maxX, Math.max(4, requestedX)))}px`;
+    panel.style.top = `${Math.round(Math.min(maxY, Math.max(minY, requestedY)))}px`;
+  }
+
+  function findAvailableFloatingPosition(panel, desired, homeSlotId) {
+    if (!spacePanel) return desired;
+    const spaceRect = spacePanel.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const toolbarHeight = document.querySelector(".cockpit-toolbar")?.getBoundingClientRect().height ?? 0;
+    const minY = Math.max(84, toolbarHeight + 10);
+    const maxX = Math.max(4, spaceRect.width - panelRect.width - 4);
+    const maxY = Math.max(minY, spaceRect.height - panelRect.height - 42);
+    const startX = Math.min(maxX, Math.max(4, desired.x));
+    const startY = Math.min(maxY, Math.max(minY, desired.y));
+    const occupied = [...document.querySelectorAll(".is-cockpit-module.is-cockpit-floating")]
+      .filter((other) => other !== panel)
+      .map((other) => {
+        const rect = other.getBoundingClientRect();
+        return {
+          left: rect.left - spaceRect.left - 8,
+          right: rect.right - spaceRect.left + 8,
+          top: rect.top - spaceRect.top - 8,
+          bottom: rect.bottom - spaceRect.top + 8,
+        };
+      });
+    const overlaps = (x, y) => occupied.some((rect) => (
+      x < rect.right
+      && x + panelRect.width > rect.left
+      && y < rect.bottom
+      && y + panelRect.height > rect.top
+    ));
+    const xStep = homeSlotId === "right" ? -24 : 24;
+    const xLimitReached = (x) => xStep > 0 ? x > maxX : x < 4;
+
+    for (let x = startX; !xLimitReached(x); x += xStep) {
+      for (let y = startY; y <= maxY; y += 24) {
+        if (!overlaps(x, y)) return { x, y };
+      }
+      for (let y = minY; y < startY; y += 24) {
+        if (!overlaps(x, y)) return { x, y };
+      }
+    }
+
+    return desired;
+  }
+
+  closeFloatingCockpitPanels = () => {
+    document.querySelectorAll(".is-cockpit-module.is-cockpit-expanded:not(.is-cockpit-chamber)").forEach(dockFloatingPanel);
+  };
+
+  function applyAssignments() {
+    const orderedPanelIds = [
+      ...trayPanelOrder,
+      ...COCKPIT_MODULE_IDS.filter((panelId) => !chamberIds.has(panelId) && !trayPanelOrder.includes(panelId)),
+    ];
+    COCKPIT_MODULE_IDS.filter((panelId) => chamberIds.has(panelId)).forEach((panelId) => {
+      const panel = document.querySelector(`.is-cockpit-module[data-panel-id="${panelId}"]`);
+      if (!panel) return;
+      if (panel.parentElement !== spacePanel) spacePanel.append(panel);
+      panel.dataset.cockpitSlot = panelId === "processor" ? "left" : "right";
+    });
+    orderedPanelIds.forEach((panelId) => {
+      const panel = document.querySelector(`.is-cockpit-module[data-panel-id="${panelId}"]`);
+      const launcher = launchers.get(panelId);
+      if (!panel) return;
+      panel.dataset.cockpitSlot = "tray";
+      panel.dataset.cockpitRouteTarget = panelId;
+      if (panel.classList.contains("is-cockpit-floating")) {
+        if (launcher) trayList.append(launcher);
+      } else {
+        trayList.append(panel);
+      }
+    });
+    if (presetSelect) presetSelect.value = state.ui.cockpit.preset;
+    renderConfigurationRows();
+  }
+
+  function renderConfigurationRows() {
+    if (!configList) return;
+    const note = document.createElement("p");
+    note.className = "cockpit-config-note";
+    note.textContent = "All installed instruments now live in the left module bay. Open any combination, then drag the live instruments into position.";
+    configList.replaceChildren(note);
+  }
+
+  function setConfigOpen(isOpen) {
+    if (!configPanel || !configureButton) return;
+    configPanel.hidden = !isOpen;
+    configureButton.setAttribute("aria-expanded", String(isOpen));
+    if (isOpen) configDoneButton?.focus();
+  }
+
+  function recordConfiguration(reason) {
+    state.ledger.recordEvent("cockpit.configured", {
+      preset: state.ui.cockpit.preset,
+      reason,
+    }, { visible: false });
+    updateLedgerDrivenSystems();
+    saveNow();
+  }
+
+  presetSelect?.addEventListener("change", () => {
+    if (!COCKPIT_PRESETS[presetSelect.value]) return;
+    setTrayOpen(false);
+    closeFloatingCockpitPanels();
+    applyCockpitPreset(state.ui.cockpit, presetSelect.value);
+    applyAssignments();
+    recordConfiguration("preset-selected");
+  });
+  configureButton?.addEventListener("click", () => setConfigOpen(configPanel?.hidden ?? true));
+  phosphorColorInput?.addEventListener("input", () => applyPhosphorColor(phosphorColorInput.value));
+  phosphorColorInput?.addEventListener("change", () => recordConfiguration("phosphor-color-selected"));
+  configDoneButton?.addEventListener("click", () => {
+    setConfigOpen(false);
+    recordConfiguration("configuration-closed");
+  });
+  resetButton?.addEventListener("click", () => {
+    setTrayOpen(false);
+    closeFloatingCockpitPanels();
+    const preset = COCKPIT_PRESETS[state.ui.cockpit.preset] ? state.ui.cockpit.preset : "mining";
+    applyCockpitPreset(state.ui.cockpit, preset);
+    applyAssignments();
+    recordConfiguration("layout-reset");
+  });
+  defaultModeButton?.addEventListener("click", () => applyViewportLayout("default"));
+  panoramaModeButton?.addEventListener("click", () => applyViewportLayout("fullscreen-background"));
+  objectiveButton?.addEventListener("click", () => {
+    const shouldOpen = !journeyPanel.classList.contains("is-cockpit-expanded");
+    journeyPanel.classList.toggle("is-cockpit-expanded", shouldOpen);
+    objectiveButton.setAttribute("aria-expanded", String(shouldOpen));
+  });
+
+  bringPanelToFront = (panel) => {
+    if (panel?.classList.contains("is-cockpit-module")) {
+      playAttentionOnce(panel);
+      return;
+    }
+    previousBringPanelToFront(panel);
+  };
+
+  applyAssignments();
+  setupProcessorClaw();
+  if (!document.querySelector("[data-panel-id='license']")?.closest("#paperwork-drawer")) {
+    movePaperPanelToDrawer("license");
+  }
+  applyViewportLayout(state.ui.viewportLayout ?? "default");
+  updateCockpitDisplay();
+
+  function setupProcessorClaw() {
+    if (!spacePanel || spacePanel.querySelector(".processor-claw")) return;
+    const routes = {
+      engine: "fuel",
+      miner: "ammo",
+      scanner: "scanergy",
+      hull: "hull-repair",
+      cargo: "cargo",
+    };
+    const tether = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    const claw = document.createElement("button");
+    const glyph = document.createElement("span");
+    const label = document.createElement("span");
+    tether.classList.add("processor-tether");
+    line.setAttribute("vector-effect", "non-scaling-stroke");
+    tether.append(line);
+    claw.type = "button";
+    claw.className = "processor-claw";
+    claw.setAttribute("aria-label", "Drag processor claw onto a destination instrument");
+    glyph.className = "processor-claw-glyph";
+    label.className = "processor-claw-label";
+    claw.append(glyph, label);
+    spacePanel.append(tether, claw);
+
+    const saved = state.ui.cockpit.processorClawPosition;
+    let position = saved ?? { x: 238, y: 150 };
+    let attachedPanelId = state.ui.cockpit.processorClawTarget ?? null;
+    let drag = null;
+
+    const updateRouteLabel = () => {
+      const output = getSelectedProcessorOutput();
+      label.textContent = `PROC > ${output.replace("hull-repair", "repair").toUpperCase()}`;
+    };
+    const place = (x, y) => {
+      const bounds = spacePanel.getBoundingClientRect();
+      const clawBounds = claw.getBoundingClientRect();
+      position = {
+        x: Math.round(Math.max(4, Math.min(bounds.width - clawBounds.width - 4, x))),
+        y: Math.round(Math.max(88, Math.min(bounds.height - clawBounds.height - 42, y))),
+      };
+      claw.style.left = `${position.x}px`;
+      claw.style.top = `${position.y}px`;
+      const processorRect = document.querySelector("[data-panel-id='processor']")?.getBoundingClientRect();
+      line.setAttribute("x1", String((processorRect?.left ?? bounds.left) - bounds.left + (processorRect?.width ?? 0) / 2));
+      line.setAttribute("y1", String((processorRect?.top ?? bounds.top) - bounds.top + (processorRect?.height ?? 0) / 2));
+      line.setAttribute("x2", String(position.x + clawBounds.width / 2));
+      line.setAttribute("y2", String(position.y + clawBounds.height / 2));
+    };
+    const getSnapPosition = (panelId) => {
+      if (!spacePanel) return null;
+      if (!moduleTray.classList.contains("is-open") && claw.classList.contains("is-plugged-to-tray")) {
+        return null;
+      }
+      const trayTarget = moduleTray.classList.contains("is-open")
+        ? moduleTray.querySelector(`[data-cockpit-route-target='${panelId}']`)
+        : null;
+      const floatingTarget = document.querySelector(`.is-cockpit-floating[data-panel-id='${panelId}']`);
+      const target = trayTarget ?? floatingTarget;
+      const bounds = spacePanel.getBoundingClientRect();
+      const clawRect = claw.getBoundingClientRect();
+      if (trayTarget) {
+        const targetRect = trayTarget.getBoundingClientRect();
+        return {
+          x: targetRect.right - bounds.left + 8,
+          y: targetRect.top - bounds.top + targetRect.height / 2 - clawRect.height / 2,
+          isTrayTarget: true,
+        };
+      }
+      if (panelId === "cargo") {
+        const cargoRect = cargoCanvas.getBoundingClientRect();
+        return {
+          x: cargoRect.left - bounds.left + 38 - clawRect.width,
+          y: cargoRect.top - bounds.top + cargoRect.height * 0.42 - clawRect.height / 2,
+          isTrayTarget: false,
+        };
+      }
+      if (!target) return null;
+      const targetRect = target.getBoundingClientRect();
+      return {
+        x: targetRect.left - bounds.left - clawRect.width + 5,
+        y: targetRect.top - bounds.top + targetRect.height / 2 - clawRect.height / 2,
+        isTrayTarget: false,
+      };
+    };
+    const snapToPanel = (panelId) => {
+      const snapPosition = getSnapPosition(panelId);
+      if (!snapPosition) return false;
+      attachedPanelId = panelId;
+      claw.classList.add("is-plugged");
+      claw.classList.toggle("is-plugged-to-tray", snapPosition.isTrayTarget);
+      claw.dataset.targetPanel = panelId;
+      place(snapPosition.x, snapPosition.y);
+      return true;
+    };
+    const clearTargets = () => document.querySelectorAll(".is-processor-lasso-target").forEach((element) => element.classList.remove("is-processor-lasso-target"));
+    const findTarget = (clientX, clientY) => {
+      const candidates = document.elementsFromPoint(clientX, clientY);
+      return candidates.map((element) => element.closest?.("[data-cockpit-route-target]"))
+        .find((element) => element && routes[element.dataset.cockpitRouteTarget]);
+    };
+
+    claw.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      attachedPanelId = null;
+      claw.classList.remove("is-plugged", "is-plugged-to-tray");
+      delete claw.dataset.targetPanel;
+      drag = { pointerId: event.pointerId, dx: event.clientX - claw.getBoundingClientRect().left, dy: event.clientY - claw.getBoundingClientRect().top };
+      claw.setPointerCapture(event.pointerId);
+      claw.classList.add("is-dragging");
+    });
+    claw.addEventListener("pointermove", (event) => {
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      const bounds = spacePanel.getBoundingClientRect();
+      place(event.clientX - bounds.left - drag.dx, event.clientY - bounds.top - drag.dy);
+      clearTargets();
+      findTarget(event.clientX, event.clientY)?.classList.add("is-processor-lasso-target");
+    });
+    const finish = (event) => {
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      const target = findTarget(event.clientX, event.clientY);
+      const targetPanelId = target?.dataset.cockpitRouteTarget;
+      const output = targetPanelId ? routes[targetPanelId] : null;
+      if (output) {
+        const input = processorOutputPanel.querySelector(`input[value='${output}']`);
+        if (input) {
+          input.checked = true;
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+          updateRouteLabel();
+          snapToPanel(targetPanelId);
+          audio.playPanelDrop();
+        }
+      }
+      clearTargets();
+      claw.classList.remove("is-dragging");
+      state.ui.cockpit.processorClawPosition = position;
+      state.ui.cockpit.processorClawTarget = attachedPanelId;
+      saveNow();
+      drag = null;
+    };
+    claw.addEventListener("pointerup", finish);
+    claw.addEventListener("pointercancel", finish);
+    updateRouteLabel();
+    const followAttachedPanel = () => {
+      if (attachedPanelId && !drag) snapToPanel(attachedPanelId);
+      requestAnimationFrame(followAttachedPanel);
+    };
+    requestAnimationFrame(() => {
+      if (!attachedPanelId || !snapToPanel(attachedPanelId)) place(position.x, position.y);
+      followAttachedPanel();
+    });
+    window.addEventListener("resize", () => attachedPanelId ? snapToPanel(attachedPanelId) : place(position.x, position.y));
+  }
+}
+
+function updateCockpitDisplay() {
+  if (!cockpitLayoutInitialized) return;
+  const setSummary = (panelId, text) => {
+    const summary = document.querySelector(`.is-cockpit-module[data-panel-id="${panelId}"] .cockpit-module-summary`);
+    if (summary && summary.textContent !== text) summary.textContent = text;
+  };
+
+  setSummary("engine", `${fuelCount?.textContent ?? "0"} fuel · ${shipStatus?.textContent ?? "offline"}`);
+  setSummary("hull", `${hullCount?.textContent ?? "0%"} · ${dockingTarget?.textContent ?? "no lock"}`);
+  setSummary("scanner", `${scanergyCount?.textContent ?? "0"} scanergy`);
+  setSummary("beacon-locator", beaconTracking?.textContent ?? "No signal");
+  setSummary("beacon-bay", beaconRecoveryLabel?.textContent ?? "Bays ready");
+  setSummary("miner", `${ammoCount?.textContent ?? "0"} charges`);
+  setSummary("collector", document.querySelector("#collector-status")?.textContent ?? "Field idle");
+  setSummary("processor", state.components.processor?.output ? `${state.components.processor.output} output` : "Ready");
+  setSummary("cargo", "Stored goods");
+  setSummary("tow-cable", towCableStatus?.textContent ?? "Idle");
+  setSummary("moss-harvester", mossHarvesterStatus?.textContent ?? "Stored");
+  setSummary("moss-seeder", mossSeederStatus?.textContent ?? "Stored");
+  setSummary("shield", shieldStatus?.textContent ?? "Idle");
+  setSummary("cloak", cloakStatus?.textContent ?? "Offline");
+
+  const title = document.querySelector("#cockpit-objective-title");
+  const text = document.querySelector("#cockpit-objective-text");
+  const route = document.querySelector("#cockpit-objective-route");
+  if (title) title.textContent = journeyMissionTitle?.textContent || "Journey";
+  if (text) text.textContent = journeyMissionObjective?.textContent || "Awaiting instructions.";
+  if (route) route.textContent = dockingTarget?.textContent && dockingTarget.textContent !== "None"
+    ? `${dockingTarget.textContent} · open details`
+    : "Open mission details";
+
+  const panorama = state.ui.viewportLayout === "fullscreen-background";
+  document.querySelector("#cockpit-mode-default")?.setAttribute("aria-pressed", String(!panorama));
+  document.querySelector("#cockpit-mode-panorama")?.setAttribute("aria-pressed", String(panorama));
+}
+
 function makePanelsDraggable() {
   // Component panels are intentionally ordinary HTML. Their position and z-order
   // are saved locally so the ship console can slowly become the player's own
@@ -5778,6 +6451,10 @@ function makePanelsDraggable() {
   document.querySelectorAll(".component-panel").forEach((panel) => {
     const handle = panel.querySelector(".component-panel-title");
     const panelId = panel.dataset.panelId;
+
+    if (COCKPIT_MODULE_IDS.includes(panelId)) {
+      return;
+    }
 
     if (!handle) {
       return;
@@ -6545,7 +7222,27 @@ function getInspectableWorldActors() {
       };
     })
     .filter(Boolean);
-  return [...physicalActors, ...locatedActors];
+  const factoryOrdinals = new Map();
+  const infrastructure = listInspectableInfrastructure(state).map((facility) => {
+    const site = game.worldSites?.find((candidate) => candidate.id === facility.siteId);
+    if (!site?.position) return null;
+    let offset = { x: 0, y: 0 };
+    if (facility.facilityType === "parts-factory") {
+      const ordinal = factoryOrdinals.get(facility.siteId) ?? 0;
+      factoryOrdinals.set(facility.siteId, ordinal + 1);
+      offset = facilityOffset("parts-factory", ordinal);
+    } else if (facility.facilityType === "shipyard") offset = facilityOffset("shipyard", 0);
+    else if (facility.id === "facility:sprc-maw") offset = { x: -72, y: 28 };
+    else if (facility.id === "facility:sprc-berth-two") offset = { x: 72, y: 28 };
+    else return null; // A facility becomes clickable when it has a visible fixture.
+    return {
+      id: facility.id, name: facility.name, inspectionKind: facility.kind,
+      position: { x: site.position.x + offset.x, y: site.position.y + offset.y },
+      locationSiteId: site.id,
+      pickRadius: facility.facilityType === "parts-factory" ? 30 : 48,
+    };
+  }).filter(Boolean);
+  return [...physicalActors, ...locatedActors, ...infrastructure];
 }
 
 function updateWreckSalvageOffers() {
@@ -6606,6 +7303,10 @@ canvas?.addEventListener("click", (event) => {
   const scaleY = canvas.height / bounds.height;
   const screenX = (event.clientX - bounds.left) * scaleX;
   const screenY = (event.clientY - bounds.top) * scaleY;
+  if (state.ui?.viewportLayout !== "fullscreen-background") {
+    const radius = Math.max(24, Math.min(canvas.width, canvas.height) / 2 - 18);
+    if (Math.hypot(screenX - canvas.width / 2, screenY - canvas.height / 2) > radius) return;
+  }
   const worldX = screenX + (game.camera?.x ?? 0);
   const worldY = screenY + (game.camera?.y ?? 0);
 
@@ -6821,6 +7522,17 @@ function renderContractBoard() {
     ["Assigned", (row) => row.supplierName ?? "unclaimed"],
     ["Goods", (row) => credits(row.goodsPayment)],
     ["Freight/service", (row) => credits(row.servicePayment)],
+    ["Carrier bids", (row) => row.bidDiagnostics?.length
+      ? row.bidDiagnostics.map((bid) => {
+        const result = bid.winner ? "WIN" : bid.eligible ? "eligible / lost" : (bid.rejectionReason ?? "ineligible");
+        const money = bid.stage === "discovery" ? "not priced" : `ask ${Math.round(bid.askingPrice ?? 0)} / offer ${Math.round(bid.offeredPrice ?? 0)} / cost ${Math.round(bid.costToServe ?? 0)}`;
+        const context = [bid.committed ? "committed" : null, bid.localSponsoredService ? "sponsor-local" : null,
+          bid.sponsorPriority ? `sponsor ${Math.round(bid.sponsorPriority)}` : null,
+          bid.approachCost ? `approach ${Math.round(bid.approachCost)}` : null,
+          bid.currentWear != null ? `wear ${Math.round(bid.currentWear)}` : null].filter(Boolean).join(", ");
+        return `${bid.shipName ?? bid.shipId}: ${result}; ${money}${context ? `; ${context}` : ""}`;
+      }).join("\n")
+      : "not yet auctioned"],
     // The four not named in the requested order, kept rather than dropped.
     ["Issued by", (row) => row.issuerName],
     ["Source", (row) => row.originSiteId],
@@ -7219,8 +7931,13 @@ function renderActorDiagnostic() {
     const bids = diagElement("ul", "diag-list");
     view.freightBids.forEach((market) => {
       const bid = market.bid;
-      const outcome = market.winnerShipId === selectedActorId ? "won" : `lost to ${market.winnerShipId ?? "no eligible carrier"}`;
-      bids.append(diagElement("li", null, `${market.templateId}: ${outcome}; score ${Math.round(bid.selectionScore * 10) / 10}, ask ${bid.askingPrice} / offer ${bid.offeredPrice}, cost ${Math.round(bid.costToServe)}`));
+      const outcome = bid.rejectionReason
+        ? `rejected: ${String(bid.rejectionReason).replaceAll("-", " ")}`
+        : market.winnerShipId === selectedActorId ? "won" : `lost to ${market.winnerShipId ?? "no eligible carrier"}`;
+      const charter = bid.sponsorPriority?.score > 0
+        ? `, sponsor +${Math.round(bid.sponsorPriority.score)} (${Math.round(bid.sponsorPriority.ageMinutes)}m ${bid.sponsorPriority.direction}${bid.sponsorPriority.dutyDue ? ", duty due" : ""})`
+        : "";
+      bids.append(diagElement("li", null, `${market.templateId}: ${outcome}; score ${Number.isFinite(bid.selectionScore) ? Math.round(bid.selectionScore * 10) / 10 : "ineligible"}, ask ${bid.askingPrice} / offer ${bid.offeredPrice}, cost ${Math.round(bid.costToServe)}, approach ${Math.round(bid.repositionDistance ?? 0)}${charter}`));
     });
     fragments.push(diagSection("Freight bids", bids));
   }
@@ -7266,6 +7983,19 @@ function renderActorDiagnostic() {
       institution.append(projects);
     }
     fragments.push(diagSection("Institution", institution));
+  }
+
+  if (view.history) {
+    const history = diagElement("div");
+    const countRows = Object.entries(view.history.counts ?? {});
+    if (countRows.length) history.append(diagRows(countRows));
+    const recent = diagElement("ul", "diag-list");
+    (view.history.recent ?? []).forEach((event) => recent.append(
+      diagElement("li", null, `${formatClock(event.at) ?? "earlier"} Â· ${event.message ?? event.type}`),
+    ));
+    if ((view.history.recent ?? []).length === 0) recent.append(diagElement("li", null, "No recorded events yet."));
+    history.append(recent);
+    fragments.push(diagSection("History", history));
   }
 
   if (view.detail) {

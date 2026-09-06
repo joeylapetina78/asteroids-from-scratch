@@ -58,7 +58,7 @@ improving. Quiet on long legs, exact on deadlocks.
 Covered by `tests/navigationLanes.test.mjs`, including the long-haul false
 positive and a guarantee that standing on a waypoint always registers arrival.
 
-### Why it was always the same NPC
+### Why it was always the same NPC (historical diagnosis)
 
 `REGIONAL_HAULER_FLOOR` is 8 and the world is authored with 3 carriers, so the
 `belowFloor` branch of the hub-capacity planner commissions ~5 sponsored haulers
@@ -70,3 +70,17 @@ treasury, Blue Lantern sorts first, so index 1 is always `Blue Lantern Cartage
 When a bug reproduces "every run, same named NPC", suspect that generator before
 suspecting a save. The 60-second gate is close to dead code in practice — the
 floor is reached before it can apply, which is worth revisiting on its own.
+
+That revisit is complete. The fleet target and its first-tick bypass have been
+removed. A live hub may capitalize a carrier only when real, loadable freight
+involving the hub has remained outside every existing carrier's discoverable
+and physically feasible choices for a sustained interval. Private carriers
+likewise count only work they can actually discover and complete as evidence
+for expansion. After one company changes capacity, the market is observed
+again before another company may act on the same snapshot.
+
+Generated destinations are now part of a commissioned crew's charter briefing:
+the crew learns its home compact, its delivery yard, and every registered road
+on the journey home. It does not learn unrelated communities. This prevents a
+generated hub from commissioning a ship whose copied authored map omitted the
+hub named in its own contract.

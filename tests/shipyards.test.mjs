@@ -100,6 +100,9 @@ test("buying a hull moves money rather than destroying it", () => {
   assert.equal(result.bought, true);
   assert.equal(buyerAccount.balance, 10_000 - quote.price, "the buyer paid");
   assert.equal(seller.balance, sellerBefore + quote.price, "and the yard's hub was paid, to the credit");
+  const yard = state.logistics.institutions[YARD];
+  assert.equal(yard.operatingHistory.hullsSold, 1, "the sale survives even if the event ledger is later trimmed");
+  assert.equal(yard.operatingHistory.salesRevenue, quote.price);
 });
 
 test("a buyer that cannot pay gets no hull", () => {
@@ -130,12 +133,13 @@ test("a bought hull records its builder and the quality it was built at", () => 
 // from somebody, and the world's money does not change size when it does.
 test("a mining company growing its fleet buys the hull from the yard", () => {
   const state = createWorld();
+  const physicalWorkers = [];
   const game = {
     worldSites: [
       { id: "yard-exchange", name: "Yard Exchange", position: { x: 380, y: -180 } },
       { id: "scrap-porch", name: "Scrap Porch", position: { x: -1180, y: 860 } },
     ],
-    addWorkerShip: () => {},
+    addWorkerShip: (worker) => physicalWorkers.push(worker),
   };
   const operation = createMiningOperation({ state, game, now: () => 1_000, seed: CINDER_MINING_SEED });
   const buyer = operation.getState().institution.accounts.operating;
@@ -157,6 +161,9 @@ test("a mining company growing its fleet buys the hull from the yard", () => {
   if (shipsAfter > shipsBefore) {
     assert.equal(sales.length, shipsAfter - shipsBefore, "every new hull came from a sale");
     assert.equal(buyer.balance + seller.balance, moneyBefore, "and the money supply did not change size");
+    const hired = Object.values(operation.getState().ships).find((ship) => ship.id.includes("-hire-"));
+    assert.equal(hired.currentSiteId, "yard-exchange", "a bought miner enters the world at its builder");
+    assert.ok(hired.position, "its physical launch starts beside the ways rather than at its operator's home");
   }
 });
 
@@ -263,6 +270,7 @@ test("a hull takes time and then joins the shed", () => {
 test("you cannot buy a hull nobody has built", () => {
   const state = createWorld();
   state.logistics.institutions[YARD].readyHulls = {};
+  state.logistics.institutions[YARD].commissioningReserve = {};
 
   const quote = quoteHull(state, { shipyardId: YARD, buyerInstitutionId: BUYER, hullClass: "mining-craft" });
   assert.equal(quote.available, false);
@@ -271,6 +279,7 @@ test("you cannot buy a hull nobody has built", () => {
 
 test("taking delivery empties that berth in the shed", () => {
   const state = createWorld();
+  state.miningOperations = { cinder: { institution: CINDER_MINING_SEED.institution } };
   const yard = state.logistics.institutions[YARD];
   yard.readyHulls = { "mining-craft": 1 };
   const buyerAccount = { balance: 10_000, committed: 0, transactions: [] };
@@ -280,7 +289,20 @@ test("taking delivery empties that berth in the shed", () => {
   assert.equal(yard.readyHulls["mining-craft"], 0, "the hull left with its buyer");
 
   const second = quoteHull(state, { shipyardId: YARD, buyerInstitutionId: BUYER, hullClass: "mining-craft" });
-  assert.equal(second.available, false, "and the next buyer waits for one to be built");
+  assert.equal(second.stockSource, "commissioning-reserve", "the strategic spare is exposed only after shed stock is gone");
+  assert.equal(purchaseHull(state, { quote: second, buyerInstitutionId: BUYER, buyerAccount, now: 2_001 }).bought, true);
+  const third = quoteHull(state, { shipyardId: YARD, buyerInstitutionId: BUYER, hullClass: "mining-craft" });
+  assert.equal(third.available, false, "the reserve is one self-rescue, not a regenerating hull faucet");
+});
+
+test("the strategic mining reserve is unavailable to non-mining buyers", () => {
+  const state = createWorld();
+  state.miningOperations = { cinder: { institution: CINDER_MINING_SEED.institution } };
+  const yard = state.logistics.institutions[YARD];
+  yard.readyHulls = {};
+  assert.equal(quoteHull(state, { shipyardId: YARD, buyerInstitutionId: "yard-exchange", hullClass: "mining-craft" }).available, false);
+  assert.equal(quoteHull(state, { shipyardId: YARD, buyerInstitutionId: BUYER, hullClass: "mining-craft" }).stockSource,
+    "commissioning-reserve");
 });
 
 // ── Shipbuilding competes for parts, it does not get a private supply ──────

@@ -32,6 +32,14 @@ test("relationships can break a close economic contest but not a catastrophic pr
   assert.equal(selectCarrierBid([{ ...stranger, askingPrice: 80 }, preferred]).shipId, "stranger");
 });
 
+test("a sponsored carrier may value service to its home hub without making it compulsory", () => {
+  const home = { offerId: "home", carrierId: "cartage", shipId: "home-ship", eligible: true, offeredPrice: 100, askingPrice: 100, servicePreference: 30 };
+  const closeOutside = { offerId: "close", carrierId: "cartage", shipId: "outside-ship", eligible: true, offeredPrice: 120, askingPrice: 100 };
+  assert.equal(rankCarrierBids([closeOutside, home])[0].offerId, "home", "the charter bends a close decision toward home");
+  const exceptionalOutside = { ...closeOutside, offeredPrice: 200 };
+  assert.equal(rankCarrierBids([exceptionalOutside, home])[0].offerId, "close", "the operator can still choose exceptional outside work");
+});
+
 test("ranked diagnostics retain losing bids and their scores", () => {
   const ranked = rankCarrierBids([bid({ carrierId: "b", shipId: "b", askingPrice: 140 }), bid({ carrierId: "a", shipId: "a", askingPrice: 110 })]);
   assert.deepEqual(ranked.map((entry) => entry.shipId), ["a", "b"]);

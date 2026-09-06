@@ -14,10 +14,10 @@
 // after this lands is attributable to conservation rather than tangled with a
 // retune. See docs/shipbuilding.md.
 
-import { creditPayee } from "./contractTreasury.js?v=fresh-20260822-1344-layout";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260822-1344-layout";
-import { relationshipFactor } from "./valuation.js?v=fresh-20260822-1344-layout";
-import { countHullStrokes, getHullOutline } from "../content/ships/hullOutlines.js?v=fresh-20260822-1344-layout";
+import { creditPayee } from "./contractTreasury.js?v=fresh-20260906-1546-6ff13f29";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260906-1546-6ff13f29";
+import { relationshipFactor } from "./valuation.js?v=fresh-20260906-1546-6ff13f29";
+import { countHullStrokes, getHullOutline } from "../content/ships/hullOutlines.js?v=fresh-20260906-1546-6ff13f29";
 
 export const SHIPYARD_REFUSAL = Object.freeze({
   NO_YARD: "no-shipyard-in-reach",
@@ -71,6 +71,7 @@ function ensureYardState(yard) {
   yard.inventories ??= { raw: {}, produced: {}, reserved: { raw: {}, produced: {} } };
   yard.inventories.produced ??= {};
   yard.readyHulls ??= {};
+  yard.operatingHistory ??= { hullsCompleted: 0, hullsSold: 0, salesRevenue: 0 };
   yard.build ??= null;
   return yard;
 }
@@ -145,6 +146,7 @@ export function advanceShipyards(state, now = Date.now()) {
     if (yard.build) {
       if (now - yard.build.startedAt < HULL_BUILD_MS) return;
       yard.readyHulls[yard.build.hullClass] = (yard.readyHulls[yard.build.hullClass] ?? 0) + 1;
+      yard.operatingHistory.hullsCompleted += 1;
       state.ledger?.recordEvent?.("shipyard.hullLaunched", {
         shipyardId: yard.id, hullClass: yard.build.hullClass,
         ready: yard.readyHulls[yard.build.hullClass],
@@ -228,7 +230,11 @@ export function quoteHull(state, { shipyardId, buyerInstitutionId, hullClass }) 
   // a fleet that wants to grow now waits on a yard that has to have made the
   // thing, out of parts somebody had to supply.
   const ready = (shipyard.readyHulls ?? {})[hullClass] ?? 0;
-  if (ready <= 0) {
+  const buyer = state.logistics?.institutions?.[buyerInstitutionId]
+    ?? Object.values(state.miningOperations ?? {}).find((operation) => operation.institution?.id === buyerInstitutionId)?.institution;
+  const reserveReady = hullClass === "mining-craft" && buyer?.archetypeId === "mining-contractor"
+    ? (shipyard.commissioningReserve?.[hullClass] ?? 0) : 0;
+  if (ready + reserveReady <= 0) {
     return { available: false, reason: SHIPYARD_REFUSAL.NONE_READY, shipyardId, hullClass };
   }
 
@@ -239,6 +245,7 @@ export function quoteHull(state, { shipyardId, buyerInstitutionId, hullClass }) 
     ownerInstitutionId: shipyard.ownerInstitutionId ?? shipyard.id,
     siteId: shipyard.siteId,
     hullClass,
+    stockSource: ready > 0 ? "shed" : "commissioning-reserve",
     label: listing.label,
     price,
     buildCost: listing.buildCost,
@@ -287,8 +294,17 @@ export function purchaseHull(state, { quote, buyerInstitutionId, buyerAccount, n
   const shipyard = getShipyard(state, quote.shipyardId);
   if (shipyard) {
     const held = (shipyard.readyHulls ?? {})[quote.hullClass] ?? 0;
-    if (held <= 0) return { bought: false, reason: SHIPYARD_REFUSAL.NONE_READY };
-    shipyard.readyHulls[quote.hullClass] = held - 1;
+    if (quote.stockSource === "commissioning-reserve") {
+      const reserve = shipyard.commissioningReserve?.[quote.hullClass] ?? 0;
+      if (reserve <= 0) return { bought: false, reason: SHIPYARD_REFUSAL.NONE_READY };
+      shipyard.commissioningReserve[quote.hullClass] = reserve - 1;
+    } else {
+      if (held <= 0) return { bought: false, reason: SHIPYARD_REFUSAL.NONE_READY };
+      shipyard.readyHulls[quote.hullClass] = held - 1;
+    }
+    ensureYardState(shipyard);
+    shipyard.operatingHistory.hullsSold += 1;
+    shipyard.operatingHistory.salesRevenue += quote.price;
   }
 
   const paid = creditPayee(state, {
@@ -311,7 +327,7 @@ export function purchaseHull(state, { quote, buyerInstitutionId, buyerAccount, n
     shipyardId: quote.shipyardId, buyerInstitutionId, hullClass: quote.hullClass,
     price: quote.price, buildCost: quote.buildCost, atCost: quote.atCost,
     tier: quote.tier, quality: quote.quality, credited: paid.credited,
-  }, { visible: true, message: `${quote.label} built at ${quote.siteId} for ${buyerInstitutionId} — ${quote.price} cr${quote.atCost ? " at cost" : ""}.` });
+  }, { visible: true, message: `${quote.label} sold from ${quote.siteId} to ${buyerInstitutionId} — ${quote.price} cr${quote.atCost ? " at cost" : ""}.` });
 
   return {
     bought: true,

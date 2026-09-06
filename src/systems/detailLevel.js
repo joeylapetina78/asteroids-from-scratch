@@ -1,6 +1,5 @@
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260822-1344-layout";
-import { getWorldSites } from "./worldSites.js?v=fresh-20260822-1344-layout";
-import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260822-1344-layout";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260906-1546-6ff13f29";
+import { getRuntimeWorldSites } from "./worldNetworkRegistry.js?v=fresh-20260906-1546-6ff13f29";
 
 // How closely the world is simulated, place by place.
 //
@@ -142,6 +141,5 @@ export function summarizeDetail(state, actorIds, { policy = DETAIL_DEFAULTS, sit
 }
 
 export function getRuntimeSimulationSites(state) {
-  const generated = listGeneratedSettlements(state).filter((seed) => seed.geography?.position).map((seed) => seed.geography);
-  return [...getWorldSites(), ...generated.filter((site) => !getWorldSites().some((existing) => existing.id === site.id))];
+  return getRuntimeWorldSites(state);
 }

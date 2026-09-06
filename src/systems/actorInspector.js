@@ -4,19 +4,21 @@
 // reads the diagnostic record and the projections, and only reaches into the
 // ledger to fetch the handful of events a record already references.
 
-import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260822-1344-layout";
-import { collectIntentions } from "./intentions.js?v=fresh-20260822-1344-layout";
-import { getServiceCost } from "./costBasis.js?v=fresh-20260822-1344-layout";
-import { describeActorResolution, findActorRecord, getActorFinances } from "./actorConfig.js?v=fresh-20260822-1344-layout";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260822-1344-layout";
-import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260822-1344-layout";
-import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260822-1344-layout";
-import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260822-1344-layout";
-import { getActorCapabilityPortfolio } from "./assetCapabilities.js?v=fresh-20260822-1344-layout";
-import { getHubActor } from "./hubActors.js?v=fresh-20260822-1344-layout";
+import { formatBlockerChain, getDiagnostic, resolveBlockerChain } from "./diagnostics.js?v=fresh-20260906-1546-6ff13f29";
+import { collectIntentions } from "./intentions.js?v=fresh-20260906-1546-6ff13f29";
+import { getServiceCost } from "./costBasis.js?v=fresh-20260906-1546-6ff13f29";
+import { describeActorResolution, findActorRecord, getActorFinances } from "./actorConfig.js?v=fresh-20260906-1546-6ff13f29";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260906-1546-6ff13f29";
+import { MINING_ALLOCATION_SIZE } from "./miningOperation.js?v=fresh-20260906-1546-6ff13f29";
+import { listExtractionOffers } from "./extractionOffers.js?v=fresh-20260906-1546-6ff13f29";
+import { getProcurementFreightOffers } from "./hubProcurement.js?v=fresh-20260906-1546-6ff13f29";
+import { getActorCapabilityPortfolio } from "./assetCapabilities.js?v=fresh-20260906-1546-6ff13f29";
+import { getHubActor } from "./hubActors.js?v=fresh-20260906-1546-6ff13f29";
 
 export function inspectActor(state, actorId, { game = null } = {}) {
   if (!actorId) return null;
+  const infrastructure = findInfrastructure(state, actorId);
+  if (infrastructure) return inspectInfrastructure(state, infrastructure, game);
   const actorRecord = findActorRecord(state, actorId);
   const hubActor = getHubActor(state, actorId);
   const diagnostic = getDiagnostic(state, actorId);
@@ -61,6 +63,7 @@ export function inspectActor(state, actorId, { game = null } = {}) {
     capabilityPortfolio: null,
     agency: actorRecord?.agency ?? null,
     hubActor: null,
+    history: null,
   };
 
   // Cargo: what it holds, and how much of that is already promised.
@@ -252,7 +255,167 @@ export function inspectActor(state, actorId, { game = null } = {}) {
       .slice(0, 6);
   }
 
+  view.history = describeHistory(state, actorId, actorRecord);
+
   return view;
+}
+
+export function listInspectableInfrastructure(state) {
+  const facilities = [];
+  Object.values(state.industrial?.factories ?? {}).forEach((factory) => facilities.push({
+    id: factory.id, name: factory.name ?? factory.id, kind: "parts factory",
+    facilityType: "parts-factory", siteId: state.logistics?.institutions?.[factory.institutionId]?.siteId ?? factory.institutionId,
+    record: factory,
+  }));
+  Object.values(state.logistics?.institutions ?? {})
+    .filter((institution) => institution?.archetypeId === "shipyard")
+    .forEach((yard) => facilities.push({
+      id: yard.id, name: yard.name ?? yard.id, kind: "shipyard",
+      facilityType: "shipyard", siteId: yard.siteId, record: yard,
+    }));
+  Object.values(state.sprc?.facilities ?? {}).forEach((facility) => facilities.push({
+    id: facility.id, name: facility.name ?? facility.id,
+    kind: facility.facilityType === "repair-berth" ? "repair berth" : "recovery mill",
+    facilityType: facility.facilityType, siteId: state.sprc?.institution?.siteId ?? "scrap-porch", record: facility,
+  }));
+  return facilities;
+}
+
+function findInfrastructure(state, id) {
+  return listInspectableInfrastructure(state).find((facility) => facility.id === id) ?? null;
+}
+
+function inspectInfrastructure(state, facility, game) {
+  const record = facility.record;
+  const site = (game?.worldSites ?? []).find((candidate) => candidate.id === facility.siteId);
+  const ownerId = record.ownerInstitutionId ?? record.institutionId ?? state.sprc?.institution?.ownerInstitutionId ?? null;
+  const controllerId = record.operatorInstitutionId ?? ownerId;
+  const history = describeFacilityHistory(state, facility);
+  const workingOn = record.activeRun?.output
+    ?? record.build?.hullClass
+    ?? record.activeProductionOrderId
+    ?? record.activeRepairOrderId
+    ?? null;
+  return {
+    actorId: facility.id,
+    name: facility.name,
+    kind: facility.kind,
+    controllerId,
+    state: workingOn ? "working" : record.status ?? "available",
+    summary: workingOn ? `Working on ${String(workingOn).replaceAll("-", " ")}` : "Available for work",
+    locationSiteId: facility.siteId,
+    position: site?.position ?? null,
+    intention: null, lastDecision: null, blockerChain: [], waitingFor: null, wakeOn: [], nextReconsiderAt: null,
+    refs: { contractIds: [], targetIds: [], dependencyIds: [] },
+    detail: describeFacilitySnapshot(state, facility),
+    cargo: null, freightPortfolio: null, cash: null, condition: null, beaconAccess: null,
+    visibleOffers: [], recentEvents: history.recent, institution: null, capabilityPortfolio: null,
+    agency: null, hubActor: null, history,
+  };
+}
+
+function describeFacilitySnapshot(state, facility) {
+  const record = facility.record;
+  if (facility.facilityType === "parts-factory") return {
+    output: record.recipes?.map((recipe) => recipe.output).join(", "),
+    currentRun: record.activeRun?.id ?? null,
+    completedRuns: record.completedRuns ?? 0,
+    ordersAccepted: record.operatingHistory?.ordersAccepted ?? 0,
+  };
+  if (facility.facilityType === "shipyard") return {
+    currentBuild: record.build?.hullClass ?? null,
+    readyHulls: { ...(record.readyHulls ?? {}) },
+    waitingOnParts: record.waitingOnParts ?? null,
+  };
+  if (facility.facilityType === "repair-berth") return {
+    activeRepair: record.activeRepairOrderId ?? null,
+    capacity: record.capacity ?? 1,
+  };
+  return {
+    activeProduction: record.activeProductionOrderId ?? null,
+    capacity: record.capacity ?? 1,
+  };
+}
+
+function describeFacilityHistory(state, facility) {
+  // Ownership is not identity: a factory card must not inherit every event at
+  // its parent hub. Facility history includes only records that name it.
+  const events = relatedEvents(state, facility.id);
+  const counts = {};
+  if (facility.facilityType === "parts-factory") {
+    const orders = Object.values(state.hubProcurement?.orders ?? {}).filter((order) => order.factoryId === facility.id);
+    const openOrders = orders.filter((order) => !["delivered", "withheld", "declined"].includes(order.status));
+    counts["Units produced"] = facility.record.operatingHistory?.unitsProduced ?? facility.record.completedRuns ?? 0;
+    counts["Production runs"] = facility.record.completedRuns ?? 0;
+    counts["Raw units consumed"] = facility.record.operatingHistory?.rawUnitsConsumed ?? 0;
+    counts["Orders completed"] = orders.filter((order) => order.status === "delivered").length;
+    counts["Open backlog units"] = openOrders.reduce((sum, order) => sum + Math.max(0, (order.units ?? 0) - (order.deliveredUnits ?? 0)), 0);
+  } else if (facility.facilityType === "shipyard") {
+    counts["Hulls completed"] = facility.record.operatingHistory?.hullsCompleted
+      ?? events.filter((event) => event.type === "shipyard.hullLaunched").length;
+    counts["Hulls sold"] = facility.record.operatingHistory?.hullsSold
+      ?? events.filter((event) => event.type === "shipyard.hullSold").length;
+    counts["Sales revenue"] = Math.round(facility.record.operatingHistory?.salesRevenue ?? 0);
+    counts["Hulls ready"] = Object.values(facility.record.readyHulls ?? {}).reduce((sum, value) => sum + value, 0);
+  } else if (facility.facilityType === "repair-berth") {
+    const orders = Object.values(state.sprc?.repairOrders ?? {}).filter((order) => (order.activeFacilityId ?? order.facilityId) === facility.id);
+    counts["Repairs completed"] = orders.filter((order) => order.status === "completed").length;
+    counts["Jobs handled"] = orders.length;
+  } else {
+    const orders = Object.values(state.sprc?.productionOrders ?? {}).filter((order) => order.facilityId === facility.id);
+    counts["Batches completed"] = orders.filter((order) => order.status === "completed").length;
+    counts["Wrecks dismantled"] = events.filter((event) => event.type === "sprc.salvageDismantled").length;
+    counts["Jobs handled"] = orders.length;
+  }
+  return { counts, recent: recentHistory(events) };
+}
+
+function describeHistory(state, actorId, actorRecord) {
+  const events = relatedEvents(state, actorId);
+  const counts = {};
+  events.forEach((event) => {
+    const label = historyLabel(event.type);
+    if (label) counts[label] = (counts[label] ?? 0) + 1;
+  });
+  if (actorRecord?.settlementTrade) {
+    counts["Goods sold"] = actorRecord.settlementTrade.unitsSold ?? 0;
+    counts["Trade revenue"] = Math.round(actorRecord.settlementTrade.revenue ?? 0);
+  }
+  const mining = Object.values(state.miningOperations ?? {}).find((operation) => operation?.institution?.id === actorId);
+  if (mining?.throughput) {
+    counts["Mining runs completed"] = mining.throughput.deliveries ?? 0;
+    counts["Material delivered"] = mining.throughput.unitsDelivered ?? 0;
+    counts["Mining revenue"] = Math.round(mining.throughput.revenue ?? 0);
+    Object.entries(mining.throughput.unitsByResource ?? {}).forEach(([resourceId, units]) => {
+      counts[`Delivered · ${resourceId.replaceAll("-", " ")}`] = units;
+    });
+    const ships = Object.values(mining.ships ?? {});
+    counts["Fleet size"] = ships.length;
+    counts["Fleet available"] = ships.filter((ship) => ship.maintenanceStatus === "available").length;
+  }
+  return { counts, recent: recentHistory(events) };
+}
+
+function relatedEvents(state, ...ids) {
+  const wanted = new Set(ids.filter(Boolean));
+  if (wanted.size === 0) return [];
+  return (state.ledger?.getRetainedEvents?.({ includeHidden: true }) ?? []).filter((event) =>
+    Object.values(event.payload ?? {}).some((value) => typeof value === "string" && wanted.has(value)));
+}
+
+function recentHistory(events) {
+  return events.slice(-8).reverse().map((event) => ({
+    id: event.id, type: event.type, at: event.time, message: event.message ?? event.type,
+  }));
+}
+
+function historyLabel(type) {
+  if (/delivery|delivered|fulfilled/i.test(type)) return "Deliveries completed";
+  if (/sold|purchased/i.test(type)) return "Sales and purchases";
+  if (/produced|completed|launched|dismantled/i.test(type)) return "Things completed";
+  if (/mined|extracted|collected/i.test(type)) return "Material collected";
+  if (/repair/i.test(type)) return "Repair events";
+  return null;
 }
 
 function selectRepresentativeCraftDiagnostic(state, institutionId) {

@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { createGameState } from "../src/state/gameState.js";
 import { createDistantSimulationOperation, isHubAggregated } from "../src/systems/distantSimulation.js";
+import { recordAcquisition } from "../src/systems/costBasis.js";
 import { getResourceEffectiveYield } from "../src/systems/resourceDefinitions.js";
 import { DRIFT_BAND, advanceRegionFlow, estimateFlowDrift } from "../src/systems/regionFlow.js";
 
@@ -75,6 +76,19 @@ test("a payment to an aggregated hub is not erased by the flow", () => {
 
   assert.ok(account.balance >= before + payment - 500,
     `an external payment must survive an aggregate advance (had ${before}, paid ${payment}, now ${account.balance})`);
+});
+
+test("aggregate household sales carry warehouse cost into cost of goods sold", () => {
+  const { state, advance } = createAggregatedWorld();
+  const institution = state.logistics.institutions[HUB_ID];
+  recordAcquisition(state, { institutionId: HUB_ID, itemId: "water-ice", units: 20, totalCost: 600, source: "fixture", at: 1 });
+  institution.inventories["water-ice"] = Math.max(20, institution.inventories["water-ice"] ?? 0);
+  const before = institution.settlementTrade?.costOfGoodsSold ?? 0;
+  advance(120_000);
+  assert.ok((institution.settlementTrade?.costOfGoodsSold ?? 0) > before,
+    "aggregate consumption is not booked as a zero-cost sale");
+  assert.equal(institution.settlementTrade.margin,
+    institution.settlementTrade.revenue - institution.settlementTrade.costOfGoodsSold);
 });
 
 test("real deliveries are netted against modelled supply, not added to it", () => {

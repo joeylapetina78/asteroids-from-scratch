@@ -25,19 +25,19 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260822-1344-layout";
-import { STANDING_MINING_ORDERS, getStandingMiningDefinitions } from "./miningOperation.js?v=fresh-20260822-1344-layout";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1344-layout";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260822-1344-layout";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260822-1344-layout";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260822-1344-layout";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260822-1344-layout";
-import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260822-1344-layout";
-import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260822-1344-layout";
-import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260822-1344-layout";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260822-1344-layout";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260822-1344-layout";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260906-1546-6ff13f29";
+import { STANDING_MINING_ORDERS, getStandingMiningDefinitions } from "./miningOperation.js?v=fresh-20260906-1546-6ff13f29";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260906-1546-6ff13f29";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260906-1546-6ff13f29";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260906-1546-6ff13f29";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260906-1546-6ff13f29";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260906-1546-6ff13f29";
+import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260906-1546-6ff13f29";
+import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260906-1546-6ff13f29";
+import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260906-1546-6ff13f29";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260906-1546-6ff13f29";
+import { getRuntimeWorldConnections } from "./worldNetworkRegistry.js?v=fresh-20260906-1546-6ff13f29";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept
@@ -168,8 +168,9 @@ export function evaluateSupplierCandidates(state, {
   family,
   units = 1,
   definitions = null,
-  connections = FIRST_REACH_TRANSPORT_CONNECTIONS,
+  connections = null,
 } = {}) {
+  connections ??= getRuntimeWorldConnections(state);
   definitions ??= getStandingMiningDefinitions(state);
   const institutions = state.logistics?.institutions ?? {};
   const destinationIds = Array.from(new Set(connections.flatMap((connection) => [connection.fromId, connection.toId])));
@@ -309,6 +310,14 @@ export function getIncomingProcurement(state, buyerInstitutionId, family) {
 export function getProcurementFreightOffers(state) {
   return listOrders(state, { status: PROCUREMENT_STATUS.READY })
     .filter((order) => !isHubAggregated(state, order.buyerInstitutionId) && !isHubAggregated(state, order.supplierInstitutionId))
+    // READY is a legal/economic state; freight requires the matching physical
+    // custody record too. Never advertise paper cargo while reconciliation is
+    // repairing or blocking a malformed order.
+    .filter((order) => {
+      const held = state.logistics?.institutions?.[order.supplierInstitutionId]?.awaitingPickup?.[order.id];
+      return held?.resourceId === order.resourceId && (held.units ?? 0) >= (order.units ?? 0)
+        && held.ownerInstitutionId === order.buyerInstitutionId;
+    })
     .map((order) => ({
     id: `procurement-${order.id}`,
     procurementOrderId: order.id,
@@ -324,6 +333,10 @@ export function getProcurementFreightOffers(state) {
     issuerInstitutionId: order.buyerInstitutionId,
     sourceInstitutionId: order.supplierInstitutionId,
     destinationInstitutionId: order.buyerInstitutionId,
+    // Carriers use the age of the underlying need, rather than the age of a
+    // periodically regenerated board row, when deciding how much obligation a
+    // sponsored charter carries.
+    createdAt: order.createdAt ?? null,
     // The goods are already bought and already the buyer's. Freight moves
     // property, it does not buy it, so the carrier run must not pay the seller
     // a second time or draw from the seller's own stock.
@@ -363,6 +376,66 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   function awaitingPickup(hub) {
     hub.awaitingPickup ??= {};
     return hub.awaitingPickup;
+  }
+
+  function reconcileReadyCargoCustody() {
+    listOrders(state, { status: PROCUREMENT_STATUS.READY }).forEach((order) => {
+      const supplier = institution(order.supplierInstitutionId);
+      const buyer = institution(order.buyerInstitutionId);
+      const held = supplier?.awaitingPickup?.[order.id];
+      const valid = held?.resourceId === order.resourceId
+        && (held.units ?? 0) >= (order.units ?? 0)
+        && held.ownerInstitutionId === order.buyerInstitutionId;
+      if (valid) return;
+
+      const activeShipment = Object.values(state.logistics?.shipments ?? {}).find((shipment) =>
+        shipment.procurementOrderId === order.id && ["assigned", "loaded"].includes(shipment.status));
+      if (activeShipment) {
+        order.status = PROCUREMENT_STATUS.SHIPPED;
+        order.shipmentId = activeShipment.id;
+        emit("procurement.readyCustodyReconciled", `${order.id} was marked ready after its cargo had already entered ${activeShipment.id}; the purchase now follows that physical shipment.`, {
+          procurementOrderId: order.id, shipmentId: activeShipment.id, repair: "follow-active-shipment",
+        });
+        return;
+      }
+
+      if (!supplier || !buyer || !order.resourceId || !(order.units > 0)) {
+        recordBlocker(state, order.buyerInstitutionId, createBlocker({
+          kind: BLOCKER_KIND.SOURCE_OUT_OF_STOCK,
+          summary: `${order.id} is marked ready but has no valid cargo custodian`,
+          subjectId: order.buyerInstitutionId,
+          objectId: order.id,
+          waitingFor: "a valid supplier custody record",
+          wakeOn: ["procurement-title-restored", "shipment-recovered"],
+          detail: { procurementOrderId: order.id, supplierInstitutionId: order.supplierInstitutionId, custodyMissing: true },
+          at: now(),
+        }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+        return;
+      }
+
+      // READY says the sale reserve was filled, paid, titled to the buyer, and
+      // left physically at the supplier. Reconstructing that missing custody
+      // row restores the record of those same conserved goods; it does not add
+      // inventory, repeat payment, or manufacture a second lot.
+      const manifestId = order.manifestId ?? `MANIFEST-${order.id}`;
+      awaitingPickup(supplier)[order.id] = {
+        manifestId,
+        orderId: order.id,
+        resourceId: order.resourceId,
+        units: order.units,
+        ownerInstitutionId: order.buyerInstitutionId,
+        heldAtInstitutionId: order.supplierInstitutionId,
+        paid: order.committedPayment ?? order.units * (order.pricePerUnit ?? 0),
+        titledAt: order.paidAt ?? order.readyAt ?? now(),
+        custodyReconciledAt: now(),
+      };
+      order.manifestId = manifestId;
+      emit("procurement.readyCustodyReconciled", `${hubName(order.supplierInstitutionId)} restored the missing custody record for ${order.units} ${order2Label(order.resourceId)} already titled to ${hubName(order.buyerInstitutionId)} under ${manifestId}.`, {
+        procurementOrderId: order.id, manifestId, buyerId: order.buyerInstitutionId,
+        sellerId: order.supplierInstitutionId, resourceId: order.resourceId,
+        units: order.units, repair: "restore-supplier-custody",
+      });
+    });
   }
 
   // Move whatever the hub has spare into the allocations it owes, oldest first,
@@ -983,6 +1056,39 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
     accepted.forEach((order) => {
       const supplier = institution(order.supplierInstitutionId);
       const reserved = saleReserve(supplier ?? {})[order.id] ?? 0;
+      if (order.orderKind === "industrial-part") {
+        const factory = state.industrial?.factories?.[order.factoryId]
+          ?? Object.values(state.industrial?.factories ?? {}).find((candidate) => candidate.institutionId === order.supplierInstitutionId
+            && candidate.recipes?.some((recipe) => recipe.output === order.resourceId));
+        const recipe = factory?.recipes?.find((candidate) => candidate.output === order.resourceId);
+        const owed = Math.max(0, order.units - reserved);
+        if (factory?.activeRun?.output === order.resourceId) {
+          clearBlocker(state, order.supplierInstitutionId, {
+            state: DIAGNOSTIC_STATE.WORKING,
+            summary: `${factory.name} is producing ${order2Label(order.resourceId)} for ${order.id}; ${owed} remain to be reserved`,
+            at: now(),
+          });
+          return;
+        }
+        const missingInputs = Object.entries(recipe?.inputs ?? {})
+          .map(([itemId, units]) => ({ itemId, missing: Math.max(0, units - (supplier?.inventories?.[itemId] ?? 0)) }))
+          .filter(({ missing }) => missing > 0);
+        const waitingFor = missingInputs.length
+          ? missingInputs.map(({ itemId, missing }) => `${missing} ${order2Label(itemId)}`).join(", ")
+          : `the next ${order2Label(order.resourceId)} production run`;
+        recordBlocker(state, order.supplierInstitutionId, createBlocker({
+          kind: missingInputs.length ? BLOCKER_KIND.AWAITING_MATERIAL : BLOCKER_KIND.AWAITING_PRODUCTION,
+          summary: missingInputs.length
+            ? `${factory?.name ?? hubName(order.supplierInstitutionId)} needs feedstock before it can continue ${order.id}`
+            : `${factory?.name ?? hubName(order.supplierInstitutionId)} is waiting to start the next run for ${order.id}`,
+          subjectId: order.supplierInstitutionId, objectId: order.id,
+          waitingFor,
+          wakeOn: missingInputs.length ? ["delivery.completed", "mining.contractFulfilled"] : ["industry.productionStarted", "industry.partsProduced"],
+          detail: { procurementOrderId: order.id, factoryId: factory?.id ?? null, owed: order.units, reserved, missingInputs },
+          at: now(),
+        }), { state: DIAGNOSTIC_STATE.WAITING, at: now() });
+        return;
+      }
       recordBlocker(state, order.supplierInstitutionId, createBlocker({
         kind: BLOCKER_KIND.AWAITING_MATERIAL,
         summary: `${hubName(order.supplierInstitutionId)} owes ${order.units} ${order2Label(order.resourceId)} on ${order.id} and has set aside ${reserved}`,
@@ -1137,6 +1243,7 @@ export function createHubProcurementOperation({ state, now = () => Date.now() })
   // current one. This has to precede `postNeeds`, which consults declined
   // orders to decide whether a family was turned down too recently to ask again.
   function observe() {
+    reconcileReadyCargoCustody();
     pruneDeclinedOrders();
     pruneDeliveredOrders();
   }

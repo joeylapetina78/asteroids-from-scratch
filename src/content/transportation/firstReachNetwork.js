@@ -1,4 +1,26 @@
-import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260822-1344-layout";
+import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260906-1546-6ff13f29";
+
+// A trade community is the ordinary economic neighborhood whose freight board
+// local carriers know. Long roads may connect communities physically without
+// turning the whole universe into one undifferentiated market.
+export const FIRST_REACH_TRADE_COMMUNITIES = Object.freeze({
+  "first-reach-core": Object.freeze([
+    "yard-exchange", "scrap-porch", "the-ledge", "blue-lantern", "morrow-shoal", "kiln-crossing",
+  ]),
+  "first-reach-frontier": Object.freeze([
+    "ore-station-one", "coldwater-depot", "deep-research",
+  ]),
+});
+
+export function tradeCommunityForSite(siteId) {
+  return Object.entries(FIRST_REACH_TRADE_COMMUNITIES)
+    .find(([, siteIds]) => siteIds.includes(siteId))?.[0] ?? null;
+}
+
+export function sitesShareTradeCommunity(firstSiteId, secondSiteId) {
+  const communityId = tradeCommunityForSite(firstSiteId);
+  return communityId != null && communityId === tradeCommunityForSite(secondSiteId);
+}
 
 export const FIRST_REACH_TRANSPORT_CONNECTIONS = Object.freeze([
   { id: "lane-yard-scrap", fromId: "yard-exchange", toId: "scrap-porch", distance: 1875, bidirectional: true },

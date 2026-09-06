@@ -118,22 +118,23 @@ test("a hull's drive travels with the hull, not the company", () => {
   assert.equal(getEffectiveTransportPolicy(FIRST_REACH_CARRIER_POLICY, {}), FIRST_REACH_CARRIER_POLICY);
 });
 
-test("a subspace craft flies straight and fast; a standard one still weaves", async () => {
+test("a subspace craft slips under rocks only on a long crossing; a standard one still weaves", async () => {
   const { NpcShip } = await import("../src/entities/NpcShip.js");
   const route = [
     { id: "a", type: "hub", position: { x: 0, y: 0 } },
-    { id: "b", type: "hub", position: { x: 6_000, y: 0 } },
+    { id: "b", type: "hub", position: { x: 18_000, y: 0 } },
   ];
   // A rock sitting directly on the lane.
-  const world = { asteroids: [{ position: { x: 1_200, y: 0 }, radius: 220 }], sites: route, npcShips: [] };
+  const world = { asteroids: [{ position: { x: 3_000, y: 0 }, radius: 220 }], sites: route, npcShips: [] };
 
   const fly = (drive) => {
     const ship = new NpcShip({ id: `t-${drive.id}`, name: "T", route, x: 0, y: 0, seed: 3, laneOffset: 0 });
     ship.routeIndex = 1;
     ship.operationalStatus = "available";
     ship.dockedSiteId = null;
-    ship.driveSpeedMultiplier = drive.speedMultiplier;
-    ship.phasesThroughObstacles = drive.phasesThroughObstacles;
+    ship.driveKind = drive.kind;
+    ship.subspaceCapable = drive.kind === "subspace";
+    ship.subspaceSpeedMultiplier = drive.speedMultiplier;
     let maxOffLane = 0;
     for (let tick = 0; tick < 900; tick += 1) {
       ship.update(1 / 30, world);
@@ -151,4 +152,33 @@ test("a subspace craft flies straight and fast; a standard one still weaves", as
     `a phasing craft holds the lane through the rock (drifted ${subspace.maxOffLane.toFixed(1)})`);
   assert.ok(standard.maxOffLane > subspace.maxOffLane,
     `a normal-space craft goes around it (drifted ${standard.maxOffLane.toFixed(1)})`);
+});
+
+test("a subspace hull uses ordinary flight near hubs and visibly transitions on a long leg", async () => {
+  const { NpcShip, SUBSPACE_MIN_ROUTE_DISTANCE } = await import("../src/entities/NpcShip.js");
+  const route = [
+    { id: "origin", type: "hub", interactionRadius: 300, position: { x: 0, y: 0 } },
+    { id: "frontier", type: "hub", interactionRadius: 300, position: { x: SUBSPACE_MIN_ROUTE_DISTANCE + 4_000, y: 0 } },
+  ];
+  const ship = new NpcShip({ id: "phase-test", name: "Phase Test", route, x: 0, y: 0, seed: 1 });
+  ship.driveKind = "subspace";
+  ship.subspaceCapable = true;
+  ship.subspaceSpeedMultiplier = 2.5;
+  ship.operationalStatus = "available";
+  const world = { asteroids: [], navigationObstacles: [], sites: route, npcShips: [ship] };
+
+  ship.update(1 / 30, world);
+  assert.equal(ship.isSubspaceActive, false, "it leaves the berth in normal space");
+  assert.equal(ship.getMaxSpeed(), 96, "local maneuvering uses the standard-hauler speed");
+
+  ship.position.x = 1_200;
+  ship.update(1 / 30, world);
+  assert.equal(ship.isSubspaceActive, true, "the long crossing engages after clearing the hub");
+  assert.equal(ship.getMaxSpeed(), 240, "subspace supplies the high cruise speed only while engaged");
+  assert.ok(ship.consumeEvents().some((event) => event.type === "npc.subspaceEntered"));
+
+  ship.position.x = route[1].position.x - 700;
+  ship.update(1 / 30, world);
+  assert.equal(ship.isSubspaceActive, false, "it returns to normal space for the destination approach");
+  assert.ok(ship.consumeEvents().some((event) => event.type === "npc.subspaceExited"));
 });

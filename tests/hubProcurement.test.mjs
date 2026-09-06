@@ -563,9 +563,9 @@ test("the whole chain is on the ledger, in order", () => {
     "posted before delivered");
 });
 
-test("remote freight cannot summon a hauler away from its own market circuit", () => {
+test("a community freight board lets a hauler claim remote pickup without teleporting cargo", () => {
   let clock = 1_000;
-  const { state, procurement, manager, hub } = createFullWorld({ now: () => clock });
+  const { state, procurement, manager, ships, hub } = createFullWorld({ now: () => clock });
   // Keep this inside the core, the way the logistics harness does. The far
   // stations are 37,000-85,000 units out, a flat posted rate cannot clear a
   // deadhead that long, and their demand oversubscribes The Ledge so hard that
@@ -595,22 +595,37 @@ test("remote freight cannot summon a hauler away from its own market circuit", (
   Object.entries(state.logistics.institutions).forEach(([id, institution]) => {
     if (id !== order.supplierInstitutionId) institution.awaitingPickup = {};
   });
-  // Make the remote offer extremely attractive. It still must not act as a
-  // beacon: the carrier has not physically visited its board.
+  // The community board exposes this work, but accepting it must only reserve
+  // the offer and send the hull empty to pickup.
   state.logistics.postedFreightRates = { [`procurement-${order.id}`]: 900 };
   manager.update();
 
-  assert.equal(Object.values(state.logistics.shipments).length, 0,
-    "remote work is neither accepted nor reserved from afar");
-  assert.equal(Object.values(state.logistics.movements).length, 0, "the carrier observes its local board before departing");
-
-  clock += 40_000;
-  manager.update();
+  assert.equal(Object.values(state.logistics.shipments).length, 0, "cargo stays at its physical source during the deadhead");
   const movement = Object.values(state.logistics.movements)[0];
-  assert.ok(movement, "after its individual layover the carrier chooses another market stop");
-  assert.equal(movement.type, "market-circuit");
-  assert.equal(movement.observedOfferId, null, "the movement was not prompted by a remote posting");
-  assert.ok(movement.decision && Number.isFinite(movement.score), "the emergent decision remains inspectable");
+  assert.ok(movement, "the carrier claims the community posting and starts toward pickup");
+  assert.equal(movement.type, "freight-pickup");
+  assert.equal(movement.destinationSiteId, order.supplierInstitutionId);
+  assert.equal(state.logistics.haulers[traveler[0]].reservedTemplateId, `procurement-${order.id}`);
+
+  const travelerShip = ships.find((ship) => ship.id === traveler[0]);
+  travelerShip.dockedSiteId = order.supplierInstitutionId;
+  const travelerCarrier = state.logistics.institutions[traveler[1].carrierInstitutionId];
+  travelerCarrier.homeDispatch = { updatedAt: clock - 1, offerIds: [], inboundOfferIds: [], outboundOfferIds: [], needs: [] };
+  state.ledger.recordEvent("npc.routeCompleted", {
+    npcId: traveler[0], movementId: movement.id, siteId: order.supplierInstitutionId,
+  }, { visible: false });
+  manager.update();
+  const arriving = state.logistics.haulers[traveler[0]];
+  const claimedAfterArrival = Object.values(state.logistics.shipments)
+    .find((shipment) => shipment.procurementOrderId === order.id && shipment.assigneeId === traveler[0]);
+  assert.ok(claimedAfterArrival,
+    "an eligible remote claimant loads its exact reservation even before live dispatch refreshes");
+  assert.equal(arriving.reservedTemplateId, null,
+    "loading converts the reservation into real shipment custody");
+  assert.equal(Object.values(state.logistics.movements).some((entry) => entry.type === "freight-pickup"
+    && entry.status === "active" && entry.shipId === traveler[0]), false,
+  "arrival never leaves an active empty-approach claim behind");
+
 });
 
 test("delivered procurement history remains bounded without touching open orders", () => {
@@ -802,6 +817,40 @@ test("live carrier cost can lift an underpriced freight offer and clear it", () 
   assert.ok(shipment, "the issuer moved to the live carrier ask and the work cleared");
   assert.ok(shipment.payment > 1);
   assert.equal(state.logistics.postedFreightRates[offer.id], shipment.payment);
+});
+
+test("a ready purchase without physical custody is hidden then reconciled without creating material or money", () => {
+  let clock = 5_000;
+  const world = createFullWorld({ now: () => clock });
+  const { state, procurement, hub } = world;
+  const supplier = hub("yard-exchange");
+  const buyer = hub("scrap-forge");
+  const supplierStock = { ...(supplier.inventories ?? {}) };
+  const supplierCash = supplier.accounts.operating.balance;
+  const buyerCash = buyer.accounts.operating.balance;
+  state.hubProcurement.orders.MALFORMED = {
+    id: "MALFORMED", status: PROCUREMENT_STATUS.READY,
+    buyerInstitutionId: "scrap-forge", supplierInstitutionId: "yard-exchange",
+    resourceId: "iron-nickel", family: "structural", units: 3,
+    deliveredUnits: 0, freightBudget: 500, committedPayment: 900,
+    pricePerUnit: 300, paidAt: 4_000, readyAt: 4_000,
+  };
+  supplier.awaitingPickup ??= {};
+  delete supplier.awaitingPickup.MALFORMED;
+
+  assert.equal(getProcurementFreightOffers(state).some((offer) => offer.procurementOrderId === "MALFORMED"), false,
+    "paper cargo is not advertised");
+  procurement.observe();
+
+  const held = supplier.awaitingPickup.MALFORMED;
+  assert.equal(held.units, 3);
+  assert.equal(held.ownerInstitutionId, "scrap-forge");
+  assert.ok(getProcurementFreightOffers(state).some((offer) => offer.procurementOrderId === "MALFORMED"));
+  assert.deepEqual(supplier.inventories ?? {}, supplierStock, "custody repair does not create stock");
+  assert.equal(supplier.accounts.operating.balance, supplierCash, "seller is not paid twice");
+  assert.equal(buyer.accounts.operating.balance, buyerCash, "buyer is not charged twice");
+  assert.ok(state.ledger.getEventsAfterId(0).some((event) =>
+    event.type === "procurement.readyCustodyReconciled" && event.payload.procurementOrderId === "MALFORMED"));
 });
 
 // ── Repricing: the two sides converge instead of restating offers ──────────

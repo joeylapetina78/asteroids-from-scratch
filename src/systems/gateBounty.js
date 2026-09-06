@@ -93,3 +93,34 @@ export function redeemGateTrophyForBearer(state, { siteId, unit, quantity = 1, b
   });
   return { ...result, bearerId, balance: account.balance };
 }
+
+// A patrol that destroys a gate is already in custody of the gold token. The
+// authority settles it by telemetry instead of making the watch leave its
+// jurisdiction for a paperwork trip to Yard Exchange. This is the same finite
+// bounty fund and the same beneficiary account transfer as physical redemption.
+export function awardGateBountyToPatrol(state, { unit, quantity = 1, beneficiaryId = null, account, siteId = null, now = Date.now() } = {}) {
+  if (!account || !Number.isFinite(account.balance)) {
+    return { redeemed: false, reason: "missing-beneficiary-account", payout: 0, total: 0 };
+  }
+  const payout = Math.max(0, Math.round(unit?.tradeValue ?? 0));
+  const count = Math.max(1, quantity);
+  const total = payout * count;
+  const bounty = ensureGateBounty(state);
+  if (!(total > 0)) return { redeemed: false, reason: "no-value", payout: 0, total: 0 };
+  if (bounty.fund < total) return { redeemed: false, reason: "authority-underfunded", payout: 0, total: 0, shortfall: total - bounty.fund };
+  bounty.fund -= total;
+  bounty.paidCumulative += total;
+  bounty.redemptions += 1;
+  account.balance += total;
+  account.transactions ??= [];
+  account.transactions.push({
+    id: `GATE-PATROL-${now}-${beneficiaryId ?? "patrol"}`, at: now,
+    type: "gate-bounty-income", amount: total, balance: account.balance,
+    referenceId: "authority:gate-bounty",
+  });
+  state.ledger?.recordEvent("authority.gateBountyPaid", {
+    institutionId: bounty.authorityId, beneficiaryId, siteId, quantity: count,
+    payout, total, fund: Math.round(bounty.fund), collectionMode: "patrol-telemetry",
+  }, { visible: true, message: `${bounty.authorityName} paid ${total} cr to ${beneficiaryId ?? "the patrol controller"} for clearing a gate.` });
+  return { redeemed: true, reason: null, payout, total, fund: bounty.fund, beneficiaryId, balance: account.balance };
+}

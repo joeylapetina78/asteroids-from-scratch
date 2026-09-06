@@ -20,7 +20,7 @@ export const ENGINE_MODELS = Object.freeze({
     brand: "Vektor",
     name: "R/T Reversing Drive",
     downControl: "reverse-thrust",
-    downControlLabel: "S reverse thrust",
+    downControlLabel: "S reverse",
     reverseThrusterMultiplier: 0.72,
     // Demonstrated precision flying, not a licence somebody was handed.
     requiresSkill: { skill: "precision-flight", level: 45 },

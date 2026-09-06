@@ -103,6 +103,8 @@ export function createYardShipyardInstitutionInstance(now = Date.now()) {
     // hauler floor is 8, and the three cut-off hubs need long-haul hulls. Short
     // the shed and the world opens with a freight network it cannot staff.
     readyHulls: { "mining-craft": 2, "freight-craft": 6, "freight-craft-subspace": 3 },
+    commissioningReserve: { "mining-craft": 1 },
+    operatingHistory: { hullsCompleted: 0, hullsSold: 0, salesRevenue: 0 },
     build: null,
     projects: {},
     createdAt: now,

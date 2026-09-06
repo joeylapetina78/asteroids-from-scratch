@@ -32,7 +32,38 @@ export const MINING_INSTITUTION_SEEDS = Object.freeze([
     expansionWorker: null,
     expansionProject: null,
   }),
+  Object.freeze({
+    stateKey: "ore-station-diggers",
+    institution: { id: "miner:ore-station-diggers", name: "Ore Station Diggers", archetypeId: "mining-contractor", controllerInstitutionId: "person:vesa-dag", referenceId: "FR-MIN-081", accounts: { operating: { id: "FR-ACCT-081", balance: 5200, committed: 0, transactions: [] } } },
+    controller: { id: "person:vesa-dag", name: "Vesa Dag", archetypeId: "person", controls: ["miner:ore-station-diggers"], traits: { caution: 0.5, growthBias: 0.5, urgencyBias: 0.55 }, license: { id: "MEX-081-ORE", class: "commercial-extraction", status: "active" } },
+    fleetPrefix: "ore-station", fleetName: "Ore Station",
+    shipPalette: { hullStroke: "#d8c08a", hullFill: "rgba(205, 174, 105, 0.18)", cabStroke: "#fff0c4", tractorStroke: "rgba(255, 211, 126, 0.44)" },
+    homeSiteId: "ore-station-one", operatingCosts: { crewPayPerContract: 80, consumablesPerContract: 35 },
+    workers: [{ id: "worker:ore-station-one", name: "Ore Station Pick One", referenceId: "MW-081-ORE", currentSiteId: "ore-station-one", initialWear: 0.32, offset: { x: -90, y: 70 } }],
+    expansionWorker: null, expansionProject: null,
+  }),
+  Object.freeze({
+    stateKey: "coldwater-cutters",
+    institution: { id: "miner:coldwater-cutters", name: "Coldwater Cutters", archetypeId: "mining-contractor", controllerInstitutionId: "person:mina-okonjo", referenceId: "FR-MIN-082", accounts: { operating: { id: "FR-ACCT-082", balance: 5000, committed: 0, transactions: [] } } },
+    controller: { id: "person:mina-okonjo", name: "Mina Okonjo", archetypeId: "person", controls: ["miner:coldwater-cutters"], traits: { caution: 0.8, growthBias: 0.15, urgencyBias: 0.45 }, license: { id: "MEX-082-COLD", class: "commercial-extraction", status: "active" } },
+    fleetPrefix: "coldwater", fleetName: "Coldwater",
+    shipPalette: { hullStroke: "#88d9ff", hullFill: "rgba(88, 190, 240, 0.18)", cabStroke: "#dbf6ff", tractorStroke: "rgba(126, 231, 255, 0.44)" },
+    homeSiteId: "coldwater-depot", operatingCosts: { crewPayPerContract: 75, consumablesPerContract: 30 },
+    workers: [{ id: "worker:coldwater-one", name: "Coldwater One", referenceId: "MW-082-COLD", currentSiteId: "coldwater-depot", initialWear: 0.28, offset: { x: 85, y: -65 } }],
+    expansionWorker: null, expansionProject: null,
+  }),
+  Object.freeze({
+    stateKey: "deep-field-services",
+    institution: { id: "miner:deep-field-services", name: "Deep Field Services", archetypeId: "mining-contractor", controllerInstitutionId: "person:elin-reyes", referenceId: "FR-MIN-083", accounts: { operating: { id: "FR-ACCT-083", balance: 4800, committed: 0, transactions: [] } } },
+    controller: { id: "person:elin-reyes", name: "Elin Reyes", archetypeId: "person", controls: ["miner:deep-field-services"], traits: { caution: 0.65, growthBias: 0.3, urgencyBias: 0.25 }, license: { id: "MEX-083-DEEP", class: "commercial-extraction", status: "active" } },
+    fleetPrefix: "deep-field", fleetName: "Deep Field",
+    shipPalette: { hullStroke: "#b99cff", hullFill: "rgba(153, 116, 235, 0.18)", cabStroke: "#eadfff", tractorStroke: "rgba(190, 155, 255, 0.44)" },
+    homeSiteId: "deep-research", operatingCosts: { crewPayPerContract: 85, consumablesPerContract: 35 },
+    workers: [{ id: "worker:deep-field-one", name: "Deep Field One", referenceId: "MW-083-DEEP", currentSiteId: "deep-research", initialWear: 0.22, offset: { x: -80, y: -75 } }],
+    expansionWorker: null, expansionProject: null,
+  }),
 ]);
 
 export const CINDER_MINING_SEED = MINING_INSTITUTION_SEEDS[0];
 export const FLINT_MINING_SEED = MINING_INSTITUTION_SEEDS[1];
+export const FRONTIER_MINING_SEEDS = MINING_INSTITUTION_SEEDS.slice(2);

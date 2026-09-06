@@ -4,7 +4,7 @@ import {
   getGrazingSteerTarget,
   getGrowthScale,
   isRipe,
-} from "../systems/grazing.js?v=fresh-20260822-1344-layout";
+} from "../systems/grazing.js?v=fresh-20260906-1546-6ff13f29";
 
 // How hard a grazer commits once it has locked onto food. Idle wandering keeps
 // the old dreamy steering; a creature crossing a field to a meal does not.
@@ -69,7 +69,9 @@ export class Lifeform {
       if (this.fullness > 0) this.radius = this.baseRadius * getGrowthScale(this);
       // Chasing a meal lifts the speed ceiling too, so a distant feast is worth
       // crossing the field for rather than a five-minute drift.
-      this.maxSpeed = this.grazingTarget ? this.baseMaxSpeed * GRAZER_FEED_SPEED_SCALE : this.baseMaxSpeed;
+      this.maxSpeed = this.grazerPredationTarget?.isAlive
+        ? this.baseMaxSpeed * 1.85
+        : this.grazingTarget ? this.baseMaxSpeed * GRAZER_FEED_SPEED_SCALE : this.baseMaxSpeed;
     }
 
     if (this.type === "hunter") {
@@ -125,6 +127,18 @@ export class Lifeform {
   }
 
   updateGrazer(deltaSeconds, world) {
+    // Overlapping feeding clouds are not merely accidental competition. Once a
+    // grazer is large enough, a nearby rival can become the meal. The ecology
+    // planner chooses the target; the animal must physically catch it here, so
+    // cannibalism is something the player sees rather than a counter dropping.
+    const rival = this.grazerPredationTarget?.isAlive ? this.grazerPredationTarget : null;
+    if (rival) {
+      this.applySteer(seek(this, rival.position, this.baseMaxSpeed * 1.85), 8.5);
+      this.applySteer(fleeIfClose(this, world.ship.position, 300, this.maxSpeed * 1.15), 1.8);
+      this.avoidAsteroids(world.asteroids, 1.1);
+      return;
+    }
+
     // Something abandoned in the field outranks the usual patrol around a rock.
     // The grazing system decides WHAT is worth going to and WHERE in the meal it
     // is; this only puts the body there. Each stage moves differently, which is

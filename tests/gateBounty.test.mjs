@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createGameState } from "../src/state/gameState.js";
 import {
+  awardGateBountyToPatrol,
   AUTHORITY_OFFICE_SITE_ID,
   ensureGateBounty,
   getGateBountyOffer,
@@ -79,4 +80,17 @@ test("an institutional bearer settles through the same bounty account transfer",
   assert.equal(account.balance, 850);
   assert.equal(account.transactions[0].amount, 750);
   assert.equal(ensureGateBounty(state).fund, fundBefore - 750);
+});
+
+test("a patrol kill pays its controlling account without leaving gold unclaimed", () => {
+  const state = createGameState();
+  const account = { balance: 500, transactions: [] };
+  const beforeFund = ensureGateBounty(state).fund;
+  const result = awardGateBountyToPatrol(state, {
+    unit: trophy(900), beneficiaryId: "scrap-forge", account, siteId: "scrap-porch", now: 123,
+  });
+  assert.equal(result.redeemed, true);
+  assert.equal(account.balance, 1400);
+  assert.equal(ensureGateBounty(state).fund, beforeFund - 900);
+  assert.equal(account.transactions.at(-1).type, "gate-bounty-income");
 });

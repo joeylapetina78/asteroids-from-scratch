@@ -9,7 +9,7 @@ export function getProcessorOutputs(components) {
       label: "Fuel",
       amountLabel: "matching materials",
       acceptedShapes: ["circle", "triangle", "octagon"],
-      color: "#b8eaff",
+      color: "#29b6d8",
     });
   }
 
@@ -19,7 +19,7 @@ export function getProcessorOutputs(components) {
       label: "Charges",
       amountLabel: "matching materials",
       acceptedShapes: ["square", "triangle", "diamond"],
-      color: "#ff7452",
+      color: "#d93b24",
     });
   }
 
@@ -29,7 +29,7 @@ export function getProcessorOutputs(components) {
       label: "Scanergy",
       amountLabel: "matching materials",
       acceptedShapes: ["hexagon", "diamond"],
-      color: "#a066ff",
+      color: "#7a2bd1",
     });
   }
 
@@ -41,7 +41,7 @@ export function getProcessorOutputs(components) {
       // Every material can be jury-rigged into patch reserve in a pinch, so all
       // shapes are accepted; structural (square) just converts far better.
       acceptedShapes: ["square", "triangle", "circle", "hexagon", "octagon", "diamond", "shard"],
-      color: "#ff7452",
+      color: "#d93b24",
     });
   }
 
@@ -51,7 +51,7 @@ export function getProcessorOutputs(components) {
       label: "Cargo",
       amountLabel: "store unit",
       acceptedShapes: ["circle", "square", "triangle", "hexagon", "octagon", "diamond", "shard"],
-      color: "#d9deea",
+      color: "#82909e",
     });
   }
 

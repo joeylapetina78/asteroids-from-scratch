@@ -1,5 +1,5 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260822-1344-layout";
-import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260822-1344-layout";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260906-1546-6ff13f29";
+import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260906-1546-6ff13f29";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_THRUST_POWER = 95;
@@ -12,6 +12,14 @@ const DEFAULT_BOOST_DURATION_SECONDS = 0.3;
 const DEFAULT_BOOST_FUEL_COST = 18;
 const DEFAULT_BOOST_COOLDOWN_SECONDS = 1.2;
 const SHIP_FRAMES = {
+  classic: {
+    points: [
+      { x: 22, y: 0 },
+      { x: -15, y: -13 },
+      { x: -15, y: 13 },
+    ],
+    cockpit: null,
+  },
   "yard-skiff": {
     points: [
       { x: 22, y: 0 },
@@ -235,9 +243,11 @@ export class Ship {
     context.translate(screenX, screenY);
     context.rotate(this.angle);
 
+    const displayColor = this.displayColor ?? "#7dffe0";
     context.lineWidth = 2.5;
-    context.strokeStyle = this.isVisiblyPowered() ? "#00e8a0" : "#2a3d45";
-    context.fillStyle = this.isVisiblyPowered() ? "rgba(0, 232, 160, 0.06)" : "rgba(0, 0, 0, 0)";
+    context.globalAlpha = this.isVisiblyPowered() ? 1 : 0.28;
+    context.strokeStyle = displayColor;
+    context.fillStyle = "rgba(0, 0, 0, 0)";
 
     this.drawFrame(context);
 
@@ -271,7 +281,7 @@ export class Ship {
 
     context.save();
     context.globalAlpha = this.isVisiblyPowered() ? 0.9 : 0.3;
-    context.strokeStyle = this.isVisiblyPowered() ? "#80ffdd" : "#3a4d55";
+    context.strokeStyle = this.displayColor ?? "#7dffe0";
     context.beginPath();
     context.arc(frame.cockpit.x, frame.cockpit.y, frame.cockpit.radius, 0, Math.PI * 2);
     context.stroke();
@@ -285,7 +295,7 @@ export class Ship {
 
     context.save();
     context.globalAlpha = this.isVisiblyPowered() ? 0.75 : 0.28;
-    context.strokeStyle = this.isVisiblyPowered() ? "#9ee8ff" : "#68717f";
+    context.strokeStyle = this.displayColor ?? "#7dffe0";
     context.lineWidth = 1.35;
 
     frame.details.lines?.forEach(([from, to]) => {

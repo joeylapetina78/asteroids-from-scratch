@@ -1,10 +1,11 @@
-import { DETAIL, resolveDetailLevel, setSimulationFocus } from "./detailLevel.js?v=fresh-20260822-1344-layout";
-import { getEconomySamples } from "./economySampler.js?v=fresh-20260822-1344-layout";
-import { advanceRegionFlow, createRegionFlow } from "./regionFlow.js?v=fresh-20260822-1344-layout";
-import { listHubActors } from "./hubActors.js?v=fresh-20260822-1344-layout";
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1344-layout";
-import { clearRegionalTrade } from "./regionalClearing.js?v=fresh-20260822-1344-layout";
+import { DETAIL, resolveDetailLevel, setSimulationFocus } from "./detailLevel.js?v=fresh-20260906-1546-6ff13f29";
+import { getEconomySamples } from "./economySampler.js?v=fresh-20260906-1546-6ff13f29";
+import { advanceRegionFlow, createRegionFlow } from "./regionFlow.js?v=fresh-20260906-1546-6ff13f29";
+import { listHubActors } from "./hubActors.js?v=fresh-20260906-1546-6ff13f29";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated } from "./simulationMode.js?v=fresh-20260906-1546-6ff13f29";
+import { clearRegionalTrade } from "./regionalClearing.js?v=fresh-20260906-1546-6ff13f29";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260906-1546-6ff13f29";
 
 export { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated };
 export const DISTANT_DEFAULTS = Object.freeze({ aggregateAfterMs: 30_000 });
@@ -224,10 +225,12 @@ export function applyFlowDeltaToLiveState(state, before, after, at = Date.now())
   if (!institution || !before || !after) return null;
 
   institution.accounts.operating.balance += (after.cash ?? 0) - (before.cash ?? 0);
+  const aggregateCostOfGoods = aggregateFamilyCostOfGoods(state, institution, before, after);
   applyFamilyStockDelta(institution, before.stock, after.stock);
 
   const trade = institution.settlementTrade ??= { unitsSold: 0, revenue: 0, costOfGoodsSold: 0, margin: 0, productionSpend: 0 };
   trade.revenue += Math.max(0, (after.revenueCumulative ?? 0) - (before.revenueCumulative ?? 0));
+  trade.costOfGoodsSold += aggregateCostOfGoods;
   trade.productionSpend += Math.max(0, (after.burnedCumulative ?? 0) - (before.burnedCumulative ?? 0));
   trade.margin = trade.revenue - (trade.costOfGoodsSold ?? 0);
 
@@ -246,6 +249,23 @@ export function applyFlowDeltaToLiveState(state, before, after, at = Date.now())
     population.lastIncomeAt = at;
   });
   return institution;
+}
+
+function aggregateFamilyCostOfGoods(state, institution, before = {}, after = {}) {
+  return Object.keys(after.stock ?? {}).reduce((total, family) => {
+    const measuredConsumption = (after.consumedCumulative?.[family] ?? 0) - (before.consumedCumulative?.[family] ?? 0);
+    const stockFallback = (before.stock?.[family] ?? 0) - (after.stock?.[family] ?? 0);
+    const consumedEffectiveUnits = Math.max(0, Number.isFinite(measuredConsumption) && after.consumedCumulative
+      ? measuredConsumption : stockFallback);
+    if (consumedEffectiveUnits <= 0) return total;
+    const resources = Object.entries(institution.inventories ?? {})
+      .filter(([resourceId, units]) => units > 0 && getResourceFamily(resourceId) === family);
+    const effectiveHeld = resources.reduce((sum, [resourceId, units]) => sum + units * getResourceEffectiveYield(resourceId), 0);
+    if (effectiveHeld <= 0) return total;
+    const weightedCostPerEffective = resources.reduce((sum, [resourceId, units]) =>
+      sum + getUnitCost(state, institution.id, resourceId) * units, 0) / effectiveHeld;
+    return total + consumedEffectiveUnits * weightedCostPerEffective;
+  }, 0);
 }
 
 // Effective units in, physical units out. A positive delta lands on the family's

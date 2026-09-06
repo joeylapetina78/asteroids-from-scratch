@@ -2,9 +2,10 @@
 // procedural generation both describe a seed; everything downstream consumes
 // the same compiled institutional actor record.
 
-import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260822-1344-layout";
-import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260822-1344-layout";
-import { upsertPlace } from "./placeRegistry.js?v=fresh-20260822-1344-layout";
+import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260906-1546-6ff13f29";
+import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260906-1546-6ff13f29";
+import { upsertPlace } from "./placeRegistry.js?v=fresh-20260906-1546-6ff13f29";
+import { addSiteToTradeCommunity, registerWorldSite } from "./worldNetworkRegistry.js?v=fresh-20260906-1546-6ff13f29";
 
 export const FOUNDATIONAL_EXTRACTION_FAMILIES = Object.freeze([
   "volatile", "structural", "industrial", "conductor", "energy", "advanced", "strange",
@@ -19,6 +20,10 @@ export const STANDARD_SETTLEMENT_NEEDS = Object.freeze([
   "settlement-supply-unit", "life-support-pack", "household-goods-unit", "general-materials",
 ]);
 
+// A settlement is not founded on the instant the player arrives. Its opening
+// warehouse therefore carries the small imported reserve and finished shelf it
+// would need to have survived the previous business cycle. Extraction remains
+// specialized: these imports grant no ability to replace themselves.
 const DEFAULT_AGENCY_PROFILE = Object.freeze({
   organizationType: "settlement-institution",
   governance: "local council",
@@ -136,10 +141,19 @@ export function createProceduralSettlementSeed(spec) {
     },
     geography: {
       id: spec.siteId ?? spec.id, name: spec.name, type: "hub", position: { ...spec.position },
+      tier: spec.tier ?? "settlement", developmentStage: spec.developmentStage ?? "settlement",
+      foundedAt: spec.foundedAt ?? null, parentSiteId: spec.parentSiteId ?? null,
       radius: spec.radius ?? 44, interactionRadius: spec.interactionRadius ?? 185,
       jurisdictionRadius: spec.jurisdictionRadius ?? spec.protectionPolicy?.jurisdictionRadius ?? 1800,
       beaconId: spec.beaconId ?? `beacon-${spec.siteId ?? spec.id}`,
       capabilities: [...(spec.capabilities ?? ["trade"])], services: [...(spec.services ?? [])],
+      tradeCommunityId: spec.tradeCommunityId ?? null,
+      provenance: structuredClone(spec.provenance ?? {
+        kind: "founded-settlement", foundedBy: spec.foundedBy ?? null,
+        foundingReason: spec.foundingReason ?? "surveyed-resource-opportunity",
+        discoveryId: spec.discoveryId ?? null, projectId: spec.projectId ?? null,
+      }),
+      history: structuredClone(spec.history ?? []),
     },
     organizationProfile: spec.organizationProfile,
   };
@@ -185,6 +199,12 @@ export function registerGeneratedSettlement(state, seed, { now = Date.now() } = 
   state.population ??= { populations: {}, productionOrders: {}, counter: 0, operators: {}, laborAssignments: {}, operatorCounter: 0 };
   state.population.populations ??= {};
   state.population.populations[compiled.population.id] = createPopulationRecord(settlementPopulationProfile(compiled), now);
+  registerWorldSite(state, compiled.geography, {
+    origin: compiled.origin,
+    provenance: compiled.geography?.provenance,
+    history: compiled.geography?.history,
+  });
+  if (compiled.geography?.tradeCommunityId) addSiteToTradeCommunity(state, compiled.geography.tradeCommunityId, compiled.institution.siteId);
   materializeSettlementAuthority(state, compiled);
   registry.generated[compiled.institution.id].registeredAt = now;
   return compiled;
@@ -250,10 +270,15 @@ function normalizeGeography(geography, institution) {
   return {
     id: geography.id ?? institution.siteId, name: geography.name ?? institution.name,
     type: geography.type ?? "hub", beaconId: geography.beaconId ?? `beacon-${institution.siteId}`,
+    tier: geography.tier ?? "settlement", developmentStage: geography.developmentStage ?? "settlement",
+    foundedAt: geography.foundedAt ?? null, parentSiteId: geography.parentSiteId ?? null,
     position: { ...geography.position }, radius: geography.radius ?? 44,
     interactionRadius: geography.interactionRadius ?? 185,
     jurisdictionRadius: geography.jurisdictionRadius ?? institution.protectionPolicy?.jurisdictionRadius ?? 1800,
     capabilities: [...(geography.capabilities ?? [])], services: [...(geography.services ?? [])],
+    tradeCommunityId: geography.tradeCommunityId ?? null,
+    provenance: structuredClone(geography.provenance ?? null),
+    history: structuredClone(geography.history ?? []),
   };
 }
 

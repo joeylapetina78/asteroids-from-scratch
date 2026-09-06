@@ -1,8 +1,9 @@
-import { TARGET_COVERAGE_SECONDS, TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260822-1344-layout";
-import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS, FIRST_REACH_CARRIER_POLICY } from "../content/transportation/firstReachNetwork.js?v=fresh-20260822-1344-layout";
-import { createTransportationNetwork, findTransportationRoute, maximumServiceableDistance } from "./transportationPlanning.js?v=fresh-20260822-1344-layout";
-import { getEffectiveTransportPolicy } from "./shipDrives.js?v=fresh-20260822-1344-layout";
+import { TARGET_COVERAGE_SECONDS, TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260906-1546-6ff13f29";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { FIRST_REACH_CARRIER_POLICY } from "../content/transportation/firstReachNetwork.js?v=fresh-20260906-1546-6ff13f29";
+import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./worldNetworkRegistry.js?v=fresh-20260906-1546-6ff13f29";
+import { createTransportationNetwork, findTransportationRoute, maximumServiceableDistance } from "./transportationPlanning.js?v=fresh-20260906-1546-6ff13f29";
+import { getEffectiveTransportPolicy } from "./shipDrives.js?v=fresh-20260906-1546-6ff13f29";
 
 // Trade between two regions that are both being simulated as rates.
 //
@@ -62,14 +63,11 @@ export const CLEARING_DEFAULTS = Object.freeze({
   freightPerUnitPerDistance: 0.0009,
 });
 
-let cachedNetwork = null;
-function network() {
-  cachedNetwork ??= createTransportationNetwork({
-    destinations: Array.from(new Set(FIRST_REACH_TRANSPORT_CONNECTIONS.flatMap((connection) => [connection.fromId, connection.toId])))
-      .map((id) => ({ id })),
-    connections: FIRST_REACH_TRANSPORT_CONNECTIONS,
+function network(state) {
+  return createTransportationNetwork({
+    destinations: getRuntimeWorldSites(state),
+    connections: getRuntimeWorldConnections(state),
   });
-  return cachedNetwork;
 }
 
 // Who could actually carry this, and what would they charge?
@@ -80,7 +78,7 @@ function network() {
 // the detailed world enforces, and distance stops meaning anything the moment
 // nobody is watching.
 export function findRegionalCarrier(state, originSiteId, destinationSiteId) {
-  const route = findTransportationRoute(network(), originSiteId, destinationSiteId);
+  const route = findTransportationRoute(network(state), originSiteId, destinationSiteId);
   if (!route) return null;
   const carriers = Object.values(state.logistics?.institutions ?? {})
     .filter((institution) => institution.archetypeId === "hauling-business" && institution.accounts?.operating);
@@ -208,6 +206,15 @@ export function clearRegionalTrade(state, records, { at = Date.now(), policy = C
   const aggregated = Object.values(records ?? {})
     .filter((record) => record.mode === "aggregate" && record.flow?.supply);
   if (aggregated.length < 2) return { trades: [], moved: 0, paid: 0 };
+
+  // Saved flows and flows created earlier in this very tick may predate their
+  // first advance. Normalize the mutable shelves before clearing so a valid
+  // first trade cannot throw while writing `shortfall[family]` and suppress
+  // every later system in the shared observation phase.
+  aggregated.forEach((record) => {
+    record.flow.stock ??= Object.fromEntries(TRADED_FAMILIES.map((family) => [family, 0]));
+    record.flow.shortfall ??= Object.fromEntries(TRADED_FAMILIES.map((family) => [family, 0]));
+  });
 
   const trades = [];
   let moved = 0;

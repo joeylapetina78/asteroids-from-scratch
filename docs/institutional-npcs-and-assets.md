@@ -75,6 +75,112 @@ four workers, capital and construction material and remains unavailable during
 its build interval. The general project planner will broaden that rule across
 the remaining capacity types.
 
+### Sponsored carriers are concessions, not gifts
+
+A hub-financed hauler should remain a private operating concern, but public
+capital must purchase enforceable service rather than goodwill alone. The
+intended model is a concession: the hub retains a lien or ownership share until
+its contribution is repaid and receives a defined portion of dispatch authority
+in return. That authority can require periodic home calls, reserve some completed
+runs for home-origin or home-destination freight, and issue emergency supply
+dispatches. The carrier controls its remaining work and may still refuse unsafe
+or impossible service. A retainer or subsidy covers civic work that would not
+clear an ordinary private bid.
+
+Homesickness belongs to the operator rather than the contract. Time and stops
+away, family attachment, stress and recent danger should create personal
+homeward pressure and individual stories, but a settlement's survival must not
+depend on every sponsored captain happening to feel homesick at the right time.
+The concession is the reliability layer; temperament is the variation above it.
+
+The first concession slice is live. Each sponsored carrier records completed
+outside jobs, outside market stops and its last physical home docking. Two
+outside jobs or four outside market stops make home duty binding. While due, the
+carrier considers only freight serving its sponsor (imports or exports); if none
+exists, its next market movement is a physical return home. Docking at home
+clears the duty and publishes a `carrier.homeDutyCompleted` event. A newly built
+remote-sponsored hull begins with home duty due, so it reports to the community
+that capitalized it before freely roaming the market. The charter records a
+one-third dispatch share and an outstanding hub-capital lien; repayment remains
+an independent financial right rather than another name for dispatch control.
+
+That lien is now a real declining balance equal to the commissioned hull's
+purchase price plus the opening operating grant. After a paid delivery, fleet
+finance is serviced first. The carrier then protects committed money, minimum
+operating cash, its maintenance target, and—when larger—its actual operating
+expenses from the preceding fifteen minutes. One third of only the remaining
+distributable surplus returns to the sponsoring hub until the lien reaches
+zero. Both accounts and a public `carrier.sponsorCapitalRepaid` event record the
+transfer. A carrier without genuine surplus pays nothing. Buying a used
+concession closes the former sponsor's interest and opens a new lien for the
+actual transfer price, so repayments follow ownership rather than the craft's
+original home.
+
+The sponsoring hub now also maintains a live dispatch channel to the carrier.
+It transmits the hub's open inbound and outbound procurement needs, plus the
+specific ready freight offers that can serve them, while the craft is underway;
+no market docking is required merely to learn what home needs. A captain still
+finishes cargo already in custody and accepts or changes work at a safe stop,
+so continuous communication does not become mid-flight route thrashing. Changes
+to the feed are retained in logistics history as `carrier.homeDispatchUpdated`.
+
+That feed now has economic force before the hard home-call threshold. The
+carrier values sponsor-serving freight progressively more as its originating
+purchase order ages, with a further increase when duty is due. It remains a
+reasoned preference: an infeasible route, unsafe wear projection, unfunded
+buyer or below-cost rate is still rejected. The actor card shows those exact
+reasons alongside approach distance and the age/direction/value of the
+sponsored obligation, making an untouched frontier order diagnosable in-world.
+
+That diagnosis now governs service choice. If sponsor-serving cargo is funded,
+loadable and profitable but the carrier's present condition fails the
+maintenance projection, an unrelated eligible auction bid won by another ship
+cannot mask the obligation. The empty carrier seeks preventive service rather
+than spending more wear on a market circuit, then reconsiders the still-open
+home order from its repaired condition.
+
+Arrival is now a real decision boundary. Before starting another exploratory
+market circuit, a carrier evaluates loadable freight at the stop. A sponsored
+craft standing beside cargo for its home hub has first consideration if the run
+is otherwise eligible; this closes the independent-auction case where another
+ship won several loads, accepted one, and caused the local carrier to leave the
+others behind. Departures retain their considered offers and reasons on the
+actor card instead of erasing the evidence once the ship is in transit.
+
+The procurement boundary now refuses to turn a READY label into imaginary
+freight. The matching supplier custody manifest must name the titled buyer,
+resource and full quantity before the carrier market can see the load. A stale
+READY order is reconciled to an extant active shipment or has its missing
+supplier-held custody row restored from the conserved paid title; neither path
+creates stock or repeats payment. Records lacking enough identity to repair are
+withheld behind a visible custody blocker, and every successful repair is on
+the ledger as `procurement.readyCustodyReconciled`.
+
+Sponsored concessions also enter a used-capacity market before their worker and
+hull disappear from economic life. When a one-hull sponsored carrier reaches
+withdrawal, it publishes the physical craft, its condition, operator, existing
+concession and a condition-adjusted asking price below new-build cost. A hub may
+assume that whole relationship only after freight involving the hub has remained
+genuinely unserved; a quiet regional fleet floor alone is not a reason to trade.
+The payment goes to the outgoing lienholder, the craft and operator retain their
+identities and histories, and the new sponsor receives the lien, live dispatch
+relationship and a binding first home call. The operator's personal home remains
+their place of origin even though the job's service home changes.
+
+A remote pickup claim is intentionally narrower than a freight contract. It
+prevents two empty craft from making the same approach, then expires when the
+first craft physically reaches the pickup market. The load is bid again from
+the arriving craft's real location and current condition. If wear or maintenance
+policy changed during the journey, the load returns to the market rather than
+remaining invisibly reserved by a carrier that now refuses it.
+
+Hub-owned ecological collectors are different again. The hub owns the craft
+permanently and employs its operator; completing a field assignment does not
+retire or transfer the hull. Existing empty craft are reassigned, and craft with
+retained partial cargo return home to unload. Additional collector capital must
+eventually be justified by an explicit parallel-capacity/backlog decision, not
+by failing to recognize an existing owned ship as reusable.
+
 ## Population, labor and operational people
 
 `src/systems/populationLabor.js` makes a settlement population a finite labor
@@ -203,3 +309,21 @@ No route, supplier or prescribed economic behavior is generated by this
 pipeline. A new hub receives capabilities, assets, needs and decision traits.
 Its actual mining orders, procurement choices, protection responses and trade
 relationships emerge through the same evaluators used by authored hubs.
+
+The geography portion now enters `worldNetworkRegistry.js`, the shared runtime
+graph of sites, connections, and trade communities. Authored First Reach and a
+procedurally founded site have the same stored shape, including provenance and
+history. Founding roads are registered separately, validate both endpoints,
+and immediately become available to freight, procurement, aggregate trade,
+industrial sourcing, towing, detail selection, and physical-world routing.
+This separation lets the historical generator say *why* a place and route were
+built without preselecting what businesses will later do with them.
+
+`src/systems/worldHistoryCompiler.js` now performs the first pre-play replay of
+that process. A sponsoring frontier government surveys actual procedural
+geography, chooses a balanced opportunity, approves an expedition, builds the
+founding trunk and local roads, and registers three complementary settlements
+as an independent trade community. Population, wealth, specialization, and
+the later capital designation follow the recorded opportunity and historical
+success. The result is ordinary live institutional state after compilation;
+the chronicle is explanatory memory, not a second simulation.

@@ -1,19 +1,21 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260822-1344-layout";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260822-1344-layout";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260822-1344-layout";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260822-1344-layout";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260822-1344-layout";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260822-1344-layout";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260822-1344-layout";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260822-1344-layout";
-import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260822-1344-layout";
-import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260822-1344-layout";
-import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260822-1344-layout";
-import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260822-1344-layout";
-import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260822-1344-layout";
-import { createInitialIndustrialState } from "../systems/industrialProduction.js?v=fresh-20260822-1344-layout";
-import { consolidateSprcOwnership } from "../systems/sprcOwnership.js?v=fresh-20260822-1344-layout";
-import { createInitialNpcDevelopmentState } from "../systems/npcDevelopment.js?v=fresh-20260822-1344-layout";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260906-1546-6ff13f29";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260906-1546-6ff13f29";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260906-1546-6ff13f29";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260906-1546-6ff13f29";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260906-1546-6ff13f29";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260906-1546-6ff13f29";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260906-1546-6ff13f29";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260906-1546-6ff13f29";
+import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260906-1546-6ff13f29";
+import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260906-1546-6ff13f29";
+import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260906-1546-6ff13f29";
+import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260906-1546-6ff13f29";
+import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260906-1546-6ff13f29";
+import { createInitialIndustrialState } from "../systems/industrialProduction.js?v=fresh-20260906-1546-6ff13f29";
+import { consolidateSprcOwnership } from "../systems/sprcOwnership.js?v=fresh-20260906-1546-6ff13f29";
+import { createInitialNpcDevelopmentState } from "../systems/npcDevelopment.js?v=fresh-20260906-1546-6ff13f29";
+import { createInitialWorldNetwork } from "../systems/worldNetworkRegistry.js?v=fresh-20260906-1546-6ff13f29";
+import { createCockpitLayoutState } from "../systems/cockpitLayout.js?v=fresh-20260906-1546-6ff13f29";
 
 export function createGameState() {
   const state = {
@@ -41,6 +43,7 @@ export function createGameState() {
       paperwork: {
         filingIntroduced: true,
       },
+      cockpit: createCockpitLayoutState(),
       viewportLayout: "default",
       viewportZoom: 1.0,
       mapAlpha: 0.40,
@@ -57,6 +60,8 @@ export function createGameState() {
       jobBoards: {},
     },
     worldRecords: createEmptyWorldRecords(),
+    worldNetwork: createInitialWorldNetwork(),
+    worldHistory: { version: 1, chronicles: {}, events: [], counters: { event: 0 } },
     // Rights-issuing authorities (the capital that sells work passes/permits).
     // Their treasuries are intentionally NOT part of the tracked institutional
     // economy yet — see rightsAuthority.js.

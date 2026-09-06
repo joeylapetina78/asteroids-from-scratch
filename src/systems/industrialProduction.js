@@ -1,13 +1,13 @@
-import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260822-1344-layout";
-import { listShipyards, shipyardPartShortage } from "./shipyards.js?v=fresh-20260822-1344-layout";
-import { FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260822-1344-layout";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260822-1344-layout";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260822-1344-layout";
-import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260822-1344-layout";
-import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260822-1344-layout";
-import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260822-1344-layout";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260822-1344-layout";
+import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260906-1546-6ff13f29";
+import { listShipyards, shipyardPartShortage } from "./shipyards.js?v=fresh-20260906-1546-6ff13f29";
+import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./worldNetworkRegistry.js?v=fresh-20260906-1546-6ff13f29";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260906-1546-6ff13f29";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260906-1546-6ff13f29";
+import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260906-1546-6ff13f29";
+import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260906-1546-6ff13f29";
+import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260906-1546-6ff13f29";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260906-1546-6ff13f29";
 
 export const INDUSTRIAL_PARTS = Object.freeze(["hull-plate", "machine-part"]);
 
@@ -108,6 +108,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
       factory.operatingHistory ??= { ordersAccepted: 0, contractedRevenue: 0, firstRunAt: run.startedAt, lastRunAt: null };
       factory.operatingHistory.firstRunAt ??= run.startedAt;
       factory.operatingHistory.lastRunAt = now();
+      factory.operatingHistory.unitsProduced = (factory.operatingHistory.unitsProduced ?? 0) + run.amount;
       state.ledger.recordEvent("industry.partsProduced", {
         factoryId: factory.id, institutionId: factory.institutionId,
         itemId: run.output, units: run.amount, runId: run.id,
@@ -176,7 +177,10 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
       Object.entries(recipe.inputs).forEach(([itemId, units]) => { hub.inventories[itemId] -= units; });
       hub.accounts.operating.balance -= recipe.credits;
       const id = `IND-RUN-${String(++industrial.counters.run).padStart(4, "0")}`;
-      factory.activeRun = { id, output: recipe.output, amount: recipe.amount, startedAt: now(), completesAt: now() + recipe.seconds * 1000 };
+      factory.activeRun = { id, output: recipe.output, amount: recipe.amount, inputs: { ...recipe.inputs }, startedAt: now(), completesAt: now() + recipe.seconds * 1000 };
+      factory.operatingHistory ??= { ordersAccepted: 0, contractedRevenue: 0, firstRunAt: now(), lastRunAt: null };
+      factory.operatingHistory.rawUnitsConsumed = (factory.operatingHistory.rawUnitsConsumed ?? 0)
+        + Object.values(recipe.inputs).reduce((sum, units) => sum + units, 0);
       factory.status = "working";
       state.ledger.recordEvent("industry.productionStarted", {
         factoryId: factory.id, institutionId: factory.institutionId, runId: id,
@@ -202,8 +206,7 @@ export function createIndustrialProductionOperation({ state, now = () => Date.no
   }
 
   function routeBetween(fromId, toId) {
-    const ids = Array.from(new Set(FIRST_REACH_TRANSPORT_CONNECTIONS.flatMap((connection) => [connection.fromId, connection.toId])));
-    const network = createTransportationNetwork({ destinations: ids.map((id) => ({ id })), connections: FIRST_REACH_TRANSPORT_CONNECTIONS });
+    const network = createTransportationNetwork({ destinations: getRuntimeWorldSites(state), connections: getRuntimeWorldConnections(state) });
     return findTransportationRoute(network, fromId, toId);
   }
 

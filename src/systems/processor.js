@@ -1,8 +1,12 @@
-import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260822-1344-layout";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260822-1344-layout";
+import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260906-1546-6ff13f29";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
+const SIDE_PIPE_LIP_HEIGHT = 72;
+const SIDE_PIPE_LIP_DEPTH = 26;
+const SIDE_PIPE_NECK_LENGTH = 14;
+const SIDE_PIPE_NECK_HEIGHT = 38;
 const BOUNCE = 0.18;
 const FLOOR_FRICTION = 0.82;
 const SOLVER_STEPS = 4;
@@ -25,6 +29,12 @@ export class Processor {
     this.isClickable = options.isClickable ?? true;
     this.enableCompaction = options.enableCompaction ?? false;
     this.getUnitFlags = options.getUnitFlags ?? (() => ({}));
+    this.unitScale = options.unitScale ?? 1;
+    this.spawnFromLeft = options.spawnFromLeft ?? false;
+    this.floorSpread = options.floorSpread ?? false;
+    this.inletSide = options.inletSide ?? null;
+    this.getInletCenterY = options.getInletCenterY ?? null;
+    this.transparentBackground = options.transparentBackground ?? false;
     this.units = [];
     this.sparks = [];
     this.compaction = null;
@@ -41,9 +51,14 @@ export class Processor {
 
   addUnit(type, metadata = {}) {
     const slot = this.units.length % 4;
-    const spacing = UNIT_SIZE + 4;
-
     const quantity = metadata.quantity ?? 1;
+    const size = metadata.size ?? this.getUnitSize(quantity);
+    const spacing = size + 6;
+
+    const inletY = Math.round(this.getPipeCenterY() - size / 2 + (slot - 1.5) * 5);
+    const shootsLeft = this.inletSide === "right";
+    const shootsRight = this.inletSide === "left";
+    const pipeDepth = SIDE_PIPE_NECK_LENGTH + SIDE_PIPE_LIP_DEPTH;
 
     this.units.push({
       type,
@@ -52,15 +67,51 @@ export class Processor {
       // isn't a real resource type); fall back to the resource lookups.
       color: metadata.color ?? RESOURCE_COLOR[type] ?? "#ff7452",
       shape: metadata.shape ?? getResourceShape(type),
-      x: this.canvas.width / 2 - spacing * 2 + slot * spacing,
-      y: 30,
-      vx: (slot - 1.5) * 12,
-      vy: 0,
+      x: shootsLeft
+        ? this.canvas.width - pipeDepth - size + slot * 3
+        : shootsRight
+          ? pipeDepth - slot * 3
+          : this.spawnFromLeft ? 18 + slot * 7 : this.canvas.width / 2 - spacing * 2 + slot * spacing,
+      y: this.inletSide ? inletY : 30,
+      vx: shootsLeft ? -190 - slot * 11 : shootsRight ? 190 + slot * 11 : (slot - 1.5) * 12,
+      vy: this.inletSide ? -62 + slot * 13 : 0,
       angle: (Math.random() - 0.5) * 0.5,
       angularVelocity: (Math.random() - 0.5) * 0.9,
       quantity,
-      size: metadata.size ?? getUnitSize(quantity),
+      size,
     });
+  }
+
+  resizeToDisplay() {
+    const bounds = this.canvas.getBoundingClientRect();
+    const width = Math.max(1, Math.round(bounds.width));
+    const height = Math.max(1, Math.round(bounds.height));
+    if (width === this.canvas.width && height === this.canvas.height) return;
+
+    const scaleX = width / Math.max(1, this.canvas.width);
+    const scaleY = height / Math.max(1, this.canvas.height);
+    this.units.forEach((unit) => {
+      unit.x *= scaleX;
+      unit.y *= scaleY;
+    });
+    this.canvas.width = width;
+    this.canvas.height = height;
+  }
+
+  getUnitSize(quantity) {
+    return Math.round(getUnitSize(quantity) * this.unitScale);
+  }
+
+  getPipeCenterY() {
+    const requestedCenter = this.getInletCenterY?.();
+    return Number.isFinite(requestedCenter)
+      ? clamp(requestedCenter, SIDE_PIPE_LIP_HEIGHT / 2, this.canvas.height - SIDE_PIPE_LIP_HEIGHT / 2)
+      : this.canvas.height / 2;
+  }
+
+  getPipeColor() {
+    if (typeof getComputedStyle !== "function") return "#7dffe0";
+    return getComputedStyle(this.canvas).getPropertyValue("--cockpit-phosphor").trim() || "#7dffe0";
   }
 
   getUnitCounts() {
@@ -90,7 +141,7 @@ export class Processor {
         removedUnits.push({
           ...unit,
           quantity: removedQuantity,
-          size: getUnitSize(removedQuantity),
+          size: this.getUnitSize(removedQuantity),
         });
         remaining -= removedQuantity;
       }
@@ -99,7 +150,7 @@ export class Processor {
         keptUnits.push({
           ...unit,
           quantity: quantity - removedQuantity,
-          size: getUnitSize(quantity - removedQuantity),
+          size: this.getUnitSize(quantity - removedQuantity),
         });
       }
     });
@@ -156,7 +207,7 @@ export class Processor {
       tradeValue: unit.tradeValue ?? null,
       label: unit.label ?? null,
       quantity: unit.quantity ?? 1,
-      size: unit.size ?? getUnitSize(unit.quantity ?? 1),
+      size: unit.size ?? this.getUnitSize(unit.quantity ?? 1),
     }));
   }
 
@@ -176,7 +227,7 @@ export class Processor {
     }
 
     const compactingUnits = this.advanceCompaction(deltaSeconds);
-    this.units.forEach((unit) => {
+    this.units.forEach((unit, unitIndex) => {
       if (compactingUnits?.has(unit)) {
         return;
       }
@@ -187,6 +238,12 @@ export class Processor {
       unit.angle += unit.angularVelocity * deltaSeconds;
       unit.angularVelocity *= ANGULAR_DRAG;
       unit.angularVelocity = clamp(unit.angularVelocity, -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
+      if (this.floorSpread && unit.y + unit.size >= this.canvas.height - 3) {
+        const spacing = unit.size + 7;
+        const columns = Math.max(1, Math.floor((this.canvas.width - 16) / spacing));
+        const targetX = 8 + (unitIndex % columns) * spacing;
+        unit.vx += clamp((targetX - unit.x) * 18, -360, 360) * deltaSeconds;
+      }
       this.keepInsideBounds(unit);
     });
 
@@ -211,14 +268,16 @@ export class Processor {
 
   draw() {
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.context.fillStyle = "#080a0f";
-    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    if (!this.transparentBackground) {
+      this.context.fillStyle = "#080a0f";
+      this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
 
     this.drawPipe();
 
     this.units.forEach((unit) => {
-      this.context.fillStyle = unit.color;
-      this.context.strokeStyle = "rgba(255,255,255,0.7)";
+      this.context.fillStyle = createVectorResourceFill(this.context, unit.color, unit.size);
+      this.context.strokeStyle = getVectorResourceOutline(unit.color);
       this.context.lineWidth = 2;
       this.context.save();
       this.context.translate(unit.x + unit.size / 2, unit.y + unit.size / 2);
@@ -248,7 +307,34 @@ export class Processor {
 
   drawPipe() {
     const pipeWidth = 78;
-    const pipeX = this.canvas.width / 2 - pipeWidth / 2;
+    if (this.inletSide) {
+      const pipeCenterY = this.getPipeCenterY();
+      const lipY = Math.round(pipeCenterY - SIDE_PIPE_LIP_HEIGHT / 2);
+      const neckY = Math.round(pipeCenterY - SIDE_PIPE_NECK_HEIGHT / 2);
+      const opensLeft = this.inletSide === "right";
+      const neckX = opensLeft ? this.canvas.width - SIDE_PIPE_NECK_LENGTH : 0;
+      const lipX = opensLeft
+        ? neckX - SIDE_PIPE_LIP_DEPTH
+        : SIDE_PIPE_NECK_LENGTH;
+      const pipeColor = this.getPipeColor();
+
+      this.context.save();
+      this.context.fillStyle = pipeColor;
+      this.context.strokeStyle = pipeColor;
+      this.context.lineWidth = 2;
+      this.context.globalAlpha = 0.2;
+      this.context.fillRect(neckX, neckY, SIDE_PIPE_NECK_LENGTH, SIDE_PIPE_NECK_HEIGHT);
+      this.context.globalAlpha = 0.68;
+      this.context.strokeRect(neckX, neckY, SIDE_PIPE_NECK_LENGTH, SIDE_PIPE_NECK_HEIGHT);
+      this.context.globalAlpha = 0.13;
+      this.context.fillRect(lipX, lipY, SIDE_PIPE_LIP_DEPTH, SIDE_PIPE_LIP_HEIGHT);
+      this.context.globalAlpha = 0.78;
+      this.context.strokeRect(lipX, lipY, SIDE_PIPE_LIP_DEPTH, SIDE_PIPE_LIP_HEIGHT);
+      this.context.restore();
+      return;
+    }
+
+    const pipeX = this.spawnFromLeft ? 12 : this.canvas.width / 2 - pipeWidth / 2;
 
     this.context.fillStyle = "#2a303b";
     this.context.strokeStyle = "#697386";
@@ -375,23 +461,35 @@ export class Processor {
     const scaleY = this.canvas.height / bounds.height;
     const x = (event.clientX - bounds.left) * scaleX;
     const y = (event.clientY - bounds.top) * scaleY;
-    const clickedIndex = this.units.findLastIndex(
-      (unit) => x >= unit.x && x <= unit.x + unit.size && y >= unit.y && y <= unit.y + unit.size,
-    );
+    let clickedIndex = -1;
+    let nearestDistance = Infinity;
+    this.units.forEach((unit, index) => {
+      const dx = x - (unit.x + unit.size / 2);
+      const dy = y - (unit.y + unit.size / 2);
+      const distance = Math.hypot(dx, dy);
+      const hitRadius = Math.max(30, unit.size * 1.15);
+      if (distance <= hitRadius && distance <= nearestDistance) {
+        nearestDistance = distance;
+        clickedIndex = index;
+      }
+    });
 
     if (clickedIndex >= 0) {
       const unit = this.units[clickedIndex];
       const shouldProcess = this.onUnitProcessed(unit.type, unit);
 
       if (shouldProcess === false) {
+        unit.vy = -Math.max(110, Math.abs(unit.vy) * 0.7);
+        unit.vx += (x < unit.x + unit.size / 2 ? 1 : -1) * 34;
+        unit.angularVelocity += 0.8;
         return;
       }
 
       const processedQuantity = shouldProcess?.processedQuantity ?? (unit.quantity ?? 1);
       if (processedQuantity < (unit.quantity ?? 1)) {
         unit.quantity -= processedQuantity;
-        unit.size = getUnitSize(unit.quantity);
-        this.createCrushSparks({ ...unit, quantity: processedQuantity, size: getUnitSize(processedQuantity) });
+        unit.size = this.getUnitSize(unit.quantity);
+        this.createCrushSparks({ ...unit, quantity: processedQuantity, size: this.getUnitSize(processedQuantity) });
         return;
       }
 
@@ -474,7 +572,7 @@ export class Processor {
     });
 
     if (progress >= 1) {
-      const size = getUnitSize(COMPACTION_COUNT);
+      const size = this.getUnitSize(COMPACTION_COUNT);
       const bundle = {
         type: compaction.type,
         ...compaction.metadata,

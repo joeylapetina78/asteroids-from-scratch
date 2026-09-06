@@ -1,6 +1,6 @@
-import { TRADED_FAMILIES, getFamilyConsumptionRates } from "./hubInventory.js?v=fresh-20260822-1344-layout";
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260822-1344-layout";
+import { TRADED_FAMILIES, getFamilyConsumptionRates } from "./hubInventory.js?v=fresh-20260906-1546-6ff13f29";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { POPULATION_NEEDS, POPULATION_PROFILES, NEED_KIND, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260906-1546-6ff13f29";
 
 // A place simulated as RATES rather than as transactions. Step 4, Phase B.
 //
@@ -221,6 +221,11 @@ export function createRegionFlow(state, institutionId, { samples = [], at = Date
     institutionId,
     at,
     stock,
+    // Regional clearing can run in the same observation tick that creates the
+    // aggregate, before `advanceRegionFlow` has produced its first shortfall.
+    // Keep the write target present from birth rather than making the first
+    // legitimate trade crash while reducing a field that does not yet exist.
+    shortfall: Object.fromEntries(TRADED_FAMILIES.map((family) => [family, 0])),
     cash: record?.accounts?.operating?.balance ?? 0,
     demand: deriveDemandRates(institutionId, state),
     // Null until the region has been watched long enough to know. Advancing a
@@ -234,6 +239,7 @@ export function createRegionFlow(state, institutionId, { samples = [], at = Date
     createdCumulative: 0,
     discardedCumulative: 0,
     revenueCumulative: 0,
+    consumedCumulative: Object.fromEntries(TRADED_FAMILIES.map((family) => [family, 0])),
   };
 }
 
@@ -359,9 +365,11 @@ export function advanceRegionFlow(flow, seconds, { externalInflow = null } = {})
   const served = stockServed * affordableFraction;
   const revenue = payableRevenue;
   const burned = flow.demand.productionBurnPerSecond * seconds * served;
+  const consumedCumulative = { ...(flow.consumedCumulative ?? {}) };
   // Stock reserved for an unaffordable purchase remains on the shelf.
   Object.entries(familyMovement).forEach(([family, movement]) => {
     const actuallyDrawn = movement.drawn * affordableFraction;
+    consumedCumulative[family] = (consumedCumulative[family] ?? 0) + actuallyDrawn;
     stock[family] = movement.available - actuallyDrawn;
     shortfall[family] = round2(movement.wanted - actuallyDrawn);
   });
@@ -397,6 +405,7 @@ export function advanceRegionFlow(flow, seconds, { externalInflow = null } = {})
     createdCumulative: flow.createdCumulative + createdReceived,
     discardedCumulative: (flow.discardedCumulative ?? 0) + discarded,
     revenueCumulative: (flow.revenueCumulative ?? 0) + revenue,
+    consumedCumulative,
     blocked: null,
   };
 }

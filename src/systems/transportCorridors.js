@@ -38,6 +38,17 @@ export function expandTransportationPath(path, destinations, connections, corrid
 
 export function getCorridorClearance(position, bodyRadius, corridors = []) {
   for (const corridor of corridors) {
+    // Most streamed rocks are nowhere near most roads. Reject them against the
+    // corridor's cached bounds before walking what can be hundreds of sampled
+    // segments. The margin preserves the widest endpoint plus the caller's
+    // body radius, so this changes cost rather than clearance behaviour.
+    const margin = Math.max(corridor.width, corridor.endpointWidth) * 0.5 + bodyRadius;
+    if (corridor.bounds && (
+      position.x < corridor.bounds.minX - margin
+      || position.x > corridor.bounds.maxX + margin
+      || position.y < corridor.bounds.minY - margin
+      || position.y > corridor.bounds.maxY + margin
+    )) continue;
     const nearest = nearestPointOnPolyline(position, corridor.samples);
     const endpointFactor = Math.min(nearest.progress, 1 - nearest.progress) / 0.12;
     const width = mix(corridor.endpointWidth, corridor.width, Math.min(1, endpointFactor));
@@ -91,7 +102,13 @@ function createCorridor(connection, from, to) {
   const courseLength = polylineLength(samples);
   const id = config.id ?? `corridor:${connection.id}`;
   const boostProgress = config.boostPatchProgress ?? deriveBoostPatchProgress(samples, config.boostPads);
-  return { id, archetypeId: config.archetypeId ?? null, connectionId: connection.id, name: config.name ?? `${from.name}–${to.name} Freight Corridor`, fromId: from.id, toId: to.id, width: config.width ?? 480, endpointWidth: config.endpointWidth ?? 720, shoulderDensity: config.shoulderDensity ?? 0, outerShoulderDensity: config.outerShoulderDensity ?? 0, slipstreamSpeedMultiplier: config.slipstreamSpeedMultiplier ?? 1, slipstreamThrustMultiplier: config.slipstreamThrustMultiplier ?? 1, boostPatches: createBoostPatches(id, samples, boostProgress), seed: config.seed ?? 1, samples, waypoints, length: courseLength, directLength: length, generation: { procedural: !config.coursePoints, coursePoints } };
+  const bounds = samples.reduce((result, point) => ({
+    minX: Math.min(result.minX, point.x),
+    maxX: Math.max(result.maxX, point.x),
+    minY: Math.min(result.minY, point.y),
+    maxY: Math.max(result.maxY, point.y),
+  }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
+  return { id, archetypeId: config.archetypeId ?? null, connectionId: connection.id, name: config.name ?? `${from.name}–${to.name} Freight Corridor`, fromId: from.id, toId: to.id, width: config.width ?? 480, endpointWidth: config.endpointWidth ?? 720, shoulderDensity: config.shoulderDensity ?? 0, outerShoulderDensity: config.outerShoulderDensity ?? 0, slipstreamSpeedMultiplier: config.slipstreamSpeedMultiplier ?? 1, slipstreamThrustMultiplier: config.slipstreamThrustMultiplier ?? 1, boostPatches: createBoostPatches(id, samples, boostProgress), seed: config.seed ?? 1, samples, bounds, waypoints, length: courseLength, directLength: length, generation: { procedural: !config.coursePoints, coursePoints } };
 }
 
 function generateCourseProfile(generator = {}, seed, directLength, sampleSpacing) {

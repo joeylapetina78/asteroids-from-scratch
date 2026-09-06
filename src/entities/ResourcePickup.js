@@ -1,7 +1,7 @@
-import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260822-1344-layout";
-import { createRandom, randomRange } from "../systems/random.js?v=fresh-20260822-1344-layout";
-import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260822-1344-layout";
-import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "../systems/rockmossStrains.js?v=fresh-20260822-1344-layout";
+import { WHITE_ASTEROID_COLOR } from "./Asteroid.js?v=fresh-20260906-1546-6ff13f29";
+import { createRandom, randomRange } from "../systems/random.js?v=fresh-20260906-1546-6ff13f29";
+import { RESOURCE_COLOR, getResourceShape, normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260906-1546-6ff13f29";
+import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "../systems/rockmossStrains.js?v=fresh-20260906-1546-6ff13f29";
 
 const PICKUP_RADIUS = 10;
 const PICKUP_DRAG = 0.985;
@@ -52,21 +52,80 @@ export class ResourcePickup {
   draw(context, camera) {
     const screenX = this.position.x - camera.x;
     const screenY = this.position.y - camera.y;
+    const viewportColor = intensifyVectorColor(this.color);
+    const viewportAccent = this.accent ? intensifyVectorColor(this.accent) : null;
 
     context.save();
     context.translate(screenX, screenY);
-    context.fillStyle = this.color;
-    context.strokeStyle = "rgba(255,255,255,0.7)";
-    context.lineWidth = 1;
+    context.fillStyle = createViewportResourceFill(context, this.color, viewportColor, this.size);
+    context.strokeStyle = viewportColor;
+    context.lineWidth = 2.25;
+    context.shadowColor = viewportColor;
+    context.shadowBlur = 8;
 
     if (this.type === ROCKMOSS_CRAWLER_TYPE) {
-      drawCrawlerPickup(context, this.shape, this.size, this.color, this.accent);
+      drawCrawlerPickup(context, this.shape, this.size, viewportColor, viewportAccent);
     } else {
       drawResourceShape(context, this.shape, this.size);
     }
 
     context.restore();
   }
+}
+
+// Resource colors use the same economical language as the cockpit: a dark,
+// chromatic edge around a restrained same-hue fill. This keeps every family
+// distinct without the pastel body + white sticker-outline look.
+export function getVectorResourceOutline(color) {
+  return intensifyVectorColor(color);
+}
+
+export function createVectorResourceFill(context, color, size) {
+  const channels = parseHexColor(color);
+  if (!channels || typeof context.createLinearGradient !== "function") return color;
+  const [red, green, blue] = channels;
+  const [brightRed, brightGreen, brightBlue] = parseHexColor(intensifyVectorColor(color)) ?? channels;
+  const half = size / 2;
+  const gradient = context.createLinearGradient(-half, -half, half, half);
+  gradient.addColorStop(0, `rgba(${brightRed}, ${brightGreen}, ${brightBlue}, 0.58)`);
+  gradient.addColorStop(0.55, `rgba(${brightRed}, ${brightGreen}, ${brightBlue}, 0.78)`);
+  gradient.addColorStop(1, `rgba(${red}, ${green}, ${blue}, 0.94)`);
+  return gradient;
+}
+
+// Loose ore is viewed through the dark, gridded porthole rather than close-up
+// behind the processor glass. Push each hue to the brightest saturated version
+// of itself and use an opaque center so a pickup reads instantly at flight scale.
+function createViewportResourceFill(context, baseColor, brightColor, size) {
+  const base = parseHexColor(baseColor);
+  const bright = parseHexColor(brightColor);
+  if (!base || !bright || typeof context.createRadialGradient !== "function") return brightColor;
+  const [red, green, blue] = base;
+  const [brightRed, brightGreen, brightBlue] = bright;
+  const radius = Math.max(1, size / 2);
+  const gradient = context.createRadialGradient(-radius * 0.18, -radius * 0.2, 0, 0, 0, radius);
+  gradient.addColorStop(0, `rgba(${brightRed}, ${brightGreen}, ${brightBlue}, 1)`);
+  gradient.addColorStop(0.62, `rgba(${brightRed}, ${brightGreen}, ${brightBlue}, 0.92)`);
+  gradient.addColorStop(1, `rgba(${red}, ${green}, ${blue}, 0.76)`);
+  return gradient;
+}
+
+function intensifyVectorColor(color) {
+  const channels = parseHexColor(color);
+  if (!channels) return color;
+  const strongest = Math.max(...channels, 1);
+  const scale = 255 / strongest;
+  return `#${channels.map((channel) => Math.min(255, Math.round(channel * scale)).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function parseHexColor(color) {
+  const match = /^#([0-9a-f]{6})$/i.exec(color ?? "");
+  if (!match) return null;
+  return [
+    Number.parseInt(match[1].slice(0, 2), 16),
+    Number.parseInt(match[1].slice(2, 4), 16),
+    Number.parseInt(match[1].slice(4, 6), 16),
+  ];
 }
 
 // A crawler in the world keeps its legs and its breathing pulse — that is what
