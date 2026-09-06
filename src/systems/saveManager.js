@@ -1,9 +1,9 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260906-1546-6ff13f29";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260906-1546-6ff13f29";
-import { ensureObligations } from "./obligations.js?v=fresh-20260906-1546-6ff13f29";
-import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260906-1546-6ff13f29";
-import { consolidateSprcOwnership } from "./sprcOwnership.js?v=fresh-20260906-1546-6ff13f29";
-import { listGeneratedSettlements, materializeSettlementAuthority } from "./settlementSeedPipeline.js?v=fresh-20260906-1546-6ff13f29";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260906-1624-52f1c0c1";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260906-1624-52f1c0c1";
+import { ensureObligations } from "./obligations.js?v=fresh-20260906-1624-52f1c0c1";
+import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260906-1624-52f1c0c1";
+import { consolidateSprcOwnership } from "./sprcOwnership.js?v=fresh-20260906-1624-52f1c0c1";
+import { listGeneratedSettlements, materializeSettlementAuthority } from "./settlementSeedPipeline.js?v=fresh-20260906-1624-52f1c0c1";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 
@@ -12,7 +12,7 @@ export function shouldResetSave(search = window.location.search) {
 }
 
 export function getDevStart(search = window.location.search) {
-  return new URLSearchParams(search).get("devStart");
+  return new URLSearchParams(search).get("devStart") ?? "explorer";
 }
 
 export function clearSavedProfile() {
