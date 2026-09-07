@@ -5165,6 +5165,37 @@ body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:focus-within
   border-left: 0;
 }
 
+.cockpit-observatory-button {
+  width: calc(100% - 8px);
+  margin: 7px 4px 0 4px;
+  min-height: 30px;
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 62%, transparent);
+  border-radius: 0;
+  padding: 5px 8px;
+  color: var(--cockpit-phosphor);
+  background: transparent;
+  font: 700 0.58rem/1 "Courier New", monospace;
+  letter-spacing: 0.09em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cockpit-observatory-button:hover,
+.cockpit-observatory-button:focus-visible {
+  color: #010808;
+  background: var(--cockpit-phosphor);
+  outline: 0;
+}
+
+.cockpit-build-tag {
+  display: block;
+  padding: 6px 8px 1px;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 52%, transparent);
+  font: 700 0.48rem/1.25 "Courier New", monospace;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+
 body.is-cockpit-layout .processor-claw {
   z-index: 2300;
 }
