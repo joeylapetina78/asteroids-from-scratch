@@ -4784,7 +4784,7 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track 
   position: absolute;
   display: block;
   align-items: center;
-  width: 82px;
+  width: 112px;
   height: 34px;
   border: 0;
   padding: 2px;
@@ -4800,29 +4800,28 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track 
 .processor-claw-glyph {
   position: relative;
   display: block;
-  width: 78px;
+  width: 108px;
   height: 30px;
   box-sizing: border-box;
   border: 1px solid var(--cockpit-phosphor);
-  border-radius: 3px 9px 9px 3px;
-  background: color-mix(in srgb, var(--cockpit-phosphor) 4%, transparent);
+  border-radius: 2px 8px 8px 2px;
+  background: transparent;
 }
 
 .processor-claw-shapes {
   position: absolute;
-  inset: 4px 9px 4px 5px;
+  inset: 4px 10px 4px 7px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  align-content: center;
-  gap: 4px;
+  flex-wrap: nowrap;
+  gap: 3px;
   pointer-events: none;
 }
 
 .processor-claw-shapes .processor-output-shape {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   margin: 0;
 }
 
@@ -4830,22 +4829,24 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track 
 .processor-claw-glyph::after {
   content: "";
   position: absolute;
-  top: 7px;
-  width: 5px;
-  height: 14px;
-  border-top: 1px solid var(--cockpit-phosphor);
-  border-bottom: 1px solid var(--cockpit-phosphor);
 }
 
 .processor-claw-glyph::before {
-  left: -6px;
-  border-left: 1px solid var(--cockpit-phosphor);
+  left: -8px;
+  top: 7px;
+  width: 8px;
+  height: 1px;
+  background: var(--cockpit-phosphor);
+  box-shadow: 0 14px 0 var(--cockpit-phosphor);
 }
 
 .processor-claw-glyph::after {
-  right: -4px;
-  width: 3px;
-  border-right: 1px solid var(--cockpit-phosphor);
+  right: -1px;
+  top: 8px;
+  width: 2px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--cockpit-phosphor);
 }
 
 .is-processor-lasso-target {
@@ -4868,8 +4869,7 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber {
 body.is-cockpit-layout .processor-tether { z-index: 559; }
 body.is-cockpit-layout .processor-claw {
   z-index: 1200;
-  border-top: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 48%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 48%, transparent);
+  border: 0;
 }
 
 .processor-claw.is-route-pulse,
@@ -4936,41 +4936,8 @@ body.is-cockpit-layout .beacon-locator-panel.is-cockpit-expanded .system-readout
   outline-offset: 3px;
 }
 
-/* The routing tool is a corded jack. Its prongs sit at the right edge so the
-   whole control can snap flush to a destination instrument or pipe lip. */
-body.is-cockpit-layout .processor-claw {
-  grid-template-columns: auto 30px;
-  min-width: 106px;
-  padding: 3px 1px 3px 7px;
-}
-
-body.is-cockpit-layout .processor-claw-label { order: 1; }
-
-body.is-cockpit-layout .processor-claw-glyph {
-  order: 2;
-  width: 25px;
-  height: 18px;
-  border: 1px solid var(--cockpit-phosphor);
-  border-radius: 0;
-}
-
-body.is-cockpit-layout .processor-claw-glyph::before,
-body.is-cockpit-layout .processor-claw-glyph::after {
-  left: auto;
-  right: -8px;
-  bottom: auto;
-  width: 8px;
-  height: 0;
-  border: 0;
-  border-top: 2px solid var(--cockpit-phosphor);
-  transform: none;
-}
-
-body.is-cockpit-layout .processor-claw-glyph::before { top: 4px; }
-body.is-cockpit-layout .processor-claw-glyph::after { top: 12px; }
-
 body.is-cockpit-layout .processor-claw.is-plugged {
-  background: rgba(0, 7, 7, 0.9);
+  background: transparent;
 }
 
 /* Module bay -------------------------------------------------------------
@@ -5061,7 +5028,7 @@ body.is-cockpit-layout .cockpit-slot {
 .cockpit-module-tray-list {
   display: flex;
   min-height: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   flex-direction: column;
   gap: 4px;
   overflow-x: hidden;
@@ -5074,7 +5041,7 @@ body.is-cockpit-layout .cockpit-slot {
 
 .cockpit-patch-panel {
   flex: 0 0 auto;
-  padding: 8px 4px 2px 0;
+  padding: 5px 4px 2px 0;
   border-top: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 38%, transparent);
 }
 
@@ -5181,22 +5148,7 @@ body.is-cockpit-layout .processor-claw {
 }
 
 body.is-cockpit-layout .processor-claw.is-plugged-to-tray {
-  grid-template-columns: 30px auto;
-  padding: 3px 7px 3px 1px;
-}
-
-body.is-cockpit-layout .processor-claw.is-plugged-to-tray .processor-claw-glyph {
-  order: 1;
-}
-
-body.is-cockpit-layout .processor-claw.is-plugged-to-tray .processor-claw-label {
-  order: 2;
-}
-
-body.is-cockpit-layout .processor-claw.is-plugged-to-tray .processor-claw-glyph::before,
-body.is-cockpit-layout .processor-claw.is-plugged-to-tray .processor-claw-glyph::after {
-  right: auto;
-  left: -8px;
+  padding: 2px;
 }
 
 .cockpit-config-note {
