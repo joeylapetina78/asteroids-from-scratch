@@ -1,5 +1,5 @@
-import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260906-2130-f16b8333";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260906-2130-f16b8333";
+import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260906-2140-8f07c5ea";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260906-2140-8f07c5ea";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -230,6 +230,7 @@ export class Processor {
   }
 
   update(deltaSeconds) {
+    this.expandPartialBundles();
     if (this.enableCompaction && !this.compaction) {
       this.startCompaction();
     }
@@ -495,11 +496,9 @@ export class Processor {
 
       const processedQuantity = shouldProcess?.processedQuantity ?? (unit.quantity ?? 1);
       if (processedQuantity < (unit.quantity ?? 1)) {
-        unit.quantity -= processedQuantity;
-        unit.size = this.getUnitSize(unit.quantity);
-        unit.vx += (Math.random() < 0.5 ? -1 : 1) * (75 + Math.random() * 55);
-        unit.vy = -Math.max(180, Math.abs(unit.vy) + 110);
-        unit.angularVelocity += (Math.random() - 0.5) * 2.4;
+        const remainderQuantity = unit.quantity - processedQuantity;
+        this.units.splice(clickedIndex, 1);
+        this.explodeBundle(unit, remainderQuantity);
         this.createCrushSparks({ ...unit, quantity: processedQuantity, size: this.getUnitSize(processedQuantity) });
         return;
       }
@@ -527,6 +526,40 @@ export class Processor {
         maxLife: 0.6,
       });
     }
+  }
+
+  explodeBundle(bundle, quantity) {
+    const centerX = bundle.x + bundle.size / 2;
+    const centerY = bundle.y + bundle.size / 2;
+    const metadata = getUnitMetadata(bundle);
+    for (let index = 0; index < quantity; index += 1) {
+      const angle = (Math.PI * 2 * index) / Math.max(1, quantity) + (Math.random() - 0.5) * 0.3;
+      const speed = 130 + Math.random() * 110;
+      const size = this.getUnitSize(1);
+      this.units.push({
+        type: bundle.type,
+        ...metadata,
+        color: bundle.color ?? RESOURCE_COLOR[bundle.type] ?? "#ff7452",
+        shape: bundle.shape ?? getResourceShape(bundle.type),
+        quantity: 1,
+        size,
+        x: clamp(centerX - size / 2 + Math.cos(angle) * 5, 0, this.canvas.width - size),
+        y: clamp(centerY - size / 2 + Math.sin(angle) * 5, 0, this.canvas.height - size),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 85,
+        angle: (Math.random() - 0.5) * 0.5,
+        angularVelocity: (Math.random() - 0.5) * 2.4,
+      });
+    }
+  }
+
+  expandPartialBundles() {
+    const partialBundles = this.units.filter((unit) => (unit.quantity ?? 1) > 1 && unit.quantity !== COMPACTION_COUNT);
+    partialBundles.forEach((bundle) => {
+      const index = this.units.indexOf(bundle);
+      if (index >= 0) this.units.splice(index, 1);
+      this.explodeBundle(bundle, bundle.quantity);
+    });
   }
 
   startCompaction() {
@@ -636,7 +669,7 @@ function getUnitSize(quantity) {
 }
 
 function getStackKey(unit) {
-  return [unit.type, unit.sourceClaimId ?? "", unit.sourceClaimName ?? "", unit.tradeValue ?? "", unit.label ?? ""].join("|");
+  return [unit.type, unit.color ?? "", unit.shape ?? ""].join("|");
 }
 
 function getUnitMetadata(unit) {
