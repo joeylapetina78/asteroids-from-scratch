@@ -4233,11 +4233,6 @@ body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-right {
 }
 body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-left { left: 6px; }
 body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-right { right: 6px; }
-body.is-cockpit-layout.is-viewport-fullscreen .cockpit-module-summary { display: none !important; }
-body.is-cockpit-layout.is-viewport-fullscreen .is-cockpit-module { min-height: 30px; text-align: center; padding: 3px 2px; }
-body.is-cockpit-layout.is-viewport-fullscreen .is-cockpit-module .component-panel-title strong { font-size: 0.64rem; overflow: hidden; text-overflow: ellipsis; }
-body.is-cockpit-layout.is-viewport-fullscreen .is-cockpit-module:not(.is-cockpit-expanded) .component-panel-title strong { display: none; }
-body.is-cockpit-layout.is-viewport-fullscreen .is-cockpit-module:not(.is-cockpit-expanded) .cockpit-module-code { display: block !important; color: #dbe6f5; font-size: 0.62rem; text-align: center; }
 body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-bottom {
   right: 50px;
   bottom: 4px;
@@ -4245,15 +4240,6 @@ body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-bottom {
   display: flex;
   justify-content: center;
 }
-body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-bottom .is-cockpit-module { width: 92px; }
-body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-bottom .cockpit-module-summary { display: block !important; }
-body.is-cockpit-layout.is-viewport-fullscreen .is-cockpit-module.is-cockpit-expanded {
-  position: absolute;
-  width: 276px;
-  text-align: left;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
-}
-body.is-cockpit-layout.is-viewport-fullscreen .is-cockpit-module.is-cockpit-expanded .cockpit-module-summary { display: block !important; }
 body.is-cockpit-layout.is-viewport-fullscreen .cockpit-objective {
   margin: 48px 50px 0;
 }
