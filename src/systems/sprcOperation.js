@@ -1,18 +1,18 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260906-2126-2bd621be";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260906-2126-2bd621be";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260906-2126-2bd621be";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260906-2126-2bd621be";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260906-2126-2bd621be";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260906-2126-2bd621be";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260906-2126-2bd621be";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260906-2126-2bd621be";
-import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260906-2126-2bd621be";
-import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260906-2126-2bd621be";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260906-2126-2bd621be";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260906-2126-2bd621be";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260906-2126-2bd621be";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260906-2126-2bd621be";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260906-2126-2bd621be";
+import { depositCredits } from "./accounts.js?v=fresh-20260906-2130-f16b8333";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260906-2130-f16b8333";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260906-2130-f16b8333";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260906-2130-f16b8333";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260906-2130-f16b8333";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260906-2130-f16b8333";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260906-2130-f16b8333";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260906-2130-f16b8333";
+import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260906-2130-f16b8333";
+import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260906-2130-f16b8333";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260906-2130-f16b8333";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260906-2130-f16b8333";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260906-2130-f16b8333";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260906-2130-f16b8333";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260906-2130-f16b8333";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //

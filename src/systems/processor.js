@@ -1,5 +1,5 @@
-import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260906-2126-2bd621be";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260906-2126-2bd621be";
+import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260906-2130-f16b8333";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260906-2130-f16b8333";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -17,6 +17,14 @@ const TRIANGLE_SLOPE_PUSH = 0.42;
 const MAX_ANGULAR_VELOCITY = 1.8;
 const COMPACTION_COUNT = 10;
 const COMPACTION_DURATION = 0.38;
+
+export function getProcessorConsumptionQuantity(quantity, amountPerUnit, headroom) {
+  const availableQuantity = Math.max(0, Math.floor(Number(quantity) || 0));
+  const unitValue = Number(amountPerUnit) || 0;
+  if (availableQuantity === 0 || unitValue <= 0 || headroom <= 0) return 0;
+  if (!Number.isFinite(headroom)) return availableQuantity;
+  return Math.min(availableQuantity, Math.max(1, Math.ceil(headroom / unitValue)));
+}
 
 // Processor is a small square-unit physics canvas. It is used for both the
 // clickable processor and the non-clickable cargo hold, with behavior selected
@@ -489,6 +497,9 @@ export class Processor {
       if (processedQuantity < (unit.quantity ?? 1)) {
         unit.quantity -= processedQuantity;
         unit.size = this.getUnitSize(unit.quantity);
+        unit.vx += (Math.random() < 0.5 ? -1 : 1) * (75 + Math.random() * 55);
+        unit.vy = -Math.max(180, Math.abs(unit.vy) + 110);
+        unit.angularVelocity += (Math.random() - 0.5) * 2.4;
         this.createCrushSparks({ ...unit, quantity: processedQuantity, size: this.getUnitSize(processedQuantity) });
         return;
       }
