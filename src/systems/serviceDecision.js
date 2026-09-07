@@ -1,6 +1,6 @@
-import { COMPONENT_THRESHOLDS, getWorstComponent } from "./componentCondition.js?v=fresh-20260906-1956-0200d459";
-import { createNeedRecord, planResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260906-1956-0200d459";
-import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260906-1956-0200d459";
+import { COMPONENT_THRESHOLDS, getWorstComponent } from "./componentCondition.js?v=fresh-20260906-2047-2e658453";
+import { createNeedRecord, planResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260906-2047-2e658453";
+import { getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260906-2047-2e658453";
 
 // When an operator takes a machine out of service.
 //

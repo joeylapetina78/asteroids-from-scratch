@@ -1,75 +1,75 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260906-1956-0200d459";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260906-1956-0200d459";
-import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260906-1956-0200d459";
-import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260906-1956-0200d459";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260906-1956-0200d459";
-import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260906-1956-0200d459";
-import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260906-1956-0200d459";
-import { ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260906-1956-0200d459";
-import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260906-1956-0200d459";
-import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260906-1956-0200d459";
-import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260906-1956-0200d459";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260906-1956-0200d459";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260906-1956-0200d459";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260906-1956-0200d459";
-import { Game } from "./game.js?v=fresh-20260906-1956-0200d459";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260906-1956-0200d459";
-import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260906-1956-0200d459";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260906-1956-0200d459";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260906-1956-0200d459";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260906-1956-0200d459";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260906-2047-2e658453";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260906-2047-2e658453";
+import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260906-2047-2e658453";
+import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260906-2047-2e658453";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260906-2047-2e658453";
+import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260906-2047-2e658453";
+import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260906-2047-2e658453";
+import { ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260906-2047-2e658453";
+import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260906-2047-2e658453";
+import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260906-2047-2e658453";
+import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260906-2047-2e658453";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260906-2047-2e658453";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260906-2047-2e658453";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260906-2047-2e658453";
+import { Game } from "./game.js?v=fresh-20260906-2047-2e658453";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260906-2047-2e658453";
+import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260906-2047-2e658453";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260906-2047-2e658453";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260906-2047-2e658453";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260906-2047-2e658453";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260906-1956-0200d459";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260906-1956-0200d459";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260906-1956-0200d459";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260906-1956-0200d459";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260906-1956-0200d459";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260906-1956-0200d459";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260906-1956-0200d459";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260906-1956-0200d459";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260906-1956-0200d459";
-import { Processor } from "./systems/processor.js?v=fresh-20260906-1956-0200d459";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260906-1956-0200d459";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260906-1956-0200d459";
-import { createGameState } from "./state/gameState.js?v=fresh-20260906-1956-0200d459";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260906-1956-0200d459";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260906-1956-0200d459";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260906-1956-0200d459";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260906-1956-0200d459";
-import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260906-1956-0200d459";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260906-1956-0200d459";
-import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260906-1956-0200d459";
-import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260906-1956-0200d459";
-import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260906-1956-0200d459";
-import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260906-1956-0200d459";
-import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260906-1956-0200d459";
-import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260906-1956-0200d459";
-import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS } from "./content/economy/miningInstitutions.js?v=fresh-20260906-1956-0200d459";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260906-1956-0200d459";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260906-1956-0200d459";
-import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260906-1956-0200d459";
-import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260906-1956-0200d459";
-import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260906-1956-0200d459";
-import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260906-1956-0200d459";
-import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260906-1956-0200d459";
-import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260906-1956-0200d459";
-import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260906-1956-0200d459";
-import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260906-1956-0200d459";
-import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260906-1956-0200d459";
-import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260906-1956-0200d459";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260906-1956-0200d459";
-import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260906-1956-0200d459";
-import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260906-1956-0200d459";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260906-1956-0200d459";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260906-1956-0200d459";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260906-1956-0200d459";
-import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260906-1956-0200d459";
-import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260906-1956-0200d459";
-import { COCKPIT_MODULE_IDS, COCKPIT_PRESETS, applyCockpitPreset, createCockpitLayoutState } from "./systems/cockpitLayout.js?v=fresh-20260906-1956-0200d459";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260906-2047-2e658453";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260906-2047-2e658453";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260906-2047-2e658453";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260906-2047-2e658453";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260906-2047-2e658453";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260906-2047-2e658453";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260906-2047-2e658453";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260906-2047-2e658453";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260906-2047-2e658453";
+import { Processor } from "./systems/processor.js?v=fresh-20260906-2047-2e658453";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260906-2047-2e658453";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260906-2047-2e658453";
+import { createGameState } from "./state/gameState.js?v=fresh-20260906-2047-2e658453";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260906-2047-2e658453";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260906-2047-2e658453";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260906-2047-2e658453";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260906-2047-2e658453";
+import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260906-2047-2e658453";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260906-2047-2e658453";
+import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260906-2047-2e658453";
+import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260906-2047-2e658453";
+import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260906-2047-2e658453";
+import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260906-2047-2e658453";
+import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260906-2047-2e658453";
+import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260906-2047-2e658453";
+import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS } from "./content/economy/miningInstitutions.js?v=fresh-20260906-2047-2e658453";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260906-2047-2e658453";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260906-2047-2e658453";
+import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260906-2047-2e658453";
+import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260906-2047-2e658453";
+import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260906-2047-2e658453";
+import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260906-2047-2e658453";
+import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260906-2047-2e658453";
+import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260906-2047-2e658453";
+import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260906-2047-2e658453";
+import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260906-2047-2e658453";
+import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260906-2047-2e658453";
+import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260906-2047-2e658453";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260906-2047-2e658453";
+import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260906-2047-2e658453";
+import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260906-2047-2e658453";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260906-2047-2e658453";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260906-2047-2e658453";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260906-2047-2e658453";
+import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260906-2047-2e658453";
+import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260906-2047-2e658453";
+import { COCKPIT_MODULE_IDS, COCKPIT_PRESETS, applyCockpitPreset, createCockpitLayoutState } from "./systems/cockpitLayout.js?v=fresh-20260906-2047-2e658453";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -5900,7 +5900,9 @@ function setupCockpitLayout() {
   const trayToggle = document.createElement("button");
   const trayHeader = document.createElement("header");
   const trayList = document.createElement("div");
+  const patchPanel = document.createElement("div");
   const cargoRouteTarget = document.createElement("div");
+  const processorOutlet = document.createElement("div");
   moduleTray.className = "cockpit-module-tray";
   moduleTray.setAttribute("aria-label", "Module bay");
   trayToggle.type = "button";
@@ -5911,10 +5913,14 @@ function setupCockpitLayout() {
   trayHeader.className = "cockpit-module-tray-header";
   trayHeader.innerHTML = "<strong>MODULE BAY</strong><span>SELECT / ROUTE</span>";
   trayList.className = "cockpit-module-tray-list";
+  patchPanel.className = "cockpit-patch-panel";
   cargoRouteTarget.className = "cockpit-tray-cargo-socket";
   cargoRouteTarget.dataset.cockpitRouteTarget = "cargo";
   cargoRouteTarget.innerHTML = "<span><b>CARGO</b><small>PROCESSOR INPUT</small></span><i aria-hidden=\"true\"></i>";
-  moduleTray.append(trayToggle, trayHeader, trayList, cargoRouteTarget);
+  processorOutlet.className = "cockpit-processor-outlet";
+  processorOutlet.innerHTML = "<span><b>PROCESSOR</b><small>ROUTED OUTPUT</small></span><i aria-hidden=\"true\"></i>";
+  patchPanel.append(cargoRouteTarget, processorOutlet);
+  moduleTray.append(trayToggle, trayHeader, trayList, patchPanel);
   spacePanel?.append(moduleTray);
 
   const setTrayOpen = (isOpen) => {
@@ -6255,13 +6261,13 @@ function setupCockpitLayout() {
       cargo: "cargo",
     };
     const tether = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    const cable = document.createElementNS("http://www.w3.org/2000/svg", "path");
     const claw = document.createElement("button");
     const glyph = document.createElement("span");
     const label = document.createElement("span");
     tether.classList.add("processor-tether");
-    line.setAttribute("vector-effect", "non-scaling-stroke");
-    tether.append(line);
+    cable.setAttribute("vector-effect", "non-scaling-stroke");
+    tether.append(cable);
     claw.type = "button";
     claw.className = "processor-claw";
     claw.setAttribute("aria-label", "Drag processor claw onto a destination instrument");
@@ -6272,12 +6278,23 @@ function setupCockpitLayout() {
 
     const saved = state.ui.cockpit.processorClawPosition;
     let position = saved ?? { x: 238, y: 150 };
-    let attachedPanelId = state.ui.cockpit.processorClawTarget ?? null;
+    let attachedPanelId = state.ui.cockpit.processorClawTarget ?? "cargo";
     let drag = null;
 
     const updateRouteLabel = () => {
       const output = getSelectedProcessorOutput();
       label.textContent = `PROC > ${output.replace("hull-repair", "repair").toUpperCase()}`;
+      const sourceShapes = processorOutputPanel
+        .querySelector(`input[value='${output}']`)
+        ?.closest("label")
+        ?.querySelector(".processor-output-shapes");
+      let shapeRack = glyph.querySelector(".processor-claw-shapes");
+      if (!shapeRack) {
+        shapeRack = document.createElement("span");
+        shapeRack.className = "processor-claw-shapes";
+        glyph.append(shapeRack);
+      }
+      shapeRack.replaceChildren(...[...(sourceShapes?.children ?? [])].map((shape) => shape.cloneNode(true)));
     };
     const place = (x, y) => {
       const bounds = spacePanel.getBoundingClientRect();
@@ -6288,20 +6305,17 @@ function setupCockpitLayout() {
       };
       claw.style.left = `${position.x}px`;
       claw.style.top = `${position.y}px`;
-      const processorRect = document.querySelector("[data-panel-id='processor']")?.getBoundingClientRect();
-      line.setAttribute("x1", String((processorRect?.left ?? bounds.left) - bounds.left + (processorRect?.width ?? 0) / 2));
-      line.setAttribute("y1", String((processorRect?.top ?? bounds.top) - bounds.top + (processorRect?.height ?? 0) / 2));
-      line.setAttribute("x2", String(position.x + clawBounds.width / 2));
-      line.setAttribute("y2", String(position.y + clawBounds.height / 2));
+      const outletRect = processorOutlet.getBoundingClientRect();
+      const startX = outletRect.right - bounds.left;
+      const startY = outletRect.top - bounds.top + outletRect.height / 2;
+      const endX = position.x + clawBounds.width / 2;
+      const endY = position.y + clawBounds.height / 2;
+      const bowX = Math.max(startX, endX) + Math.min(90, 40 + Math.abs(endY - startY) * 0.12);
+      cable.setAttribute("d", `M ${startX} ${startY} C ${bowX} ${startY}, ${bowX} ${endY}, ${endX} ${endY}`);
     };
     const getSnapPosition = (panelId) => {
       if (!spacePanel) return null;
-      if (!moduleTray.classList.contains("is-open") && claw.classList.contains("is-plugged-to-tray")) {
-        return null;
-      }
-      const trayTarget = moduleTray.classList.contains("is-open")
-        ? moduleTray.querySelector(`[data-cockpit-route-target='${panelId}']`)
-        : null;
+      const trayTarget = moduleTray.querySelector(`[data-cockpit-route-target='${panelId}']`);
       const floatingTarget = document.querySelector(`.is-cockpit-floating[data-panel-id='${panelId}']`);
       const target = trayTarget ?? floatingTarget;
       const bounds = spacePanel.getBoundingClientRect();
@@ -6312,14 +6326,6 @@ function setupCockpitLayout() {
           x: targetRect.right - bounds.left + 8,
           y: targetRect.top - bounds.top + targetRect.height / 2 - clawRect.height / 2,
           isTrayTarget: true,
-        };
-      }
-      if (panelId === "cargo") {
-        const cargoRect = cargoCanvas.getBoundingClientRect();
-        return {
-          x: cargoRect.left - bounds.left + 38 - clawRect.width,
-          y: cargoRect.top - bounds.top + cargoRect.height * 0.42 - clawRect.height / 2,
-          isTrayTarget: false,
         };
       }
       if (!target) return null;
@@ -6333,18 +6339,36 @@ function setupCockpitLayout() {
     const snapToPanel = (panelId) => {
       const snapPosition = getSnapPosition(panelId);
       if (!snapPosition) return false;
+      const routedOutput = routes[panelId];
+      const routedInput = processorOutputPanel.querySelector(`input[value='${routedOutput}']`);
+      if (routedInput && !routedInput.checked) {
+        routedInput.checked = true;
+        routedInput.dispatchEvent(new Event("change", { bubbles: true }));
+      }
       attachedPanelId = panelId;
       claw.classList.add("is-plugged");
       claw.classList.toggle("is-plugged-to-tray", snapPosition.isTrayTarget);
       claw.dataset.targetPanel = panelId;
       place(snapPosition.x, snapPosition.y);
+      updateRouteLabel();
       return true;
     };
     const clearTargets = () => document.querySelectorAll(".is-processor-lasso-target").forEach((element) => element.classList.remove("is-processor-lasso-target"));
     const findTarget = (clientX, clientY) => {
       const candidates = document.elementsFromPoint(clientX, clientY);
-      return candidates.map((element) => element.closest?.("[data-cockpit-route-target]"))
+      const direct = candidates.map((element) => element.closest?.("[data-cockpit-route-target]"))
         .find((element) => element && routes[element.dataset.cockpitRouteTarget]);
+      if (direct) return direct;
+      const magneticTargets = [...moduleTray.querySelectorAll("[data-cockpit-route-target]")]
+        .filter((element) => routes[element.dataset.cockpitRouteTarget])
+        .map((element) => {
+          const rect = element.getBoundingClientRect();
+          const nearestX = Math.max(rect.left, Math.min(clientX, rect.right));
+          const nearestY = Math.max(rect.top, Math.min(clientY, rect.bottom));
+          return { element, distance: Math.hypot(clientX - nearestX, clientY - nearestY) };
+        })
+        .sort((first, second) => first.distance - second.distance);
+      return magneticTargets[0]?.distance <= 72 ? magneticTargets[0].element : null;
     };
 
     claw.addEventListener("pointerdown", (event) => {
@@ -6359,9 +6383,16 @@ function setupCockpitLayout() {
     claw.addEventListener("pointermove", (event) => {
       if (!drag || drag.pointerId !== event.pointerId) return;
       const bounds = spacePanel.getBoundingClientRect();
-      place(event.clientX - bounds.left - drag.dx, event.clientY - bounds.top - drag.dy);
+      const target = findTarget(event.clientX, event.clientY);
+      const freeX = event.clientX - bounds.left - drag.dx;
+      const freeY = event.clientY - bounds.top - drag.dy;
+      const magneticPosition = target ? getSnapPosition(target.dataset.cockpitRouteTarget) : null;
+      place(
+        magneticPosition ? freeX * 0.58 + magneticPosition.x * 0.42 : freeX,
+        magneticPosition ? freeY * 0.58 + magneticPosition.y * 0.42 : freeY,
+      );
       clearTargets();
-      findTarget(event.clientX, event.clientY)?.classList.add("is-processor-lasso-target");
+      target?.classList.add("is-processor-lasso-target");
     });
     const finish = (event) => {
       if (!drag || drag.pointerId !== event.pointerId) return;
@@ -6369,14 +6400,14 @@ function setupCockpitLayout() {
       const targetPanelId = target?.dataset.cockpitRouteTarget;
       const output = targetPanelId ? routes[targetPanelId] : null;
       if (output) {
-        const input = processorOutputPanel.querySelector(`input[value='${output}']`);
-        if (input) {
-          input.checked = true;
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-          updateRouteLabel();
+        if (processorOutputPanel.querySelector(`input[value='${output}']`)) {
           snapToPanel(targetPanelId);
           audio.playPanelDrop();
         }
+      }
+      if (!attachedPanelId) {
+        snapToPanel("cargo");
+        audio.playPanelDrop();
       }
       clearTargets();
       claw.classList.remove("is-dragging");
@@ -6393,7 +6424,7 @@ function setupCockpitLayout() {
       requestAnimationFrame(followAttachedPanel);
     };
     requestAnimationFrame(() => {
-      if (!attachedPanelId || !snapToPanel(attachedPanelId)) place(position.x, position.y);
+      if (!snapToPanel(attachedPanelId)) snapToPanel("cargo");
       followAttachedPanel();
     });
     window.addEventListener("resize", () => attachedPanelId ? snapToPanel(attachedPanelId) : place(position.x, position.y));

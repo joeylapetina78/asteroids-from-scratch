@@ -87,7 +87,7 @@ function normalizePoint(point) {
 }
 
 function normalizeClawTarget(target) {
-  return ["engine", "miner", "scanner", "hull", "cargo"].includes(target) ? target : null;
+  return ["engine", "miner", "scanner", "hull", "cargo"].includes(target) ? target : "cargo";
 }
 
 export function applyCockpitPreset(state, preset) {
@@ -96,7 +96,7 @@ export function applyCockpitPreset(state, preset) {
   state.assignments = { ...COCKPIT_PRESETS[resolvedPreset] };
   state.floatingPositions = {};
   state.processorClawPosition = null;
-  state.processorClawTarget = null;
+  state.processorClawTarget = "cargo";
   return state;
 }
 

@@ -5,12 +5,12 @@
 // orders, and authority seeds. Adding a settlement should begin here; authored
 // geography remains in the transportation network and is referenced by siteId.
 
-import { WORLD_SITES } from "../../systems/worldSites.js?v=fresh-20260906-1956-0200d459";
+import { WORLD_SITES } from "../../systems/worldSites.js?v=fresh-20260906-2047-2e658453";
 import {
   FOUNDATIONAL_EXTRACTION_FAMILIES, MUNICIPAL_CAPACITY_TYPES, STANDARD_SETTLEMENT_NEEDS,
   compileSettlementSeed, settlementExtractionDefinition, settlementMiningRight,
   settlementPlace, settlementPopulationProfile,
-} from "../../systems/settlementSeedPipeline.js?v=fresh-20260906-1956-0200d459";
+} from "../../systems/settlementSeedPipeline.js?v=fresh-20260906-2047-2e658453";
 
 const STANDARD_NEEDS = STANDARD_SETTLEMENT_NEEDS;
 

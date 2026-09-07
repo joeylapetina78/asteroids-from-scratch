@@ -1,9 +1,9 @@
-import { TARGET_COVERAGE_SECONDS, TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260906-1956-0200d459";
-import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260906-1956-0200d459";
-import { FIRST_REACH_CARRIER_POLICY } from "../content/transportation/firstReachNetwork.js?v=fresh-20260906-1956-0200d459";
-import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./worldNetworkRegistry.js?v=fresh-20260906-1956-0200d459";
-import { createTransportationNetwork, findTransportationRoute, maximumServiceableDistance } from "./transportationPlanning.js?v=fresh-20260906-1956-0200d459";
-import { getEffectiveTransportPolicy } from "./shipDrives.js?v=fresh-20260906-1956-0200d459";
+import { TARGET_COVERAGE_SECONDS, TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260906-2047-2e658453";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260906-2047-2e658453";
+import { FIRST_REACH_CARRIER_POLICY } from "../content/transportation/firstReachNetwork.js?v=fresh-20260906-2047-2e658453";
+import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./worldNetworkRegistry.js?v=fresh-20260906-2047-2e658453";
+import { createTransportationNetwork, findTransportationRoute, maximumServiceableDistance } from "./transportationPlanning.js?v=fresh-20260906-2047-2e658453";
+import { getEffectiveTransportPolicy } from "./shipDrives.js?v=fresh-20260906-2047-2e658453";
 
 // Trade between two regions that are both being simulated as rates.
 //

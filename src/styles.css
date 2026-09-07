@@ -4773,10 +4773,10 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track 
   z-index: 535;
 }
 
-.processor-tether line {
+.processor-tether path {
   stroke: color-mix(in srgb, var(--cockpit-phosphor) 54%, transparent);
-  stroke-width: 1;
-  stroke-dasharray: 5 5;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
 .processor-claw {
@@ -4807,6 +4807,24 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track 
   height: 34px;
   border: 1px solid var(--cockpit-phosphor);
   border-radius: 50%;
+}
+
+.processor-claw-shapes {
+  position: absolute;
+  inset: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.processor-claw-shapes .processor-output-shape {
+  width: 5px;
+  height: 5px;
+  margin: 0;
 }
 
 .processor-claw-glyph::before,
@@ -5047,6 +5065,12 @@ body.is-cockpit-layout .cockpit-slot {
   scrollbar-width: thin;
 }
 
+.cockpit-patch-panel {
+  flex: 0 0 auto;
+  padding: 8px 4px 2px 0;
+  border-top: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 38%, transparent);
+}
+
 .cockpit-module-tray-list > * {
   flex: 0 0 auto;
   direction: ltr;
@@ -5069,8 +5093,7 @@ body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:hover,
 body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:focus-within,
 .cockpit-module-tray-list .cockpit-module-launcher:hover,
 .cockpit-module-tray-list .cockpit-module-launcher:focus-visible,
-.cockpit-module-tray-list .is-processor-lasso-target,
-.cockpit-tray-cargo-socket.is-processor-lasso-target {
+.cockpit-module-tray-list .is-processor-lasso-target {
   border-color: var(--cockpit-phosphor);
   background: color-mix(in srgb, var(--cockpit-phosphor) 12%, transparent);
   outline: 1px solid var(--cockpit-phosphor) !important;
@@ -5081,16 +5104,22 @@ body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:focus-within
 .cockpit-tray-cargo-socket {
   position: relative;
   display: flex;
-  min-height: 48px;
+  min-height: 38px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 4px 6px 8px;
-  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 54%, transparent);
+  padding: 5px 4px 5px 8px;
+  border: 0;
   color: var(--cockpit-phosphor);
   font: 700 0.64rem/1 "Courier New", monospace;
   letter-spacing: 0.08em;
+}
+
+.cockpit-tray-cargo-socket.is-processor-lasso-target {
+  background: color-mix(in srgb, var(--cockpit-phosphor) 10%, transparent);
+  outline: 1px dashed var(--cockpit-phosphor);
+  outline-offset: -2px;
 }
 
 .cockpit-tray-cargo-socket span,
@@ -5109,6 +5138,35 @@ body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:focus-within
   height: 24px;
   border: 1px solid var(--cockpit-phosphor);
   border-right: 0;
+}
+
+.cockpit-processor-outlet {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 4px 4px 8px;
+  color: var(--cockpit-phosphor);
+  font: 700 0.64rem/1 "Courier New", monospace;
+  letter-spacing: 0.08em;
+}
+
+.cockpit-processor-outlet span,
+.cockpit-processor-outlet small {
+  display: block;
+}
+
+.cockpit-processor-outlet small {
+  margin-top: 4px;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 62%, transparent);
+  font-size: 0.48rem;
+}
+
+.cockpit-processor-outlet i {
+  width: 17px;
+  height: 17px;
+  border: 1px solid var(--cockpit-phosphor);
+  border-left: 0;
 }
 
 body.is-cockpit-layout .processor-claw {

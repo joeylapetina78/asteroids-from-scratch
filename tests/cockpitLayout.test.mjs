@@ -57,6 +57,13 @@ test("floating module positions survive loading and reset with a preset", () => 
   assert.deepEqual(layout.floatingPositions, { processor: { x: 123, y: 88 } });
   applyCockpitPreset(layout, "mining");
   assert.deepEqual(layout.floatingPositions, {});
+  assert.equal(layout.processorClawTarget, "cargo");
+});
+
+test("the processor plug defaults to cargo", () => {
+  assert.equal(createCockpitLayoutState().processorClawTarget, "cargo");
+  assert.equal(createCockpitLayoutState({ processorClawTarget: "unknown" }).processorClawTarget, "cargo");
+  assert.equal(createCockpitLayoutState({ processorClawTarget: "engine" }).processorClawTarget, "engine");
 });
 
 test("the selected phosphor color survives loading and invalid colors fall back safely", () => {
