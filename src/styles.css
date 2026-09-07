@@ -5073,7 +5073,8 @@ body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module,
 .cockpit-module-tray-list [data-cockpit-route-target="hull"]::after,
 .cockpit-module-tray-list [data-cockpit-route-target="engine"]::after,
 .cockpit-module-tray-list [data-cockpit-route-target="miner"]::after,
-.cockpit-module-tray-list [data-cockpit-route-target="scanner"]::after {
+.cockpit-module-tray-list [data-cockpit-route-target="scanner"]::after,
+.cockpit-module-tray-list [data-cockpit-route-target="collector"]::after {
   content: "⊙";
   position: absolute;
   top: 50%;

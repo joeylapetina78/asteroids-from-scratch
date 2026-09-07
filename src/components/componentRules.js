@@ -23,7 +23,7 @@ export function getProcessorOutputs(components) {
     });
   }
 
-  if (components.scanner.installed) {
+  if (components.scanner.installed || components.collector?.installed) {
     outputs.push({
       id: "scanergy",
       label: "Scanergy",

@@ -64,6 +64,7 @@ test("the processor plug defaults to cargo", () => {
   assert.equal(createCockpitLayoutState().processorClawTarget, "cargo");
   assert.equal(createCockpitLayoutState({ processorClawTarget: "unknown" }).processorClawTarget, "cargo");
   assert.equal(createCockpitLayoutState({ processorClawTarget: "engine" }).processorClawTarget, "engine");
+  assert.equal(createCockpitLayoutState({ processorClawTarget: "collector" }).processorClawTarget, "collector");
 });
 
 test("the selected phosphor color survives loading and invalid colors fall back safely", () => {

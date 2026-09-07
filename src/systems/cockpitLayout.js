@@ -87,7 +87,7 @@ function normalizePoint(point) {
 }
 
 function normalizeClawTarget(target) {
-  return ["engine", "miner", "scanner", "hull", "cargo"].includes(target) ? target : "cargo";
+  return ["engine", "miner", "scanner", "collector", "hull", "cargo"].includes(target) ? target : "cargo";
 }
 
 export function applyCockpitPreset(state, preset) {
