@@ -1,5 +1,5 @@
-import { getResourceColor, getResourceShape, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260906-1906-06d4afdc";
-import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260906-1906-06d4afdc";
+import { getResourceColor, getResourceShape, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260906-1956-0200d459";
+import { drawResourceShape } from "../entities/ResourcePickup.js?v=fresh-20260906-1956-0200d459";
 
 const SCAN_RANGE = 1800;
 const SCAN_HALF_ANGLE = Math.PI / 5;
@@ -41,11 +41,11 @@ export function createScanner(canvas) {
       }
     },
 
-    draw(context, camera, ship) {
+    draw(context, camera, ship, options = {}) {
       drawScanPulse(context, camera, ship, this.pulseAge);
 
       this.targets.forEach((target) => {
-        drawTargetMarker(context, canvas, camera, ship, target, this.markerAge);
+        drawTargetMarker(context, canvas, camera, ship, target, this.markerAge, options);
       });
     },
   };
@@ -147,7 +147,7 @@ function drawScanPulse(context, camera, ship, pulseAge) {
   context.restore();
 }
 
-function drawTargetMarker(context, canvas, camera, ship, target, markerAge) {
+function drawTargetMarker(context, canvas, camera, ship, target, markerAge, options) {
   const shipScreenX = ship.position.x - camera.x;
   const shipScreenY = ship.position.y - camera.y;
   const directionX = target.position.x - ship.position.x;
@@ -158,7 +158,14 @@ function drawTargetMarker(context, canvas, camera, ship, target, markerAge) {
     return;
   }
 
-  const edgePoint = getEdgePoint(shipScreenX, shipScreenY, directionX / directionLength, directionY / directionLength, canvas);
+  const edgePoint = getScanMarkerEdgePoint(
+    shipScreenX,
+    shipScreenY,
+    directionX / directionLength,
+    directionY / directionLength,
+    canvas,
+    options.viewportBoundary,
+  );
   const alpha = Math.max(0.18, 1 - markerAge / SCAN_MARKER_SECONDS);
   const color = target.type === "site" ? SITE_COLOR : getResourceColor(normalizeResourceType(target.type));
   const rgb = hexToRgbComponents(color);
@@ -188,7 +195,27 @@ function hexToRgbComponents(hex) {
 }
 
 
-function getEdgePoint(startX, startY, directionX, directionY, canvas) {
+export function getScanMarkerEdgePoint(startX, startY, directionX, directionY, canvas, boundary = null) {
+  if (boundary?.type === "circle") {
+    const centerX = boundary.centerX ?? canvas.width / 2;
+    const centerY = boundary.centerY ?? canvas.height / 2;
+    const radius = Math.max(0, (boundary.radius ?? Math.min(canvas.width, canvas.height) / 2) - EDGE_MARGIN);
+    const offsetX = startX - centerX;
+    const offsetY = startY - centerY;
+    const projection = offsetX * directionX + offsetY * directionY;
+    const discriminant = projection * projection - (offsetX * offsetX + offsetY * offsetY - radius * radius);
+
+    if (discriminant >= 0) {
+      const time = -projection + Math.sqrt(discriminant);
+      if (time >= 0) {
+        return {
+          x: startX + directionX * time,
+          y: startY + directionY * time,
+        };
+      }
+    }
+  }
+
   const times = [];
 
   if (directionX > 0) {
