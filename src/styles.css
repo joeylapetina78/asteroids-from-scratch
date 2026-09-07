@@ -4825,6 +4825,12 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track 
   margin: 0;
 }
 
+.processor-all-materials {
+  color: var(--cockpit-phosphor);
+  font: 700 1.35rem/1 Georgia, serif;
+  text-shadow: 0 0 6px color-mix(in srgb, var(--cockpit-phosphor) 55%, transparent);
+}
+
 .processor-claw-glyph::before,
 .processor-claw-glyph::after {
   content: "";
@@ -5052,6 +5058,7 @@ body.is-cockpit-layout .cockpit-slot {
 
 body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module,
 .cockpit-module-tray-list .cockpit-module-launcher {
+  position: relative;
   width: 100%;
   min-height: 42px;
   border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 54%, transparent);
@@ -5061,6 +5068,21 @@ body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module,
   color: var(--cockpit-phosphor);
   text-align: left;
   pointer-events: auto;
+}
+
+.cockpit-module-tray-list [data-cockpit-route-target="hull"]::after,
+.cockpit-module-tray-list [data-cockpit-route-target="engine"]::after,
+.cockpit-module-tray-list [data-cockpit-route-target="miner"]::after,
+.cockpit-module-tray-list [data-cockpit-route-target="scanner"]::after {
+  content: "⊙";
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  transform: translateY(-50%);
+  color: var(--cockpit-phosphor);
+  font: 700 1rem/1 "Courier New", monospace;
+  opacity: 0.88;
+  pointer-events: none;
 }
 
 body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:hover,
