@@ -22,9 +22,9 @@ export const FAMILIES = {
 // shade within their lane; keep new materials inside their role's lane.
 export const FAMILY_MEMBERS = {
   volatile: [
-    { id: "water-ice",   color: "#29b6d8", weight: 3, value: 30, institutionalFeedstockValue: 30, effectiveYield: 1, processOutputs: { fuel: 250, "hull-repair": 4 } },
-    { id: "methane-ice", color: "#168ca8", weight: 2, value: 50, institutionalFeedstockValue: 38, effectiveYield: 1.25, processOutputs: { fuel: 320, "hull-repair": 4 } },
-    { id: "hydrogen",    color: "#3274c5", weight: 1, value: 80, processOutputs: { fuel: 400, "hull-repair": 4 } },
+    { id: "water-ice",   color: "#2bd9f7", weight: 3, value: 30, institutionalFeedstockValue: 30, effectiveYield: 1, processOutputs: { fuel: 250, "hull-repair": 4 } },
+    { id: "methane-ice", color: "#15918c", weight: 2, value: 50, institutionalFeedstockValue: 38, effectiveYield: 1.25, processOutputs: { fuel: 320, "hull-repair": 4 } },
+    { id: "hydrogen",    color: "#4967e8", weight: 1, value: 80, processOutputs: { fuel: 400, "hull-repair": 4 } },
   ],
   // Structural is the efficient hull-patch material, and hull-repair yields keep
   // SPRC's structural equivalence ratio (iron-nickel 1 : aluminum 2 : titanium 3)

@@ -1,5 +1,5 @@
-import { PLACE_TYPES } from "./authorityModel.js?v=fresh-20260906-2140-8f07c5ea";
-import { ensureWorldRecords } from "./worldRecords.js?v=fresh-20260906-2140-8f07c5ea";
+import { PLACE_TYPES } from "./authorityModel.js?v=fresh-20260906-2151-24f1b808";
+import { ensureWorldRecords } from "./worldRecords.js?v=fresh-20260906-2151-24f1b808";
 
 export function upsertPlace(state, place) {
   const records = ensureWorldRecords(state);

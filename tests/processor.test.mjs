@@ -75,6 +75,39 @@ test("ten matching singles compact even when their provenance differs", () => {
   assert.equal(processor.units[0].quantity, 10);
 });
 
+test("same-shape resources with different colors stay in separate stacks", () => {
+  const canvas = {
+    width: 300,
+    height: 180,
+    getContext: () => ({}),
+    addEventListener: () => {},
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 300, height: 180 }),
+  };
+  const processor = new Processor(canvas, () => true, { enableCompaction: true });
+  const makeUnit = (type, color, index) => ({
+    type,
+    color,
+    shape: "circle",
+    quantity: 1,
+    size: processor.getUnitSize(1),
+    x: 20 + index * 20,
+    y: 80,
+    vx: 0,
+    vy: 0,
+    angle: 0,
+    angularVelocity: 0,
+  });
+  processor.units.push(
+    ...Array.from({ length: 5 }, (_, index) => makeUnit("water-ice", "#2bd9f7", index)),
+    ...Array.from({ length: 5 }, (_, index) => makeUnit("hydrogen", "#4967e8", index + 5)),
+  );
+
+  processor.startCompaction();
+
+  assert.equal(processor.compaction, null);
+  assert.equal(processor.units.length, 10);
+});
+
 test("an old partial bundle plus loose units reforms as one ten-stack with singles left over", () => {
   const canvas = {
     width: 300,
