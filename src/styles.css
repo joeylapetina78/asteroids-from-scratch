@@ -96,6 +96,17 @@ body.is-cockpit-layout .cockpit-snap-grid-scope {
 .cockpit-snap-grid-scope::before { left: 50%; top: 0; bottom: 0; width: 1px; }
 .cockpit-snap-grid-scope::after { top: 50%; left: 0; right: 0; height: 1px; }
 
+body.is-cockpit-layout .cockpit-align-guide {
+  position: absolute;
+  display: none;
+  background: color-mix(in srgb, var(--cockpit-phosphor) 72%, transparent);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--cockpit-phosphor) 34%, transparent);
+}
+
+body.is-cockpit-layout .cockpit-align-guide.is-matched { display: block; }
+body.is-cockpit-layout .cockpit-align-guide.is-vertical { top: 0; bottom: 0; width: 1px; }
+body.is-cockpit-layout .cockpit-align-guide.is-horizontal { left: 0; right: 0; height: 1px; }
+
 .quick-links {
   position: fixed;
   right: 18px;

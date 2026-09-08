@@ -1,5 +1,6 @@
 export const COCKPIT_RECT_GRID = 24;
 export const COCKPIT_RADIAL_DIVISIONS = 24;
+export const COCKPIT_ALIGNMENT_THRESHOLD = 11;
 
 export function snapCockpitPanel(position, panelSize, deskSize) {
   const panelCenter = {
@@ -29,4 +30,28 @@ export function snapCockpitPanel(position, panelSize, deskSize) {
     y: Math.round(position.y / COCKPIT_RECT_GRID) * COCKPIT_RECT_GRID,
     region: "bay",
   };
+}
+
+export function alignCockpitPanel(position, movingAnchors, referenceAnchors, threshold = COCKPIT_ALIGNMENT_THRESHOLD) {
+  const xMatch = closestAlignment(position.x, movingAnchors.x, referenceAnchors.x, threshold);
+  const yMatch = closestAlignment(position.y, movingAnchors.y, referenceAnchors.y, threshold);
+
+  return {
+    x: xMatch ? Math.round(position.x + xMatch.delta) : position.x,
+    y: yMatch ? Math.round(position.y + yMatch.delta) : position.y,
+    guideX: xMatch?.reference ?? null,
+    guideY: yMatch?.reference ?? null,
+  };
+}
+
+function closestAlignment(origin, movingOffsets = [], references = [], threshold) {
+  let closest = null;
+  movingOffsets.forEach((offset) => {
+    references.forEach((reference) => {
+      const delta = reference - (origin + offset);
+      if (Math.abs(delta) > threshold || (closest && Math.abs(delta) >= Math.abs(closest.delta))) return;
+      closest = { delta, reference };
+    });
+  });
+  return closest;
 }

@@ -21,8 +21,8 @@
 // Not a `player.canMine` flag: rights are sets the pilot holds (zones, authorities)
 // checked against what each plot carries.
 
-import { RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260908-1712-9523f1c6";
-import { evaluateTerritoryAccess } from "./hubTerritories.js?v=fresh-20260908-1712-9523f1c6";
+import { RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260908-1722-d2ce0f26";
+import { evaluateTerritoryAccess } from "./hubTerritories.js?v=fresh-20260908-1722-d2ce0f26";
 
 const RIGHT_REQUIRING_STATUS = /required|restricted/i;
 // The zone influence at which the ship is considered to have ENTERED a zone —

@@ -2,10 +2,10 @@
 // procedural generation both describe a seed; everything downstream consumes
 // the same compiled institutional actor record.
 
-import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260908-1712-9523f1c6";
-import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260908-1712-9523f1c6";
-import { upsertPlace } from "./placeRegistry.js?v=fresh-20260908-1712-9523f1c6";
-import { addSiteToTradeCommunity, registerWorldSite } from "./worldNetworkRegistry.js?v=fresh-20260908-1712-9523f1c6";
+import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260908-1722-d2ce0f26";
+import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260908-1722-d2ce0f26";
+import { upsertPlace } from "./placeRegistry.js?v=fresh-20260908-1722-d2ce0f26";
+import { addSiteToTradeCommunity, registerWorldSite } from "./worldNetworkRegistry.js?v=fresh-20260908-1722-d2ce0f26";
 
 export const FOUNDATIONAL_EXTRACTION_FAMILIES = Object.freeze([
   "volatile", "structural", "industrial", "conductor", "energy", "advanced", "strange",
