@@ -4798,25 +4798,30 @@ body.is-cockpit-layout .cargo-panel.is-cockpit-chamber .component-panel-title > 
    the designation stayed at caption size. Qualifying with both classes settles
    it, the same way the chamber sizing rules further down do. */
 body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber .component-panel-title strong {
+  font-family: "Atari Classic Chunky", "Atari Classic", "Eurostile Extended", "Microgramma D Extended", "Arial Black", sans-serif;
   font-size: clamp(1.5rem, min(6.5vh, 5.5vw), 4rem);
   text-transform: uppercase;
-  letter-spacing: 0.3em;
+  letter-spacing: 0.22em;
   /* The tracking is applied to the right of every glyph including the last, so
      a centred line sits one space left of true centre without this. */
-  text-indent: 0.3em;
-  line-height: 1;
-  font-weight: 700;
-  color: var(--cockpit-phosphor);
-  opacity: 0.34;
+  text-indent: 0.22em;
+  line-height: 0.92;
+  font-weight: 800;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 42%, #11181a);
+  opacity: 0.38;
+  text-shadow: none;
   white-space: nowrap;
 }
 
 body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber .component-panel-title span:not(.cockpit-module-code):not(.cockpit-module-summary) {
+  font-family: "Eurostile Extended", "Microgramma D Extended", "Arial Narrow", sans-serif;
   font-size: clamp(0.5rem, 1.15vh, 0.72rem);
   text-transform: uppercase;
-  letter-spacing: 0.42em;
-  text-indent: 0.42em;
-  opacity: 0.6;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 38%, #11181a);
+  opacity: 0.42;
+  text-shadow: none;
   margin-top: 0.5em;
   white-space: nowrap;
 }
