@@ -1,4 +1,4 @@
-import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260906-2151-24f1b808";
+import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260907-2014-86f4c011";
 
 const RESOURCE_CONTRACTS = [
   {
@@ -80,9 +80,14 @@ export const chapterOneContracts = [
       ],
     },
     reward: {
-      credits: 1000,
+      // Split: money on signing, the rest on delivery. A hand who starts broke
+      // needs the first payment to be something they can watch land on their
+      // license, and the balance is what makes finishing the run matter.
+      advanceCredits: 250,
+      credits: 750,
     },
     clauses: [
+      "250 cr advance releases on signing; 750 cr balance on delivery.",
       "Terms are satisfied when the listed VIN docks at the destination hub with ship power down.",
       "Payment releases when the completed contract is confirmed.",
       "Damage penalties are waived for this assessment contract.",

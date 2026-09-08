@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260906-2151-24f1b808";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260906-2151-24f1b808";
+import { getNpcName } from "../npcs.js?v=fresh-20260907-2014-86f4c011";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260907-2014-86f4c011";
 
 const COMMON_FRONTIER_ORE_VALUES = Object.freeze({
   "water-ice": 30,
@@ -229,11 +229,16 @@ export const hubServiceDefinitions = {
           tags: ["Converts resources", "Passive output", "Configurable"],
         },
         {
+          // The yard has no business selling a pilot the drive already bolted to
+          // their ship. A campaign hand leaves in Rook's own skiff running the
+          // Standard, so this reads as Installed for them and remains a real
+          // purchase for anyone who arrives on something else.
           id: "rook-standard-braking-drive",
           stockGroup: "restock-1",
           componentId: "engine",
           componentName: "Rook Standard Drive",
           upgradeId: "rook-standard-drive",
+          installedWhenEngineModelId: "rook-standard-drive",
           price: 650,
           title: "Rook Standard Braking Drive",
           description:
@@ -242,6 +247,28 @@ export const hubServiceDefinitions = {
           apply: {
             engine: {
               engineModelId: "rook-standard-drive",
+              thrustMode: "forward",
+            },
+          },
+        },
+        {
+          // …and the drive a Standard owner actually wants next: reverse thrust
+          // instead of a brake, which is a different way to fly rather than a
+          // bigger number.
+          id: "vektor-reversing-drive",
+          stockGroup: "restock-1",
+          componentId: "engine",
+          componentName: "Vektor R/T Drive",
+          upgradeId: "vektor-reversing-drive",
+          installedWhenEngineModelId: "vektor-reversing-drive",
+          price: 900,
+          title: "Vektor R/T Reversing Drive",
+          description:
+            "Swaps the S-key brake for true reverse thrust. Harder to fly, far better at holding station over a rock.",
+          tags: ["Reverse thrust", "No S brake", "Station keeping"],
+          apply: {
+            engine: {
+              engineModelId: "vektor-reversing-drive",
               thrustMode: "forward",
             },
           },

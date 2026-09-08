@@ -21,6 +21,11 @@ export const MISSION_ACTION_DEFINITIONS = {
     description: "Hide an interface panel or component window.",
     required: ["componentId"],
   },
+  dockComponent: {
+    label: "Rack Module",
+    description: "Return a cockpit module to the module bay so the player must switch it on.",
+    required: ["componentId"],
+  },
   offerContract: {
     label: "Offer Contract",
     description: "Open or create a contract offer through the contract system.",
@@ -73,6 +78,11 @@ export const MISSION_ACTION_DEFINITIONS = {
     label: "Go To Mission Step",
     description: "Jump to another beat in the same mission.",
     required: ["stepId"],
+  },
+  goToStepIfFlags: {
+    label: "Skip Ahead If Already Done",
+    description: "Jump to another beat when the player has already satisfied every listed flag.",
+    required: ["flags", "stepId"],
   },
   completeMission: {
     label: "Complete Mission",
@@ -136,6 +146,8 @@ function runMissionAction(action, { state, actions, missionDefinition, goToStep 
     actions.showComponent(action.componentId, action.componentName);
   } else if (action.type === "hideComponent") {
     actions.hideComponent(action.componentId);
+  } else if (action.type === "dockComponent") {
+    actions.dockComponent?.(action.componentId);
   } else if (action.type === "offerContract") {
     actions.offerContract(action.contractId);
   } else if (action.type === "setComponentValue") {
@@ -161,6 +173,16 @@ function runMissionAction(action, { state, actions, missionDefinition, goToStep 
     actions.setEnginePowerLock(action.isLocked);
   } else if (action.type === "goToStep") {
     goToStep(action.stepId);
+  } else if (action.type === "goToStepIfFlags") {
+    // A player can get ahead of the script. Transitions only fire on incoming
+    // events, so a beat entered with its flags ALREADY satisfied would sit
+    // there asking for something that has been done — waiting on an event that
+    // has already passed. Checked on enter, before the beat speaks, so the
+    // alternate line is what the player hears.
+    const required = Array.isArray(action.flags) ? action.flags : [];
+    if (required.length > 0 && required.every((flag) => Boolean(state.journey.flags?.[flag]))) {
+      goToStep(action.stepId);
+    }
   } else if (action.type === "completeMission") {
     actions.completeMission(missionDefinition);
   } else if (action.type === "completeAndStartMission") {

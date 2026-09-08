@@ -11,6 +11,7 @@ import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { createSprcOperation } from "../src/systems/sprcOperation.js";
 import { STANDING_MINING_ORDERS, createMiningOperation } from "../src/systems/miningOperation.js";
 import { DIAGNOSTIC_STATE, getDiagnostic } from "../src/systems/diagnostics.js";
+import { HULL_EVENT, auditFleetIntegrity, getHullEvents } from "../src/systems/fleetCensus.js";
 
 // ── Routine wear ───────────────────────────────────────────────────────────
 
@@ -241,6 +242,41 @@ test("Cinder stands a ship down after two minutes with nothing to do", () => {
   assert.ok(released[0].payload.idleSeconds >= 120);
   assert.equal(getDiagnostic(world.state, released[0].payload.shipInstitutionId)?.state, DIAGNOSTIC_STATE.RETIRED,
     "a released ship leaves the current actor population instead of returning as a free ghost");
+});
+
+test("standing a ship down sends its crew home and records what left service", () => {
+  // A 26-minute story run ended with four operators still employed on ships
+  // that had been deleted: the labour assignment stayed `active`, the person
+  // stayed unavailable, and `operatesAssetId` pointed at a hull that no longer
+  // existed. Nothing in the game could see it, so both halves are pinned here —
+  // the crew going home, and the hull's departure being recorded at all.
+  const world = createFleetWorld();
+  const crewed = world.mining.workers
+    .map((worker) => world.state.miningOperation.ships[worker.id])
+    .filter((shipRecord) => shipRecord?.operatorId);
+
+  world.mining.workers.forEach((worker) => { worker.assignment = null; worker.cargo = {}; });
+  world.mining.update();
+  world.advance(121);
+  world.mining.workers.forEach((worker) => { worker.assignment = null; worker.cargo = {}; });
+  world.mining.update();
+
+  const gone = Object.keys(world.state.miningOperation.ships);
+  const standDowns = getHullEvents(world.state).filter((event) => event.kind === HULL_EVENT.STOOD_DOWN);
+  assert.ok(standDowns.length > 0, "the hull's departure is recorded, not silent");
+  assert.ok(standDowns.every((event) => event.idleSeconds >= 120));
+
+  // Whatever was released must not still be employing anyone.
+  const audit = auditFleetIntegrity(world.state);
+  assert.deepEqual(audit.orphanedEmployments, [],
+    "nobody is left employed on a hull that no longer exists");
+
+  // And the released crew is genuinely reusable rather than merely detached.
+  crewed.filter((shipRecord) => !gone.includes(shipRecord.id)).forEach((shipRecord) => {
+    const assignment = world.state.population.laborAssignments[`employment:${shipRecord.id}`];
+    assert.equal(assignment?.status, "released");
+    assert.equal(world.state.population.operators[shipRecord.operatorId ?? assignment.operatorId]?.status, "available");
+  });
 });
 
 test("completed mining allocations retain only a compact operational tail", () => {

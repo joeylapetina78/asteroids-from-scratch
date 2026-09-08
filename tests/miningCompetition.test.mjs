@@ -3,7 +3,7 @@ import test from "node:test";
 import { createGameState } from "../src/state/gameState.js";
 import { createInitialLogisticsState } from "../src/systems/logistics.js";
 import { createMiningOperation } from "../src/systems/miningOperation.js";
-import { CINDER_MINING_SEED, FLINT_MINING_SEED, FRONTIER_MINING_SEEDS } from "../src/content/economy/miningInstitutions.js";
+import { CINDER_MINING_SEED, FLINT_MINING_SEED, FRONTIER_MINING_SEEDS, MINING_INSTITUTION_SEEDS, ROOK_MINING_SEED } from "../src/content/economy/miningInstitutions.js";
 import { findActorRecord } from "../src/systems/actorConfig.js";
 import { createExtractionOffer, registerExtractionOfferSource } from "../src/systems/extractionOffers.js";
 
@@ -160,4 +160,72 @@ test("an unknown mining craft withdraws for public repair after critical incursi
   assert.equal(worker.miningDisabled, true);
   assert.ok(state.ledger.getRecentEvents(20).some((event) =>
     event.type === "mining.maintenanceRequired" && event.payload.cause === "combat-damage"));
+});
+
+// The player's sponsor.
+//
+// Rook Industries has been named on the RTC license form and wrapped in an
+// authored contract ladder since the beginning, but it had no institution
+// record, no treasury and no hulls — an employer that existed only as a voice.
+// These pin the seed data that gives it a body. They deliberately do NOT assert
+// extraction behaviour: `createWorld` stubs `addWorkerShip`, so no physical
+// worker exists here and any claim about what Rook actually mines would be the
+// headless-harness lie documented in state-of-development.md. Whether Rook wins
+// work, and whether it stays solvent doing so, has to be watched in the running
+// game.
+test("the player's sponsor is a seeded operator rather than a voice", () => {
+  const account = ROOK_MINING_SEED.institution.accounts.operating;
+
+  assert.equal(ROOK_MINING_SEED.institution.id, "miner:rook-industries");
+  assert.equal(ROOK_MINING_SEED.institution.controllerInstitutionId, ROOK_MINING_SEED.controller.id);
+  assert.ok(ROOK_MINING_SEED.controller.controls.includes(ROOK_MINING_SEED.institution.id));
+  assert.equal(ROOK_MINING_SEED.controller.license.status, "active");
+  assert.equal(ROOK_MINING_SEED.homeSiteId, "yard-exchange");
+  assert.ok(account.balance > 0, "a sponsor with no treasury cannot pay anyone");
+
+  // Deeper reserves than any small outfit, because Rook has to still be standing
+  // at the bottom of the ownership ladder after a whole player arc. This is a
+  // starting balance, not a floor: nothing stops it being spent to zero.
+  const smallOutfits = [CINDER_MINING_SEED, FLINT_MINING_SEED, ...FRONTIER_MINING_SEEDS];
+  smallOutfits.forEach((seed) => {
+    assert.ok(account.balance > seed.institution.accounts.operating.balance,
+      `${seed.stateKey} should not out-capitalize the sponsoring operator`);
+  });
+
+  assert.ok(ROOK_MINING_SEED.workers.length > 0);
+  ROOK_MINING_SEED.workers.forEach((worker) => {
+    assert.ok(worker.currentSiteId, "every hull starts somewhere physical");
+  });
+
+  // The fourth berth is the player's seat. If Rook ever seeds an expansion hull
+  // into it, story mode's "you are Rook's next hull" premise is already taken.
+  assert.equal(ROOK_MINING_SEED.expansionWorker, null);
+  assert.equal(ROOK_MINING_SEED.expansionProject, null);
+});
+
+test("the frontier fleet is defined by where operators live, not by array position", () => {
+  // FRONTIER_MINING_SEEDS was `slice(2)`, so inserting a core operator above the
+  // frontier ones silently enrolled it in the frontier fleet. Rook is inserted
+  // exactly there and must not appear.
+  const rookIndex = MINING_INSTITUTION_SEEDS.indexOf(ROOK_MINING_SEED);
+  const firstFrontierIndex = MINING_INSTITUTION_SEEDS.indexOf(FRONTIER_MINING_SEEDS[0]);
+
+  assert.ok(rookIndex >= 0 && rookIndex < firstFrontierIndex,
+    "this test is only meaningful while a core operator sits above the frontier ones");
+  assert.ok(!FRONTIER_MINING_SEEDS.includes(ROOK_MINING_SEED));
+  assert.deepEqual(FRONTIER_MINING_SEEDS.map((seed) => seed.homeSiteId),
+    ["ore-station-one", "coldwater-depot", "deep-research"]);
+});
+
+test("the sponsor bids in the same clearing as the outfits it competes with", () => {
+  const { state, game } = createWorld();
+  createMiningOperation({ state, game, now: () => 1_000, seed: CINDER_MINING_SEED });
+  createMiningOperation({ state, game, now: () => 1_000, seed: FLINT_MINING_SEED });
+  const rook = createMiningOperation({ state, game, now: () => 1_000, seed: ROOK_MINING_SEED });
+
+  assert.equal(rook.getState().institution.id, "miner:rook-industries");
+  // One shared clearing, three participants. Rook gets no reserved work and no
+  // update-order privilege — it registers the same way the others do.
+  assert.equal(Object.keys(state.miningOperations).length, 3);
+  assert.ok(Object.keys(state.extractionMarket.participants).length >= 3);
 });

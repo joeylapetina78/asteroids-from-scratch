@@ -1,5 +1,6 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260906-2151-24f1b808";
-import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260906-2151-24f1b808";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260907-2014-86f4c011";
+import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260907-2014-86f4c011";
+import { HULL_OUTLINES } from "../content/ships/hullOutlines.js?v=fresh-20260907-2014-86f4c011";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_THRUST_POWER = 95;
@@ -11,7 +12,23 @@ const DEFAULT_BOOST_MAX_SPEED_MULTIPLIER = 2.2;
 const DEFAULT_BOOST_DURATION_SECONDS = 0.3;
 const DEFAULT_BOOST_FUEL_COST = 18;
 const DEFAULT_BOOST_COOLDOWN_SECONDS = 1.2;
+// The player's ore worker is the SAME hull every NPC miner in the world flies,
+// built from the same outline the slipway lays down stroke by stroke. Campaign
+// starts the player in a fleet miner, and a fleet miner that did not match the
+// craft working alongside it would give away that the player is a special case.
+// Derived rather than copied, so the three can never drift apart.
+const MINING_WORKER_OUTLINE = HULL_OUTLINES["mining-craft"];
+const miningWorkerFrame = {
+  points: MINING_WORKER_OUTLINE.fill.map(([x, y]) => ({ x, y })),
+  cockpit: null,
+  details: {
+    // The cab, which is the last stroke in the build order.
+    lines: [MINING_WORKER_OUTLINE.strokes[MINING_WORKER_OUTLINE.strokes.length - 1].map(([x, y]) => ({ x, y }))],
+  },
+};
+
 const SHIP_FRAMES = {
+  "mining-worker": miningWorkerFrame,
   classic: {
     points: [
       { x: 22, y: 0 },
@@ -247,7 +264,9 @@ export class Ship {
     context.lineWidth = 2.5;
     context.globalAlpha = this.isVisiblyPowered() ? 1 : 0.28;
     context.strokeStyle = displayColor;
-    context.fillStyle = "rgba(0, 0, 0, 0)";
+    // A working hull reads as a solid body, the way every NPC craft does. Ships
+    // without an authored fill stay transparent exactly as before.
+    context.fillStyle = this.displayFill ?? "rgba(0, 0, 0, 0)";
 
     this.drawFrame(context);
 

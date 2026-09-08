@@ -15,6 +15,42 @@ body {
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* ── Stacking order, in one place ─────────────────────────────────────────────
+   Z-index was scattered across three dozen declarations between 1 and 999999,
+   several of them `!important`, and the result did not match any intention:
+   the paperwork drawer sat ABOVE the journey panel, the processor tethers ran
+   over the top of the desk, and the chambers covered the viewport.
+
+   The order below is the deliberate one, top to bottom. Anything that needs a
+   layer takes a variable from here rather than inventing a number.
+
+     journey        the thing talking to you, always on top
+     drawer paper   documents inside the open drawer ride above its shell
+     drawer         the drawer itself
+     desk paper     licenses and contracts out on the desk, above the consoles
+     desk panels    ship instruments (30..520, assigned in main.js)
+     viewport       the world
+     chamber pipes  processor/cargo tethers and the routing plug
+     chamber ore    material sitting in the chambers
+     chamber glow   the backing wash behind it
+
+   Overlays that are not part of the desk at all — the observatory, the license
+   application, the boot error banner — deliberately sit far above this ladder
+   and are not listed. */
+:root {
+  --z-journey: 720;
+  --z-drawer-paper: 700;
+  --z-drawer: 680;
+  --z-desk-paper: 560;
+  --z-desk-panel-max: 520;
+  --z-desk-panel-min: 30;
+  --z-viewport: 20;
+  --z-chamber-plug: 16;
+  --z-chamber-pipes: 14;
+  --z-chamber-ore: 10;
+  --z-chamber-glow: 6;
+}
+
 .quick-links {
   position: fixed;
   right: 18px;
@@ -407,12 +443,12 @@ body {
   box-shadow:
     12px 0 38px rgba(0, 0, 0, 0.42),
     0 0 18px rgba(0, 189, 255, 0.08);
-  transform: translateX(calc((var(--journey-width) - var(--journey-tab)) * -1)) !important;
+  transform: translateX(calc((var(--journey-width) - var(--journey-tab)) * -1));
   transition:
     transform 260ms ease,
     box-shadow 260ms ease,
     border-color 260ms ease;
-  z-index: 560;
+  z-index: var(--z-journey);
 }
 
 .journey-panel > * {
@@ -423,10 +459,18 @@ body {
   display: none;
 }
 
-.journey-panel.is-journey-open,
-.journey-panel:focus-within,
-.journey-panel:hover {
+/* The slide-out drawer's open/hover transforms are for the LEGACY desk layout
+   only. In the cockpit the journey is a draggable card, and an `!important`
+   transform there can never be overridden by the drag's inline style — which is
+   exactly why the card showed a grab cursor and refused to move. */
+body:not(.is-cockpit-layout) .journey-panel.is-journey-open,
+body:not(.is-cockpit-layout) .journey-panel:focus-within,
+body:not(.is-cockpit-layout) .journey-panel:hover {
   transform: translateX(0) !important;
+}
+
+body:not(.is-cockpit-layout) .journey-panel {
+  transform: translateX(calc((var(--journey-width) - var(--journey-tab)) * -1)) !important;
 }
 
 .journey-panel.is-journey-speaking {
@@ -2499,8 +2543,8 @@ body {
   left: 0;
   right: 0;
   /* Normal ship consoles are capped below this layer in main.js. Paperwork
-     inside the drawer rides with the drawer; Journey stays above everything. */
-  z-index: 600;
+     inside the drawer rides above it; Journey stays above everything. */
+  z-index: var(--z-drawer);
   background:
     linear-gradient(180deg, rgba(8, 11, 16, 0.94), rgba(5, 7, 11, 0.98)),
     #08090d;
@@ -2543,6 +2587,11 @@ body {
 .paperwork-drawer.is-open .drawer-toggle-arrow {
   display: inline-block;
   transform: rotate(180deg);
+}
+
+/* Documents ride above the drawer they are filed in. */
+.paperwork-drawer .component-panel {
+  z-index: var(--z-drawer-paper);
 }
 
 .drawer-shelf {
@@ -3780,7 +3829,10 @@ body.is-cockpit-layout .is-cockpit-module {
   z-index: 1 !important;
 }
 
-body.is-cockpit-layout .is-cockpit-module > :not(.component-panel-title) {
+/* A COLLAPSED module shows only its title bar. Scoped to the collapsed state so
+   that expanding it simply stops hiding things, rather than needing a second
+   rule to force them back. */
+body.is-cockpit-layout .is-cockpit-module:not(.is-cockpit-expanded) > :not(.component-panel-title) {
   display: none !important;
 }
 
@@ -3853,7 +3905,7 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-floating {
   position: absolute !important;
   width: 260px;
   transform: none !important;
-  z-index: var(--cockpit-float-z, 600) !important;
+  z-index: var(--cockpit-float-z, var(--z-desk-panel-max)) !important;
 }
 
 body.is-cockpit-layout .is-cockpit-floating[data-panel-id="processor"] { width: 320px; }
@@ -4010,13 +4062,17 @@ body.is-cockpit-layout .cockpit-slot-left .is-cockpit-expanded { left: 0; }
 body.is-cockpit-layout .cockpit-slot-right .is-cockpit-expanded { right: 0; }
 body.is-cockpit-layout .cockpit-slot-bottom .is-cockpit-expanded { bottom: 0; }
 
-body.is-cockpit-layout .is-cockpit-module.is-cockpit-expanded > :not(.component-panel-title) {
-  display: revert !important;
-}
+/* The rule that used to live here was `display: revert !important` on every
+   expanded module's children, to undo the blanket hide above. `revert` goes back
+   to the USER-AGENT value — `block` for a div — and `!important` made it beat
+   every author rule, so any panel child that needed grid or flex silently got
+   block instead. That is why the docking readout ran its four fields inline
+   into each other, and why the Processor's outputs needed the `!important`
+   patch below. Hiding is now scoped to collapsed modules, so nothing has to be
+   forced back on.
 
-/* `display: revert` is useful for arbitrary module contents, but fieldset's
-   browser default is block. Restore the Processor's authored control grid so
-   its outputs remain compact buttons instead of a tall single-file stack. */
+   The Processor override is kept: its outputs are a fieldset, whose UA default
+   is block regardless, and the authored grid is what keeps them compact. */
 body.is-cockpit-layout .processor-panel.is-cockpit-expanded > .processor-outputs {
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4183,12 +4239,12 @@ body.is-cockpit-layout .hud {
 
 body.is-cockpit-layout .journey-panel {
   position: absolute !important;
-  top: 92px;
-  left: 50%;
-  width: min(390px, calc(100% - 380px));
-  max-height: calc(100vh - 180px);
   overflow: auto;
-  transform: translateX(-50%) !important;
+  /* No centring transform. The drag code owns `transform`, and an `!important`
+     one here beats even an inline style — which is exactly why the card showed
+     a grab cursor, logged a drag, wrote `translate(...)` to its inline style,
+     and still did not move a pixel. Position and size live in the card block
+     further down this file. */
   display: none;
   pointer-events: auto;
 }
@@ -4240,8 +4296,11 @@ body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-bottom {
   display: flex;
   justify-content: center;
 }
+/* Panorama used to push the mission readout down onto its own floating strip.
+   It lives in the toolbar now, so that margin only made the bar taller in one
+   mode than the other. */
 body.is-cockpit-layout.is-viewport-fullscreen .cockpit-objective {
-  margin: 48px 50px 0;
+  margin: 0;
 }
 
 @media (max-width: 1000px) {
@@ -4261,9 +4320,7 @@ body.is-cockpit-layout.is-viewport-fullscreen .cockpit-objective {
   body.is-cockpit-layout .cockpit-slot-right .is-cockpit-module:not(.is-cockpit-expanded) .component-panel-title strong { display: none; }
   body.is-cockpit-layout .cockpit-slot-left .is-cockpit-module:not(.is-cockpit-expanded) .cockpit-module-code,
   body.is-cockpit-layout .cockpit-slot-right .is-cockpit-module:not(.is-cockpit-expanded) .cockpit-module-code { display: block !important; color: #dbe6f5; font-size: 0.62rem; text-align: center; }
-  body.is-cockpit-layout .cockpit-objective { margin-inline: 76px; }
   body.is-cockpit-layout .cockpit-slot-bottom { right: 76px; left: 76px; }
-  body.is-cockpit-layout:not(.is-viewport-fullscreen) .viewport-panel .component-panel-title { left: 76px; }
   body.is-cockpit-layout .journey-panel { width: min(390px, calc(100% - 160px)); }
 }
 
@@ -4331,16 +4388,14 @@ body.is-cockpit-layout .cockpit-toolbar {
   inset: 6px 6px auto;
 }
 
+/* The mission readout used to float on its own absolute strip below the
+   toolbar, which is how the top of the screen ended up with three overlapping
+   bands. It is a child of the toolbar now and lays out in its flex row. */
 body.is-cockpit-layout .cockpit-objective {
-  position: absolute;
-  top: 44px;
-  right: 132px;
-  left: 132px;
+  position: static;
   margin: 0;
-}
-
-body.is-cockpit-layout:not(.is-viewport-fullscreen) .viewport-panel .component-panel-title {
-  top: 82px;
+  height: auto;
+  align-self: stretch;
 }
 
 body.is-cockpit-layout .quick-links {
@@ -4666,16 +4721,28 @@ body.is-cockpit-layout .hull-panel.is-cockpit-expanded .component-meter-track sp
    not another pair of miniature floating status cards. */
 body.is-cockpit-layout .is-cockpit-chamber {
   position: absolute !important;
+  /* Full-height bays. Enough loot has to be able to fill the whole side. */
   top: 92px;
   bottom: 44px;
-  width: max(190px, calc((100vw - min(100vw, 100vh)) / 2 + 22px)) !important;
+  /* Reach in PAST the scope's shoulder.
+     At `+ 22px` the bay's straight edge and the portal's circle were tangent —
+     a four pixel touch — so the curve never entered the bay and material piled
+     against the bay's own invisible wall instead of against the portal. The
+     overlap below pushes the bay under the scope far enough that the arc cuts
+     across the bay's whole height, and ore packs along it. */
+  --chamber-scope-overlap: clamp(60px, min(100vw, 100vh) * 0.2, 260px);
+  width: max(190px, calc((100vw - min(100vw, 100vh)) / 2 + 22px + var(--chamber-scope-overlap))) !important;
+  /* The bay now lies over the viewport, so it must not intercept the pointer.
+     Clicks that land on a unit are claimed from the window in processor.js;
+     everything else falls through to the world behind. */
+  pointer-events: none !important;
   min-height: 0;
   padding: 0 6px 6px !important;
   overflow: visible !important;
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  z-index: 28 !important;
+  z-index: var(--z-chamber-ore) !important;
 }
 
 body.is-cockpit-layout .processor-panel.is-cockpit-chamber { left: 6px; }
@@ -4688,21 +4755,70 @@ body.is-cockpit-layout .is-cockpit-chamber .component-panel-title {
   pointer-events: none;
 }
 
-body.is-cockpit-layout .is-cockpit-chamber .component-panel-title > div {
-  align-items: flex-start;
+/* The bay's designation, painted on the wall in its lower third — the way a
+   shipping floor marks off an area. It is a label on the space, not a header
+   above it, so it sits out of the way of the ore and does not move as the pile
+   grows. Centred in its own bay on both sides; one used to read as centred and
+   the other as hugging its outer edge, which is what made the pair look
+   lopsided across the desk. */
+body.is-cockpit-layout .is-cockpit-chamber .component-panel-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 68%;
+  /* Centred in the bay's VISIBLE width, not its true width. The bay now runs on
+     under the scope, and a designation centred across the whole thing had its
+     inner half hidden behind the portal — "PROCESSO", "ARGO HOLD". */
+  height: auto;
+  justify-content: center;
+  z-index: 1;
 }
 
+body.is-cockpit-layout .processor-panel.is-cockpit-chamber .component-panel-title {
+  right: var(--chamber-scope-overlap);
+}
+
+body.is-cockpit-layout .cargo-panel.is-cockpit-chamber .component-panel-title {
+  left: var(--chamber-scope-overlap);
+}
+
+body.is-cockpit-layout .is-cockpit-chamber .component-panel-title > div,
 body.is-cockpit-layout .cargo-panel.is-cockpit-chamber .component-panel-title > div {
-  align-items: flex-end;
+  align-items: center;
+  text-align: center;
+  width: 100%;
 }
 
-body.is-cockpit-layout .is-cockpit-chamber .component-panel-title strong {
-  font-size: 0.78rem;
-  letter-spacing: 0.18em;
+/* Floor markings, not a caption. These bays are industrial space, and the way
+   you tell an industrial space from a status readout is that the name of the
+   area is painted across it at the size of the area itself. Big, wide-tracked,
+   and faint enough that ore drifting across it always wins. */
+/* `.is-cockpit-module` also matches these panels and carries an identical
+   specificity, so at equal weight the later rule in this file was winning and
+   the designation stayed at caption size. Qualifying with both classes settles
+   it, the same way the chamber sizing rules further down do. */
+body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber .component-panel-title strong {
+  font-size: clamp(1.5rem, min(6.5vh, 5.5vw), 4rem);
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  /* The tracking is applied to the right of every glyph including the last, so
+     a centred line sits one space left of true centre without this. */
+  text-indent: 0.3em;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--cockpit-phosphor);
+  opacity: 0.34;
+  white-space: nowrap;
 }
 
-body.is-cockpit-layout .is-cockpit-chamber .component-panel-title span:not(.cockpit-module-code):not(.cockpit-module-summary) {
-  font-size: 0.58rem;
+body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber .component-panel-title span:not(.cockpit-module-code):not(.cockpit-module-summary) {
+  font-size: clamp(0.5rem, 1.15vh, 0.72rem);
+  text-transform: uppercase;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  opacity: 0.6;
+  margin-top: 0.5em;
+  white-space: nowrap;
 }
 
 body.is-cockpit-layout .is-cockpit-chamber canvas,
@@ -4710,7 +4826,9 @@ body.is-cockpit-layout .processor-panel.is-cockpit-chamber #processor,
 body.is-cockpit-layout .cargo-panel.is-cockpit-chamber #cargo {
   display: block !important;
   width: 100%;
-  height: calc(100% - 34px) !important;
+  /* The whole bay: the designation is painted over it rather than sitting above
+     it, so there is no header row to subtract. */
+  height: 100% !important;
   aspect-ratio: auto;
   border: 0;
   border-radius: 0;
@@ -4770,7 +4888,7 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track 
   height: 100%;
   overflow: visible;
   pointer-events: none;
-  z-index: 535;
+  z-index: var(--z-chamber-pipes);
 }
 
 .processor-tether path {
@@ -4792,7 +4910,7 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track 
   background: transparent;
   cursor: grab;
   touch-action: none;
-  z-index: 540;
+  z-index: var(--z-chamber-plug);
 }
 
 .processor-claw.is-dragging { cursor: grabbing; }
@@ -4805,7 +4923,16 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track 
   box-sizing: border-box;
   border: 1px solid var(--cockpit-phosphor);
   border-radius: 2px 8px 8px 2px;
-  background: transparent;
+  /* Opaque. This is the part the player grabs, and seeing the asteroid field
+     through it made it read as a hole rather than as a handle. */
+  background: #000707;
+}
+
+/* Slid home after a spell of being left alone. Only the grab end shows, level
+   with the module tab on the same edge. */
+.processor-claw.is-docked .processor-claw-glyph {
+  border-radius: 2px 8px 8px 2px;
+  box-shadow: 6px 0 12px rgba(0, 0, 0, 0.55);
 }
 
 .processor-claw-shapes {
@@ -4869,10 +4996,10 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track 
 }
 
 body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber {
-  z-index: 28 !important;
+  z-index: var(--z-chamber-ore) !important;
 }
 
-body.is-cockpit-layout .processor-tether { z-index: 559; }
+body.is-cockpit-layout .processor-tether { z-index: var(--z-chamber-pipes); }
 body.is-cockpit-layout .processor-claw {
   z-index: 1200;
   border: 0;
@@ -4906,7 +5033,7 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber {
 }
 
 body.is-cockpit-layout .viewport-panel {
-  z-index: 30 !important;
+  z-index: var(--z-viewport) !important;
   pointer-events: none;
   background: transparent;
   box-shadow: none;
@@ -4955,8 +5082,11 @@ body.is-cockpit-layout .cockpit-slot {
 
 .cockpit-module-tray {
   position: absolute;
+  /* Equal gaps top and bottom. At 48/34 the bay hung lower than it sat high,
+     so a full module list ran off the bottom of the screen while leaving room
+     above it. */
   top: 48px;
-  bottom: 34px;
+  bottom: 48px;
   left: 0;
   display: flex;
   width: 214px;
@@ -4972,7 +5102,9 @@ body.is-cockpit-layout .cockpit-slot {
   transform: translateX(-100%);
   transition: transform 120ms steps(4, end);
   pointer-events: auto;
-  z-index: 2200;
+  /* The bay slides over the desk, so it rides with the consoles rather than
+     above the paperwork and the journey card. */
+  z-index: var(--z-desk-panel-max);
 }
 
 .cockpit-module-tray.is-open {
@@ -5033,8 +5165,11 @@ body.is-cockpit-layout .cockpit-slot {
 
 .cockpit-module-tray-list {
   display: flex;
+  /* The list is the part that gives when the bay is shorter than its contents.
+     Without `flex: 1 1 auto` the fixed furniture below it (patch panel, build
+     tag, mode links) pushes the whole column past the bay's own bottom edge. */
   min-height: 0;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 4px;
   overflow-x: hidden;
@@ -5198,7 +5333,7 @@ body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:focus-within
 }
 
 body.is-cockpit-layout .processor-claw {
-  z-index: 2300;
+  z-index: var(--z-chamber-plug);
 }
 
 body.is-cockpit-layout .processor-claw.is-plugged-to-tray {
@@ -5280,4 +5415,596 @@ body.is-cockpit-layout .tow-cable-panel.is-cockpit-expanded .tow-cable-controls 
 
 body.is-cockpit-layout .moss-harvester-panel.is-cockpit-expanded .moss-harvester-button + .moss-harvester-button {
   margin-top: 3px;
+}
+
+/* Fleet tab: hull census, movements, and the asset-side conservation audit.
+   Mirrors the economy pane's shape so the two read as one instrument. */
+.fleet-body { display: flex; flex-direction: column; gap: 14px; }
+.fleet-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.fleet-head strong { font-size: 15px; color: #d8e6f5; }
+.fleet-trend { color: #7f8da2; font-size: 12px; }
+.fleet-spark { width: 100%; height: 90px; color: #6fd3ff; display: block; }
+.fleet-up { color: #7ee7a6; }
+.fleet-down { color: #ffa07a; }
+.fleet-audit { display: flex; flex-direction: column; gap: 10px; }
+.fleet-audit-list { margin: 0; padding-left: 18px; color: #ffa07a; }
+.fleet-audit-list li { margin: 2px 0; }
+.fleet-capital { color: #7f8da2; font-size: 12px; margin: 4px 0 0; }
+
+/* The two game modes sit on their own full-width row at the end of the quick
+   links, under the build tag and the Observatory button, so they read as ways to
+   play rather than as more developer shortcuts. */
+.quick-links-modes {
+  flex-basis: 100%;
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.quick-links-modes a { color: rgba(122, 138, 162, 0.82); }
+
+/* The two game modes, under the build tag in the module bay's patch panel.
+   Matches the panel's stencilled-label voice rather than reading as web links,
+   and follows the cockpit phosphor like everything else in the bay. */
+.cockpit-mode-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 8px 6px;
+}
+
+.cockpit-mode-links a {
+  color: color-mix(in srgb, var(--cockpit-phosphor) 68%, transparent);
+  font: 700 0.48rem/1.35 "Courier New", monospace;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+}
+
+.cockpit-mode-links a:hover,
+.cockpit-mode-links a:focus-visible {
+  color: var(--cockpit-phosphor);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Journey, redesigned for the cockpit ──────────────────────────────────────
+   The base `.journey-panel` is a LEFT SLIDE-OUT DRAWER: fixed to the window
+   edge, full height, translated off-screen except for a 44px tab. The cockpit
+   override re-centred it but inherited every drawer trait — a left-edge shadow,
+   no left border, no radius, 130px of bottom padding and a full-height column —
+   so it rendered as a 390x854 pillar down the middle of the viewport.
+
+   This is the same content as a comms card instead: wide, short, docked under
+   the viewport title, in the module bay's stencilled phosphor voice. Reading
+   order is who is talking, what they said, who you are, and what the job is. */
+body.is-cockpit-layout .journey-panel {
+  width: min(720px, calc(100% - 420px));
+  max-height: min(52vh, 440px);
+  /* Docked low and centred by default. At the top of the screen it sat over the
+     space where instruments pop out of the module bay, so every panel the
+     tutorial asks the player to open landed underneath it.
+     
+     Anchored by its TOP, not its bottom. Bottom-anchored with a content-driven
+     height, the card grew UPWARD whenever Rook said something longer — measured
+     at 65px for one extra line — so it slid out from under the pointer as the
+     player reached for it. Top-anchored, new dialogue grows downward into the
+     space already reserved for it by `max-height`. */
+  top: min(58vh, calc(100% - 470px));
+  bottom: auto;
+  padding: 12px 16px 14px;
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 34%, transparent);
+  border-radius: 3px;
+  background: rgba(4, 7, 11, 0.96);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+  overflow: hidden auto;
+  gap: 8px 14px;
+  grid-template-columns: 84px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  grid-template-areas:
+    "title    title"
+    "portrait log"
+    "portrait mission"
+    "help     help"
+    "actions  actions";
+  align-content: start;
+  align-items: start;
+  /* Centred by AUTO MARGINS between left:0 and right:0, not by a transform.
+     The drag code owns `transform`, and an `!important` centring transform
+     beats even an inline style — that is why the card showed a grab cursor,
+     recorded a drag, wrote `translate(...)` to its own inline style, and still
+     did not move. A `calc(50% - width/2)` does not work either: this panel is
+     absolutely positioned inside the HUD, so the percentage resolves against
+     that box rather than the window and threw the card off the right edge. */
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  transform: none;
+}
+
+/* `.is-cockpit-expanded` sets `display: block` at a higher specificity than the
+   base cockpit rule, which silently made every grid property above inert and
+   stacked the children full-width. The card is only ever laid out while
+   expanded, so the grid has to be declared here too. */
+body.is-cockpit-layout .journey-panel.is-cockpit-expanded {
+  display: grid;
+}
+
+body.is-cockpit-layout .journey-panel .component-panel-title { grid-area: title; }
+body.is-cockpit-layout .journey-panel .journey-log { grid-area: log; }
+body.is-cockpit-layout .journey-panel .journey-portrait { grid-area: portrait; }
+body.is-cockpit-layout .journey-panel .journey-profile { grid-area: profile; }
+body.is-cockpit-layout .journey-panel .journey-mission { grid-area: mission; }
+body.is-cockpit-layout .journey-panel .journey-help { grid-area: help; }
+body.is-cockpit-layout .journey-panel .journey-actions { grid-area: actions; }
+
+/* Help is not an aside here. It is the line that tells a stuck player what to
+   do, so it stands open in its own band with room to be read. */
+body.is-cockpit-layout .journey-panel .journey-help {
+  /* The drawer PINNED help and the buttons to the bottom of a tall column with
+     `position: absolute`. Absolutely positioned children are out of grid flow
+     entirely, so in a card they render on top of whatever is beneath them —
+     which is what put "Need help?" across the mission block. */
+  position: static;
+  display: block;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 22%, transparent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--cockpit-phosphor) 6%, transparent);
+}
+
+body.is-cockpit-layout .journey-panel .journey-help summary {
+  margin-bottom: 4px;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 74%, transparent);
+  font: 700 0.5rem/1.2 "Courier New", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body.is-cockpit-layout .journey-panel #journey-help-text {
+  display: block;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 88%, transparent);
+  font: 400 0.56rem/1.45 "Courier New", monospace;
+}
+
+/* The speaker sits in a lit alcove, so it reads as a comms feed rather than as
+   decoration floating in the middle of the card. */
+body.is-cockpit-layout .journey-panel .journey-portrait {
+  display: grid;
+  place-items: center;
+  min-height: 68px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 22%, transparent);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* The pilot's name and balance live on the LICENSE, which the induction now
+   teaches the player to read. Repeating them here is a second source of truth
+   for the same two numbers, and the one that is not the document a patrol asks
+   to see. */
+body.is-cockpit-layout .journey-panel .journey-profile {
+  display: none;
+}
+
+body.is-cockpit-layout .journey-panel .journey-profile.is-unused {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  align-content: start;
+  font: 700 0.46rem/1.3 "Courier New", monospace;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+body.is-cockpit-layout .journey-panel .journey-profile span {
+  color: color-mix(in srgb, var(--cockpit-phosphor) 46%, transparent);
+}
+
+/* The dialogue is the point of the panel, so it gets the room and scrolls on
+   its own rather than growing the card. */
+body.is-cockpit-layout .journey-panel .journey-log {
+  /* The drawer sets `min-height: 200px` on the log because it had a full-height
+     column to fill. In a card that floor drives the grid taller than the card's
+     own max-height, and the rows below it end up overlapping the ones above. */
+  min-height: 0;
+  max-height: 150px;
+  overflow: hidden auto;
+  padding-right: 4px;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+body.is-cockpit-layout .journey-panel .journey-mission {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-width: 0;
+}
+
+/* Help is reference, not the headline: collapsed by default here, where the
+   drawer had room to leave it open. */
+body.is-cockpit-layout .journey-panel .journey-help summary {
+  cursor: pointer;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 58%, transparent);
+}
+
+body.is-cockpit-layout .journey-panel .journey-actions {
+  position: static;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+/* Narrow desks: the viewport needs the width more than the card does, so it
+   drops to a single column and the portrait steps aside. */
+@media (max-width: 1180px) {
+  body.is-cockpit-layout .journey-panel,
+  body.is-cockpit-layout .journey-panel.is-cockpit-expanded {
+    width: calc(100% - 32px);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "title"
+      "log"
+      "mission"
+      "help"
+      "actions";
+    left: 16px;
+    right: 16px;
+    margin-inline: 0;
+  }
+
+  body.is-cockpit-layout .journey-panel .journey-portrait,
+  body.is-cockpit-layout .journey-panel .journey-profile { display: none; }
+}
+
+/* The card wants a header. `.journey-panel .component-panel-title` is hidden
+   for the slide-out drawer, which had its own tab; a centred card with no title
+   leaves the chapter and mission nameless. */
+body.is-cockpit-layout .journey-panel .component-panel-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 20%, transparent);
+}
+
+body.is-cockpit-layout .journey-panel .component-panel-title > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+body.is-cockpit-layout .journey-panel #journey-chapter {
+  color: var(--cockpit-phosphor);
+  font: 700 0.62rem/1.2 "Courier New", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+body.is-cockpit-layout .journey-panel #journey-status {
+  color: color-mix(in srgb, var(--cockpit-phosphor) 52%, transparent);
+  font: 400 0.56rem/1.2 "Courier New", monospace;
+  letter-spacing: 0.06em;
+}
+
+/* The ASCII speaker is sized for a 405px-wide drawer. In an 84px alcove it has
+   to come down or it drives the whole card taller than its own max-height. */
+body.is-cockpit-layout .journey-panel .journey-portrait {
+  align-self: start;
+  max-height: 92px;
+  overflow: hidden;
+}
+
+body.is-cockpit-layout .journey-panel .journey-portrait pre {
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+/* The mission title is sized for a drawer where it was the only heading. Beside
+   a dialogue column it competes with the line the player is meant to read. */
+body.is-cockpit-layout .journey-panel #journey-mission-title {
+  font-size: 0.82rem;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+}
+
+body.is-cockpit-layout .journey-panel #journey-mission-objective {
+  color: var(--cockpit-phosphor);
+  font: 700 0.58rem/1.35 "Courier New", monospace;
+}
+
+/* The pilot rail is a label stack, not prose: it must not bleed into the
+   mission column when a name runs long. */
+body.is-cockpit-layout .journey-panel .journey-profile strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.54rem;
+  line-height: 1.25;
+}
+
+/* A faulted instrument reads as faulted from the bay, without being opened:
+   hazard stripes across the module, an amber rule, and its summary in the
+   fault colour. Used by the processor today; any panel that can fail later
+   gets the treatment for free. */
+.is-module-faulted .cockpit-module-summary,
+.cockpit-module-launcher.is-module-faulted .cockpit-module-launcher-code {
+  color: #ffb454;
+}
+
+.cockpit-module-launcher.is-module-faulted,
+.is-cockpit-module.is-module-faulted > .component-panel-title {
+  position: relative;
+  border-left: 2px solid #ffb454;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 180, 84, 0.11) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+.processor-all-materials.is-faulted {
+  color: #ffb454;
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* A shop card offering to replace a unit that is fitted but dead. It is not a
+   new capability, so it does not read like one: the fault is stated on the card
+   and the button says Replace rather than Buy. */
+.ship-offer.is-replacement-offer {
+  border-color: rgba(255, 180, 84, 0.42);
+}
+
+.ship-offer-fault {
+  display: block;
+  margin: 2px 0 4px;
+  color: #ffb454;
+  font: 700 0.58rem/1.3 "Courier New", monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Cargo is sending something out ──────────────────────────────────────────
+   A soft wash behind the ore when the hold is pointed at a destination —
+   depositing against a contract, or open to a supply window. The chamber is
+   otherwise a passive pile; this is the only signal that the next thing to
+   arrive is going straight back out again.
+
+   `z-index: -1` rather than `var(--z-chamber-glow)`: the chamber sets its own
+   z-index and so opens a stacking context, and inside one a positive z-index
+   paints ABOVE the chamber's in-flow content. -1 is what puts the wash behind
+   the ore while staying in front of the chamber's own backing. The variable
+   still records where this layer sits in the ladder overall. */
+body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-deposit-target::before,
+body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-sell-target::before {
+  content: "";
+  position: absolute;
+  /* The whole chamber, not a pool at its base. A radial gradient rising from
+     the bottom read as a candle flame rather than as a bay that is lit up. */
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 2px;
+  animation: cargo-outbound-wash 2.6s ease-in-out infinite;
+}
+
+/* Two destinations, two readings: material leaving against paperwork you signed,
+   and material leaving for money. */
+/* Flat washes. Two destinations, two readings: material leaving against
+   paperwork you signed, and material leaving for money. */
+body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-deposit-target::before {
+  background: color-mix(in srgb, var(--cockpit-phosphor) 14%, transparent);
+}
+
+body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-sell-target::before {
+  background: rgba(255, 196, 92, 0.14);
+}
+
+@keyframes cargo-outbound-wash {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-deposit-target::before,
+  body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-sell-target::before {
+    animation: none;
+    opacity: 0.8;
+  }
+}
+
+/* ── The top bar ─────────────────────────────────────────────────────────────
+   There used to be three things competing for this strip: a layout toolbar, a
+   mission button, and the viewport panel's own title, all overlapping. There is
+   one bar now. The mission readout owns the width because that is what a player
+   reads at a glance; layout controls are housekeeping and sit behind the button
+   at the right end. */
+body.is-cockpit-layout .cockpit-toolbar {
+  /* Deliberately NOT re-declaring `position` here. The rule above already makes
+     this `absolute` with `inset: 6px 6px auto`, which is what sizes it to the
+     container minus equal margins. Setting `position: relative` broke that:
+     on a relatively positioned box `left` shifts it and `right` is ignored, so
+     the bar kept its full-container width, slid 6px right, and hung off the
+     right edge while still showing its left end. */
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-height: 26px;
+}
+
+body.is-cockpit-layout .cockpit-objective {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  min-width: 0;
+  text-align: left;
+}
+
+body.is-cockpit-layout .cockpit-objective-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+body.is-cockpit-layout #cockpit-objective-title {
+  flex: none;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+body.is-cockpit-layout #cockpit-objective-text,
+body.is-cockpit-layout .cockpit-objective-tasks,
+body.is-cockpit-layout .cockpit-objective-route {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* What is still outstanding, which the bar never used to say. */
+body.is-cockpit-layout .cockpit-objective-tasks {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 66%, transparent);
+}
+
+body.is-cockpit-layout .cockpit-objective-tasks:not(.is-empty)::before {
+  content: "▸ ";
+}
+
+body.is-cockpit-layout .cockpit-objective-tasks[data-progress]:not([data-progress=""])::after {
+  content: " " attr(data-progress);
+  opacity: 0.6;
+}
+
+/* Where the ship is pointed, right-aligned and quiet. */
+body.is-cockpit-layout .cockpit-objective-route {
+  flex: none;
+  margin-left: auto;
+  padding-left: 14px;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 52%, transparent);
+}
+
+body.is-cockpit-layout .cockpit-toolbar-toggle {
+  flex: none;
+  align-self: center;
+  padding: 2px 9px;
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 34%, transparent);
+  border-radius: 2px;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 78%, transparent);
+  background: transparent;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+body.is-cockpit-layout .cockpit-toolbar-toggle:hover,
+body.is-cockpit-layout .cockpit-toolbar-toggle.is-open {
+  color: var(--cockpit-phosphor);
+  border-color: var(--cockpit-phosphor);
+}
+
+body.is-cockpit-layout .cockpit-toolbar-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: var(--z-desk-paper);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: min(460px, 90vw);
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 34%, transparent);
+  border-radius: 3px;
+  background: rgba(4, 7, 11, 0.97);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+}
+
+body.is-cockpit-layout .cockpit-toolbar-menu[hidden] { display: none; }
+
+/* ── Where you are ───────────────────────────────────────────────────────────
+   The region breadcrumb had the viewport panel's whole title bar to itself — a
+   full-width band carrying two words. It is a short label, and the status bar
+   has room for it, so it moves there (main.js relocates the element at cockpit
+   setup) and the band is gone. */
+body.is-cockpit-layout .viewport-panel .component-panel-title { display: none; }
+
+body.is-cockpit-layout #viewport-region {
+  flex: none;
+  margin-left: 14px;
+  padding-left: 14px;
+  border-left: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 22%, transparent);
+  color: color-mix(in srgb, var(--cockpit-phosphor) 58%, transparent);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 34ch;
+}
+
+/* The docking lock is a label/value readout, not a sentence. Its four items ran
+   inline in a panel narrow enough that "No target" and "No dock target" wrapped
+   into each other. Two columns, value right-aligned and ellipsised, status and
+   button spanning the full width beneath. */
+body.is-cockpit-layout .hull-docking-lock {
+  /* Declared explicitly rather than relying on the base rule: something further
+     down resets this to `display: block`, which made every column rule below
+     inert and let the four readouts run inline into each other. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 10px;
+}
+
+body.is-cockpit-layout .hull-docking-lock > span:first-child { grid-column: 1; }
+
+body.is-cockpit-layout #docking-target {
+  grid-column: 2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+body.is-cockpit-layout #docking-detail {
+  grid-column: 1 / -1;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 52%, transparent);
+}
+
+body.is-cockpit-layout #docking-detail[hidden] { display: none; }
+
+body.is-cockpit-layout .hull-docking-lock .dock-button { grid-column: 1 / -1; }
+
+/* A floating instrument must never hang off the desk. `positionFloatingPanel`
+   clamps against the space panel, but a panel whose own width exceeds the
+   space left of the edge could still be placed past it. */
+body.is-cockpit-layout .is-cockpit-module.is-cockpit-floating {
+  max-width: calc(100vw - 24px);
+}
+
+/* Nothing animates while it is being dragged.
+   The journey card carried `transition: transform 260ms` from its slide-out
+   drawer origins. Every pointer move set a new transform and the browser
+   animated toward it, so the card trailed a quarter-second behind the pointer —
+   and `clampPanelOffset` then measured that IN-FLIGHT rect and corrected
+   against it, which is what made the panel drift on its own and refuse to move
+   upward. A dragged panel must track the pointer exactly. */
+.component-panel.is-dragging {
+  transition: none !important;
+}
+
+/* And the cockpit card has no reason to animate its position at all: it is a
+   card that gets dragged, not a drawer that slides. Only its lit state
+   transitions. */
+body.is-cockpit-layout .journey-panel {
+  transition:
+    box-shadow 260ms ease,
+    border-color 260ms ease;
 }

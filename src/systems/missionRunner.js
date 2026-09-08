@@ -1,5 +1,5 @@
-import { runMissionActions } from "./missionActions.js?v=fresh-20260906-2151-24f1b808";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260906-2151-24f1b808";
+import { runMissionActions } from "./missionActions.js?v=fresh-20260907-2014-86f4c011";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260907-2014-86f4c011";
 
 export function createMissionRunner({ missionDefinition, state, actions }) {
   const beatDefs = missionDefinition.beats ?? missionDefinition.steps;
@@ -95,11 +95,18 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
       return currentBeatIndex >= fromIndex && currentBeatIndex <= toIndex;
     });
     const allConsiderations = [...(step.considerations ?? []), ...activeMissionConsiderations];
-    const consideration = state.journey.pendingAcknowledgement
-      ? null
-      : allConsiderations.find(
-          (candidate) => (!controlLocked || candidate.allowWhileControlLocked) && matchesEventRule(candidate, event, { state }),
-        );
+    // A pending acknowledgement silences considerations, so that Rook waiting on
+    // an "Okay" is not talked over. But some things a player does while that
+    // prompt is up still have to be NOTICED — filing paperwork during a "press
+    // Okay" beat was recorded nowhere, so the tutorial later asked them to file
+    // documents that were already in the drawer. `allowWhilePending` mirrors the
+    // existing `allowWhileControlLocked` escape hatch: it does not let the
+    // consideration speak, it lets it observe.
+    const consideration = allConsiderations.find(
+      (candidate) => (!state.journey.pendingAcknowledgement || candidate.allowWhilePending)
+        && (!controlLocked || candidate.allowWhileControlLocked)
+        && matchesEventRule(candidate, event, { state }),
+    );
 
     if (consideration) {
       const considerationActions = getRuleActions(consideration, { state });

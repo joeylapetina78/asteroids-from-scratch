@@ -1,7 +1,7 @@
-import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260906-2151-24f1b808";
-import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260906-2151-24f1b808";
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260906-2151-24f1b808";
-import { hashNumbers } from "./random.js?v=fresh-20260906-2151-24f1b808";
+import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260907-2014-86f4c011";
+import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260907-2014-86f4c011";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260907-2014-86f4c011";
+import { hashNumbers } from "./random.js?v=fresh-20260907-2014-86f4c011";
 
 const PORTAL_WAVE_SIZES = [5, 10, 30];
 const BASE_WAVE_SECONDS = 70;

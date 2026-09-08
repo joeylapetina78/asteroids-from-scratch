@@ -1,21 +1,21 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260906-2151-24f1b808";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260906-2151-24f1b808";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260906-2151-24f1b808";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260906-2151-24f1b808";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260906-2151-24f1b808";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260906-2151-24f1b808";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260906-2151-24f1b808";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260906-2151-24f1b808";
-import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260906-2151-24f1b808";
-import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260906-2151-24f1b808";
-import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260906-2151-24f1b808";
-import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260906-2151-24f1b808";
-import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260906-2151-24f1b808";
-import { createInitialIndustrialState } from "../systems/industrialProduction.js?v=fresh-20260906-2151-24f1b808";
-import { consolidateSprcOwnership } from "../systems/sprcOwnership.js?v=fresh-20260906-2151-24f1b808";
-import { createInitialNpcDevelopmentState } from "../systems/npcDevelopment.js?v=fresh-20260906-2151-24f1b808";
-import { createInitialWorldNetwork } from "../systems/worldNetworkRegistry.js?v=fresh-20260906-2151-24f1b808";
-import { createCockpitLayoutState } from "../systems/cockpitLayout.js?v=fresh-20260906-2151-24f1b808";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260907-2014-86f4c011";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260907-2014-86f4c011";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260907-2014-86f4c011";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260907-2014-86f4c011";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260907-2014-86f4c011";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260907-2014-86f4c011";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260907-2014-86f4c011";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260907-2014-86f4c011";
+import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260907-2014-86f4c011";
+import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260907-2014-86f4c011";
+import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260907-2014-86f4c011";
+import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260907-2014-86f4c011";
+import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260907-2014-86f4c011";
+import { createInitialIndustrialState } from "../systems/industrialProduction.js?v=fresh-20260907-2014-86f4c011";
+import { consolidateSprcOwnership } from "../systems/sprcOwnership.js?v=fresh-20260907-2014-86f4c011";
+import { createInitialNpcDevelopmentState } from "../systems/npcDevelopment.js?v=fresh-20260907-2014-86f4c011";
+import { createInitialWorldNetwork } from "../systems/worldNetworkRegistry.js?v=fresh-20260907-2014-86f4c011";
+import { createCockpitLayoutState } from "../systems/cockpitLayout.js?v=fresh-20260907-2014-86f4c011";
 
 export function createGameState() {
   const state = {
@@ -228,6 +228,16 @@ export function createGameState() {
       processor: {
         installed: false,
         output: "fuel",
+        // The processor carries a condition record like every other panel. It is
+        // NOT yet on the wear machine — nothing defines a wear input for it, so
+        // it cannot break through use, only by being authored broken. That is
+        // enough for the campaign skiff, whose processor is dead on handover and
+        // is why its ore drops straight into the hold; a real wear ladder for it
+        // is future work, not something to fake here.
+        condition: {
+          stage: "healthy", wear: 0, currentCondition: 100,
+          lifetimeDegradation: 0, maxRecoverableCondition: 100, serviceCount: 0,
+        },
       },
       cargoHold: {
         installed: false,

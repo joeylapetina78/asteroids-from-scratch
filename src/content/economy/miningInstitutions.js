@@ -32,6 +32,49 @@ export const MINING_INSTITUTION_SEEDS = Object.freeze([
     expansionWorker: null,
     expansionProject: null,
   }),
+  // Rook Industries is the sponsoring operator already named on the RTC
+  // provisional license form: mining rights in First Reach are extended through
+  // ITS Commission permit, not the pilot's. Until now it existed only as a voice
+  // in `npcs.js` with an authored contract ladder wrapped around it — an
+  // employer with no treasury, no hulls, and no position in the extraction
+  // clearing. It is seeded here so the sponsorship the player signs on the
+  // opening form is backed by a company that actually competes for work.
+  //
+  // It is capitalized well above the small outfits ON PURPOSE, and that is a
+  // character fact rather than a protective rule. Rook has to still be standing
+  // after an entire player arc, because falling back to working for Rook is the
+  // floor of the ownership ladder. An engine rule forbidding its bankruptcy
+  // would be exactly the outcome-protection this project keeps rejecting; deep
+  // reserves and patient traits are the diegetic version of the same thing. It
+  // can still fail — it just has to be outcompeted for a long time first.
+  Object.freeze({
+    stateKey: "rook-industries",
+    institution: { id: "miner:rook-industries", name: "Rook Industries", archetypeId: "mining-contractor", controllerInstitutionId: "person:rook", referenceId: "FR-MIN-007", accounts: { operating: { id: "FR-ACCT-007", balance: 32000, committed: 0, transactions: [] } } },
+    controller: { id: "person:rook", name: "Rook", archetypeId: "person", controls: ["miner:rook-industries"], traits: { caution: 0.55, growthBias: 0.45, urgencyBias: 0.3 }, license: { id: "MEX-007-ROOK", class: "commercial-extraction", status: "active" } },
+    fleetPrefix: "rook",
+    fleetName: "Rook",
+    // Every small outfit gets a colour of its own; the old sponsor flies
+    // unpainted steel. Read on sight: the big fleet is the plain one.
+    shipPalette: { hullStroke: "#cfd8e3", hullFill: "rgba(150, 172, 196, 0.18)", cabStroke: "#f2f6ff", tractorStroke: "rgba(198, 216, 236, 0.44)" },
+    homeSiteId: "yard-exchange",
+    // Rook pays its hands better than the small outfits do. That raises its cost
+    // to serve and should cost it marginal auctions — the trade it makes for
+    // crews who stay. Watch this number rather than trusting it: it is the one
+    // that will later pay the player, and it has never been measured against a
+    // full clearing.
+    operatingCosts: { crewPayPerContract: 80, consumablesPerContract: 28 },
+    workers: [
+      { id: "worker:rook-one", name: "Rook One", referenceId: "MW-007-ROOK", currentSiteId: "yard-exchange", initialWear: 0.3, offset: { x: -150, y: 55 } },
+      { id: "worker:rook-two", name: "Rook Two", referenceId: "MW-008-ROOK", currentSiteId: "scrap-porch", initialWear: 0.42, offset: { x: -30, y: -125 } },
+      { id: "worker:rook-three", name: "Rook Three", referenceId: "MW-009-ROOK", currentSiteId: "the-ledge", initialWear: 0.18, offset: { x: -110, y: -70 } },
+    ],
+    // No expansion hull, deliberately. The fourth Rook berth is the player's:
+    // story mode flies "Rook Provisional" under this company's permit, and the
+    // next slice dispatches it out of this fleet rather than commissioning an
+    // NPC into the seat the player is supposed to occupy.
+    expansionWorker: null,
+    expansionProject: null,
+  }),
   Object.freeze({
     stateKey: "ore-station-diggers",
     institution: { id: "miner:ore-station-diggers", name: "Ore Station Diggers", archetypeId: "mining-contractor", controllerInstitutionId: "person:vesa-dag", referenceId: "FR-MIN-081", accounts: { operating: { id: "FR-ACCT-081", balance: 5200, committed: 0, transactions: [] } } },
@@ -64,6 +107,17 @@ export const MINING_INSTITUTION_SEEDS = Object.freeze([
   }),
 ]);
 
-export const CINDER_MINING_SEED = MINING_INSTITUTION_SEEDS[0];
-export const FLINT_MINING_SEED = MINING_INSTITUTION_SEEDS[1];
-export const FRONTIER_MINING_SEEDS = MINING_INSTITUTION_SEEDS.slice(2);
+const seedByStateKey = (stateKey) => MINING_INSTITUTION_SEEDS.find((seed) => seed.stateKey === stateKey);
+
+export const CINDER_MINING_SEED = seedByStateKey("cinder-contracting");
+export const FLINT_MINING_SEED = seedByStateKey("flint-prospecting");
+export const ROOK_MINING_SEED = seedByStateKey("rook-industries");
+
+// Which operators are "the frontier" is a fact about where they live, not about
+// where they sit in this array. This was `slice(2)`, so inserting any core
+// operator above them silently promoted it into the frontier fleet — and past
+// the test that pins that fleet's home sites, because the test read the same
+// slice it was checking.
+const FRONTIER_HOME_SITE_IDS = new Set(["ore-station-one", "coldwater-depot", "deep-research"]);
+export const FRONTIER_MINING_SEEDS = MINING_INSTITUTION_SEEDS
+  .filter((seed) => FRONTIER_HOME_SITE_IDS.has(seed.homeSiteId));

@@ -42,6 +42,27 @@ test("a partially processed ten-stack explodes its remainder into individual uni
   assert.equal(processor.sparks.length, 18);
 });
 
+// Runs the processor's own update loop, which is where the settle window and the
+// building gather actually live.
+function runFramesUntil(processor, predicate, { step = 0.05, limit = 400 } = {}) {
+  for (let index = 0; index < limit; index += 1) {
+    processor.update(step);
+    if (predicate()) return true;
+  }
+  return false;
+}
+
+// The gather now takes a couple of seconds and builds as it goes, instead of
+// snapping shut in 0.38s. These tests are about the OUTCOME — ten singles become
+// one ten-stack — so they run the gather to completion rather than encoding a
+// duration that is deliberately tunable.
+function runCompactionToCompletion(processor, { step = 0.1, limit = 200 } = {}) {
+  for (let index = 0; index < limit && processor.compaction; index += 1) {
+    processor.advanceCompaction(step);
+  }
+  assert.equal(processor.compaction, null, "the gather finished within a sensible number of steps");
+}
+
 test("ten matching singles compact even when their provenance differs", () => {
   const canvas = {
     width: 300,
@@ -69,7 +90,7 @@ test("ten matching singles compact even when their provenance differs", () => {
   }
 
   processor.startCompaction();
-  processor.advanceCompaction(0.5);
+  runCompactionToCompletion(processor);
 
   assert.equal(processor.units.length, 1);
   assert.equal(processor.units[0].quantity, 10);
@@ -132,9 +153,12 @@ test("an old partial bundle plus loose units reforms as one ten-stack with singl
   });
   processor.units.push(makeUnit(7, 0), ...Array.from({ length: 5 }, (_, index) => makeUnit(1, index + 1)));
 
-  processor.expandPartialBundles();
-  processor.startCompaction();
-  processor.advanceCompaction(0.5);
+  // Driven through the REAL frame loop, not by poking the two phases directly.
+  // Bursting the old partial bundle scatters fragments that are deliberately
+  // ineligible for a moment, so a test that expanded and gathered in the same
+  // breath would be asserting a sequence the game no longer performs.
+  const settled = runFramesUntil(processor, () => processor.units.some((unit) => unit.quantity === 10));
+  assert.ok(settled, "the loose units find each other once they have settled");
 
   assert.equal(processor.units.reduce((sum, unit) => sum + unit.quantity, 0), 12);
   assert.equal(processor.units.filter((unit) => unit.quantity === 10).length, 1);

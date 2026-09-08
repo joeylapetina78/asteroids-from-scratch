@@ -1,18 +1,18 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260906-2151-24f1b808";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260906-2151-24f1b808";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260906-2151-24f1b808";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260906-2151-24f1b808";
-import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260906-2151-24f1b808";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260906-2151-24f1b808";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260906-2151-24f1b808";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260906-2151-24f1b808";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260906-2151-24f1b808";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260906-2151-24f1b808";
-import { getStandingMiningOrderAvailability, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260906-2151-24f1b808";
-import { payFromIssuer } from "./contractTreasury.js?v=fresh-20260906-2151-24f1b808";
-import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260906-2151-24f1b808";
-import { recordAuthorityRevenue } from "./rightsAuthority.js?v=fresh-20260906-2151-24f1b808";
-import { grantPlayerTerritoryRights } from "./hubTerritories.js?v=fresh-20260906-2151-24f1b808";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260907-2014-86f4c011";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260907-2014-86f4c011";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260907-2014-86f4c011";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260907-2014-86f4c011";
+import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260907-2014-86f4c011";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260907-2014-86f4c011";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260907-2014-86f4c011";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260907-2014-86f4c011";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260907-2014-86f4c011";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260907-2014-86f4c011";
+import { getStandingMiningOrderAvailability, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260907-2014-86f4c011";
+import { payFromIssuer } from "./contractTreasury.js?v=fresh-20260907-2014-86f4c011";
+import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260907-2014-86f4c011";
+import { recordAuthorityRevenue } from "./rightsAuthority.js?v=fresh-20260907-2014-86f4c011";
+import { grantPlayerTerritoryRights } from "./hubTerritories.js?v=fresh-20260907-2014-86f4c011";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -123,6 +123,7 @@ export function createContractManager({ state, onChange = () => {} }) {
     if (contract.type === "loan" && !contract.disbursedAt) {
       disburseLoan(contract);
     }
+    payContractAdvance(contract);
     state.ledger.recordEvent(
       "contract.accepted",
       {
@@ -561,6 +562,38 @@ export function createContractManager({ state, onChange = () => {} }) {
 
     onChange(contract);
     return true;
+  }
+
+  // Money up front, on acceptance.
+  //
+  // Paid from the ISSUER'S OWN treasury through the same path as a loan
+  // principal, so an advance is a transfer rather than a faucet. An issuer that
+  // cannot fund it says so and the contract stands without one, instead of the
+  // world quietly gaining credits.
+  function payContractAdvance(contract) {
+    const advanceCredits = Math.max(0, Math.round(contract.reward?.advanceCredits ?? 0));
+    if (advanceCredits === 0 || contract.advancePaidAt) return;
+
+    const advance = payFromIssuer(state, {
+      issuer: contract.issuer, institutionId: contract.issuerInstitutionId ?? null,
+      amount: advanceCredits, referenceId: contract.id, kind: "contract-advance",
+    });
+
+    if (!advance.funded) {
+      state.ledger.recordEvent("contract.advanceDeclined", {
+        contractId: contract.id, contractTitle: contract.title, issuer: contract.issuer,
+        advanceCredits, shortfall: advance.shortfall, reason: advance.reason ?? "issuer-underfunded",
+      }, { visible: true, message: `${contract.issuer} cannot cover the ${advanceCredits} cr advance right now.` });
+      return;
+    }
+
+    contract.advancePaidAt = Date.now();
+    contract.advancePaid = advance.paid;
+    depositCredits(state, advance.paid);
+    state.ledger.recordEvent("contract.advancePaid", {
+      contractId: contract.id, contractTitle: contract.title, issuer: contract.issuer,
+      credits: advance.paid,
+    }, { visible: true, message: `${contract.issuer} paid ${advance.paid} cr up front.` });
   }
 
   function disburseLoan(contract) {

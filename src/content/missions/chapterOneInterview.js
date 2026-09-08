@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260906-2151-24f1b808";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260907-2014-86f4c011";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -164,6 +164,9 @@ export const chapterOneInterviewMission = {
     chapterName: "Chapter 1",
     episodeName: "Starting Out",
   },
+  // Rook speaks alone until the player has actually flown. Everything else the
+  // world wants to say is queued behind this, not lost.
+  exclusiveCommsUntilStepId: "first-thrust",
   title: "The Interview",
   successCriteria: `Dock at ${chapterOneRoute.destinationSite.name}.`,
   nextMissionId: "chapter-1-new-ship",
@@ -204,28 +207,33 @@ export const chapterOneInterviewMission = {
       },
     ],
   },
-  startBeatId: "drag-panels",
+  startBeatId: "show-hull",
   considerations: [
     {
-      id: "license-panel-moved",
-      fromBeat: "drag-panels",
-      throughBeat: "drag-panels",
-      eventType: "component.dragged",
-      payloadEquals: { componentId: "license" },
-      setFlag: "licensePanelMoved",
+      // Switching the hull readout on from the bay. This is the cockpit's
+      // replacement for the old desk's "Add panel" button.
+      id: "hull-module-added",
+      fromBeat: "show-hull-module",
+      throughBeat: "show-hull-module",
+      eventType: "cockpit.moduleToggled",
+      payloadEquals: { componentId: "hull", expanded: true },
+      setFlag: "hullPanelAdded",
       once: true,
       actions: [
         {
           type: "say",
           speaker: "Rook",
-          text: "There you go. That's your provisional license. It lets you make this run under my authority, in this zone only. Now move the Hull panel too.",
+          text: "That's her. Now drag it by the title bar over to the far side, clear of the bay.",
         },
       ],
     },
     {
+      // Once floating, a cockpit module is an ordinary draggable panel, so the
+      // hull CAN satisfy a drag gate here — unlike in the bay, where it never
+      // could.
       id: "hull-panel-moved",
-      fromBeat: "drag-panels",
-      throughBeat: "drag-panels",
+      fromBeat: "show-hull-module",
+      throughBeat: "show-hull-module",
       eventType: "component.dragged",
       payloadEquals: { componentId: "hull" },
       setFlag: "hullPanelMoved",
@@ -234,67 +242,188 @@ export const chapterOneInterviewMission = {
         {
           type: "say",
           speaker: "Rook",
-          text: "Good, that's the Hull panel. Move the License too, then we'll get to the flying part.",
+          text: "Good. Somewhere you'll actually look at it. Paperwork next.",
         },
       ],
+    },
+    {
+      // Both documents have to be stowed, and either can go first, so each gets
+      // its own consideration rather than a single ordered transition.
+      id: "contract-filed",
+      // Observed even while Rook is waiting on an acknowledgement: a player can
+      // file paperwork during any of these beats, and it has to count.
+      allowWhilePending: true,
+      // Listening from the moment the drawer is taught, not only during the beat
+      // that asks. A player who files as soon as they can was being made to pull
+      // the paper back out and file it again, because the flag only counted
+      // inside one beat.
+      fromBeat: "open-drawer",
+      throughBeat: "file-contract",
+      eventType: "component.filed",
+      payloadEquals: { componentId: "contract", destination: "drawer" },
+      setFlag: "contractFiled",
+      once: true,
+    },
+    {
+      id: "license-filed",
+      // Observed even while Rook is waiting on an acknowledgement: a player can
+      // file paperwork during any of these beats, and it has to count.
+      allowWhilePending: true,
+      fromBeat: "open-drawer",
+      throughBeat: "file-contract",
+      eventType: "component.filed",
+      payloadEquals: { componentId: "license", destination: "drawer" },
+      setFlag: "licenseFiled",
+      once: true,
     },
     ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
   ],
   beats: [
     {
       id: "show-hull",
-      objective: "Get your bearings.",
+      objective: "Open the module bay.",
       tasks: [
-        { label: "Review the ship controls", flag: "reviewedShipControls" },
+        { label: "Open the module bay", flag: "moduleBayOpened" },
       ],
       helpText:
-        "This communicator rail shows mission dialogue, plain instructions, and your credits. The Hull panel shows ship health, VIN, and the Docking Lock. Your license is paperwork you can file in the drawer.",
+        "The module bay is the tab labelled MODULES down the left edge of the viewport. Click it to slide the bay out. Every instrument this ship carries is listed there.",
       onEnter: [
         { type: "setPaperworkFiling", isEnabled: false },
-        { type: "showComponent", componentId: "license", componentName: "License" },
-        { type: "showComponent", componentId: "hull", componentName: "Hull" },
-        { type: "showComponent", componentId: "docking", componentName: "Docking Lock" },
         {
           type: "say",
           speaker: "Rook",
           text:
-            "All right, rookie. Here are our ship controls and displays. You can see the hull of this ship's at 100%. You better keep it that way, ya hear? You've got a provisional license for this starter route, so stay in bounds. Consider this your assessment test, training, and interview all in one.",
-          acknowledgement: { label: "Okay" },
+            "All right, rookie. Consider this your assessment test, training and interview all in one. Start by opening the module bay — that MODULES tab on the left. Everything this skiff carries is racked in there.",
         },
       ],
-      onAcknowledge: [
-        { type: "setFlag", flag: "reviewedShipControls" },
-        { type: "clearMessage" },
-        { type: "goToStep", stepId: "drag-panels" },
+      transitions: [
+        {
+          eventType: "cockpit.moduleBayOpened",
+          setFlag: "moduleBayOpened",
+          delayMs: 900,
+          nextStepId: "broken-processor",
+        },
       ],
     },
     {
-      id: "drag-panels",
-      objective: "Move the License and Hull panels.",
+      id: "broken-processor",
+      objective: "Look over the bay.",
       helpText:
-        "Drag panels by their title bars. Move the License panel and the Hull panel anywhere comfortable in the display area.",
-      tasks: [
-        { label: "Move the License panel", flag: "licensePanelMoved" },
-        { label: "Move the Hull panel", flag: "hullPanelMoved" },
-      ],
+        "The PROCESSOR module is marked NOT FUNCTIONING with hazard stripes. A working processor refines what you cut into fuel, charges or hull patch; this one cannot, so everything you collect drops straight into cargo.",
       onEnter: [
-        { type: "showComponent", componentId: "license", componentName: "License" },
-        { type: "showComponent", componentId: "hull", componentName: "Hull" },
-        { type: "showComponent", componentId: "docking", componentName: "Docking Lock" },
         {
           type: "say",
           speaker: "Rook",
           text:
-            "All right, rookie. Here are our ship controls and displays. You can see the hull of this ship's at 100%. You better keep it that way, ya hear? You've got a provisional license for this starter route, so stay in bounds. People have preferences, who am I to stand in the way of them. Go ahead and drag the License and Hull panels around the display area. Get a feel for how it works.",
+            "See the processor there, flagged up amber? It's dead. Has been a while. Don't worry about it for now — not important. It just means whatever you cut goes straight into the hold as ore instead of getting refined on the way home.",
+          acknowledgement: { label: "Understood" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "goToStep", stepId: "show-hull-module" },
+      ],
+    },
+    {
+      id: "show-hull-module",
+      objective: "Switch on the Hull display.",
+      tasks: [
+        { label: "Switch on the Hull display", flag: "hullPanelAdded" },
+        { label: "Move it clear of the bay", flag: "hullPanelMoved" },
+      ],
+      helpText:
+        "Click HULL in the module bay to pop it out onto the desk, then drag it by its title bar over to the other side of the screen so the bay is not covering it.",
+      onEnter: [
+        { type: "showComponent", componentId: "hull", componentName: "Hull" },
+        // The cockpit preset floats the hull onto the desk by default, so it has
+        // to be racked before the player can be asked to switch it on.
+        { type: "dockComponent", componentId: "hull" },
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Click the Hull readout in the bay to switch it on, then drag it over to the far side of the desk where you can keep an eye on it. She's at 100%. You better keep it that way, ya hear?",
         },
       ],
       transitions: [
         {
           eventType: "component.dragged",
-          requiresFlags: ["licensePanelMoved", "hullPanelMoved"],
-          delayMs: 1200,
-          nextStepId: "offer-contract",
+          requiresFlags: ["hullPanelAdded", "hullPanelMoved"],
+          delayMs: 1000,
+          nextStepId: "open-drawer",
         },
+      ],
+    },
+    {
+      id: "open-drawer",
+      objective: "Open the paperwork drawer.",
+      tasks: [
+        { label: "Open the paperwork drawer", flag: "drawerOpened" },
+      ],
+      helpText:
+        "The PAPERWORK tab sits along the bottom edge of the screen. Click it to slide the drawer open.",
+      onEnter: [
+        { type: "setPaperworkFiling", isEnabled: true },
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Now the paperwork. That tab along the bottom — PAPERWORK — open it up. Your license is filed in there.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "paperwork.drawerOpened",
+          setFlag: "drawerOpened",
+          delayMs: 700,
+          nextStepId: "license-to-desk",
+        },
+      ],
+    },
+    {
+      id: "license-to-desk",
+      objective: "Put your license on the desk.",
+      tasks: [
+        { label: "Move the license to the desk", flag: "licenseOnDesk" },
+      ],
+      helpText:
+        "Find the License in the open drawer and press DESK on its title bar. The drawer holds every document you carry — licenses, contracts, anything a patrol might ask to see.",
+      onEnter: [
+        { type: "showComponent", componentId: "license", componentName: "License" },
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Find your license in there and press DESK to pull it out. That drawer is where you store and manage every document you carry. Keep it tidy — when a patrol asks, they don't wait long.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "component.filed",
+          payloadEquals: { componentId: "license", destination: "desk" },
+          setFlag: "licenseOnDesk",
+          delayMs: 900,
+          nextStepId: "read-your-balance",
+        },
+      ],
+    },
+    {
+      id: "read-your-balance",
+      objective: "Read your balance.",
+      helpText:
+        "Credits are printed on the license itself, near the bottom. It is the only place your balance is shown — the license IS your account.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "There she is. Look down the bottom — Credits. That's your money, and the license is where you read it. Go on, have a look at what you're worth.",
+          acknowledgement: { label: "Zero" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "goToStep", stepId: "offer-contract" },
       ],
     },
     {
@@ -310,7 +439,7 @@ export const chapterOneInterviewMission = {
           type: "say",
           speaker: "Rook",
           text:
-            "Before we fly, agree to the contract for this job. It just says when you deliver this ship to Yard Exchange, I'll pay you 500 credits. Simple terms, clean paper, real promise.",
+            "Zero. That's why you're here. So — work. Take this ship to Yard Exchange and it's a thousand credits: two-fifty in your hand the moment you sign, seven-fifty when she's docked and powered down. Read it, then accept it.",
         },
         { type: "offerContract", contractId: "rook-yard-exchange-delivery" },
       ],
@@ -320,35 +449,79 @@ export const chapterOneInterviewMission = {
           payloadEquals: { contractId: "rook-yard-exchange-delivery" },
           setFlag: "offerContractAccepted",
           delayMs: 1200,
-          nextStepId: "file-contract",
+          nextStepId: "advance-paid",
         },
       ],
     },
     {
+      id: "advance-paid",
+      objective: "Check your license.",
+      helpText:
+        "Credits on the license has gone from 0 to 250. That is the signing advance, paid out of Rook Industries' own account the moment you accepted.",
+      onEnter: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Signed. Now look at your license again — two-fifty, right there. That's real money out of my account and into yours. The rest lands when this ship is on the pad at Yard Exchange.",
+          acknowledgement: { label: "Got it" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "goToStep", stepId: "file-contract" },
+      ],
+    },
+    {
       id: "file-contract",
-      objective: "File the Assessment Delivery contract.",
+      objective: "File your paperwork.",
       tasks: [
-        { label: "File the contract into the drawer", flag: "contractFiled" },
+        { label: "File the contract", flag: "contractFiled" },
+        { label: "File the license", flag: "licenseFiled" },
       ],
       helpText:
-        "Click the FILE button on the Contract panel. It will move into the Paperwork drawer at the bottom, where you can pull it up anytime.",
+        "Press FILE on the Contract, and FILE on the License. Both drop into the Paperwork drawer, where you can pull either back out whenever you need it.",
+      onEnter: [
+        { type: "setPaperworkFiling", isEnabled: true },
+        // Checked BEFORE Rook speaks, so a player who already put everything
+        // away hears the right line instead of being asked to do it again.
+        { type: "goToStepIfFlags", flags: ["contractFiled", "licenseFiled"], stepId: "paperwork-already-filed" },
+        {
+          type: "say",
+          speaker: "Rook",
+          text:
+            "Good, you're on the contract. Now stow both of them — FILE on the contract, FILE on the license. Clean desk before we fly. Do that and I'll get your viewport up.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "component.filed",
+          requiresFlags: ["contractFiled", "licenseFiled"],
+          delayMs: 1200,
+          nextStepId: "show-scanner",
+        },
+      ],
+    },
+    {
+      // Reached only when the desk was already clear on arrival. Rook has
+      // nothing to teach here, so he says so and moves on.
+      id: "paperwork-already-filed",
+      objective: "Ready to fly.",
+      helpText:
+        "Both documents are already in the Paperwork drawer. Open it any time with the PAPERWORK tab along the bottom.",
       onEnter: [
         { type: "setPaperworkFiling", isEnabled: true },
         {
           type: "say",
           speaker: "Rook",
           text:
-            "Good, you're on the contract. File it away — press FILE on the Contract panel and it drops into your Paperwork drawer. We'll pull it up when we get to Yard Exchange. File it and I'll bring up your viewport.",
+            "Desk's already clear. You filed them without being told — good. That's the last thing I was going to teach you about paper. Let's get your viewport up.",
+          acknowledgement: { label: "Ready" },
         },
       ],
-      transitions: [
-        {
-          eventType: "component.filed",
-          payloadEquals: { componentId: "contract", destination: "drawer" },
-          setFlag: "contractFiled",
-          delayMs: 1200,
-          nextStepId: "show-scanner",
-        },
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "goToStep", stepId: "show-scanner" },
       ],
     },
     {
@@ -419,25 +592,34 @@ export const chapterOneInterviewMission = {
     },
     {
       id: "show-engine",
-      objective: "Get the engine online.",
+      objective: "Switch on the Engine.",
       tasks: [
-        { label: "Add the Engine panel to controls", flag: "enginePanelAdded" },
+        { label: "Switch on the Engine module", flag: "enginePanelAdded" },
       ],
+      // This beat used to say "Press Add Engine" and hand the player an
+      // acknowledgement button. In the cockpit there is no Add button: an
+      // instrument is racked in the module bay and switched on from there. The
+      // engine is REVEALED into the bay on enter, and the beat then waits for
+      // the player to actually switch it on.
       helpText:
-        "Press Add Engine to bring up the Engine panel. Power Ship turns the ship on. W thrusts, A/D rotate, and S brakes.",
+        "The ENGINE module is now racked in the module bay on the left. Click it to pop the Engine panel out onto the desk.",
       onEnter: [
+        { type: "showComponent", componentId: "engine", componentName: "Engine" },
+        { type: "dockComponent", componentId: "engine" },
         {
           type: "say",
           speaker: "Rook",
-          text: "Good. Let me get you the Engine panel so you can get going.",
-          acknowledgement: { label: "Add Engine" },
+          text: "Good. I've racked the engine in your bay — click it to bring the panel out, and let's get going. Time is money.",
         },
       ],
-      onAcknowledge: [
-        { type: "setFlag", flag: "enginePanelAdded" },
-        { type: "clearMessage" },
-        { type: "showComponent", componentId: "engine", componentName: "Engine" },
-        { type: "goToStep", stepId: "power-on" },
+      transitions: [
+        {
+          eventType: "cockpit.moduleToggled",
+          payloadEquals: { componentId: "engine", expanded: true },
+          setFlag: "enginePanelAdded",
+          delayMs: 800,
+          nextStepId: "power-on",
+        },
       ],
     },
     {

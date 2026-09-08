@@ -1,8 +1,8 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260906-2151-24f1b808";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260906-2151-24f1b808";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260906-2151-24f1b808";
-import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260906-2151-24f1b808";
-import { createMissionRunner } from "./missionRunner.js?v=fresh-20260906-2151-24f1b808";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260907-2014-86f4c011";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260907-2014-86f4c011";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260907-2014-86f4c011";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260907-2014-86f4c011";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260907-2014-86f4c011";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -15,6 +15,7 @@ export function createJourneyDirector({
   onChange = () => {},
   offerContract = () => {},
   showComponent = () => {},
+  dockComponent = () => {},
   unlockHubService = () => {},
   requestAttention = () => {},
   runInspection = () => {},
@@ -40,18 +41,52 @@ export function createJourneyDirector({
     onChange(journey);
   }
 
-  function startFreeMode() {
+  // Start with no authored mission chain running.
+  //
+  // Explorer and campaign both enter this way, but they are not the same
+  // chapter and they are emphatically not the same ship: explorer is open play
+  // with every instrument fitted, campaign is a hand in a company skiff with
+  // four things bolted to it. So the panel list is the caller's too — showing
+  // explorer's set in campaign would hand the player a scanner, a collector and
+  // a processor that its hull does not have.
+  //
+  // Every default here is explorer's, so that start is unchanged.
+  const FREE_MODE_PANELS = ["viewport", "hull", "docking", "engine", "beacon-locator", "scanner", "miner", "collector", "processor", "cargo"];
+
+  function startFreeMode({
+    chapterId = "free", chapterName = "Free Play", episodeName = "Explorer Mode",
+    panels = FREE_MODE_PANELS,
+  } = {}) {
     showOnlyInitialComponents();
-    // Show all flight panels immediately — explorer skips the mission unlock sequence.
-    ["viewport", "hull", "docking", "engine", "beacon-locator", "scanner", "miner", "collector", "processor", "cargo"].forEach((id) => {
+    // Neither start walks the mission unlock sequence that reveals panels one at
+    // a time, so whatever the ship actually carries is shown at once.
+    panels.forEach((id) => {
       showComponent(id);
     });
     game?.enableHubPatrol();
-    journey.chapterId = "free";
-    journey.chapterName = "Free Play";
-    journey.episodeName = "Explorer Mode";
+    journey.chapterId = chapterId;
+    journey.chapterName = chapterName;
+    journey.episodeName = episodeName;
     journey.mission = null;
     onChange(journey);
+  }
+
+  // Does the current mission hold the comms floor?
+  //
+  // Rook is conducting an interview. Sal offering a repair quote or a hub
+  // hailing about paperwork on top of him does not read as a living world during
+  // an induction — it reads as the game talking over itself while a new player
+  // is being told which button to press. A mission can therefore declare a step
+  // up to which it speaks alone; anything else is QUEUED, not dropped, so the
+  // world still gets its say once the player is flying.
+  function isCommsFloorHeld() {
+    const missionId = journey.mission?.id;
+    const definition = missionId ? MISSION_DEFINITIONS.get(missionId) : null;
+    const untilStepId = definition?.exclusiveCommsUntilStepId;
+
+    if (!untilStepId || journey.mission?.status === "completed") return false;
+
+    return !(journey.completedStepIds ?? []).includes(untilStepId);
   }
 
   function acceptMission() {
@@ -312,6 +347,7 @@ export function createJourneyDirector({
           offerContract(contractId);
         },
         hideComponent: (componentId) => showComponent(componentId, false),
+        dockComponent: (componentId) => dockComponent(componentId),
         recordEvent: (...args) => state.ledger.recordEvent(...args),
         runInspection,
         say: (speaker, text, acknowledgement) => sayAsNpc(speaker, text, acknowledgement, { priority: 0 }),
@@ -339,6 +375,7 @@ export function createJourneyDirector({
   return {
     start,
     startFreeMode,
+    isCommsFloorHeld,
     startMission,
     sayAsNpc,
     askConfirmation,

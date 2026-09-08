@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260906-2151-24f1b808";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260907-2014-86f4c011";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;

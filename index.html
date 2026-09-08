@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260906-2151-24f1b808" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260907-2014-86f4c011" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -24,11 +24,11 @@
           <div class="license-form-row">
             <div class="license-form-field">
               <label for="license-first-name">First Name</label>
-              <input id="license-first-name" type="text" maxlength="32" placeholder="As registered" spellcheck="false" />
+              <input id="license-first-name" type="text" maxlength="32" placeholder="As registered" spellcheck="false" value="Niko" />
             </div>
             <div class="license-form-field">
               <label for="license-last-name">Last Name</label>
-              <input id="license-last-name" type="text" maxlength="32" placeholder="As registered" spellcheck="false" />
+              <input id="license-last-name" type="text" maxlength="32" placeholder="As registered" spellcheck="false" value="Franks" />
             </div>
           </div>
           <div class="license-form-readonly">
@@ -57,13 +57,19 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260906-2151-24f1b808</span>
+      <span class="build-tag">build: fresh-20260907-2014-86f4c011</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
-      <a href="./?resetSave=1&amp;devStart=explorer">Explorer</a>
       <a href="./?resetSave=1&amp;devStart=panorama">Panorama</a>
       <button id="observatory-toggle" type="button" class="quick-link-button">Observatory</button>
+      <!-- The two real ways to play, on their own row beneath the build tag and
+           the Observatory button, so they read as game modes rather than as more
+           dev shortcuts. -->
+      <span class="quick-links-modes">
+        <a href="./?resetSave=1&amp;devStart=explorer">Explorer Mode</a>
+        <a href="./?resetSave=1&amp;devStart=campaign">Campaign Mode</a>
+      </span>
       <a href="https://joeylapetina78.github.io/asteroids-from-scratch/">Public build</a>
       <a href="https://github.com/joeylapetina78/asteroids-from-scratch">GitHub</a>
       <a href="https://cash.app/$joeylapetina">Murmur alms</a>
@@ -91,6 +97,7 @@
           <button type="button" class="observatory-tab" data-observatory-tab="blockers">Blockers</button>
           <button type="button" class="observatory-tab" data-observatory-tab="contracts">Contracts</button>
           <button type="button" class="observatory-tab" data-observatory-tab="economy">Economy</button>
+          <button type="button" class="observatory-tab" data-observatory-tab="fleet">Fleet</button>
           <button type="button" class="observatory-tab" data-observatory-tab="simulation">Simulation</button>
           <button type="button" class="observatory-tab" data-observatory-tab="ledger">Ledger</button>
           <button type="button" class="observatory-tab" data-observatory-tab="stats">Stats</button>
@@ -139,6 +146,12 @@
            in the observatory answers "what is true now"; this answers "which
            way is it going". Charts are built in main.js from economySampler
            series, so the markup is just the frame and the controls. -->
+      <!-- Fleet: how many hulls exist over time, every commissioning and stand-
+           down, and the asset-side conservation audit — the hull equivalent of
+           the money reconciler's residual. -->
+      <div id="observatory-pane-fleet" class="observatory-pane observatory-pane-fleet" hidden>
+        <div id="fleet-body" class="fleet-body"></div>
+      </div>
       <div id="observatory-pane-economy" class="observatory-pane observatory-pane-economy" hidden>
         <div class="econ-controls" role="group" aria-label="Economy chart controls">
           <label class="econ-control">Window
@@ -289,28 +302,42 @@
         </section>
 
         <section class="space-panel">
-          <header class="cockpit-toolbar" aria-label="Cockpit layout controls">
-            <div class="cockpit-mode-switch" role="group" aria-label="Display mode">
-              <button id="cockpit-mode-default" type="button" aria-pressed="true">Cockpit</button>
-              <button id="cockpit-mode-panorama" type="button" aria-pressed="false">Panorama</button>
-            </div>
-            <label for="cockpit-preset">Preset</label>
-            <select id="cockpit-preset">
-              <option value="mining">Mining</option>
-              <option value="hauling">Hauling</option>
-              <option value="exploration">Exploration</option>
-              <option value="recovery">Recovery</option>
-              <option value="custom">Custom</option>
-            </select>
-            <span class="cockpit-toolbar-spacer"></span>
-            <button id="cockpit-configure" type="button" aria-expanded="false">Configure</button>
-            <button id="cockpit-reset" type="button">Reset layout</button>
-          </header>
+          <!-- One bar across the top, not three overlapping ones. The mission
+               readout owns the width, because that is what a player needs at a
+               glance; layout controls are housekeeping and live behind the
+               control at the right end. -->
+          <header class="cockpit-toolbar" aria-label="Mission status and layout controls">
+            <button id="cockpit-objective" class="cockpit-objective" type="button" aria-expanded="false">
+              <span class="cockpit-objective-line">
+                <strong id="cockpit-objective-title">Journey</strong>
+                <span id="cockpit-objective-text">Awaiting instructions.</span>
+              </span>
+              <span id="cockpit-objective-tasks" class="cockpit-objective-tasks"></span>
+              <span id="cockpit-objective-route" class="cockpit-objective-route">Open mission details</span>
+            </button>
 
-          <button id="cockpit-objective" class="cockpit-objective" type="button" aria-expanded="false">
-            <span><strong id="cockpit-objective-title">Journey</strong><span id="cockpit-objective-text">Awaiting instructions.</span></span>
-            <span id="cockpit-objective-route">Open mission details</span>
-          </button>
+            <button id="cockpit-toolbar-toggle" class="cockpit-toolbar-toggle" type="button"
+                    aria-expanded="false" aria-controls="cockpit-toolbar-menu" aria-label="Layout controls">
+              <span aria-hidden="true">☰</span>
+            </button>
+
+            <div id="cockpit-toolbar-menu" class="cockpit-toolbar-menu" hidden>
+              <div class="cockpit-mode-switch" role="group" aria-label="Display mode">
+                <button id="cockpit-mode-default" type="button" aria-pressed="true">Cockpit</button>
+                <button id="cockpit-mode-panorama" type="button" aria-pressed="false">Panorama</button>
+              </div>
+              <label for="cockpit-preset">Preset</label>
+              <select id="cockpit-preset">
+                <option value="mining">Mining</option>
+                <option value="hauling">Hauling</option>
+                <option value="exploration">Exploration</option>
+                <option value="recovery">Recovery</option>
+                <option value="custom">Custom</option>
+              </select>
+              <button id="cockpit-configure" type="button" aria-expanded="false">Configure</button>
+              <button id="cockpit-reset" type="button">Reset layout</button>
+            </div>
+          </header>
 
           <aside id="cockpit-slot-left" class="cockpit-slot cockpit-slot-left" aria-label="Ship status modules"></aside>
           <aside id="cockpit-slot-right" class="cockpit-slot cockpit-slot-right" aria-label="Navigation modules"></aside>
@@ -355,14 +382,19 @@
                 <strong id="journey-mission-title">Assessment Run</strong>
                 <span id="journey-mission-objective">Awaiting instructions.</span>
                 <div id="current-objectives" hidden></div>
-                <details class="journey-help" open>
-                  <summary>Need help?</summary>
-                  <span id="journey-help-text">Read the current objective and follow the next prompt.</span>
-                </details>
-                <div class="journey-actions">
-                  <button id="journey-decline" class="journey-button journey-button-decline" type="button" hidden>Not Yet</button>
-                  <button id="journey-accept" class="journey-button" type="button">Accept Job</button>
-                </div>
+              </div>
+              <!-- Help and the action buttons are DIRECT children of the panel,
+                   not tucked inside the mission block. Nested, they shared the
+                   mission's column and could be scrolled out of a card with a
+                   max-height — which is how "Press Add Engine" arrived with no
+                   reachable Add Engine button. Each now owns a row. -->
+              <details class="journey-help" open>
+                <summary>Need help?</summary>
+                <span id="journey-help-text">Read the current objective and follow the next prompt.</span>
+              </details>
+              <div class="journey-actions">
+                <button id="journey-decline" class="journey-button journey-button-decline" type="button" hidden>Not Yet</button>
+                <button id="journey-accept" class="journey-button" type="button">Accept Job</button>
               </div>
             </div>
 
@@ -1004,6 +1036,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260906-2151-24f1b808"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260907-2014-86f4c011"></script>
   </body>
 </html>

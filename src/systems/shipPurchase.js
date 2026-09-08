@@ -1,6 +1,6 @@
-import { getCurrentShipLegal, getPilotName, updateCurrentShipLegal } from "./legalRecords.js?v=fresh-20260906-2151-24f1b808";
-import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260906-2151-24f1b808";
-import { registerHull, setActiveHull } from "./hulls.js?v=fresh-20260906-2151-24f1b808";
+import { getCurrentShipLegal, getPilotName, updateCurrentShipLegal } from "./legalRecords.js?v=fresh-20260907-2014-86f4c011";
+import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260907-2014-86f4c011";
+import { registerHull, setActiveHull } from "./hulls.js?v=fresh-20260907-2014-86f4c011";
 import {
   WORLD_RECORD_RELATIONSHIPS,
   ensureInstitution,
@@ -9,7 +9,7 @@ import {
   getShipAssetId,
   issueWorldDocument,
   upsertWorldRelationship,
-} from "./worldRecords.js?v=fresh-20260906-2151-24f1b808";
+} from "./worldRecords.js?v=fresh-20260907-2014-86f4c011";
 
 const YARD_EXCHANGE_AUTHORITY_ID = "institution:yard-exchange-authority";
 const YARD_EXCHANGE_FINANCE_ID = "institution:yard-exchange-finance";
@@ -35,9 +35,14 @@ export function purchaseShipOffer(state, offer) {
 
   spendCredits(state, offer.price);
   state.ship.purchasedOfferId = offer.id;
-  state.ship.frameId = "yard-skiff-miner";
+  // Stays an ORE WORKER. The purchased Skiff-M is the same class of working
+  // hull the player flew in for Rook and the same one every NPC miner flies;
+  // swapping it to the angular `yard-skiff` silhouette on purchase made buying
+  // your own ship look like changing species. Drawn from the shared
+  // `mining-craft` outline, so it cannot drift from the fleet around it.
+  state.ship.frameId = "mining-worker";
   state.ship.name = offer.title;
-  state.ship.shape = "yard-skiff";
+  state.ship.shape = "mining-worker";
   const previousVin = state.components.hull.vin;
   const purchasedVin = "YRDSKF-M-2B7";
   const activeStarterLoan = state.contracts.records["mako-starter-ship-loan"];

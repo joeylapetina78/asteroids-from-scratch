@@ -37,6 +37,14 @@ export function createCommsDirector({ state, journeyDirector }) {
       expiresAt: Date.now() + ttlMs,
     };
 
+    // A mission that holds the comms floor speaks alone. The message is queued
+    // rather than discarded, so nothing the world wanted to say is lost — it
+    // simply waits until the induction is over.
+    if (journeyDirector.isCommsFloorHeld?.()) {
+      enqueue(message);
+      return false;
+    }
+
     if (requireIdle && hasActiveMessage()) {
       if (queueIfBlocked) {
         enqueue(message);

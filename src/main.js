@@ -1,75 +1,79 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260906-2151-24f1b808";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260906-2151-24f1b808";
-import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260906-2151-24f1b808";
-import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260906-2151-24f1b808";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260906-2151-24f1b808";
-import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260906-2151-24f1b808";
-import { addToTank } from "./systems/panelMaintenance.js?v=fresh-20260906-2151-24f1b808";
-import { ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260906-2151-24f1b808";
-import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260906-2151-24f1b808";
-import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260906-2151-24f1b808";
-import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260906-2151-24f1b808";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260906-2151-24f1b808";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260906-2151-24f1b808";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260906-2151-24f1b808";
-import { Game } from "./game.js?v=fresh-20260906-2151-24f1b808";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260906-2151-24f1b808";
-import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260906-2151-24f1b808";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260906-2151-24f1b808";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260906-2151-24f1b808";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260906-2151-24f1b808";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260907-2014-86f4c011";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260907-2014-86f4c011";
+import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260907-2014-86f4c011";
+import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260907-2014-86f4c011";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260907-2014-86f4c011";
+import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260907-2014-86f4c011";
+import { accumulatePanelWear, addToTank, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260907-2014-86f4c011";
+import { ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260907-2014-86f4c011";
+import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260907-2014-86f4c011";
+import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260907-2014-86f4c011";
+import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260907-2014-86f4c011";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260907-2014-86f4c011";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260907-2014-86f4c011";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260907-2014-86f4c011";
+import { Game } from "./game.js?v=fresh-20260907-2014-86f4c011";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260907-2014-86f4c011";
+import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260907-2014-86f4c011";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260907-2014-86f4c011";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260907-2014-86f4c011";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260907-2014-86f4c011";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260906-2151-24f1b808";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260906-2151-24f1b808";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260906-2151-24f1b808";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260906-2151-24f1b808";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260906-2151-24f1b808";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260906-2151-24f1b808";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260906-2151-24f1b808";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260906-2151-24f1b808";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260906-2151-24f1b808";
-import { Processor, getProcessorConsumptionQuantity } from "./systems/processor.js?v=fresh-20260906-2151-24f1b808";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260906-2151-24f1b808";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260906-2151-24f1b808";
-import { createGameState } from "./state/gameState.js?v=fresh-20260906-2151-24f1b808";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260906-2151-24f1b808";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260906-2151-24f1b808";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260906-2151-24f1b808";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260906-2151-24f1b808";
-import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260906-2151-24f1b808";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260906-2151-24f1b808";
-import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260906-2151-24f1b808";
-import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260906-2151-24f1b808";
-import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260906-2151-24f1b808";
-import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260906-2151-24f1b808";
-import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260906-2151-24f1b808";
-import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260906-2151-24f1b808";
-import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS } from "./content/economy/miningInstitutions.js?v=fresh-20260906-2151-24f1b808";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260906-2151-24f1b808";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260906-2151-24f1b808";
-import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260906-2151-24f1b808";
-import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260906-2151-24f1b808";
-import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260906-2151-24f1b808";
-import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260906-2151-24f1b808";
-import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260906-2151-24f1b808";
-import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260906-2151-24f1b808";
-import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260906-2151-24f1b808";
-import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260906-2151-24f1b808";
-import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260906-2151-24f1b808";
-import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260906-2151-24f1b808";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260906-2151-24f1b808";
-import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260906-2151-24f1b808";
-import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260906-2151-24f1b808";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260906-2151-24f1b808";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260906-2151-24f1b808";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260906-2151-24f1b808";
-import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260906-2151-24f1b808";
-import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260906-2151-24f1b808";
-import { COCKPIT_MODULE_IDS, COCKPIT_PRESETS, applyCockpitPreset, createCockpitLayoutState } from "./systems/cockpitLayout.js?v=fresh-20260906-2151-24f1b808";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260907-2014-86f4c011";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260907-2014-86f4c011";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260907-2014-86f4c011";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260907-2014-86f4c011";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260907-2014-86f4c011";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260907-2014-86f4c011";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260907-2014-86f4c011";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260907-2014-86f4c011";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260907-2014-86f4c011";
+import { Processor, getProcessorConsumptionQuantity } from "./systems/processor.js?v=fresh-20260907-2014-86f4c011";
+import { createBayInertia } from "./systems/bayInertia.js?v=fresh-20260907-2014-86f4c011";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260907-2014-86f4c011";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260907-2014-86f4c011";
+import { createGameState } from "./state/gameState.js?v=fresh-20260907-2014-86f4c011";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260907-2014-86f4c011";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260907-2014-86f4c011";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260907-2014-86f4c011";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260907-2014-86f4c011";
+import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260907-2014-86f4c011";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260907-2014-86f4c011";
+import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260907-2014-86f4c011";
+import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260907-2014-86f4c011";
+import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260907-2014-86f4c011";
+import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260907-2014-86f4c011";
+import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260907-2014-86f4c011";
+import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260907-2014-86f4c011";
+import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS, ROOK_MINING_SEED } from "./content/economy/miningInstitutions.js?v=fresh-20260907-2014-86f4c011";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260907-2014-86f4c011";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260907-2014-86f4c011";
+import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260907-2014-86f4c011";
+import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260907-2014-86f4c011";
+import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260907-2014-86f4c011";
+import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260907-2014-86f4c011";
+import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260907-2014-86f4c011";
+import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260907-2014-86f4c011";
+import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260907-2014-86f4c011";
+import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260907-2014-86f4c011";
+import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260907-2014-86f4c011";
+import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260907-2014-86f4c011";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260907-2014-86f4c011";
+import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260907-2014-86f4c011";
+import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260907-2014-86f4c011";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260907-2014-86f4c011";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260907-2014-86f4c011";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260907-2014-86f4c011";
+import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260907-2014-86f4c011";
+import { FLEET_SAMPLE_INTERVAL_MS, HULL_EVENT, auditFleetIntegrity, getFleetSamples, getHullEvents, readFleetCensus, recordFleetSample } from "./systems/fleetCensus.js?v=fresh-20260907-2014-86f4c011";
+import { clampToViewport, fromAnchoredPosition, hasAnchoredPosition, toAnchoredPosition } from "./systems/panelAnchoring.js?v=fresh-20260907-2014-86f4c011";
+import { CAMPAIGN_BROKEN_COMPONENT_IDS, CAMPAIGN_FITTED_COMPONENT_IDS, CAMPAIGN_MINER_AMMO, CAMPAIGN_MINER_PRIOR_SERVICES, CAMPAIGN_MINER_WEAR_FRACTION, CAMPAIGN_PANEL_IDS, CAMPAIGN_SHIP_FRAME_ID, CAMPAIGN_SHIP_NAME, CAMPAIGN_UNFITTED_COMPONENT_IDS } from "./content/ships/campaignLoadout.js?v=fresh-20260907-2014-86f4c011";
+import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260907-2014-86f4c011";
+import { COCKPIT_MODULE_IDS, COCKPIT_PRESETS, applyCockpitPreset, createCockpitLayoutState } from "./systems/cockpitLayout.js?v=fresh-20260907-2014-86f4c011";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -88,14 +92,65 @@ const OLD_PANEL_LAYOUT_STORAGE_KEYS = [
   "asteroids.panelLayout.v3",
   "asteroids.panelLayout.v4",
   "asteroids.panelLayout.v5",
+  "asteroids.panelLayout.v6",
 ];
 // Each play mode has its own desk. Version 6 intentionally starts clean: the
 // old single-desk records were allowed to bleed positions between modes.
-const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v6";
-const JOURNEY_PANEL_Z_INDEX = 560;
-const VIEWPORT_PANEL_Z_INDEX = 10;
+// v7 stores anchored positions (see panelAnchoring.js) beside the old pixel
+// offsets. Bumped rather than migrated: a v6 desk has no anchors to infer from
+// without knowing the window it was arranged on.
+// The viewport is not anchored and never moves proportionally: it has one place
+// on the desk and keeps it at every window size. Anchoring it would let the
+// window the player happened to arrange on decide where the world is drawn.
+// Declared up here with the other panel constants, not beside the helpers that
+// use it: `makePanelsDraggable()` runs at module top level, long before those
+// helpers appear further down the file, and a `const` in the temporal dead zone
+// throws at boot while every test stays green.
+// Panels that are NOT anchored proportionally. The viewport has one place on the
+// desk and keeps it at any window size. The journey card is likewise placed by
+// CSS — centred, docked low — with a drag offset on top; giving it a
+// proportional anchor as well meant two systems arguing about where it lived,
+// and a bad offset was re-derived into a worse anchor on every boot until the
+// card sat seven thousand pixels off the desk.
+const UNANCHORED_PANEL_IDS = new Set(["viewport", "journey"]);
+// The viewport's position is owned by CSS, not by a drag offset. Clamping it
+// against the window fights the stylesheet instead of helping the reader.
+const UNCLAMPED_PANEL_IDS = new Set(["viewport"]);
+
+// Sal's running commentary, off for now.
+//
+// SPRC narrates every batch, repair and expired feedstock order into the same
+// panel Rook is running an induction through. Even queued behind the interview's
+// comms floor it is a stream of shop-floor status the player has no use for yet
+// — the Observatory and the ledger already carry all of it, and better.
+//
+// Turned off rather than deleted: the lines are good and the hookup is correct,
+// so this is one flag to flip when Sal has something to say that the player has
+// a reason to care about. The event cursor is still advanced while off, so
+// switching it back on reports what happens NEXT rather than replaying an hour
+// of backlog at whoever is standing there.
+//
+// Declared UP HERE with the other module constants, not beside the function that
+// reads it. `updateSprcChatter` is reached from the boot tick, long before a
+// `const` further down the file has initialized, and a temporal-dead-zone throw
+// kills module evaluation with the whole test suite still green. This is the
+// second time that exact mistake has been made in this file.
+const SPRC_CHATTER_ENABLED = false;
+
+const PANEL_LAYOUT_STORAGE_KEY = "asteroids.panelLayout.v7";
+// Mirrors of the stacking ladder documented at the top of styles.css. These are
+// the layers main.js assigns directly; the rest live in CSS.
+const JOURNEY_PANEL_Z_INDEX = 720;
+const VIEWPORT_PANEL_Z_INDEX = 20;
 const DESK_PANEL_MIN_Z_INDEX = 30;
 const DESK_PANEL_MAX_Z_INDEX = 520;
+// Paperwork out on the desk sits above every ship console. A license or a
+// contract is the thing a patrol asks to see; burying it under the engine
+// readout because the engine was clicked more recently is the wrong answer.
+const DESK_PAPER_MIN_Z_INDEX = 530;
+const DESK_PAPER_MAX_Z_INDEX = 556;
+// …and paperwork inside the open drawer rides above the drawer's own shell.
+const DRAWER_PAPER_Z_INDEX = 700;
 const PAPERWORK_PANEL_IDS = ["license", "resource-guide", "document", "contract"];
 const TOW_DRIVER_NAMES = ["Nell Winch"];
 const YARD_EXCHANGE_CORE_SERVICES = [
@@ -130,7 +185,12 @@ const FREE_PLAY_STARTING_CREDITS = 1000;
 const DEFAULT_PANEL_LAYOUT = {
   viewport: { x: 0, y: 0, z: 20 },
   license: { x: 980, y: 20, z: 95 },
-  journey: { x: 980, y: 20, z: JOURNEY_PANEL_Z_INDEX },
+  // The journey panel is placed by CSS in BOTH layouts — a fixed slide-out
+  // drawer on the legacy desk, a centred card in the cockpit — so a translate
+  // offset was never meaningful for it. Left at 980 it started a thousand
+  // pixels right of where CSS put it, got clamped back to a nonsense position,
+  // and read as "the panel will not move" because it was never where it looked.
+  journey: { x: 0, y: 0, z: JOURNEY_PANEL_Z_INDEX },
   engine: { x: -300, y: 20, z: 70 },
   "beacon-locator": { x: 980, y: 300, z: 90 },
   "beacon-bay": { x: 980, y: 430, z: 89 },
@@ -402,11 +462,75 @@ const getViewportCenterInChamber = (chamberCanvas) => {
   const centerInCssPixels = viewportBounds.top + viewportBounds.height / 2 - chamberBounds.top;
   return centerInCssPixels * chamberCanvas.height / chamberBounds.height;
 };
+// What is physically in the way inside a chamber, in that canvas's own
+// coordinates.
+//
+// The bays are not empty rectangles. The viewport scope bulges into the inner
+// edge of both, and the module bay slides across the left one. Material packs
+// against those rather than drawing over them, which is what makes the two
+// sides read as one space with furniture in it. Recomputed per frame because
+// the furniture moves.
+const getChamberObstacles = (chamberCanvas) => {
+  const chamberBounds = chamberCanvas.getBoundingClientRect();
+  if (!chamberBounds.width || !chamberBounds.height) return [];
+
+  // CSS pixels → canvas units. The two axes scale differently, so a circle on
+  // screen is an ellipse in here; that is why obstacles carry rx and ry.
+  const scaleX = chamberCanvas.width / chamberBounds.width;
+  const scaleY = chamberCanvas.height / chamberBounds.height;
+  const toLocalX = (clientX) => (clientX - chamberBounds.left) * scaleX;
+  const toLocalY = (clientY) => (clientY - chamberBounds.top) * scaleY;
+  const obstacles = [];
+
+  const viewportBounds = canvas.getBoundingClientRect();
+  if (viewportBounds.width && viewportBounds.height) {
+    // The scope is the inscribed circle of its canvas, matching
+    // `getCircularViewportGeometry` in game.js.
+    const radius = Math.max(0, Math.min(viewportBounds.width, viewportBounds.height) / 2 - 18);
+    obstacles.push({
+      kind: "ellipse",
+      x: toLocalX(viewportBounds.left + viewportBounds.width / 2),
+      y: toLocalY(viewportBounds.top + viewportBounds.height / 2),
+      rx: radius * scaleX,
+      ry: radius * scaleY,
+    });
+  }
+
+  const tray = document.querySelector(".cockpit-module-tray");
+  if (tray && tray.classList.contains("is-open")) {
+    const trayBounds = tray.getBoundingClientRect();
+    if (trayBounds.width && trayBounds.right > chamberBounds.left) {
+      obstacles.push({
+        kind: "rect",
+        x: toLocalX(trayBounds.left),
+        y: toLocalY(trayBounds.top),
+        w: trayBounds.width * scaleX,
+        h: trayBounds.height * scaleY,
+      });
+    }
+  }
+
+  return obstacles;
+};
+
+// Both bays are bolted to the same hull, so they feel the same accelerations —
+// but each keeps its own tracker because each samples on its own frame delta.
+// `game` is constructed further down; these closures are only ever called from
+// a bay frame, long after that.
+const getShipVelocity = () => game.ship?.velocity ?? null;
+const processorInertia = createBayInertia({ getVelocity: getShipVelocity });
+const cargoInertia = createBayInertia({ getVelocity: getShipVelocity });
+
 const processor = new Processor(processorCanvas, processUnit, {
   enableCompaction: true,
   getUnitFlags: getResourceUnitFlags,
   spawnFromLeft: true,
-  floorSpread: true,
+  // No gravity and no floor sorting: a bay this size is a hold, not a hopper.
+  // Material drifts, pushes its neighbours, and packs against the scope.
+  floorSpread: false,
+  gravityScale: 0,
+  getObstacles: () => getChamberObstacles(processorCanvas),
+  getAmbientAcceleration: (deltaSeconds) => processorInertia.sample(deltaSeconds),
   inletSide: "right",
   getInletCenterY: () => getViewportCenterInChamber(processorCanvas),
   transparentBackground: true,
@@ -420,6 +544,9 @@ const cargoHold = new Processor(cargoCanvas, handleCargoUnitClick, {
   // each unit one rightward shove; after that, collisions and floor friction
   // settle it wherever it lands instead of an invisible sorter pulling it left.
   floorSpread: false,
+  gravityScale: 0,
+  getObstacles: () => getChamberObstacles(cargoCanvas),
+  getAmbientAcceleration: (deltaSeconds) => cargoInertia.sample(deltaSeconds),
   inletSide: "left",
   getInletCenterY: () => getViewportCenterInChamber(cargoCanvas),
   transparentBackground: true,
@@ -482,6 +609,10 @@ window.__asteroids.sprc = sprcManager;
 sprcManager.update();
 const miningManager = createMiningOperation({ state, game, sprcOperation: sprcManager });
 const flintMiningManager = createMiningOperation({ state, game, sprcOperation: sprcManager, seed: FLINT_MINING_SEED });
+// The player's sponsor competes on the same terms as everyone else. It gets no
+// update-order privilege and no reserved work: it bids into the shared
+// extraction clearing beside Cinder and Flint, and can lose.
+const rookMiningManager = createMiningOperation({ state, game, sprcOperation: sprcManager, seed: ROOK_MINING_SEED });
 const frontierMiningManagers = FRONTIER_MINING_SEEDS.map((seed) =>
   createMiningOperation({ state, game, sprcOperation: sprcManager, seed }));
 const historicalMiningManagers = getHistoricalMiningSeeds(state).map((seed) =>
@@ -489,6 +620,7 @@ const historicalMiningManagers = getHistoricalMiningSeeds(state).map((seed) =>
 const ecologicalRecoveryManager = createEcologicalRecoveryOperation({ state, game });
 window.__asteroids.mining = miningManager;
 window.__asteroids.miningCompetitor = flintMiningManager;
+window.__asteroids.rookMining = rookMiningManager;
 window.__asteroids.frontierMining = frontierMiningManagers;
 window.__asteroids.historicalMining = historicalMiningManagers;
 window.__asteroids.ecologicalRecovery = ecologicalRecoveryManager;
@@ -531,6 +663,7 @@ const journeyDirector = createJourneyDirector({
     updateHudDisplay();
   },
   showComponent: setComponentAvailable,
+  dockComponent: (componentId) => dockCockpitPanelById(componentId),
   unlockHubService,
   requestAttention,
   updatePaperworkControls: updatePaperworkControlLabels,
@@ -573,6 +706,14 @@ let movePaperPanelToDesk = () => {};
 let movePaperPanelToDrawer = () => {};
 let cockpitLayoutInitialized = false;
 let closeFloatingCockpitPanels = () => {};
+// Rack a cockpit module back into the bay. The layout PRESET decides which
+// instruments start floating on the desk, so a beat that wants the player to
+// switch something on has to put it away first — otherwise the task is already
+// done on arrival and no toggle event ever fires.
+let dockCockpitPanelById = () => {};
+// Pull the journey card back on screen if a saved position stranded it. It is
+// hidden at boot, so it cannot be measured until it is first shown.
+let rescueJourneyPanel = () => {};
 let contractPulledFromDrawer = false;
 let renderedLedgerVersion = -1;
 let renderedLedgerEventsKey = "";
@@ -928,6 +1069,11 @@ componentCloseButtons.forEach((button) => {
 drawerToggle?.addEventListener("click", () => {
   const isOpen = paperworkDrawer.classList.toggle("is-open");
   drawerToggle.setAttribute("aria-expanded", String(isOpen));
+  // Opening the drawer is a step the induction can ask for and wait on.
+  if (isOpen) {
+    state.ledger.recordEvent("paperwork.drawerOpened", {}, { visible: false });
+    updateLedgerDrivenSystems();
+  }
 });
 
 renderProcessorOutputs();
@@ -992,11 +1138,12 @@ worldClock.register("insurance", () => fleetInsuranceManager.observe(), { phase:
 // A fleet marked high-risk by a settled claim has to be known before anybody is
 // offered hardware on the strength of it.
 worldClock.register("protection-observe", () => fleetProtectionManager.observe(), { phase: TICK_PHASE.OBSERVE });
-// Both mining companies read the world before either of them acts on it, so
-// neither is looking at a board the other has already changed.
+// Every mining company reads the world before any of them acts on it, so none
+// is looking at a board another has already changed.
 worldClock.register("mining-observe", () => {
   miningManager.observe();
   flintMiningManager.observe();
+  rookMiningManager.observe();
   frontierMiningManagers.forEach((manager) => manager.observe());
   historicalMiningManagers.forEach((manager) => manager.observe());
 }, { phase: TICK_PHASE.OBSERVE });
@@ -1013,11 +1160,12 @@ worldClock.register("shipyards", () => advanceShipyards(state));
 worldClock.register("procurement", ({ tick }) => procurementManager.decide({ tick }));
 worldClock.register("logistics", () => logisticsManager.decide());
 // Which orders each company's ships get is settled inside `clearExtractionMarket`,
-// one ranking over every idle ship in the world, so the order these two decide
-// in does not decide who wins.
+// one ranking over every idle ship in the world, so the order these decide in
+// does not decide who wins.
 worldClock.register("mining", () => {
   miningManager.decide();
   flintMiningManager.decide();
+  rookMiningManager.decide();
   frontierMiningManagers.forEach((manager) => manager.decide());
   historicalMiningManagers.forEach((manager) => manager.decide());
 });
@@ -1064,6 +1212,16 @@ wirePanelControlSounds();
 if (isFreePlayStart) {
   journeyDirector.startFreeMode();
 } else {
+  // Campaign runs the authored interview, same as the default start. It was
+  // always Rook's induction — "All right, rookie… consider this your assessment
+  // test, training, and interview all in one" — it simply had no company behind
+  // it. Now it does, and the tutorial introduces each panel in turn rather than
+  // dumping a fitted cockpit on the player.
+  //
+  // Nothing had to be carved out for the stripped skiff: the two steps named
+  // `show-scanner` and `try-scanner` are misnamed and teach the BEACON LOCATOR.
+  // The tutorial never installs a scanner, so campaign keeps its loadout intact
+  // while walking the whole sequence.
   journeyDirector.start();
 }
 const PANORAMA_LAYOUT_VERSION = "centered-panorama-v3";
@@ -1089,6 +1247,10 @@ if (state.ui.viewportLayout === "fullscreen-background") {
   applyViewportLayout("fullscreen-background");
 }
 applyDevStart(initialDevStart);
+// The cockpit class lands during setup, so the journey card is still the legacy
+// slide-out drawer while `applyDevStart` runs and measuring it there proves
+// nothing. Check once the layout has actually settled.
+window.requestAnimationFrame(() => window.requestAnimationFrame(() => rescueJourneyPanel()));
 revealInstalledComponents();
 renderContract();
 updateShipPowerDisplay();
@@ -1517,6 +1679,21 @@ function applyDevStart(devStartId) {
     applyViewportLayout("fullscreen-background");
     updateHudDisplay();
   }
+
+  // Story mode is the only start that leaves the license application standing.
+  // `initLicenseApplication` runs the form, issues the license and reveals the
+  // license panel on submit, so nothing here dismisses it.
+  if (devStartId === "campaign") {
+    setupCampaignStart();
+    // Campaign is a guided start: Rook is talking from the first beat, so the
+    // card he talks through is open by default rather than something the player
+    // has to discover behind the status bar.
+    const journeyPanel = document.querySelector('[data-panel-id="journey"]');
+    journeyPanel?.classList.add("is-cockpit-expanded");
+    document.querySelector("#cockpit-objective")?.setAttribute("aria-expanded", "true");
+    rescueJourneyPanel();
+    updateHudDisplay();
+  }
 }
 
 function applyViewportLayout(layout) {
@@ -1592,9 +1769,14 @@ mapGlowUp?.addEventListener("click", () => adjustMapGlow(0.05));
 mapGlowDown?.addEventListener("click", () => adjustMapGlow(-0.05));
 updateMapGlowLabel();
 
-function setupExplorerStart() {
+// The free-play outfit: a comfortable ship with every instrument fitted, for a
+// start that is about the terrarium rather than about earning anything.
+//
+// Campaign deliberately does NOT share this. A Rook hand flies the company's
+// cheap skiff with four things bolted to it, and handing that player a full
+// instrument suite would erase the whole point of working up from it.
+function outfitStartingShip(shipName) {
   // Slightly better ship than the yard skiff — more hull, faster, bigger tank.
-  // Not a story ship; just comfortable for open exploration.
   Object.assign(state.components.engine, {
     installed: true,
     powered: false,
@@ -1648,40 +1830,7 @@ function setupExplorerStart() {
 
   state.ship.frameId = "classic";
   state.ship.shape = "classic";
-  state.ship.name = "Explorer";
-
-  issuePilotLicense(state, {
-    firstName: "Explorer",
-    lastName: "One",
-    licenseId: "RTC-EXPLORER-ONE",
-    status: "provisional",
-    canonical: true,
-  });
-
-  // Unlock Rook contracts at Yard Exchange so they can take runs freely.
-  state.hubServices.unlocked[chapterOneRoute.destinationSite.id] = Array.from(
-    new Set([
-      ...(state.hubServices.unlocked[chapterOneRoute.destinationSite.id] ?? []),
-      yardExchangeServices.rook,
-      yardExchangeServices.finance,
-      yardExchangeServices.supply,
-      yardExchangeServices.modworks,
-    ]),
-  );
-  state.hubServices.skipMissionFirstContracts[yardExchangeServices.finance] = true;
-  state.hubServices.flags.yardCoreSeenDocked = true;
-  // Explorer begins after the authored Rook ladder, so its first Rook visit
-  // is the ongoing three-choice board rather than another tutorial file.
-  const rookService = getHubService(chapterOneRoute.destinationSite.id, yardExchangeServices.rook);
-  (rookService?.contractIds ?? []).forEach((contractId) => {
-    state.contracts.records[contractId] ??= {
-      id: contractId,
-      status: "paid",
-      runCount: 1,
-      paidAt: Date.now(),
-    };
-  });
-  state.hubServices.jobBoards = {};
+  state.ship.name = shipName;
 
   // Free play begins close enough to dock, but already tethered starts make
   // the ship inherit the placement velocity and immediately break the line.
@@ -1716,7 +1865,163 @@ function setupExplorerStart() {
   setComponentAvailable("collector", true);
   setComponentAvailable("tow-cable", true);
   setComponentAvailable("moss-seeder", true);
+}
+
+function setupExplorerStart() {
+  outfitStartingShip("Explorer");
+
+  issuePilotLicense(state, {
+    firstName: "Explorer",
+    lastName: "One",
+    licenseId: "RTC-EXPLORER-ONE",
+    status: "provisional",
+    canonical: true,
+  });
   setComponentAvailable("license", true);
+
+  // Unlock Rook contracts at Yard Exchange so they can take runs freely.
+  state.hubServices.unlocked[chapterOneRoute.destinationSite.id] = Array.from(
+    new Set([
+      ...(state.hubServices.unlocked[chapterOneRoute.destinationSite.id] ?? []),
+      yardExchangeServices.rook,
+      yardExchangeServices.finance,
+      yardExchangeServices.supply,
+      yardExchangeServices.modworks,
+    ]),
+  );
+  state.hubServices.skipMissionFirstContracts[yardExchangeServices.finance] = true;
+  state.hubServices.flags.yardCoreSeenDocked = true;
+  // Explorer begins after the authored Rook ladder, so its first Rook visit
+  // is the ongoing three-choice board rather than another tutorial file.
+  const rookService = getHubService(chapterOneRoute.destinationSite.id, yardExchangeServices.rook);
+  (rookService?.contractIds ?? []).forEach((contractId) => {
+    state.contracts.records[contractId] ??= {
+      id: contractId,
+      status: "paid",
+      runCount: 1,
+      paidAt: Date.now(),
+    };
+  });
+  state.hubServices.jobBoards = {};
+}
+
+// Campaign mode. The player is a provisional licensee working for Rook
+// Industries — which is what the RTC form on the opening screen has always said,
+// and is now backed by a company with a treasury, hulls and a seat in the
+// extraction clearing.
+//
+// The loadout is not invented here. `shipOffers.js` has carried the
+// `rook-yard-skiff-miner` since long before this mode existed — "a cheap working
+// hull with a miner and cargo hold bolted in. Ugly, slow, and legal", included
+// components Engine, Hull, Docking, Beacon Locator, Miner, Cargo Hold, and the
+// tradeoff line "Eligible for Rook work". This start fits exactly that list and
+// nothing else. No scanner, no processor, no collector, no beacon bay, no tow
+// cable: every one of those is something to earn.
+//
+// It deliberately does NOT unlock the authored Rook service ladder the way
+// Explorer does. That ladder is the old canon — hand-written quantity tiers
+// standing in for an employer. It is left unrouted rather than deleted, so the
+// interview's teaching beats stay available to reparent onto Rook's induction.
+//
+// The license is issued by the form, not here: filling it out is the first
+// thing the player does.
+function setupCampaignStart() {
+  // Rook's standard drive is the game's DEFAULT engine — thrustPower 95,
+  // maxSpeed 105, against the explorer Vektor's 160/185. The company hull is
+  // already the slow one; nothing needs to be made slow for it.
+  Object.assign(state.components.engine, {
+    installed: true,
+    powered: false,
+    fuel: state.components.engine.maxFuel,
+  });
+  Object.assign(state.components.hull, {
+    installed: true,
+    integrity: state.components.hull.maxIntegrity,
+  });
+
+  // The company laser is not new. Rather than invent a faster wear rate — which
+  // would be a hidden rule the player cannot see or service — this runs the
+  // REAL wear machine forward to hand over a used emitter: serviced three times
+  // already and most of the way to Degraded again. It reaches its first
+  // symptoms in tens of shots instead of two hundred, through exactly the
+  // ladder every other panel uses, and Sal can fix it like any other.
+  Object.assign(state.components.miner, { installed: true, armed: false, ammo: CAMPAIGN_MINER_AMMO });
+  const emitter = state.components.miner.condition;
+  for (let service = 0; service < CAMPAIGN_MINER_PRIOR_SERVICES; service += 1) {
+    accumulatePanelWear(emitter, MINER_CONDITION_CONFIG.thresholds.degraded + 8, MINER_CONDITION_CONFIG.thresholds);
+    repairPanelCondition(emitter);
+  }
+  accumulatePanelWear(emitter, MINER_CONDITION_CONFIG.thresholds.degraded * CAMPAIGN_MINER_WEAR_FRACTION, MINER_CONDITION_CONFIG.thresholds);
+
+  state.components.cargoHold.installed = true;
+  state.components.docking.installed = true;
+
+  // A fleet miner's locator holds job geography, not a gazetteer. It is fitted
+  // and empty: no hub directory, no ecology beacons. Where the ore is and where
+  // it goes arrive with the work Rook gives out, which is the point — knowing
+  // your way around First Reach is something the job teaches you, and something
+  // an independent operator has that a hand does not.
+  Object.assign(state.components.beaconLocator, {
+    installed: true,
+    beaconMemoryIds: [],
+    ecologyBeacons: [],
+    activeBeaconId: null,
+  });
+
+  // The processor is aboard and dead. Fitted, visible, failed — so the player can
+  // see why raw ore is going straight into the hold, and has something concrete
+  // to want fixed.
+  CAMPAIGN_BROKEN_COMPONENT_IDS.forEach((componentId) => {
+    const component = state.components[componentId];
+    if (!component) return;
+    component.installed = true;
+    component.condition = {
+      ...(component.condition ?? {}),
+      stage: "failed", wear: 100, currentCondition: 0,
+      lifetimeDegradation: component.condition?.lifetimeDegradation ?? 0,
+      maxRecoverableCondition: component.condition?.maxRecoverableCondition ?? 100,
+      serviceCount: component.condition?.serviceCount ?? 0,
+    };
+  });
+
+  // Explicitly NOT fitted, so a later save-restore or a flipped default cannot
+  // quietly hand a Rook hand an instrument it never earned.
+  CAMPAIGN_UNFITTED_COMPONENT_IDS.forEach((componentId) => {
+    if (state.components[componentId]) state.components[componentId].installed = false;
+  });
+
+  state.ship.frameId = CAMPAIGN_SHIP_FRAME_ID;
+  state.ship.shape = CAMPAIGN_SHIP_FRAME_ID;
+  state.ship.name = CAMPAIGN_SHIP_NAME;
+  // Rook's colours, read from the same seed its NPC craft are painted from, so
+  // the player's skiff is indistinguishable from the rest of the fleet.
+  state.ship.displayColor = ROOK_MINING_SEED.shipPalette.hullStroke;
+  state.ship.displayFill = ROOK_MINING_SEED.shipPalette.hullFill;
+
+  // Docked at Scrap Porch, which is where the interview narrates from: "we're
+  // that unpowered ship in the centre of the viewport… there's the hub we came
+  // from, Scrap Porch." Starting anywhere else makes Rook describe a view the
+  // player is not looking at.
+  game.placeShipNearSite(chapterOneRoute.startSite.id);
+  game.ship.velocity.x = 0;
+  game.ship.velocity.y = 0;
+
+  // A Rook hand starts BROKE. The induction asks the player to read their own
+  // balance, notice it is zero, and then watch the contract advance land on the
+  // license — which only works if there is nothing there to begin with. No
+  // endowment is recorded because none is made.
+
+  // The loadout list is authoritative, not merely descriptive: each fitting
+  // above configures its own component, and this makes the declared list the
+  // thing that decides what is actually aboard.
+  CAMPAIGN_FITTED_COMPONENT_IDS.forEach((componentId) => {
+    if (state.components[componentId]) state.components[componentId].installed = true;
+  });
+
+  // Panels are deliberately NOT revealed here. The skiff is fitted, but the
+  // interview introduces each instrument as Rook gets to it, which is the whole
+  // point of putting the tutorial back. `CAMPAIGN_PANEL_IDS` remains the record
+  // of what this hull may ever show, and the loadout test holds it to that.
 }
 
 function spawnExplorerIncursionPortal() {
@@ -1841,7 +2146,10 @@ function updateDockingDisplay(siteState) {
 
   if (!state.components.docking.installed || !site) {
     dockingTarget.textContent = "No target";
-    dockingDetail.textContent = "No dock target";
+    // "No target" and "No dock target" said the same thing twice, side by side,
+    // in a panel narrow enough that the pair wrapped into each other.
+    dockingDetail.textContent = "";
+    dockingDetail.hidden = true;
     dockToggleButton.textContent = "Dock";
     dockToggleButton.disabled = true;
     hullDockingLock.classList.remove("is-docking-active", "is-docking-caution");
@@ -1850,6 +2158,7 @@ function updateDockingDisplay(siteState) {
 
   dockingTarget.textContent = site.name;
   dockingDetail.textContent = isDocked ? "Docked" : "Press E to dock";
+  dockingDetail.hidden = false;
   dockToggleButton.textContent = isDocked ? "Undock" : "Dock";
   dockToggleButton.disabled = false;
   hullDockingLock.classList.toggle("is-docking-active", isDocked);
@@ -2949,6 +3258,14 @@ function updateLedgerDrivenSystems() {
 
 function updateSprcChatter() {
   const events = state.ledger.getEventsAfterId(lastSprcChatterEventId, { includeHidden: true });
+
+  if (!SPRC_CHATTER_ENABLED) {
+    events.forEach((event) => {
+      lastSprcChatterEventId = Math.max(lastSprcChatterEventId, event.id);
+    });
+    return;
+  }
+
   events.forEach((event) => {
     lastSprcChatterEventId = Math.max(lastSprcChatterEventId, event.id);
     let text = null;
@@ -5003,11 +5320,23 @@ function pulseProcessorRoute(output, accepted) {
   });
 }
 
+// A dead processor is not an absent one.
+//
+// Intake used to ask only whether a processor was INSTALLED, so a broken unit
+// would have swallowed everything the ship collected and done nothing with it.
+// The campaign skiff is issued with a failed processor — which is the in-world
+// reason its ore drops straight into the hold — so the question has to be
+// whether the thing actually works.
+function isProcessorOperational() {
+  const processorState = state.components.processor;
+  return Boolean(processorState?.installed) && processorState.condition?.stage !== "failed";
+}
+
 function receiveCollectedResource(resource) {
   const type = typeof resource === "string" ? resource : resource.type;
   const metadata = getResourceUnitMetadata(resource);
 
-  if (state.components.processor.installed) {
+  if (isProcessorOperational()) {
     processor.addUnit(type, metadata);
     return;
   }
@@ -5884,6 +6213,8 @@ function setupCockpitLayout() {
   const defaultModeButton = document.querySelector("#cockpit-mode-default");
   const panoramaModeButton = document.querySelector("#cockpit-mode-panorama");
   const objectiveButton = document.querySelector("#cockpit-objective");
+  const toolbarToggle = document.querySelector("#cockpit-toolbar-toggle");
+  const toolbarMenu = document.querySelector("#cockpit-toolbar-menu");
   const spacePanel = document.querySelector(".space-panel");
   const previousBringPanelToFront = bringPanelToFront;
   const launchers = new Map();
@@ -5893,7 +6224,11 @@ function setupCockpitLayout() {
     "hull", "engine", "beacon-locator", "tow-cable", "moss-seeder",
     "beacon-bay", "miner", "collector", "scanner",
   ];
-  let floatingPanelZ = 600;
+  // Floating instruments are DESK PANELS in the stacking ladder, so they live in
+  // the desk band and stay under the paperwork. At 600 they sat above the
+  // license and the contract, which put the ship's readouts on top of the one
+  // document a patrol asks to see.
+  let floatingPanelZ = DESK_PANEL_MIN_Z_INDEX;
   const shortLabels = {
     engine: "ENG", hull: "HULL", scanner: "SCAN", "beacon-locator": "NAV",
     "beacon-bay": "BAY", miner: "MINE", collector: "PULL", processor: "PROC",
@@ -5932,19 +6267,60 @@ function setupCockpitLayout() {
   observatoryButton.addEventListener("click", () => document.querySelector("#observatory-toggle")?.click());
   cockpitBuildTag.className = "cockpit-build-tag";
   cockpitBuildTag.textContent = document.querySelector(".quick-links .build-tag")?.textContent ?? "build: local";
-  patchPanel.append(processorOutlet, cargoRouteTarget, observatoryButton, cockpitBuildTag);
+  // The two ways to play, under the build tag and the Observatory button. The
+  // `.quick-links` nav they also live in is hidden in cockpit view, so without
+  // this the only way to switch modes in the cockpit is to edit the URL.
+  const cockpitModeLinks = document.createElement("div");
+  cockpitModeLinks.className = "cockpit-mode-links";
+  [
+    { label: "EXPLORER MODE", href: "./?resetSave=1&devStart=explorer" },
+    { label: "CAMPAIGN MODE", href: "./?resetSave=1&devStart=campaign" },
+  ].forEach(({ label, href }) => {
+    const link = document.createElement("a");
+    link.href = href;
+    link.textContent = label;
+    cockpitModeLinks.append(link);
+  });
+  patchPanel.append(processorOutlet, cargoRouteTarget, observatoryButton, cockpitBuildTag, cockpitModeLinks);
   moduleTray.append(trayToggle, trayHeader, trayList, patchPanel);
   spacePanel?.append(moduleTray);
 
   const setTrayOpen = (isOpen) => {
+    const wasOpen = moduleTray.classList.contains("is-open");
     moduleTray.classList.toggle("is-open", isOpen);
+    // A wall arriving is not the same as a wall being there. The bay sweeping
+    // out shoves whatever it passes through, and that shove carries on through
+    // the pile by ordinary unit-to-unit contact.
+    if (isOpen && !wasOpen) {
+      // Measured once the slide has finished. On the next animation frame the
+      // bay is still travelling and is measured off the left edge, so no wall
+      // is found and nothing gets shoved. `transitionend` with a timeout
+      // fallback, because a bay that is already open transitions nothing.
+      const shove = () => {
+        [[processor, processorCanvas], [cargoHold, cargoCanvas]].forEach(([chamber, chamberCanvas]) => {
+          const wall = getChamberObstacles(chamberCanvas).find((obstacle) => obstacle.kind === "rect");
+          if (wall) chamber.shoveFrom(wall);
+        });
+      };
+      let shoved = false;
+      const once = () => { if (shoved) return; shoved = true; shove(); };
+      moduleTray.addEventListener("transitionend", once, { once: true });
+      window.setTimeout(once, 200);
+    }
     trayToggle.setAttribute("aria-expanded", String(isOpen));
     trayToggle.setAttribute("aria-label", `${isOpen ? "Close" : "Open"} module bay`);
   };
   trayToggle.onclick = (event) => {
     event.preventDefault();
     event.stopPropagation();
-    setTrayOpen(!moduleTray.classList.contains("is-open"));
+    const willOpen = !moduleTray.classList.contains("is-open");
+    setTrayOpen(willOpen);
+    // The bay is where the ship's instruments live. The induction opens with it,
+    // so it needs to be observable.
+    if (willOpen) {
+      state.ledger.recordEvent("cockpit.moduleBayOpened", {}, { visible: false });
+      updateLedgerDrivenSystems();
+    }
   };
 
   function applyPhosphorColor(color) {
@@ -5954,6 +6330,16 @@ function setupCockpitLayout() {
   }
 
   applyPhosphorColor(state.ui.cockpit.phosphorColor);
+
+  // Where you are moves into the status bar. It was the viewport panel's title
+  // bar, which meant a full-width band across the screen carrying two words.
+  // Relocated rather than duplicated, so whatever writes `#viewport-region`
+  // keeps working without knowing it moved.
+  const regionLabel = document.querySelector("#viewport-region");
+  const toolbarBar = document.querySelector(".cockpit-toolbar");
+  if (regionLabel && toolbarBar && regionLabel.parentElement !== toolbarBar) {
+    toolbarBar.insertBefore(regionLabel, document.querySelector("#cockpit-toolbar-toggle"));
+  }
 
   COCKPIT_MODULE_IDS.forEach((panelId) => {
     const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
@@ -6012,7 +6398,7 @@ function setupCockpitLayout() {
       const left = Number.parseFloat(panel.style.left) || 0;
       const top = Number.parseFloat(panel.style.top) || 0;
       drag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, left, top, moved: false };
-      floatingPanelZ += 1;
+      floatingPanelZ = nextFloatingPanelZ();
       panel.style.setProperty("--cockpit-float-z", String(floatingPanelZ));
       panel.classList.add("is-dragging");
       title.setPointerCapture(event.pointerId);
@@ -6038,6 +6424,16 @@ function setupCockpitLayout() {
         };
         saveNow();
         audio.playPanelDrop();
+        // A moved panel is a moved panel. Floating cockpit modules have their own
+        // drag handler and never reported one, so a beat asking the player to
+        // move an instrument could not tell that they had — the same gap that
+        // made the old "drag the Hull panel" task impossible to satisfy.
+        state.ledger.recordEvent(
+          "component.dragged",
+          { componentId: panelId, x: Math.round(event.clientX), y: Math.round(event.clientY) },
+          { visible: false },
+        );
+        updateLedgerDrivenSystems();
       }
       drag = null;
     }
@@ -6055,6 +6451,11 @@ function setupCockpitLayout() {
     });
   });
 
+  // Wraps inside the desk band instead of climbing past the paperwork.
+  function nextFloatingPanelZ() {
+    return floatingPanelZ < DESK_PANEL_MAX_Z_INDEX ? floatingPanelZ + 1 : DESK_PANEL_MIN_Z_INDEX;
+  }
+
   function toggleCockpitPanel(panel, force = null) {
     const shouldOpen = force ?? !panel.classList.contains("is-cockpit-expanded");
     if (shouldOpen) {
@@ -6063,6 +6464,14 @@ function setupCockpitLayout() {
     } else {
       dockFloatingPanel(panel);
     }
+    // Switching an instrument on is the cockpit's equivalent of the old desk's
+    // "add the panel" button, and the induction has to be able to wait for it.
+    state.ledger.recordEvent(
+      "cockpit.moduleToggled",
+      { componentId: panel.dataset.panelId, expanded: shouldOpen },
+      { visible: false },
+    );
+    updateLedgerDrivenSystems();
   }
 
   function floatCockpitPanel(panel) {
@@ -6075,7 +6484,7 @@ function setupCockpitLayout() {
     panel.dataset.cockpitSlot = "tray";
     spacePanel.append(panel);
     panel.classList.add("is-cockpit-expanded", "is-cockpit-floating");
-    floatingPanelZ += 1;
+    floatingPanelZ = nextFloatingPanelZ();
     panel.style.setProperty("--cockpit-float-z", String(floatingPanelZ));
     const saved = state.ui.cockpit.floatingPositions?.[panelId];
     const panelRect = panel.getBoundingClientRect();
@@ -6118,6 +6527,29 @@ function setupCockpitLayout() {
     panel.style.left = `${Math.round(Math.min(maxX, Math.max(4, requestedX)))}px`;
     panel.style.top = `${Math.round(Math.min(maxY, Math.max(minY, requestedY)))}px`;
   }
+
+  // Re-seat every floating instrument inside the desk after a resize.
+  //
+  // `positionFloatingPanel` clamps at the moment of placing, but the position is
+  // SAVED — so a panel parked near the right edge of a wide window was restored
+  // at that same offset on a narrower one and hung off the screen, with no pass
+  // to pull it back. Same story vertically against the bottom.
+  function reclampFloatingPanels() {
+    document.querySelectorAll(".is-cockpit-module.is-cockpit-floating").forEach((panel) => {
+      positionFloatingPanel(panel,
+        Number.parseFloat(panel.style.left) || 0,
+        Number.parseFloat(panel.style.top) || 0);
+    });
+  }
+
+  let floatingReclampFrame = null;
+  window.addEventListener("resize", () => {
+    if (floatingReclampFrame !== null) return;
+    floatingReclampFrame = window.requestAnimationFrame(() => {
+      floatingReclampFrame = null;
+      reclampFloatingPanels();
+    });
+  });
 
   function findAvailableFloatingPosition(panel, desired, homeSlotId) {
     if (!spacePanel) return desired;
@@ -6239,13 +6671,42 @@ function setupCockpitLayout() {
     applyAssignments();
     recordConfiguration("layout-reset");
   });
+  // Layout controls live behind one button so the top bar can be about the
+  // mission instead of about housekeeping. Closes on outside click and on
+  // Escape, like any menu.
+  const setToolbarMenuOpen = (isOpen) => {
+    if (!toolbarMenu || !toolbarToggle) return;
+    toolbarMenu.hidden = !isOpen;
+    toolbarToggle.setAttribute("aria-expanded", String(isOpen));
+    toolbarToggle.classList.toggle("is-open", isOpen);
+  };
+  toolbarToggle?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setToolbarMenuOpen(toolbarMenu?.hidden ?? true);
+  });
+  document.addEventListener("click", (event) => {
+    if (!toolbarMenu || toolbarMenu.hidden) return;
+    if (toolbarMenu.contains(event.target) || toolbarToggle?.contains(event.target)) return;
+    setToolbarMenuOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setToolbarMenuOpen(false);
+  });
+
   defaultModeButton?.addEventListener("click", () => applyViewportLayout("default"));
   panoramaModeButton?.addEventListener("click", () => applyViewportLayout("fullscreen-background"));
   objectiveButton?.addEventListener("click", () => {
     const shouldOpen = !journeyPanel.classList.contains("is-cockpit-expanded");
     journeyPanel.classList.toggle("is-cockpit-expanded", shouldOpen);
     objectiveButton.setAttribute("aria-expanded", String(shouldOpen));
+    // Only measurable once shown, so the rescue happens here rather than at boot.
+    if (shouldOpen) rescueJourneyPanel();
   });
+
+  dockCockpitPanelById = (panelId) => {
+    const panel = document.querySelector(`.is-cockpit-module[data-panel-id="${panelId}"]`);
+    if (panel?.classList.contains("is-cockpit-floating")) dockFloatingPanel(panel);
+  };
 
   bringPanelToFront = (panel) => {
     if (panel?.classList.contains("is-cockpit-module")) {
@@ -6257,6 +6718,10 @@ function setupCockpitLayout() {
 
   applyAssignments();
   setupProcessorClaw();
+  // The license starts FILED in the paperwork drawer. The induction opens the
+  // drawer with the player, has them pull the license onto the desk, then file
+  // it again — so the drawer is taught as a place documents live rather than as
+  // somewhere paperwork mysteriously went.
   if (!document.querySelector("[data-panel-id='license']")?.closest("#paperwork-drawer")) {
     movePaperPanelToDrawer("license");
   }
@@ -6264,6 +6729,11 @@ function setupCockpitLayout() {
   updateCockpitDisplay();
 
   function setupProcessorClaw() {
+    // Docking state for the plug: how far it has slid into the left edge, when
+    // the player last touched it, and whether the pointer is on it right now.
+    let clawDockShift = 0;
+    let clawIdleSince = performance.now();
+    let clawHovered = false;
     if (!spacePanel || spacePanel.querySelector(".processor-claw")) return;
     const routes = {
       engine: "fuel",
@@ -6307,18 +6777,34 @@ function setupCockpitLayout() {
       }
       if (attachedPanelId === "cargo" || output === "cargo") {
         const allMaterials = document.createElement("span");
-        allMaterials.className = "processor-all-materials";
-        allMaterials.textContent = "∞";
+        // A working unit routing to cargo takes everything, hence the infinity.
+        // A FAILED one is not choosing to take everything — it cannot convert at
+        // all, and the hold is simply the only place its mag link still reaches.
+        // Saying "∞" there reads as capability instead of as a fault.
+        const failed = state.components.processor?.condition?.stage === "failed";
+        allMaterials.className = failed ? "processor-all-materials is-faulted" : "processor-all-materials";
+        allMaterials.textContent = failed ? "ERR" : "∞";
         shapeRack.replaceChildren(allMaterials);
       } else {
         shapeRack.replaceChildren(...[...(sourceShapes?.children ?? [])].map((shape) => shape.cloneNode(true)));
       }
     };
+    // How far the plug sits out of the left edge once it has been left alone.
+    // Matched to the module tab so the two things poking out of that edge poke
+    // out by the same amount — the plug has to sit proud enough to grab, but at
+    // full extension it made the tab look like a mistake.
+    const CLAW_DOCK_DELAY_MS = 2600;
+    const CLAW_DOCK_EASING = 0.18;
+    const dockedProtrusion = () => moduleTray.querySelector(".cockpit-module-tray-tab")?.getBoundingClientRect().width ?? 29;
+
     const place = (x, y) => {
       const bounds = spacePanel.getBoundingClientRect();
       const clawBounds = claw.getBoundingClientRect();
+      // The lower bound is negative on purpose: docking slides the plug body out
+      // through the left edge, leaving only the grab end showing.
+      const minX = Math.min(4, dockedProtrusion() - clawBounds.width);
       position = {
-        x: Math.round(Math.max(4, Math.min(bounds.width - clawBounds.width - 4, x))),
+        x: Math.round(Math.max(minX, Math.min(bounds.width - clawBounds.width - 4, x))),
         y: Math.round(Math.max(88, Math.min(bounds.height - clawBounds.height - 42, y))),
       };
       claw.style.left = `${position.x}px`;
@@ -6363,7 +6849,7 @@ function setupCockpitLayout() {
         isTrayTarget: false,
       };
     };
-    const snapToPanel = (panelId) => {
+    const snapToPanel = (panelId, { dockShift = clawDockShift } = {}) => {
       const snapPosition = getSnapPosition(panelId);
       if (!snapPosition) return false;
       const routedOutput = routes[panelId];
@@ -6376,7 +6862,7 @@ function setupCockpitLayout() {
       claw.classList.add("is-plugged");
       claw.classList.toggle("is-plugged-to-tray", snapPosition.isTrayTarget);
       claw.dataset.targetPanel = panelId;
-      place(snapPosition.x, snapPosition.y);
+      place(snapPosition.x - dockShift, snapPosition.y);
       updateRouteLabel();
       return true;
     };
@@ -6398,8 +6884,12 @@ function setupCockpitLayout() {
       return magneticTargets[0]?.distance <= 72 ? magneticTargets[0].element : null;
     };
 
+    claw.addEventListener("pointerenter", () => { clawHovered = true; clawIdleSince = performance.now(); });
+    claw.addEventListener("pointerleave", () => { clawHovered = false; clawIdleSince = performance.now(); });
     claw.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
+      clawIdleSince = performance.now();
+      clawDockShift = 0;
       if (!moduleTray.classList.contains("is-open")) setTrayOpen(true);
       attachedPanelId = null;
       claw.classList.remove("is-plugged", "is-plugged-to-tray");
@@ -6439,6 +6929,7 @@ function setupCockpitLayout() {
       }
       clearTargets();
       claw.classList.remove("is-dragging");
+      clawIdleSince = performance.now();
       state.ui.cockpit.processorClawPosition = position;
       state.ui.cockpit.processorClawTarget = attachedPanelId;
       saveNow();
@@ -6447,10 +6938,49 @@ function setupCockpitLayout() {
     claw.addEventListener("pointerup", finish);
     claw.addEventListener("pointercancel", finish);
     updateRouteLabel();
+    // Retract when left alone; come back out the moment the player reaches for
+    // it. The shift is eased rather than snapped so the plug reads as sliding
+    // home rather than teleporting.
     const followAttachedPanel = () => {
-      if (attachedPanelId && !drag) snapToPanel(attachedPanelId);
+      if (attachedPanelId && !drag) {
+        const clawWidth = claw.getBoundingClientRect().width || 112;
+        const fullShift = Math.max(0, clawWidth - dockedProtrusion());
+        const wantsDock = !drag && !clawHovered && performance.now() - clawIdleSince > CLAW_DOCK_DELAY_MS;
+        const targetShift = wantsDock ? fullShift : 0;
+        if (Math.abs(clawDockShift - targetShift) < 0.5) {
+          clawDockShift = targetShift;
+        } else {
+          clawDockShift += (targetShift - clawDockShift) * CLAW_DOCK_EASING;
+        }
+        claw.classList.toggle("is-docked", clawDockShift > fullShift * 0.5);
+        snapToPanel(attachedPanelId);
+      }
+      keepTrayTabClearOfClaw();
       requestAnimationFrame(followAttachedPanel);
     };
+
+    // The tab and the plug both live on the left edge, and they were happy to
+    // sit on top of each other. The tab yields, because the plug's position is
+    // the player's choice and the tab's is not.
+    function keepTrayTabClearOfClaw() {
+      const tab = moduleTray.querySelector(".cockpit-module-tray-tab");
+      if (!tab) return;
+      const trayRect = moduleTray.getBoundingClientRect();
+      const tabRect = tab.getBoundingClientRect();
+      const clawRect = claw.getBoundingClientRect();
+      if (!trayRect.height || !clawRect.height) return;
+
+      const overlapsHorizontally = clawRect.right > tabRect.left - 6 && clawRect.left < tabRect.right + 6;
+      const overlapsVertically = clawRect.bottom > tabRect.top - 8 && clawRect.top < tabRect.bottom + 8;
+      if (!overlapsHorizontally || !overlapsVertically) return;
+
+      const gap = 14;
+      const above = clawRect.top - trayRect.top - tabRect.height - gap;
+      const below = clawRect.bottom - trayRect.top + gap;
+      const maxTop = trayRect.height - tabRect.height - 8;
+      const chosen = above >= 8 ? above : Math.min(below, maxTop);
+      tab.style.top = `${Math.round(Math.max(8, Math.min(maxTop, chosen)))}px`;
+    }
     requestAnimationFrame(() => {
       if (!snapToPanel(attachedPanelId)) snapToPanel("cargo");
       followAttachedPanel();
@@ -6473,7 +7003,17 @@ function updateCockpitDisplay() {
   setSummary("beacon-bay", beaconRecoveryLabel?.textContent ?? "Bays ready");
   setSummary("miner", `${ammoCount?.textContent ?? "0"} charges`);
   setSummary("collector", `${tractorFieldStatus?.textContent ?? "Idle"} · ${Math.floor(state.components.scanner.scanergy)} scanergy`);
-  setSummary("processor", state.components.processor?.output ? `${state.components.processor.output} output` : "Ready");
+  // A dead processor says so, in the bay, without being opened. "cargo output"
+  // on a failed unit reads as a working choice rather than as the only place a
+  // broken mag link can still reach.
+  const processorFailed = state.components.processor?.condition?.stage === "failed";
+  setSummary("processor", processorFailed
+    ? "NOT FUNCTIONING · ERR"
+    : state.components.processor?.output ? `${state.components.processor.output} output` : "Ready");
+  document.querySelector('.is-cockpit-module[data-panel-id="processor"]')
+    ?.classList.toggle("is-module-faulted", processorFailed);
+  document.querySelector('.cockpit-module-launcher[data-panel-id="processor"]')
+    ?.classList.toggle("is-module-faulted", processorFailed);
   setSummary("cargo", "Stored goods");
   setSummary("tow-cable", towCableStatus?.textContent ?? "Idle");
   setSummary("moss-harvester", mossHarvesterStatus?.textContent ?? "Stored");
@@ -6481,14 +7021,38 @@ function updateCockpitDisplay() {
   setSummary("shield", shieldStatus?.textContent ?? "Idle");
   setSummary("cloak", cloakStatus?.textContent ?? "Offline");
 
+  // The bar is what the player reads when the journey card is closed, so it
+  // carries the same three things the card does: who/what, the current
+  // objective, and what is still outstanding. Previously it repeated the
+  // mission title and offered "open details", which is a link, not information.
   const title = document.querySelector("#cockpit-objective-title");
   const text = document.querySelector("#cockpit-objective-text");
+  const tasks = document.querySelector("#cockpit-objective-tasks");
   const route = document.querySelector("#cockpit-objective-route");
   if (title) title.textContent = journeyMissionTitle?.textContent || "Journey";
   if (text) text.textContent = journeyMissionObjective?.textContent || "Awaiting instructions.";
-  if (route) route.textContent = dockingTarget?.textContent && dockingTarget.textContent !== "None"
-    ? `${dockingTarget.textContent} · open details`
-    : "Open mission details";
+
+  if (tasks) {
+    const outstanding = (state.journey.mission?.tasks ?? [])
+      .filter((task) => !state.journey.flags?.[task.flag]);
+    const done = (state.journey.mission?.tasks ?? []).length - outstanding.length;
+    tasks.textContent = outstanding.length
+      ? `${outstanding[0].label}${outstanding.length > 1 ? ` (+${outstanding.length - 1})` : ""}`
+      : "";
+    tasks.classList.toggle("is-empty", outstanding.length === 0);
+    tasks.dataset.progress = (state.journey.mission?.tasks ?? []).length ? `${done}/${done + outstanding.length}` : "";
+  }
+
+  if (route) {
+    // Where the ship is pointed, when it is pointed anywhere. Docking target is
+    // the only genuinely useful thing this slot ever carried.
+    // "No target" is the docking readout's way of saying nothing; echoing it in
+    // the status bar just spends width to report an absence.
+    const target = dockingTarget?.textContent?.trim();
+    const hasTarget = target && !/^(none|no target)$/i.test(target);
+    route.textContent = hasTarget ? target : "";
+    route.hidden = !route.textContent;
+  }
 
   const panorama = state.ui.viewportLayout === "fullscreen-background";
   document.querySelector("#cockpit-mode-default")?.setAttribute("aria-pressed", String(!panorama));
@@ -6503,7 +7067,11 @@ function makePanelsDraggable() {
   const viewportPadding = 12;
   const savedLayout = loadPanelLayout();
   const offsetsByPanelId = new Map();
+  // Every draggable desk panel, so a window resize can put the whole desk back
+  // in proportion rather than leaving it clamped into a pile.
+  const anchoredPanels = new Map();
   let topPanelZIndex = Math.min(getSavedTopZIndex(savedLayout), DESK_PANEL_MAX_Z_INDEX);
+  let topPaperZIndex = DESK_PAPER_MIN_Z_INDEX;
 
   document.querySelectorAll(".component-panel").forEach((panel) => {
     const handle = panel.querySelector(".component-panel-title");
@@ -6517,9 +7085,13 @@ function makePanelsDraggable() {
       return;
     }
 
+    // The journey card is draggable like anything else on the desk. It used to
+    // return here, so it carried the title bar's grab cursor and then refused to
+    // move — the cockpit's centring `transform: !important` was overriding the
+    // drag transform anyway. Its z-index is still fixed: it is the thing being
+    // talked to, so it stays above the instruments.
     if (panelId === "journey") {
       panel.style.zIndex = String(JOURNEY_PANEL_Z_INDEX);
-      return;
     }
 
     const defaultPanel = DEFAULT_PANEL_LAYOUT[panelId] ?? { x: 0, y: 0, z: 1 };
@@ -6538,7 +7110,16 @@ function makePanelsDraggable() {
 
     panel.style.zIndex = String(getInitialPanelZ(panelId, savedPanel, defaultPanel));
     applyPanelOffset(panel, offset, { clamp: isPanelMeasurable(panel) });
-    savePanelLayout(panel, offset);
+    // A saved desk is restored to where it was ARRANGED, not to the pixel
+    // offsets it happened to have on whatever window it was arranged on. The
+    // pixel apply above runs first so the panel has a measurable box to work
+    // back from.
+    if (!startsOnDeskAfterBeingFiled && hasAnchoredPosition(savedPanel)) {
+      applyAnchoredPanelPosition(panel, offset, savedPanel);
+    }
+    rescueOffScreenPanel(panel, offset, defaultPanel);
+    anchoredPanels.set(panelId, { panel, offset });
+    savePanelLayout(panel, offset, { keepAnchor: hasAnchoredPosition(savedPanel) });
 
     handle.addEventListener("pointerdown", (event) => {
       if (event.button !== 0 || event.target.closest("[data-close-panel], .paper-file-button")) {
@@ -6578,7 +7159,10 @@ function makePanelsDraggable() {
       offset.x = Math.round((drag.originX + event.clientX - drag.startX) / gridSize) * gridSize;
       offset.y = Math.round((drag.originY + event.clientY - drag.startY) / gridSize) * gridSize;
       applyPanelOffset(panel, offset);
-      savePanelLayout(panel, offset);
+      // Deliberately NOT saved here. This ran a JSON.stringify and a
+      // localStorage write on every pointer move — once per frame while
+      // dragging — which is a large part of why a dragged panel felt heavy.
+      // The position is written on release instead; nothing needs it sooner.
       recordPanelDrag(panelId, drag, event);
     });
 
@@ -6592,6 +7176,8 @@ function makePanelsDraggable() {
 
       panel.classList.remove("is-dragging");
       recordPanelDrag(panelId, drag, event);
+      // One write, at the end of the gesture.
+      savePanelLayout(panel, offset);
       audio.playPanelDrop();
       drag = null;
     }
@@ -6629,6 +7215,10 @@ function makePanelsDraggable() {
 
     if (destination === "drawer") {
       shelf.appendChild(panel);
+      // A document's LAYER follows where it is filed. Its z-index was decided
+      // once at boot and never revisited, so paper that started on the desk kept
+      // a desk layer after being filed and sat behind the drawer it was in.
+      panel.style.zIndex = String(DRAWER_PAPER_Z_INDEX);
       offset.x = 0;
       offset.y = 0;
       state.ledger.recordEvent(
@@ -6648,10 +7238,30 @@ function makePanelsDraggable() {
       }, PAPERWORK_DRAWER_AUTO_CLOSE_MS);
     } else {
       hud.appendChild(panel);
-      const defaultPanel = DEFAULT_PANEL_LAYOUT[panelId] ?? { x: 0, y: 0 };
-      offset.x = defaultPanel.x;
-      offset.y = defaultPanel.y;
+      panel.style.zIndex = String(DESK_PAPER_MIN_Z_INDEX);
+      // Centred on the desk rather than dropped at an authored corner. The
+      // license's layout default put it hard against the top edge with its
+      // title bar clipped off-screen — unreadable, and un-draggable by the one
+      // handle it has. A document pulled out of the drawer is the thing the
+      // player was just told to look at, so it lands where they are looking.
+      const hudRect = hud.getBoundingClientRect();
+      const panelWidth = panel.offsetWidth || 220;
+      const panelHeight = panel.offsetHeight || 320;
+      offset.x = Math.round((hudRect.width / 2 - panelWidth / 2) / 20) * 20;
+      offset.y = Math.round((hudRect.height / 2 - panelHeight / 2) / 20) * 20;
       setPanelTop(panel);
+      // Taking a document OUT is as teachable as putting one away, and only the
+      // filing half was ever reported. A beat could ask the player to fetch
+      // their license and then had no way to know they had.
+      state.ledger.recordEvent(
+        "component.filed",
+        {
+          componentId: panelId,
+          destination: "desk",
+        },
+        { visible: false },
+      );
+      updateLedgerDrivenSystems();
     }
 
     applyPanelOffset(panel, offset, { clamp: isPanelMeasurable(panel) });
@@ -6669,6 +7279,19 @@ function makePanelsDraggable() {
 
     if (panel.dataset.panelId === "viewport") {
       panel.style.zIndex = String(VIEWPORT_PANEL_Z_INDEX);
+      savePanelLayout(panel);
+      return;
+    }
+
+    // Bringing a document to the front raises it within the PAPER band, so it
+    // comes forward of other documents without ever dropping behind a console.
+    if (PAPERWORK_PANEL_IDS.includes(panel.dataset.panelId)) {
+      if (panel.closest("#paperwork-drawer")) {
+        panel.style.zIndex = String(DRAWER_PAPER_Z_INDEX);
+      } else {
+        topPaperZIndex = topPaperZIndex < DESK_PAPER_MAX_Z_INDEX ? topPaperZIndex + 1 : DESK_PAPER_MIN_Z_INDEX;
+        panel.style.zIndex = String(topPaperZIndex);
+      }
       savePanelLayout(panel);
       return;
     }
@@ -6700,6 +7323,89 @@ function makePanelsDraggable() {
     });
   }
 
+  // A restored panel that would land entirely outside the window goes back to
+  // its default instead. Saved layouts outlive the window they were made in, and
+  // a panel nobody can see is a panel nobody can drag back.
+  function rescueOffScreenPanel(panel, offset, defaultPanel) {
+    if (!isPanelMeasurable(panel)) return false;
+    if (!isOffScreen(panel.getBoundingClientRect())) return false;
+
+    offset.x = defaultPanel?.x ?? 0;
+    offset.y = defaultPanel?.y ?? 0;
+    applyPanelOffset(panel, offset, { clamp: shouldClampPanel(panel) });
+    savePanelLayout(panel, offset);
+    return true;
+  }
+
+  // The journey card is hidden at boot, so a bad saved position cannot be caught
+  // by the startup rescue. Check it the moment it is actually shown.
+  rescueJourneyPanel = () => {
+    const panel = document.querySelector('[data-panel-id="journey"]');
+    const offset = offsetsByPanelId.get("journey");
+    if (!panel || !offset || !isPanelMeasurable(panel)) return;
+
+    // Off the desk entirely: return to zero offset, which is where CSS centres
+    // and docks the card. Applied WITHOUT clamping on purpose — clamping reads
+    // the element's rect mid-update and, for a panel that was already far
+    // off-screen, computed a correction against the stale box and threw the card
+    // just as far the other way. Zero needs no correction: the stylesheet
+    // already puts it in the right place.
+    //
+    // A card that is merely overhanging is left alone; that is the player's own
+    // placement and they can see it to drag it back.
+    if (!isOffScreen(panel.getBoundingClientRect())) return false;
+
+    offset.x = DEFAULT_PANEL_LAYOUT.journey?.x ?? 0;
+    offset.y = DEFAULT_PANEL_LAYOUT.journey?.y ?? 0;
+    applyPanelOffset(panel, offset, { clamp: false });
+    savePanelLayout(panel, offset);
+    return true;
+  };
+
+  // Move a panel to where its anchored record says it belongs on THIS desk.
+  //
+  // The panel's own box is measured live and subtracted out, because the offset
+  // the drag code works in is a translate away from wherever CSS put the panel,
+  // not an absolute coordinate.
+  function applyAnchoredPanelPosition(panel, offset, anchored) {
+    if (!isAnchorablePanel(panel)) return false;
+
+    const desk = getPanelDeskSize();
+    const rect = panel.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return false;
+
+    const untransformedLeft = rect.left - offset.x;
+    const untransformedTop = rect.top - offset.y;
+    const target = clampToViewport(
+      fromAnchoredPosition(anchored, desk),
+      { width: rect.width, height: rect.height },
+      desk,
+      { padding: viewportPadding },
+    );
+
+    offset.x = Math.round(target.left - untransformedLeft);
+    offset.y = Math.round(target.top - untransformedTop);
+    applyPanelOffset(panel, offset, { clamp: true });
+    return true;
+  }
+
+  // The desk changed size. Re-seat every panel from its stored arrangement
+  // rather than from its stale pixels. Reading the record fresh each time means
+  // a run of resizes never compounds rounding, and clamping on a narrow window
+  // never overwrites where the panel actually belongs.
+  let deskResizeFrame = null;
+  window.addEventListener("resize", () => {
+    if (deskResizeFrame !== null) return;
+    deskResizeFrame = window.requestAnimationFrame(() => {
+      deskResizeFrame = null;
+      const layout = loadPanelLayout();
+      anchoredPanels.forEach(({ panel, offset }, panelId) => {
+        const record = getSavedPanelLayout(layout, panelId);
+        if (hasAnchoredPosition(record)) applyAnchoredPanelPosition(panel, offset, record);
+      });
+    });
+  });
+
   function applyPanelOffset(panel, offset, { clamp = true } = {}) {
     panel.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
     if (clamp) {
@@ -6710,6 +7416,16 @@ function makePanelsDraggable() {
   }
 
   function clampPanelOffset(panel, offset) {
+    // The journey panel is positioned entirely by CSS and is DELIBERATELY
+    // off-canvas in its legacy slide-out form. Clamping ran at boot, before the
+    // cockpit class was on the body, saw a drawer parked at translateX(-361px),
+    // and "rescued" it by shoving it 373px right — snapped to 380. That offset
+    // then rode along into the cockpit card, which is why it always appeared a
+    // few hundred pixels from where CSS put it and felt immovable.
+    if (!shouldClampPanel(panel)) {
+      return;
+    }
+
     if (panel.closest("#paperwork-drawer")) {
       clampDrawerPanelOffset(panel, offset);
       return;
@@ -6887,6 +7603,7 @@ function renderComponentShop(service = null) {
       const tags = document.createElement("div");
       const button = document.createElement("button");
       const isInstalled = isComponentOfferPurchased(offer);
+      const isReplacement = !isInstalled && isComponentOfferFaulted(offer);
       const canAfford = currentCredits >= offer.price;
 
       card.className = "ship-offer is-special-offer";
@@ -6903,7 +7620,17 @@ function renderComponentShop(service = null) {
       button.className = "ship-offer-button";
       button.type = "button";
       button.disabled = isInstalled || !canAfford;
-      button.textContent = isInstalled ? "Installed" : canAfford ? "Buy Component" : "Need Credits";
+      button.textContent = isInstalled
+        ? "Installed"
+        : canAfford ? (isReplacement ? "Replace Unit" : "Buy Component") : "Need Credits";
+      if (isReplacement) {
+        card.classList.add("is-replacement-offer");
+        const fault = document.createElement("span");
+        fault.className = "ship-offer-fault";
+        fault.textContent = "Fitted unit has failed";
+        card.dataset.replaces = offer.componentId;
+        title.after(fault);
+      }
       button.addEventListener("click", () => buyComponentOffer(offer, service));
       card.append(title, price, description, tags, button);
       return card;
@@ -6920,6 +7647,17 @@ function getVisibleComponentOffers(offers) {
   return visibleOffers.length > 0 ? visibleOffers : starterOffers;
 }
 
+// A FAILED unit is not a satisfied purchase.
+//
+// The shop asked only whether a component was installed, so the campaign
+// skiff's dead processor read as "Installed" and the one part the player most
+// needs was the one thing the shop refused to sell them. Fitted-and-broken is
+// a reason to buy, not a reason to grey the button out.
+function isComponentOfferFaulted(offer) {
+  const component = state.components[offer.componentId];
+  return Boolean(component?.installed) && component.condition?.stage === "failed";
+}
+
 function isComponentOfferPurchased(offer) {
   const component = state.components[offer.componentId];
 
@@ -6927,8 +7665,19 @@ function isComponentOfferPurchased(offer) {
     return false;
   }
 
+  // An offer can declare that it is already satisfied by the drive the ship is
+  // running, not only by an upgrade record. The campaign skiff LEAVES THE YARD
+  // on the Rook Standard, so the yard has no business selling it back.
+  if (offer.installedWhenEngineModelId && component.engineModelId === offer.installedWhenEngineModelId) {
+    return true;
+  }
+
   if (offer.upgradeId) {
     return component.upgrades?.includes(offer.upgradeId) ?? false;
+  }
+
+  if (isComponentOfferFaulted(offer)) {
+    return false;
   }
 
   return Boolean(component.installed);
@@ -6942,8 +7691,22 @@ function buyComponentOffer(offer, service = null) {
     return;
   }
 
+  const replacedFaultedUnit = isComponentOfferFaulted(offer);
+
   spendCredits(state, offer.price);
   component.installed = true;
+
+  // A replacement is a NEW unit, so its condition record starts clean. Without
+  // this the player pays for a processor and gets the same failed one back —
+  // still routing nowhere but cargo, still stamped NOT FUNCTIONING.
+  if (replacedFaultedUnit && component.condition) {
+    component.condition = {
+      ...component.condition,
+      stage: "healthy", wear: 0,
+      currentCondition: component.condition.maxRecoverableCondition ?? 100,
+    };
+    normalizeProcessorOutput(state.components);
+  }
 
   if (offer.upgradeId) {
     component.upgrades = Array.from(new Set([...(component.upgrades ?? []), offer.upgradeId]));
@@ -7051,6 +7814,53 @@ function isPanelMeasurable(panel) {
   return getComputedStyle(panel).display !== "none";
 }
 
+// The desk. Anchoring is relative to the window rather than to the viewport
+// element, because the viewport itself moves and resizes with the window and a
+// reference that moves is not a reference.
+function getPanelDeskSize() {
+  return { width: window.innerWidth, height: window.innerHeight };
+}
+
+// A panel's live top-left, turned into something that survives a resize.
+// Drawer panels are excluded: they are filed in a container that positions them
+// itself, so anchoring them to the desk would fight the drawer.
+// Should this panel be kept inside the window?
+//
+// The journey card is a special case in BOTH directions. Before the cockpit
+// takes over it is the legacy slide-out drawer, deliberately parked off-canvas,
+// and clamping "rescues" it to a nonsense offset that then rides into the
+// cockpit form. But once it is actually on screen it must be clamped like
+// anything else — leaving it unclamped is how a saved drag ended up restoring
+// it four thousand pixels to the right with nothing to pull it back.
+function shouldClampPanel(panel) {
+  const panelId = panel?.dataset?.panelId;
+  if (!panelId || UNCLAMPED_PANEL_IDS.has(panelId)) return false;
+  if (panelId === "journey") return panel.classList.contains("is-cockpit-expanded");
+  return true;
+}
+
+// A saved position that lands a panel entirely outside the window is not worth
+// honouring. Windows get smaller, layouts change, and a panel the player cannot
+// see is a panel they cannot drag back.
+function isOffScreen(rect) {
+  return rect.width > 0
+    && (rect.right <= 0 || rect.bottom <= 0 || rect.left >= window.innerWidth || rect.top >= window.innerHeight);
+}
+
+function isAnchorablePanel(panel) {
+  return Boolean(panel)
+    && !UNANCHORED_PANEL_IDS.has(panel.dataset.panelId)
+    && !panel.closest("#paperwork-drawer")
+    && isPanelMeasurable(panel);
+}
+
+function readAnchoredPanelPosition(panel) {
+  if (!isAnchorablePanel(panel)) return null;
+  const rect = panel.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) return null;
+  return toAnchoredPosition({ left: rect.left, top: rect.top }, getPanelDeskSize());
+}
+
 function clearOldPanelLayouts() {
   OLD_PANEL_LAYOUT_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
 }
@@ -7068,6 +7878,13 @@ function getPanelLayoutProfile() {
 
   if (devStartId === "panorama" || state.ui.viewportLayout === "fullscreen-background") {
     return "panorama";
+  }
+
+  // Campaign keeps its own bucket. It fits a different, much smaller set of
+  // panels than either other start, so sharing saved positions would drag one
+  // mode's layout into another.
+  if (devStartId === "campaign") {
+    return "campaign";
   }
 
   return devStartId === "explorer" ? "explorer" : "main";
@@ -7104,6 +7921,10 @@ function getInitialPanelZ(panelId, savedPanel, defaultPanel) {
     return VIEWPORT_PANEL_Z_INDEX;
   }
 
+  if (PAPERWORK_PANEL_IDS.includes(panelId)) {
+    return getPaperPanelZ(panelId, savedPanel);
+  }
+
   const savedZ = savedPanel?.z;
 
   if (Number.isFinite(savedZ) && savedZ >= DESK_PANEL_MIN_Z_INDEX && savedZ <= DESK_PANEL_MAX_Z_INDEX) {
@@ -7111,6 +7932,25 @@ function getInitialPanelZ(panelId, savedPanel, defaultPanel) {
   }
 
   return clampDeskPanelZIndex(defaultPanel.z);
+}
+
+// A document's layer depends on where it is, not on how recently it was touched:
+// in the drawer it rides above the drawer shell, on the desk it sits above every
+// console. Within its band it still stacks against its fellow documents.
+function getPaperPanelZ(panelId, savedPanel) {
+  const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
+
+  if (panel?.closest("#paperwork-drawer")) {
+    return DRAWER_PAPER_Z_INDEX;
+  }
+
+  const savedZ = savedPanel?.z;
+
+  if (Number.isFinite(savedZ) && savedZ >= DESK_PAPER_MIN_Z_INDEX && savedZ <= DESK_PAPER_MAX_Z_INDEX) {
+    return savedZ;
+  }
+
+  return DESK_PAPER_MIN_Z_INDEX;
 }
 
 function clampDeskPanelZIndex(zIndex) {
@@ -7133,11 +7973,29 @@ function savePanelLayout(panel, offset = null, options = {}) {
   const previousRecord = layout.panels?.[panelId] ?? {};
   const previousPanel = getSavedPanelLayout(layout, panelId, profile) ?? {};
   const zIndex = panelId === "journey" ? JOURNEY_PANEL_Z_INDEX : Number(panel.style.zIndex) || previousPanel.z || 1;
+  // Where the panel sits relative to the desk, so the arrangement survives a
+  // window resize. The pixel offset is still written: it is what the drag code
+  // works in, and it is the fallback when a panel cannot be measured.
+  //
+  // `keepAnchor` matters on RESTORE. Re-deriving the anchor from a just-restored
+  // panel would bake in whatever clamping a narrow window forced, so a desk
+  // arranged on a wide screen and opened once on a laptop would be permanently
+  // squashed. Only a deliberate drag re-decides where a panel belongs.
+  // A panel that is no longer anchored must not keep re-saving the anchor it had
+  // when it was, or a poisoned record outlives the decision to stop using it.
+  const carriedAnchor = !UNANCHORED_PANEL_IDS.has(panelId) && hasAnchoredPosition(previousPanel)
+    ? { anchor: previousPanel.anchor, fx: previousPanel.fx, fy: previousPanel.fy }
+    : null;
+  const anchored = options.keepAnchor
+    ? carriedAnchor
+    : readAnchoredPanelPosition(panel) ?? carriedAnchor;
+
   const nextPanel = {
     x: offset?.x ?? previousPanel.x ?? 0,
     y: offset?.y ?? previousPanel.y ?? 0,
     z: zIndex,
     inDrawer: Boolean(panel.closest("#paperwork-drawer")),
+    ...(anchored ? { anchor: anchored.anchor, fx: anchored.fx, fy: anchored.fy } : {}),
     ...(options.layoutVersion || previousPanel.layoutVersion
       ? { layoutVersion: options.layoutVersion ?? previousPanel.layoutVersion }
       : {}),
@@ -7173,7 +8031,12 @@ function initLicenseApplication() {
     return;
   }
 
+  // The form opens pre-filled with a default pilot. Selecting rather than only
+  // focusing means the first keystroke replaces it, so the default costs a
+  // player who wants their own name nothing, and costs a player who does not
+  // want to type a name on every run one Return.
   licenseFirstName.focus();
+  licenseFirstName.select();
 
   licenseForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -7411,7 +8274,7 @@ function applyObservatoryTab() {
   if (observatoryBody) observatoryBody.hidden = !isTable;
   if (observatorySearch) observatorySearch.hidden = !isTable;
   if (observatoryCount) observatoryCount.hidden = !isTable;
-  ["ledger", "stats", "population", "contracts", "economy", "simulation", "wear-lab"].forEach((pane) => {
+  ["ledger", "stats", "population", "contracts", "economy", "fleet", "simulation", "wear-lab"].forEach((pane) => {
     const node = document.querySelector(`#observatory-pane-${pane}`);
     if (node) node.hidden = observatoryTab !== pane;
   });
@@ -7629,6 +8492,135 @@ function renderContractBoard() {
 
   table.append(thead, tbody);
   contractTable.replaceChildren(table);
+}
+
+// Fleet tab.
+//
+// Three questions, in the order they matter: is the fleet stable or moving,
+// what entered and left, and does anything fail to add up. The middle one is
+// what a money-only observatory could never answer.
+function renderFleet() {
+  const fleetBody = document.querySelector("#fleet-body");
+  if (!fleetBody || observatoryTab !== "fleet") return;
+
+  const samples = getFleetSamples(state);
+  const census = readFleetCensus(state);
+  const audit = auditFleetIntegrity(state, {
+    physicalShipIds: (game.workerShips ?? []).map((ship) => ship.id),
+  });
+  const nodes = [];
+
+  // Trend. A single number cannot tell a correction from a spiral, so say what
+  // the fleet has actually done over the window rather than only where it is.
+  const totals = samples.map((sample) => sample.total);
+  const spanMinutes = samples.length > 1 ? (samples[samples.length - 1].t - samples[0].t) / 60000 : 0;
+  const head = diagElement("div", "fleet-head");
+  head.append(diagElement("strong", null, `${census.total} hulls in service`));
+  if (samples.length > 1) {
+    const change = totals[totals.length - 1] - totals[0];
+    const direction = change === 0 ? "flat" : change > 0 ? `up ${change}` : `down ${Math.abs(change)}`;
+    head.append(diagElement("span", "fleet-trend",
+      `${direction} over ${spanMinutes.toFixed(1)} min · peak ${Math.max(...totals)} · low ${Math.min(...totals)} · ${samples.length} samples`));
+  } else {
+    head.append(diagElement("span", "fleet-trend", "collecting — the first samples land within seconds"));
+  }
+  nodes.push(head);
+
+  // Sparkline over the whole retained window.
+  if (samples.length > 1) {
+    const width = 640;
+    const height = 90;
+    const high = Math.max(...totals);
+    const low = Math.min(...totals);
+    const span = Math.max(1, high - low);
+    const points = totals.map((value, index) => {
+      const x = (index / (totals.length - 1)) * width;
+      const y = height - ((value - low) / span) * (height - 12) - 6;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ");
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.setAttribute("class", "fleet-spark");
+    svg.setAttribute("preserveAspectRatio", "none");
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    line.setAttribute("points", points);
+    line.setAttribute("fill", "none");
+    line.setAttribute("stroke", "currentColor");
+    line.setAttribute("stroke-width", "2");
+    svg.append(line);
+    nodes.push(svg);
+  }
+
+  // Who holds what.
+  const byOperator = diagElement("table", "observatory-table");
+  const opHead = diagElement("tr");
+  ["Operator", "Hulls"].forEach((label) => opHead.append(diagElement("th", null, label)));
+  byOperator.append(opHead);
+  Object.values(census.byOperator)
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .forEach((entry) => {
+      const row = diagElement("tr");
+      row.append(diagElement("td", null, entry.name), diagElement("td", null, entry.count));
+      byOperator.append(row);
+    });
+  nodes.push(diagSection("Fleet by operator", byOperator));
+
+  // What entered and left, newest first.
+  const events = getHullEvents(state).slice().reverse();
+  if (events.length) {
+    const table = diagElement("table", "observatory-table");
+    const header = diagElement("tr");
+    ["When", "Event", "Hull", "Operator", "Book value", "Idle"].forEach((label) => header.append(diagElement("th", null, label)));
+    table.append(header);
+    events.slice(0, 40).forEach((event) => {
+      const row = diagElement("tr");
+      const ago = Math.round((Date.now() - event.t) / 1000);
+      row.append(
+        diagElement("td", null, `${ago}s ago`),
+        diagElement("td", event.kind === HULL_EVENT.STOOD_DOWN ? "fleet-down" : "fleet-up",
+          event.kind === HULL_EVENT.STOOD_DOWN ? "stood down" : "commissioned"),
+        diagElement("td", null, event.shipName ?? event.shipId),
+        diagElement("td", null, event.operatorName ?? "—"),
+        // A founding hull was seeded, never bought. Saying "unpriced" is honest;
+        // quoting a number would be inventing one.
+        diagElement("td", null, event.bookValue === null ? "unpriced" : `${Math.round(event.bookValue)} cr`),
+        diagElement("td", null, event.idleSeconds === null ? "—" : `${event.idleSeconds}s`),
+      );
+      table.append(row);
+    });
+    nodes.push(diagSection(`Hull movements (${events.length})`, table));
+  } else {
+    nodes.push(diagSection("Hull movements", diagElement("p", "observatory-empty", "No hull has entered or left service yet.")));
+  }
+
+  // Conservation. The asset-side equivalent of the money residual.
+  const audits = diagElement("div", "fleet-audit");
+  const problems = [
+    ["Crew employed on hulls that no longer exist", audit.orphanedEmployments.map((entry) =>
+      `${entry.operatorName ?? entry.operatorId} — ${entry.assetId} (${entry.employerInstitutionId})`)],
+    ["Hulls an operation lists that the world does not have", audit.phantomHulls.map((entry) => `${entry.shipName} (${entry.operatorName})`)],
+    ["Craft in the world no operation claims", audit.unlistedHulls],
+    ["Hulls in service with no crew", audit.uncrewedHulls.map((entry) => `${entry.shipName} (${entry.operatorName})`)],
+  ];
+  problems.forEach(([label, rows]) => {
+    if (!rows.length) return;
+    const list = diagElement("ul", "fleet-audit-list");
+    rows.forEach((text) => list.append(diagElement("li", null, text)));
+    audits.append(diagSection(`${label} (${rows.length})`, list));
+  });
+  if (audit.clean && !audit.uncrewedHulls.length) {
+    audits.append(diagElement("p", "observatory-empty", "Nothing unaccounted for: every hull has a crew, every crew has a hull."));
+  }
+  // Capital that left the world with stood-down hulls. NOT money — no credits
+  // moved — which is exactly the asymmetry worth seeing, since a hull enters
+  // the world by being bought from a shipyard.
+  audits.append(diagElement("p", "fleet-capital",
+    `${audit.commissionings} commissioned · ${audit.standDowns} stood down · `
+    + `${Math.round(audit.capitalStoodDown)} cr of booked hull value left service with no proceeds`
+    + (audit.capitalStoodDownUnpriced ? ` (plus ${audit.capitalStoodDownUnpriced} unpriced founding ${audit.capitalStoodDownUnpriced === 1 ? "hull" : "hulls"})` : "")));
+  nodes.push(diagSection("Conservation", audits));
+
+  fleetBody.replaceChildren(...nodes);
 }
 
 function diagElement(tag, className, text) {
@@ -8068,6 +9060,7 @@ function renderObservatory() {
   if (!observatoryPanel || observatoryPanel.hidden || !observatoryBody) return;
   if (observatoryTab === "contracts") { renderContractBoard(); return; }
   if (observatoryTab === "economy") { renderEconomy(); return; }
+  if (observatoryTab === "fleet") { renderFleet(); return; }
   if (observatoryTab === "simulation") { renderSimulation(); return; }
   if (observatoryTab === "wear-lab") { renderWearLab(); return; }
   // Ledger/stats/population panes are driven by the existing HUD render path.
@@ -8299,6 +9292,12 @@ let econRenderKey = "";
 ensureEconomyHistory(state);
 recordEconomySample(state, { force: true });
 window.setInterval(() => recordEconomySample(state), SAMPLE_INTERVAL_MS);
+
+// The fleet's own series, on the same footing as the money one. Without it the
+// only way to tell a one-time fleet correction from a spiral was to hand-write
+// a sampler in the console and wait twenty minutes.
+recordFleetSample(state, { force: true });
+window.setInterval(() => recordFleetSample(state), FLEET_SAMPLE_INTERVAL_MS);
 
 econPauseButton?.addEventListener("click", () => {
   // Freezes only the DISPLAY, exactly like the ledger and contract boards: the
@@ -8711,6 +9710,15 @@ window.__asteroids.economy = {
   snapshot: () => getEconomySamples(state, {}).slice(-1)[0] ?? null,
   samples: (windowMs = Infinity) => getEconomySamples(state, { windowMs }),
   reconcile: (windowMs = Infinity) => reconcileMoney(getEconomySamples(state, { windowMs })),
+};
+
+// The fleet's console surface, mirroring the economy's. `audit()` is the
+// asset-side residual: run it before believing any claim about fleet size.
+window.__asteroids.fleet = {
+  census: () => readFleetCensus(state),
+  samples: (windowMs = Infinity) => getFleetSamples(state, { windowMs }),
+  events: (windowMs = Infinity) => getHullEvents(state, { windowMs }),
+  audit: () => auditFleetIntegrity(state, { physicalShipIds: (game.workerShips ?? []).map((ship) => ship.id) }),
 };
 
 // ── Ledger event browser ────────────────────────────────────────────────────

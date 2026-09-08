@@ -3,6 +3,18 @@
 export function getProcessorOutputs(components) {
   const outputs = [];
 
+  // A failed processor cannot route anywhere but the hold.
+  //
+  // The conversion side of the unit is dead, so nothing can be turned into fuel,
+  // charges, scanergy or patch reserve. The mag link physically reaches only the
+  // cargo chamber, and raw material passes straight through unrefined — which is
+  // the visible, in-world reason a Rook hand's ore arrives as ore. There is no
+  // wear ladder driving the processor to this stage yet; today it is authored,
+  // and this is the behaviour of that final stage when one exists.
+  if (components.processor?.condition?.stage === "failed") {
+    return components.cargoHold?.installed ? [buildCargoOutput()] : [];
+  }
+
   if (components.engine.installed) {
     outputs.push({
       id: "fuel",
@@ -46,16 +58,22 @@ export function getProcessorOutputs(components) {
   }
 
   if (components.cargoHold.installed) {
-    outputs.push({
-      id: "cargo",
-      label: "Cargo",
-      amountLabel: "store unit",
-      acceptedShapes: ["circle", "square", "triangle", "hexagon", "octagon", "diamond", "shard"],
-      color: "#82909e",
-    });
+    outputs.push(buildCargoOutput());
   }
 
   return outputs;
+}
+
+// The hold takes anything, which is why it is the one destination a dead
+// processor can still reach.
+function buildCargoOutput() {
+  return {
+    id: "cargo",
+    label: "Cargo",
+    amountLabel: "store unit",
+    acceptedShapes: ["circle", "square", "triangle", "hexagon", "octagon", "diamond", "shard"],
+    color: "#82909e",
+  };
 }
 
 export function normalizeProcessorOutput(components) {
