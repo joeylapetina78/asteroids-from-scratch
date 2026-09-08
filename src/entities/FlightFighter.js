@@ -1,6 +1,6 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260908-1722-d2ce0f26";
-import { selectIncursionTarget } from "../systems/incursionTargeting.js?v=fresh-20260908-1722-d2ce0f26";
-import { applyCraftUse, ensureCraftComponents } from "../systems/componentCondition.js?v=fresh-20260908-1722-d2ce0f26";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260908-1725-26e42077";
+import { selectIncursionTarget } from "../systems/incursionTargeting.js?v=fresh-20260908-1725-26e42077";
+import { applyCraftUse, ensureCraftComponents } from "../systems/componentCondition.js?v=fresh-20260908-1725-26e42077";
 
 const FIGHTER_COMPONENTS = Object.freeze([
   { id: "propulsion", label: "Rift Propulsion", capabilityIds: ["flight"] },

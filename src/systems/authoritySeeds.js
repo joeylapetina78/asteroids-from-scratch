@@ -1,9 +1,9 @@
-import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260908-1722-d2ce0f26";
-import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260908-1722-d2ce0f26";
-import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260908-1722-d2ce0f26";
-import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260908-1722-d2ce0f26";
-import { settlementMiningRights, settlementPlaces } from "../content/economy/firstReachSettlements.js?v=fresh-20260908-1722-d2ce0f26";
-import { seedHubTerritories } from "./hubTerritories.js?v=fresh-20260908-1722-d2ce0f26";
+import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260908-1725-26e42077";
+import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260908-1725-26e42077";
+import { ensureRegionPlace, upsertPlace } from "./placeRegistry.js?v=fresh-20260908-1725-26e42077";
+import { WORLD_REGIONS } from "./worldRegions.js?v=fresh-20260908-1725-26e42077";
+import { settlementMiningRights, settlementPlaces } from "../content/economy/firstReachSettlements.js?v=fresh-20260908-1725-26e42077";
+import { seedHubTerritories } from "./hubTerritories.js?v=fresh-20260908-1725-26e42077";
 
 const RIGHT_TO_POWER = Object.freeze({
   [RIGHT_TYPES.TRANSIT]: POWER_TYPES.AUTHORIZE_WORK,

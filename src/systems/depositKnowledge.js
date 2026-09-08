@@ -1,5 +1,5 @@
-import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260908-1722-d2ce0f26";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260908-1722-d2ce0f26";
+import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260908-1725-26e42077";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260908-1725-26e42077";
 
 // What a mining outfit knows about where the ore is, and how much it trusts it.
 //
