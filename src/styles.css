@@ -4748,52 +4748,6 @@ body.is-cockpit-layout .is-cockpit-chamber {
 body.is-cockpit-layout .processor-panel.is-cockpit-chamber { left: 6px; }
 body.is-cockpit-layout .cargo-panel.is-cockpit-chamber { right: 6px; }
 
-/* Painted hold walls. A single dark identification stripe crosses the two
-   ochre side bays behind their names; the scope hides the middle of that same
-   stripe, making it read as one architectural band continuing behind the
-   viewport. Keep this on a pseudo-layer so ore and processor units remain
-   bright, interactive objects above the paint. */
-body.is-cockpit-layout .is-cockpit-chamber::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: -2;
-  pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    #a98c30 0 61%,
-    #101313 61% 78%,
-    #a98c30 78% 100%
-  );
-}
-
-body.is-cockpit-layout .processor-panel.is-cockpit-chamber::after {
-  left: 0;
-  right: var(--chamber-scope-overlap);
-}
-
-body.is-cockpit-layout .cargo-panel.is-cockpit-chamber::after {
-  left: var(--chamber-scope-overlap);
-  right: 0;
-}
-
-/* The scope is glass and metal standing proud of the painted hold wall. The
-   narrow halo supplies depth without turning the viewport into a glowing UI
-   element. */
-body.is-cockpit-layout .viewport-panel::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: min(100vw, 100vh);
-  height: min(100vw, 100vh);
-  border-radius: 50%;
-  transform: translateX(-50%);
-  box-shadow: 0 0 24px 8px rgba(0, 0, 0, 0.62);
-  pointer-events: none;
-}
-
 body.is-cockpit-layout .is-cockpit-chamber .component-panel-title {
   height: 34px;
   margin: 0;
@@ -4853,8 +4807,8 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber .component-panel-ti
   text-indent: 0.22em;
   line-height: 0.92;
   font-weight: 800;
-  color: #d4b84d;
-  opacity: 0.48;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 42%, #11181a);
+  opacity: 0.38;
   text-shadow: none;
   white-space: nowrap;
 }
@@ -4865,8 +4819,8 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber .component-panel-ti
   text-transform: uppercase;
   letter-spacing: 0.32em;
   text-indent: 0.32em;
-  color: #c4a640;
-  opacity: 0.46;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 38%, #11181a);
+  opacity: 0.42;
   text-shadow: none;
   margin-top: 0.5em;
   white-space: nowrap;

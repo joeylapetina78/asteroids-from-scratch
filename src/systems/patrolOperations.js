@@ -1,8 +1,8 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260907-2037-8d2a468d";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260907-2037-8d2a468d";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260907-2037-8d2a468d";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260907-2037-8d2a468d";
-import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260907-2037-8d2a468d";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260907-2027-37750fb5";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260907-2027-37750fb5";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260907-2027-37750fb5";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260907-2027-37750fb5";
+import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260907-2027-37750fb5";
 
 const PATROL_OPENING_BALANCE = 1800;
 const PATROL_COMPONENTS = Object.freeze([

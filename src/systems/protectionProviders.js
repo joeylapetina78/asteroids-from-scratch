@@ -1,8 +1,8 @@
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260907-2037-8d2a468d";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260907-2037-8d2a468d";
-import { evaluateSupplierAsk, getSpendable } from "./valuation.js?v=fresh-20260907-2037-8d2a468d";
-import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260907-2037-8d2a468d";
-import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260907-2037-8d2a468d";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260907-2027-37750fb5";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260907-2027-37750fb5";
+import { evaluateSupplierAsk, getSpendable } from "./valuation.js?v=fresh-20260907-2027-37750fb5";
+import { DIAGNOSTIC_STATE, recordDiagnostic } from "./diagnostics.js?v=fresh-20260907-2027-37750fb5";
+import { applyCraftUse, ensureCraftComponents, getWorstComponent, serviceCraftComponent } from "./componentCondition.js?v=fresh-20260907-2027-37750fb5";
 
 const PROVIDER_SEEDS = Object.freeze([
   {
