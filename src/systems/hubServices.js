@@ -1,4 +1,4 @@
-import { hubServiceDefinitions } from "../content/hubs/yardExchangeServices.js?v=fresh-20260908-1829-2c0ed1f4";
+import { hubServiceDefinitions } from "../content/hubs/yardExchangeServices.js?v=fresh-20260908-1838-3f948e35";
 
 export function getHubServices(siteId) {
   return hubServiceDefinitions[siteId] ?? [];
