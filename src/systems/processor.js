@@ -1,5 +1,5 @@
-import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260908-1738-a6780bc2";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260908-1738-a6780bc2";
+import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260908-1758-b90f0dde";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260908-1758-b90f0dde";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -76,6 +76,11 @@ const SPAWN_SLOTS = 6;
 const SPAWN_FAN_SPREAD = 210;
 // How much the exit speed varies, either side of full.
 const SPAWN_SPEED_JITTER = 0.26;
+// Material arrives from the world through an end-on transfer tube. It begins
+// as a distant speck at the dark mouth, reaches full hold scale almost at once,
+// and then becomes ordinary loose cargo governed by bay inertia.
+const TUBE_EMERGENCE_SECONDS = 0.32;
+const TUBE_DISTANCE_SCALE = 0.14;
 
 export function getProcessorConsumptionQuantity(quantity, amountPerUnit, headroom) {
   const availableQuantity = Math.max(0, Math.floor(Number(quantity) || 0));
@@ -209,6 +214,7 @@ export class Processor {
       // before any of it has left the mouth.
       releaseAt: (this.nextReleaseAt = Math.max(this.elapsed ?? 0, this.nextReleaseAt ?? 0) + SPAWN_RELEASE_INTERVAL),
       inPipe: true,
+      emergedAt: null,
       // A real spray, not a line. In a bay with no gravity a single exit angle
       // sends everything along one path where it queues up behind itself; a
       // wide, jittered fan means consecutive units diverge immediately and
@@ -371,7 +377,10 @@ export class Processor {
     // Let through whatever is due. Held units sit in the pipe, untouched by
     // physics, until their moment.
     this.units.forEach((unit) => {
-      if (unit.inPipe && this.elapsed >= (unit.releaseAt ?? 0)) unit.inPipe = false;
+      if (unit.inPipe && this.elapsed >= (unit.releaseAt ?? 0)) {
+        unit.inPipe = false;
+        unit.emergedAt = this.elapsed;
+      }
     });
 
     const compactingUnits = this.advanceCompaction(deltaSeconds);
@@ -451,6 +460,13 @@ export class Processor {
       this.context.save();
       this.context.translate(unit.x + unit.size / 2, unit.y + unit.size / 2);
       this.context.rotate(unit.angle ?? 0);
+      const emergence = unit.inPipe
+        ? 0
+        : unit.emergedAt == null
+          ? 1
+          : clamp((this.elapsed - unit.emergedAt) / TUBE_EMERGENCE_SECONDS, 0, 1);
+      const perspectiveScale = TUBE_DISTANCE_SCALE + (1 - TUBE_DISTANCE_SCALE) * easeOutCubic(emergence);
+      this.context.scale(perspectiveScale, perspectiveScale);
       drawResourceShape(this.context, unit.shape, unit.size);
       if (this.getUnitFlags(unit)?.illegal) {
         drawIllegalMark(this.context, unit.size);
@@ -478,27 +494,29 @@ export class Processor {
     const pipeWidth = 78;
     if (this.inletSide) {
       const pipeCenterY = this.getPipeCenterY();
-      const lipY = Math.round(pipeCenterY - SIDE_PIPE_LIP_HEIGHT / 2);
-      const neckY = Math.round(pipeCenterY - SIDE_PIPE_NECK_HEIGHT / 2);
       const opensLeft = this.inletSide === "right";
-      const neckX = opensLeft ? this.canvas.width - SIDE_PIPE_NECK_LENGTH : 0;
-      const lipX = opensLeft
-        ? neckX - SIDE_PIPE_LIP_DEPTH
-        : SIDE_PIPE_NECK_LENGTH;
+      const mouthX = opensLeft
+        ? this.canvas.width - SIDE_PIPE_NECK_LENGTH - SIDE_PIPE_LIP_DEPTH / 2
+        : SIDE_PIPE_NECK_LENGTH + SIDE_PIPE_LIP_DEPTH / 2;
+      const mouthRadius = SIDE_PIPE_LIP_HEIGHT / 2;
       const pipeColor = this.getPipeColor();
 
       this.context.save();
-      this.context.fillStyle = pipeColor;
+      // Looking straight down the barrel: black is the distant interior, while
+      // two restrained rings describe the lip without turning it into a HUD
+      // panel. The viewport sits over this entire canvas in the DOM stack.
+      this.context.fillStyle = "#000303";
       this.context.strokeStyle = pipeColor;
       this.context.lineWidth = 2;
-      this.context.globalAlpha = 0.2;
-      this.context.fillRect(neckX, neckY, SIDE_PIPE_NECK_LENGTH, SIDE_PIPE_NECK_HEIGHT);
-      this.context.globalAlpha = 0.68;
-      this.context.strokeRect(neckX, neckY, SIDE_PIPE_NECK_LENGTH, SIDE_PIPE_NECK_HEIGHT);
-      this.context.globalAlpha = 0.13;
-      this.context.fillRect(lipX, lipY, SIDE_PIPE_LIP_DEPTH, SIDE_PIPE_LIP_HEIGHT);
+      this.context.beginPath();
+      this.context.arc(mouthX, pipeCenterY, mouthRadius, 0, Math.PI * 2);
+      this.context.fill();
       this.context.globalAlpha = 0.78;
-      this.context.strokeRect(lipX, lipY, SIDE_PIPE_LIP_DEPTH, SIDE_PIPE_LIP_HEIGHT);
+      this.context.stroke();
+      this.context.globalAlpha = 0.28;
+      this.context.beginPath();
+      this.context.arc(mouthX, pipeCenterY, mouthRadius * 0.72, 0, Math.PI * 2);
+      this.context.stroke();
       this.context.restore();
       return;
     }
@@ -948,6 +966,10 @@ export class Processor {
       });
     }
   }
+}
+
+function easeOutCubic(value) {
+  return 1 - (1 - value) ** 3;
 }
 
 function getCollisionSize(unit) {

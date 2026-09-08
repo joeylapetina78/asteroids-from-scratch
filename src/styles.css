@@ -4827,7 +4827,8 @@ body.is-cockpit-layout .is-cockpit-chamber .component-panel-title {
      inner half hidden behind the portal — "PROCESSO", "ARGO HOLD". */
   height: auto;
   justify-content: center;
-  z-index: 1;
+  /* Painted on the rear wall: ore in the chamber canvas passes in front. */
+  z-index: 0;
 }
 
 body.is-cockpit-layout .processor-panel.is-cockpit-chamber .component-panel-title {
@@ -4885,6 +4886,8 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber .component-panel-ti
 body.is-cockpit-layout .is-cockpit-chamber canvas,
 body.is-cockpit-layout .processor-panel.is-cockpit-chamber #processor,
 body.is-cockpit-layout .cargo-panel.is-cockpit-chamber #cargo {
+  position: relative;
+  z-index: 1;
   display: block !important;
   width: 100%;
   /* The whole bay: the designation is painted over it rather than sitting above
