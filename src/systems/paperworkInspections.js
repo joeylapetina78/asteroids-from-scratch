@@ -1,5 +1,5 @@
-import { getCurrentShipLegal, getPilotLicense, getPilotName, getUnauthorizedVisitedZones } from "./legalRecords.js?v=fresh-20260908-1725-26e42077";
-import { findDocumentsForEntity, findDocumentsHeldBy, getShipAssetId } from "./worldRecords.js?v=fresh-20260908-1725-26e42077";
+import { getCurrentShipLegal, getPilotLicense, getPilotName, getUnauthorizedVisitedZones } from "./legalRecords.js?v=fresh-20260908-1738-a6780bc2";
+import { findDocumentsForEntity, findDocumentsHeldBy, getShipAssetId } from "./worldRecords.js?v=fresh-20260908-1738-a6780bc2";
 
 export function createShipPaperworkInspectionReport(state, { inspector = null, site = null } = {}) {
   const hull = state.components.hull;
