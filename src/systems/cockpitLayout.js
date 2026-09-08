@@ -70,10 +70,12 @@ export function createCockpitLayoutState(source = null) {
   const assignments = normalizeAssignments(source?.assignments, COCKPIT_PRESETS[preset]);
 
   return {
-    version: 3,
+    version: 4,
     preset,
     assignments,
     floatingPositions: normalizeFloatingPositions(source?.floatingPositions),
+    openModules: normalizeOpenModules(source?.openModules),
+    trayOpen: source?.trayOpen === true,
     processorClawPosition: normalizePoint(source?.processorClawPosition),
     processorClawTarget: normalizeClawTarget(source?.processorClawTarget),
     phosphorColor: normalizePhosphorColor(source?.phosphorColor),
@@ -95,6 +97,8 @@ export function applyCockpitPreset(state, preset) {
   state.preset = resolvedPreset;
   state.assignments = { ...COCKPIT_PRESETS[resolvedPreset] };
   state.floatingPositions = {};
+  state.openModules = [];
+  state.trayOpen = false;
   state.processorClawPosition = null;
   state.processorClawTarget = "cargo";
   return state;
@@ -123,6 +127,13 @@ function normalizeFloatingPositions(positions) {
     if (!Number.isFinite(position?.x) || !Number.isFinite(position?.y)) return [];
     return [[moduleId, { x: Math.round(position.x), y: Math.round(position.y) }]];
   }));
+}
+
+function normalizeOpenModules(moduleIds) {
+  if (!Array.isArray(moduleIds)) return [];
+  return [...new Set(moduleIds)].filter((moduleId) => (
+    COCKPIT_MODULE_IDS.includes(moduleId) && !["processor", "cargo"].includes(moduleId)
+  ));
 }
 
 function normalizePhosphorColor(color) {

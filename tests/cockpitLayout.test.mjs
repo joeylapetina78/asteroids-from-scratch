@@ -60,6 +60,19 @@ test("floating module positions survive loading and reset with a preset", () => 
   assert.equal(layout.processorClawTarget, "cargo");
 });
 
+test("the last open modules and tray state survive loading and reset with a preset", () => {
+  const layout = createCockpitLayoutState({
+    openModules: ["engine", "scanner", "engine", "cargo", "unknown"],
+    trayOpen: true,
+  });
+
+  assert.deepEqual(layout.openModules, ["engine", "scanner"]);
+  assert.equal(layout.trayOpen, true);
+  applyCockpitPreset(layout, "mining");
+  assert.deepEqual(layout.openModules, []);
+  assert.equal(layout.trayOpen, false);
+});
+
 test("the processor plug defaults to cargo", () => {
   assert.equal(createCockpitLayoutState().processorClawTarget, "cargo");
   assert.equal(createCockpitLayoutState({ processorClawTarget: "unknown" }).processorClawTarget, "cargo");
