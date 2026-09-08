@@ -2750,16 +2750,14 @@ body:not(.is-cockpit-layout) .journey-panel {
   width: min(520px, calc(100vw - 48px));
 }
 
-.resource-guide-panel.is-paper-folded > :not(.component-panel-title) {
-  display: none;
+.resource-guide-panel.is-paper-folded .resource-guide-content {
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.resource-guide-panel.is-paper-flipped .resource-guide-intro,
-.resource-guide-panel.is-paper-flipped .resource-guide-content {
-  display: none;
-}
-
-.resource-guide-panel:not(.is-paper-flipped) .resource-guide-legend {
+.resource-guide-panel.is-paper-folded .resource-guide-intro,
+.resource-guide-panel.is-paper-folded .resource-guide-legend,
+.resource-guide-panel.is-paper-folded:not(.is-paper-flipped) .resource-guide-column:nth-child(2),
+.resource-guide-panel.is-paper-folded.is-paper-flipped .resource-guide-column:nth-child(1) {
   display: none;
 }
 
@@ -2770,12 +2768,17 @@ body:not(.is-cockpit-layout) .journey-panel {
   line-height: 1.45;
 }
 
-/* Family sections flow into as many ~270px columns as fit: two on the wide
-   drawer panel, collapsing to one on a narrow viewport. This roughly halves the
-   guide's height so it stops running off the bottom of the drawer. */
+/* The physical guide is a two-panel foldout. Keeping the halves explicit lets
+   Fold show one leaf and Flip turn between those leaves without reflowing which
+   families belong to each side. */
 .resource-guide-content {
-  columns: 270px 2;
-  column-gap: 22px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.resource-guide-column {
+  min-width: 0;
 }
 
 .resource-guide-family {
@@ -2830,20 +2833,9 @@ body:not(.is-cockpit-layout) .journey-panel {
 }
 
 .resource-guide-swatch {
-  width: 14px;
-  height: 14px;
-  background: var(--resource-color);
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  box-shadow: 0 0 7px color-mix(in srgb, var(--resource-color), transparent 48%);
+  width: 16px;
+  height: 16px;
 }
-
-.resource-guide-swatch.is-circle { border-radius: 50%; }
-.resource-guide-swatch.is-square { border-radius: 2px; }
-.resource-guide-swatch.is-triangle { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.resource-guide-swatch.is-hexagon { clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
-.resource-guide-swatch.is-octagon { clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); }
-.resource-guide-swatch.is-diamond { transform: rotate(45deg) scale(0.78); }
-.resource-guide-swatch.is-shard { clip-path: polygon(50% 0, 62% 37%, 100% 50%, 62% 63%, 50% 100%, 38% 63%, 0 50%, 38% 37%); }
 
 /* Themed footer that fills the space a two-column split leaves and teaches the
    survival-role color language the families are organized around. */
