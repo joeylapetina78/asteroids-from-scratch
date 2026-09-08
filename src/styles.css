@@ -45,11 +45,56 @@ body {
   --z-desk-panel-max: 520;
   --z-desk-panel-min: 30;
   --z-viewport: 20;
+  --z-snap-grid: 24;
   --z-chamber-plug: 16;
   --z-chamber-pipes: 14;
   --z-chamber-ore: 10;
   --z-chamber-glow: 6;
 }
+
+/* Visible only while an instrument is held. The rectangular lattice describes
+   the side bays; the circular overlay describes the viewport's radial docking
+   geometry. Both use the selected phosphor so the guide belongs to the HUD. */
+body.is-cockpit-layout .cockpit-snap-grid {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-snap-grid);
+  display: none;
+  pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--cockpit-phosphor) 13%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--cockpit-phosphor) 13%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+body.is-cockpit-layout .cockpit-snap-grid.is-active {
+  display: block;
+}
+
+body.is-cockpit-layout .cockpit-snap-grid-scope {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: min(100vw, 100vh);
+  height: min(100vw, 100vh);
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 28%, transparent);
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background-image:
+    repeating-radial-gradient(circle, transparent 0 63px, color-mix(in srgb, var(--cockpit-phosphor) 18%, transparent) 64px 65px),
+    repeating-conic-gradient(from 0deg, transparent 0deg 14.72deg, color-mix(in srgb, var(--cockpit-phosphor) 16%, transparent) 14.72deg 15deg);
+  background-color: rgba(2, 8, 10, 0.12);
+}
+
+.cockpit-snap-grid-scope::before,
+.cockpit-snap-grid-scope::after {
+  content: "";
+  position: absolute;
+  background: color-mix(in srgb, var(--cockpit-phosphor) 30%, transparent);
+}
+
+.cockpit-snap-grid-scope::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+.cockpit-snap-grid-scope::after { top: 50%; left: 0; right: 0; height: 1px; }
 
 .quick-links {
   position: fixed;
