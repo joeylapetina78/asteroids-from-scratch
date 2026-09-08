@@ -1,9 +1,9 @@
-import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260908-1815-d6041bf4";
-import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260908-1815-d6041bf4";
-import { ensureObligations } from "./obligations.js?v=fresh-20260908-1815-d6041bf4";
-import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260908-1815-d6041bf4";
-import { consolidateSprcOwnership } from "./sprcOwnership.js?v=fresh-20260908-1815-d6041bf4";
-import { listGeneratedSettlements, materializeSettlementAuthority } from "./settlementSeedPipeline.js?v=fresh-20260908-1815-d6041bf4";
+import { ensureAccounts, syncLegacyCredits } from "./accounts.js?v=fresh-20260908-1824-319e9c79";
+import { ensureHulls, syncActiveHullFromComponents } from "./hulls.js?v=fresh-20260908-1824-319e9c79";
+import { ensureObligations } from "./obligations.js?v=fresh-20260908-1824-319e9c79";
+import { ensurePanelCondition } from "./panelMaintenance.js?v=fresh-20260908-1824-319e9c79";
+import { consolidateSprcOwnership } from "./sprcOwnership.js?v=fresh-20260908-1824-319e9c79";
+import { listGeneratedSettlements, materializeSettlementAuthority } from "./settlementSeedPipeline.js?v=fresh-20260908-1824-319e9c79";
 
 const SAVE_KEY = "asteroids.profileSave.v4";
 
@@ -37,6 +37,8 @@ export function loadSavedProfile(state) {
 
   try {
     const save = JSON.parse(rawSave);
+
+    state._devStartId = save.devStartId ?? null;
 
     state.ledger?.loadSaveSnapshot?.(save.ledger);
 

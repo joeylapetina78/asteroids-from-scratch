@@ -48,13 +48,25 @@ test("moving a module makes the layout custom and rejects unknown targets", () =
 test("floating module positions survive loading and reset with a preset", () => {
   const layout = createCockpitLayoutState({
     floatingPositions: {
-      processor: { x: 123.4, y: 87.8 },
+      processor: {
+        x: 123.4,
+        y: 87.8,
+        anchorX: { fraction: 0.5, offset: 44 },
+        anchorY: { fraction: 0.25, offset: 18 },
+      },
       engine: { x: "far", y: 20 },
       unknown: { x: 1, y: 2 },
     },
   });
 
-  assert.deepEqual(layout.floatingPositions, { processor: { x: 123, y: 88 } });
+  assert.deepEqual(layout.floatingPositions, {
+    processor: {
+      x: 123,
+      y: 88,
+      anchorX: { fraction: 0.5, offset: 44 },
+      anchorY: { fraction: 0.25, offset: 18 },
+    },
+  });
   applyCockpitPreset(layout, "mining");
   assert.deepEqual(layout.floatingPositions, {});
   assert.equal(layout.processorClawTarget, "cargo");
