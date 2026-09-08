@@ -1,5 +1,5 @@
-import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260908-1758-b90f0dde";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260908-1758-b90f0dde";
+import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260908-1808-6f046dc7";
+import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260908-1808-6f046dc7";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -132,6 +132,7 @@ export class Processor {
     this.spawnFromLeft = options.spawnFromLeft ?? false;
     this.floorSpread = options.floorSpread ?? false;
     this.inletSide = options.inletSide ?? null;
+    this.getInletCenterX = options.getInletCenterX ?? null;
     this.getInletCenterY = options.getInletCenterY ?? null;
     this.transparentBackground = options.transparentBackground ?? false;
     // A chamber the size of a wall is not a hopper. With gravity the ore all
@@ -190,10 +191,10 @@ export class Processor {
     // inside it. Even coverage, no repeating trajectories.
     const fan = ((slot + Math.random()) / SPAWN_SLOTS - 0.5) * 2;
     const speedJitter = 1 + (Math.random() - 0.5) * 2 * SPAWN_SPEED_JITTER;
+    const inletX = this.getPipeCenterX();
     const inletY = Math.round(this.getPipeCenterY() - size / 2 + fan * 20);
     const shootsLeft = this.inletSide === "right";
     const shootsRight = this.inletSide === "left";
-    const pipeDepth = SIDE_PIPE_NECK_LENGTH + SIDE_PIPE_LIP_DEPTH;
 
     this.units.push({
       type,
@@ -203,9 +204,9 @@ export class Processor {
       color: metadata.color ?? RESOURCE_COLOR[type] ?? "#ff7452",
       shape: metadata.shape ?? getResourceShape(type),
       x: shootsLeft
-        ? this.canvas.width - pipeDepth - size + Math.random() * 9
+        ? inletX - size / 2 + Math.random() * 9
         : shootsRight
-          ? pipeDepth - Math.random() * 9
+          ? inletX - size / 2 - Math.random() * 9
           : this.spawnFromLeft ? 18 + Math.random() * 42 : this.canvas.width / 2 - spacing * 2 + slot * spacing,
       y: this.inletSide ? inletY : 30,
       vx: shootsLeft ? -220 * speedJitter : shootsRight ? 220 * speedJitter : fan * 24,
@@ -252,6 +253,14 @@ export class Processor {
     return Number.isFinite(requestedCenter)
       ? clamp(requestedCenter, SIDE_PIPE_LIP_HEIGHT / 2, this.canvas.height - SIDE_PIPE_LIP_HEIGHT / 2)
       : this.canvas.height / 2;
+  }
+
+  getPipeCenterX() {
+    const requestedCenter = this.getInletCenterX?.();
+    if (Number.isFinite(requestedCenter)) return clamp(requestedCenter, SIDE_PIPE_LIP_HEIGHT / 2, this.canvas.width - SIDE_PIPE_LIP_HEIGHT / 2);
+    return this.inletSide === "right"
+      ? this.canvas.width - SIDE_PIPE_NECK_LENGTH - SIDE_PIPE_LIP_DEPTH / 2
+      : SIDE_PIPE_NECK_LENGTH + SIDE_PIPE_LIP_DEPTH / 2;
   }
 
   getPipeColor() {
@@ -494,10 +503,7 @@ export class Processor {
     const pipeWidth = 78;
     if (this.inletSide) {
       const pipeCenterY = this.getPipeCenterY();
-      const opensLeft = this.inletSide === "right";
-      const mouthX = opensLeft
-        ? this.canvas.width - SIDE_PIPE_NECK_LENGTH - SIDE_PIPE_LIP_DEPTH / 2
-        : SIDE_PIPE_NECK_LENGTH + SIDE_PIPE_LIP_DEPTH / 2;
+      const mouthX = this.getPipeCenterX();
       const mouthRadius = SIDE_PIPE_LIP_HEIGHT / 2;
       const pipeColor = this.getPipeColor();
 
