@@ -44,6 +44,42 @@ export function alignCockpitPanel(position, movingAnchors, referenceAnchors, thr
   };
 }
 
+// Save the relationship that was snapped, rather than only today's pixels.
+// If a control matched a guide, `offset` is that control's center inside its
+// panel. Otherwise the panel center is used. Either way the reference point is
+// stored as a desk fraction, so smaller desks pull the arrangement inward.
+export function createResponsiveCockpitPosition(position, panelSize, deskSize, alignment = {}) {
+  const width = Math.max(1, deskSize?.width ?? 1);
+  const height = Math.max(1, deskSize?.height ?? 1);
+  const panelWidth = Math.max(0, panelSize?.width ?? 0);
+  const panelHeight = Math.max(0, panelSize?.height ?? 0);
+  const guideX = Number.isFinite(alignment.guideX) ? alignment.guideX : position.x + panelWidth / 2;
+  const guideY = Number.isFinite(alignment.guideY) ? alignment.guideY : position.y + panelHeight / 2;
+
+  return {
+    x: Math.round(position.x),
+    y: Math.round(position.y),
+    anchorX: { fraction: guideX / width, offset: guideX - position.x },
+    anchorY: { fraction: guideY / height, offset: guideY - position.y },
+  };
+}
+
+export function restoreResponsiveCockpitPosition(record, panelSize, deskSize) {
+  if (!isResponsiveAxis(record?.anchorX) || !isResponsiveAxis(record?.anchorY)) {
+    return { x: Number(record?.x) || 0, y: Number(record?.y) || 0 };
+  }
+  const width = Math.max(1, deskSize?.width ?? 1);
+  const height = Math.max(1, deskSize?.height ?? 1);
+  return {
+    x: record.anchorX.fraction * width - record.anchorX.offset,
+    y: record.anchorY.fraction * height - record.anchorY.offset,
+  };
+}
+
+function isResponsiveAxis(axis) {
+  return Number.isFinite(axis?.fraction) && Number.isFinite(axis?.offset);
+}
+
 function closestAlignment(origin, movingOffsets = [], references = [], threshold) {
   let closest = null;
   movingOffsets.forEach((offset) => {

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { alignCockpitPanel, snapCockpitPanel } from "../src/systems/cockpitSnap.js";
+import { alignCockpitPanel, createResponsiveCockpitPosition, restoreResponsiveCockpitPosition, snapCockpitPanel } from "../src/systems/cockpitSnap.js";
 
 test("panels outside the viewport snap to the rectangular bay grid", () => {
   const result = snapCockpitPanel(
@@ -43,4 +43,28 @@ test("panels over the viewport snap to a radial intersection", () => {
   assert.equal(result.region, "viewport");
   assert.equal(result.y, 405);
   assert.equal(result.x, 932);
+});
+
+test("a control snapped to center remains centered on a smaller desk", () => {
+  const saved = createResponsiveCockpitPosition(
+    { x: 700, y: 300 },
+    { width: 200, height: 100 },
+    { width: 1600, height: 900 },
+    { guideX: 800, guideY: null },
+  );
+  const restored = restoreResponsiveCockpitPosition(saved, { width: 200, height: 100 }, { width: 1200, height: 700 });
+
+  assert.equal(restored.x + saved.anchorX.offset, 600);
+  assert.ok(Math.abs(restored.y - 222.2222222222222) < Number.EPSILON * 256);
+});
+
+test("an unsnapped panel scales inward around its own center", () => {
+  const saved = createResponsiveCockpitPosition(
+    { x: 1200, y: 700 },
+    { width: 200, height: 100 },
+    { width: 1600, height: 900 },
+  );
+  const restored = restoreResponsiveCockpitPosition(saved, { width: 200, height: 100 }, { width: 800, height: 450 });
+
+  assert.deepEqual(restored, { x: 550, y: 325 });
 });

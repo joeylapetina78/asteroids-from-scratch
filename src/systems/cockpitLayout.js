@@ -125,7 +125,16 @@ function normalizeFloatingPositions(positions) {
   return Object.fromEntries(COCKPIT_MODULE_IDS.flatMap((moduleId) => {
     const position = positions?.[moduleId];
     if (!Number.isFinite(position?.x) || !Number.isFinite(position?.y)) return [];
-    return [[moduleId, { x: Math.round(position.x), y: Math.round(position.y) }]];
+    const responsive = Number.isFinite(position?.anchorX?.fraction)
+      && Number.isFinite(position?.anchorX?.offset)
+      && Number.isFinite(position?.anchorY?.fraction)
+      && Number.isFinite(position?.anchorY?.offset)
+      ? {
+          anchorX: { fraction: position.anchorX.fraction, offset: position.anchorX.offset },
+          anchorY: { fraction: position.anchorY.fraction, offset: position.anchorY.offset },
+        }
+      : {};
+    return [[moduleId, { x: Math.round(position.x), y: Math.round(position.y), ...responsive }]];
   }));
 }
 
