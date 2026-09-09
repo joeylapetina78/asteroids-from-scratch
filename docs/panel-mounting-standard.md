@@ -146,6 +146,30 @@ Two consequences worth stating plainly:
   be consulted only when there was no profile, so a continued save carried its
   own private copy of the desk and the two drifted apart.
 
+### Position is shared. Being switched on is not.
+
+WHERE an instrument sits is the player's arrangement, and belongs to every run.
+WHETHER it is switched on is a fact about *this ship*, and does not.
+
+Restoring both from the shared store meant a fresh Campaign booted with an
+engine, a beacon locator, a tractor field and a scanner already humming — none
+of which the pilot had been given yet — purely because a previous Explorer run
+had left them on. So the stored open list is filtered by what the ship actually
+has (`state.ui.panels[id].available`), while positions restore unconditionally.
+The first time the player switches the tractor field on in Campaign, it appears
+exactly where they keep it.
+
+Two ordering facts make this work, and both cost a wrong first attempt:
+
+- The filter **cannot run during `setupCockpitLayout()`**. Nothing is fitted yet
+  in any mode at that point — `applyDevStart` and `revealInstalledComponents`
+  both run afterwards — so gating there emptied every start, Explorer included.
+  `restoreOpenCockpitInstruments()` is called once fitment has settled.
+- Instruments filtered out are **held, not dropped** (`suppressedOpenModules`),
+  and written back by `persistCockpitDefault`. Otherwise a single Campaign run
+  would erase the Explorer desk's open set on its way past. An explicit toggle
+  releases the hold, because that is the player making a real decision.
+
 ### The one exception
 
 Campaign's induction has Rook ask the player to switch the hull readout on and
