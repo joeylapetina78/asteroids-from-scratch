@@ -1,81 +1,81 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260909-1841-3b03c045";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260909-1841-3b03c045";
-import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260909-1841-3b03c045";
-import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260909-1841-3b03c045";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260909-1841-3b03c045";
-import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260909-1841-3b03c045";
-import { accumulatePanelWear, addToTank, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260909-1841-3b03c045";
-import { ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260909-1841-3b03c045";
-import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260909-1841-3b03c045";
-import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260909-1841-3b03c045";
-import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260909-1841-3b03c045";
-import { getMeterGrain, getPanelMaker, getPanelMakerId } from "./content/ships/panelMakers.js?v=fresh-20260909-1841-3b03c045";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260909-1841-3b03c045";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260909-1841-3b03c045";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260909-1841-3b03c045";
-import { Game } from "./game.js?v=fresh-20260909-1841-3b03c045";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260909-1841-3b03c045";
-import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260909-1841-3b03c045";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260909-1841-3b03c045";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260909-1841-3b03c045";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260909-1841-3b03c045";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260909-1854-f2fad7ca";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260909-1854-f2fad7ca";
+import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260909-1854-f2fad7ca";
+import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260909-1854-f2fad7ca";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260909-1854-f2fad7ca";
+import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260909-1854-f2fad7ca";
+import { accumulatePanelWear, addToTank, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260909-1854-f2fad7ca";
+import { ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260909-1854-f2fad7ca";
+import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260909-1854-f2fad7ca";
+import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260909-1854-f2fad7ca";
+import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260909-1854-f2fad7ca";
+import { getMeterGrain, getPanelMaker, getPanelMakerId } from "./content/ships/panelMakers.js?v=fresh-20260909-1854-f2fad7ca";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260909-1854-f2fad7ca";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260909-1854-f2fad7ca";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260909-1854-f2fad7ca";
+import { Game } from "./game.js?v=fresh-20260909-1854-f2fad7ca";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260909-1854-f2fad7ca";
+import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260909-1854-f2fad7ca";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260909-1854-f2fad7ca";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260909-1854-f2fad7ca";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260909-1854-f2fad7ca";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260909-1841-3b03c045";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260909-1841-3b03c045";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260909-1841-3b03c045";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260909-1841-3b03c045";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260909-1841-3b03c045";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260909-1841-3b03c045";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260909-1841-3b03c045";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260909-1841-3b03c045";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260909-1841-3b03c045";
-import { Processor, getProcessorConsumptionQuantity } from "./systems/processor.js?v=fresh-20260909-1841-3b03c045";
-import { createBayInertia } from "./systems/bayInertia.js?v=fresh-20260909-1841-3b03c045";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260909-1841-3b03c045";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260909-1841-3b03c045";
-import { createGameState } from "./state/gameState.js?v=fresh-20260909-1841-3b03c045";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260909-1841-3b03c045";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260909-1841-3b03c045";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260909-1841-3b03c045";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260909-1841-3b03c045";
-import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260909-1841-3b03c045";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260909-1841-3b03c045";
-import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260909-1841-3b03c045";
-import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260909-1841-3b03c045";
-import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260909-1841-3b03c045";
-import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260909-1841-3b03c045";
-import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260909-1841-3b03c045";
-import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260909-1841-3b03c045";
-import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS, ROOK_MINING_SEED } from "./content/economy/miningInstitutions.js?v=fresh-20260909-1841-3b03c045";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260909-1841-3b03c045";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260909-1841-3b03c045";
-import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260909-1841-3b03c045";
-import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260909-1841-3b03c045";
-import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260909-1841-3b03c045";
-import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260909-1841-3b03c045";
-import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260909-1841-3b03c045";
-import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260909-1841-3b03c045";
-import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260909-1841-3b03c045";
-import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260909-1841-3b03c045";
-import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260909-1841-3b03c045";
-import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260909-1841-3b03c045";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260909-1841-3b03c045";
-import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260909-1841-3b03c045";
-import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260909-1841-3b03c045";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260909-1841-3b03c045";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260909-1841-3b03c045";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260909-1841-3b03c045";
-import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260909-1841-3b03c045";
-import { FLEET_SAMPLE_INTERVAL_MS, HULL_EVENT, auditFleetIntegrity, getFleetSamples, getHullEvents, readFleetCensus, recordFleetSample } from "./systems/fleetCensus.js?v=fresh-20260909-1841-3b03c045";
-import { clampToViewport, fromAnchoredPosition, hasAnchoredPosition, toAnchoredPosition } from "./systems/panelAnchoring.js?v=fresh-20260909-1841-3b03c045";
-import { CAMPAIGN_BROKEN_COMPONENT_IDS, CAMPAIGN_FITTED_COMPONENT_IDS, CAMPAIGN_MINER_AMMO, CAMPAIGN_MINER_PRIOR_SERVICES, CAMPAIGN_MINER_WEAR_FRACTION, CAMPAIGN_PANEL_IDS, CAMPAIGN_SHIP_FRAME_ID, CAMPAIGN_SHIP_NAME, CAMPAIGN_UNFITTED_COMPONENT_IDS } from "./content/ships/campaignLoadout.js?v=fresh-20260909-1841-3b03c045";
-import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260909-1841-3b03c045";
-import { COCKPIT_MODULE_IDS, createCockpitLayoutState, resetCockpitLayout } from "./systems/cockpitLayout.js?v=fresh-20260909-1841-3b03c045";
-import { alignCockpitPanel, createResponsiveCockpitPosition, getCockpitScope, restoreResponsiveCockpitPosition, ceilToColumn, floorToColumn, snapCockpitPanel, snapCockpitPanelToBay } from "./systems/cockpitSnap.js?v=fresh-20260909-1841-3b03c045";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260909-1854-f2fad7ca";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260909-1854-f2fad7ca";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260909-1854-f2fad7ca";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260909-1854-f2fad7ca";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260909-1854-f2fad7ca";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260909-1854-f2fad7ca";
+import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260909-1854-f2fad7ca";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260909-1854-f2fad7ca";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260909-1854-f2fad7ca";
+import { Processor, getProcessorConsumptionQuantity } from "./systems/processor.js?v=fresh-20260909-1854-f2fad7ca";
+import { createBayInertia } from "./systems/bayInertia.js?v=fresh-20260909-1854-f2fad7ca";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260909-1854-f2fad7ca";
+import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260909-1854-f2fad7ca";
+import { createGameState } from "./state/gameState.js?v=fresh-20260909-1854-f2fad7ca";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260909-1854-f2fad7ca";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260909-1854-f2fad7ca";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260909-1854-f2fad7ca";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260909-1854-f2fad7ca";
+import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260909-1854-f2fad7ca";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260909-1854-f2fad7ca";
+import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260909-1854-f2fad7ca";
+import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260909-1854-f2fad7ca";
+import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260909-1854-f2fad7ca";
+import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260909-1854-f2fad7ca";
+import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260909-1854-f2fad7ca";
+import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260909-1854-f2fad7ca";
+import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS, ROOK_MINING_SEED } from "./content/economy/miningInstitutions.js?v=fresh-20260909-1854-f2fad7ca";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260909-1854-f2fad7ca";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260909-1854-f2fad7ca";
+import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260909-1854-f2fad7ca";
+import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260909-1854-f2fad7ca";
+import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260909-1854-f2fad7ca";
+import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260909-1854-f2fad7ca";
+import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260909-1854-f2fad7ca";
+import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260909-1854-f2fad7ca";
+import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260909-1854-f2fad7ca";
+import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260909-1854-f2fad7ca";
+import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260909-1854-f2fad7ca";
+import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260909-1854-f2fad7ca";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260909-1854-f2fad7ca";
+import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260909-1854-f2fad7ca";
+import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260909-1854-f2fad7ca";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260909-1854-f2fad7ca";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260909-1854-f2fad7ca";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260909-1854-f2fad7ca";
+import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260909-1854-f2fad7ca";
+import { FLEET_SAMPLE_INTERVAL_MS, HULL_EVENT, auditFleetIntegrity, getFleetSamples, getHullEvents, readFleetCensus, recordFleetSample } from "./systems/fleetCensus.js?v=fresh-20260909-1854-f2fad7ca";
+import { clampToViewport, fromAnchoredPosition, hasAnchoredPosition, toAnchoredPosition } from "./systems/panelAnchoring.js?v=fresh-20260909-1854-f2fad7ca";
+import { CAMPAIGN_BROKEN_COMPONENT_IDS, CAMPAIGN_FITTED_COMPONENT_IDS, CAMPAIGN_MINER_AMMO, CAMPAIGN_MINER_PRIOR_SERVICES, CAMPAIGN_MINER_WEAR_FRACTION, CAMPAIGN_PANEL_IDS, CAMPAIGN_SHIP_FRAME_ID, CAMPAIGN_SHIP_NAME, CAMPAIGN_UNFITTED_COMPONENT_IDS } from "./content/ships/campaignLoadout.js?v=fresh-20260909-1854-f2fad7ca";
+import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260909-1854-f2fad7ca";
+import { COCKPIT_MODULE_IDS, createCockpitLayoutState, resetCockpitLayout } from "./systems/cockpitLayout.js?v=fresh-20260909-1854-f2fad7ca";
+import { alignCockpitPanel, createResponsiveCockpitPosition, getCockpitScope, restoreResponsiveCockpitPosition, ceilToColumn, floorToColumn, snapCockpitPanel, snapCockpitPanelToBay } from "./systems/cockpitSnap.js?v=fresh-20260909-1854-f2fad7ca";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -7388,14 +7388,48 @@ function updateCockpitDisplay() {
   // A dead processor says so, in the bay, without being opened. "cargo output"
   // on a failed unit reads as a working choice rather than as the only place a
   // broken mag link can still reach.
-  const processorFailed = state.components.processor?.condition?.stage === "failed";
+  // Dead is dead, for every panel that can die.
+  //
+  // `failed` is the last rung of the SHARED wear ladder in panelMaintenance.js
+  // (healthy -> degraded -> emergency -> failed), so the way a dead unit looks
+  // is driven off that stage for every cockpit module rather than being written
+  // out by hand for the processor. The processor is simply the first one the
+  // player meets, because Rook issues a skiff with a dead one bolted in.
+  const failedPanelIds = new Set();
+  COCKPIT_MODULE_IDS.forEach((panelId) => {
+    const componentStateId = COMPONENT_STATE_BY_PANEL_ID[panelId];
+    const stage = componentStateId ? state.components[componentStateId]?.condition?.stage : null;
+    const isFailed = stage === "failed";
+    if (isFailed) failedPanelIds.add(panelId);
+    document.querySelector(`.is-cockpit-module[data-panel-id="${panelId}"]`)
+      ?.classList.toggle("is-module-faulted", isFailed);
+    document.querySelector(`.cockpit-module-launcher[data-panel-id="${panelId}"]`)
+      ?.classList.toggle("is-module-faulted", isFailed);
+  });
+
+  const processorFailed = failedPanelIds.has("processor");
   setSummary("processor", processorFailed
     ? "NOT FUNCTIONING · ERR"
     : state.components.processor?.output ? `${state.components.processor.output} output` : "Ready");
-  document.querySelector('.is-cockpit-module[data-panel-id="processor"]')
-    ?.classList.toggle("is-module-faulted", processorFailed);
-  document.querySelector('.cockpit-module-launcher[data-panel-id="processor"]')
-    ?.classList.toggle("is-module-faulted", processorFailed);
+
+  // The patch panel is the first place a player looks at the processor at all —
+  // Rook points it out before the chamber has even been revealed — so the fault
+  // has to be legible on that row and not only on the wall of the bay.
+  // The routing plug is the processor's other face. It hangs on its tether
+  // across the cockpit showing ERR, in phosphor, as though the link were live —
+  // a dead unit's cable should read dead along its whole length.
+  document.querySelector(".processor-claw")?.classList.toggle("is-module-faulted", processorFailed);
+  document.querySelector(".processor-tether")?.classList.toggle("is-module-faulted", processorFailed);
+
+  const processorOutletRow = document.querySelector(".cockpit-processor-outlet");
+  if (processorOutletRow) {
+    processorOutletRow.classList.toggle("is-module-faulted", processorFailed);
+    const outletCaption = processorOutletRow.querySelector("small");
+    if (outletCaption) {
+      const caption = processorFailed ? "NOT FUNCTIONING" : "ROUTED OUTPUT";
+      if (outletCaption.textContent !== caption) outletCaption.textContent = caption;
+    }
+  }
   setSummary("cargo", "Stored goods");
   setSummary("tow-cable", towCableStatus?.textContent ?? "Idle");
   setSummary("moss-harvester", mossHarvesterStatus?.textContent ?? "Stored");

@@ -5430,6 +5430,55 @@ body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:focus-within
   font-size: 0.48rem;
 }
 
+/* A DEAD UNIT ON THE PATCH ROW ------------------------------------------
+   Rook points at the processor before the chamber has been revealed, so for
+   the first minutes of a campaign this row IS the processor as far as the
+   player is concerned. "ROUTED OUTPUT" on a unit that cannot route anything is
+   worse than saying nothing; the caption is swapped for the fault and the
+   socket becomes a hazard marker.
+
+   Amber, not red. The fault colour is established across the bay row, the
+   launcher and the chamber wall — and Rook's own line is "flagged up amber",
+   so a red row would contradict the script. */
+.cockpit-processor-outlet.is-module-faulted {
+  color: #ffb454;
+}
+
+.cockpit-processor-outlet.is-module-faulted small {
+  color: #ffb454;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+/* The output socket becomes a warning triangle. Drawn on ::before so the
+   exclamation mark on ::after is not clipped by the triangle's own shape. */
+.cockpit-processor-outlet.is-module-faulted i {
+  position: relative;
+  width: 20px;
+  height: 18px;
+  border: 0;
+  background: transparent;
+}
+
+.cockpit-processor-outlet.is-module-faulted i::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #ffb454;
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+
+.cockpit-processor-outlet.is-module-faulted i::after {
+  content: "!";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 1px;
+  color: #100a04;
+  font: 900 10px/1 "Courier New", monospace;
+  text-align: center;
+}
+
 .cockpit-processor-outlet i {
   width: 17px;
   height: 17px;
@@ -5870,6 +5919,7 @@ body.is-cockpit-layout .journey-panel .journey-profile strong {
 }
 
 .cockpit-module-launcher.is-module-faulted,
+.cockpit-processor-outlet.is-module-faulted,
 .is-cockpit-module.is-module-faulted > .component-panel-title {
   position: relative;
   border-left: 2px solid #ffb454;
@@ -5933,6 +5983,27 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber.is-module-faulted .
 body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber.is-module-faulted
   .component-panel-title span:not(.cockpit-module-code):not(.cockpit-module-summary) {
   display: none;
+}
+
+/* The plug and its cable, dead. The ERR text was already amber, but it sat
+   inside a phosphor-lit housing on a phosphor cable, which reads as a working
+   link carrying an error rather than as a dead unit. Housing, cable and the
+   hazard paint all follow the fault. */
+.processor-tether.is-module-faulted path {
+  stroke: color-mix(in srgb, #ffb454 46%, transparent);
+}
+
+.processor-claw.is-module-faulted {
+  color: #ffb454;
+}
+
+.processor-claw.is-module-faulted .processor-claw-glyph {
+  border-color: #ffb454;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 180, 84, 0.13) 0 6px,
+    transparent 6px 12px
+  );
 }
 
 .processor-all-materials.is-faulted {

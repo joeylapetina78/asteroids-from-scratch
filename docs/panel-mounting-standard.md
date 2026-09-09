@@ -226,7 +226,19 @@ bay, and a bay left open in Explorer answers that instruction before it is given
 Held in `campaignTrayWasOpen` and written back by `persistCockpitDefault`, so the
 staging never reaches the store; opening the bay by hand spends it.
 
-**The processor starts dead**, and now looks it. `CAMPAIGN_BROKEN_COMPONENT_IDS`
+**The processor starts dead**, and now looks it — but nothing about that look is
+campaign-specific. `failed` is the last rung of the SHARED wear ladder in
+`panelMaintenance.js` (`healthy → degraded → emergency → failed`), and
+`updateCockpitDisplay` walks every cockpit module, looks its component up in
+`COMPONENT_STATE_BY_PANEL_ID`, and toggles `is-module-faulted` off that stage.
+Any panel that reaches the bottom of the ladder looks dead the same way. The
+processor is just the first one a player meets, because Rook issues a skiff with
+a dead one bolted in.
+
+The fault is carried on every face the unit has, because the player meets them at
+different times: the bay row and its launcher, the patch-panel outlet (caption
+swapped to NOT FUNCTIONING, socket replaced by a warning triangle), the routing
+plug and its tether, and the chamber wall itself. `CAMPAIGN_BROKEN_COMPONENT_IDS`
 has always put the skiff's processor at `stage: "failed"`, but the only visible
 sign was an amber flag on a bay row the player has to open the bay to see. A
 chamber is the size of a wall, so a dead one now reads from across the cockpit:
