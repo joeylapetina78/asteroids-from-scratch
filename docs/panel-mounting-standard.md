@@ -125,3 +125,38 @@ There are three, and all three had to be fixed:
   limit, so a correctly snapped panel could still be clamped off-grid at an edge.
   Floors round up and ceilings round down, so quantizing a bound never pushes a
   panel back outside it.
+
+## Where an arrangement lives
+
+There is one physical cockpit, so there is one arrangement. It is not a property
+of a save or of a game mode — it is where this person likes their hands to fall.
+
+`asteroids.cockpitDefault.v1` holds it, and `persistCockpitDefault()` writes it
+the moment anything moves: a drag finishing, an instrument switched on or off,
+the bay opening, the phosphor colour, the viewport mode. There is no "save my
+layout" button, because being asked to press one is how an arrangement gets lost.
+
+Two consequences worth stating plainly:
+
+- **`?resetSave=1` does not clear it.** Starting a fresh run throws away the
+  world, the money and the ship. It does not rearrange the furniture.
+- **It is read in every mode**, saved or fresh, Explorer or Campaign. It used to
+  be consulted only when there was no profile, so a continued save carried its
+  own private copy of the desk and the two drifted apart.
+
+### The one exception
+
+Campaign's induction has Rook ask the player to switch the hull readout on and
+drag it clear of the bay. That only teaches anything if the hull actually starts
+beside the bay, so campaign racks it — and a stored position would otherwise have
+it already parked on the far side, satisfying the lesson before it was given.
+
+The suppression is staging for one run and must never reach the store:
+`campaignHullFallback` holds the player's real hull position and
+`persistCockpitDefault()` writes it back until the player moves the hull
+themselves, at which point their placement wins. Without that, starting a
+campaign silently wiped a hull carefully parked in Explorer.
+
+Note that this branch reads `initialDevStart`, not `state._devStartId`. The
+latter is only assigned this early for free-play starts, so it is `undefined` at
+cockpit-setup time in the one mode the branch exists for.
