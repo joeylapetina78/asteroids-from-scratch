@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260908-2017-938406fa" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260908-2037-c924cfc5" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260908-2017-938406fa</span>
+      <span class="build-tag">build: fresh-20260908-2037-c924cfc5</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -326,23 +326,11 @@
                 <button id="cockpit-mode-default" type="button" aria-pressed="true">Cockpit</button>
                 <button id="cockpit-mode-panorama" type="button" aria-pressed="false">Panorama</button>
               </div>
-              <label for="cockpit-preset">Preset</label>
-              <select id="cockpit-preset">
-                <option value="mining">Mining</option>
-                <option value="hauling">Hauling</option>
-                <option value="exploration">Exploration</option>
-                <option value="recovery">Recovery</option>
-                <option value="custom">Custom</option>
-              </select>
               <button id="cockpit-configure" type="button" aria-expanded="false">Configure</button>
               <button id="cockpit-save-default" type="button">Save as default</button>
               <button id="cockpit-reset" type="button">Reset layout</button>
             </div>
           </header>
-
-          <aside id="cockpit-slot-left" class="cockpit-slot cockpit-slot-left" aria-label="Ship status modules"></aside>
-          <aside id="cockpit-slot-right" class="cockpit-slot cockpit-slot-right" aria-label="Navigation modules"></aside>
-          <nav id="cockpit-slot-bottom" class="cockpit-slot cockpit-slot-bottom" aria-label="Task modules"></nav>
 
           <section id="cockpit-config-panel" class="cockpit-config-panel" aria-label="Configure cockpit modules" hidden>
             <header>
@@ -406,7 +394,6 @@
                   <span id="ship-status">ship offline</span>
                   <span class="engine-brand-row">
                     <span id="engine-model-name" class="engine-brand-name">Vektor R/T Reversing Drive</span>
-                    <button id="engine-help" class="engine-help-button" type="button" aria-label="Vektor engine help">?</button>
                   </span>
                 </div>
               </div>
@@ -1037,6 +1024,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260908-2017-938406fa"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260908-2037-c924cfc5"></script>
   </body>
 </html>

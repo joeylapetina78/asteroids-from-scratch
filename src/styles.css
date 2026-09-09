@@ -3763,6 +3763,13 @@ body.is-cockpit-layout .space-panel {
   --meter-h: 16px;
   /* Default control height. A brand may set another multiple of --u2. */
   --control-h: 32px;
+  /* Two size classes that are FUNCTIONAL rather than expressive, so they are
+     structural and a maker does not get to argue with them.
+     `lg` is a panic target: a control hit repeatedly under pressure, where
+     missing it costs the player something. `flat` is for a control that has to
+     share a crowded panel without dominating it. */
+  --control-h-lg: 64px;
+  --control-h-flat: 32px;
   --type-xs: 8px;
   --type-s: 10px;
   --type-m: 12px;
@@ -3902,46 +3909,6 @@ body.is-cockpit-layout .viewport-panel #game {
   aspect-ratio: 16 / 9;
 }
 
-.cockpit-slot {
-  grid-area: stage;
-  position: absolute;
-  display: flex;
-  gap: 6px;
-  min-width: 0;
-  z-index: 80;
-  pointer-events: none;
-}
-
-.cockpit-slot .cockpit-module-launcher {
-  pointer-events: auto;
-}
-
-.cockpit-slot-left,
-.cockpit-slot-right {
-  flex-direction: column;
-  top: 44px;
-  bottom: 46px;
-  width: 118px;
-  overflow: auto;
-}
-
-.cockpit-slot-left {
-  left: 6px;
-}
-
-.cockpit-slot-right {
-  right: 6px;
-}
-
-.cockpit-slot-bottom {
-  right: 132px;
-  bottom: 6px;
-  left: 132px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
-  align-items: start;
-}
-
 body.is-cockpit-layout .is-cockpit-module {
   position: relative;
   width: 100%;
@@ -4039,8 +4006,6 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-floating {
 }
 
 body.is-cockpit-layout .is-cockpit-floating[data-panel-id="processor"] { width: 320px; }
-body.is-cockpit-layout .is-cockpit-floating[data-cockpit-slot="right"] { width: 240px; }
-body.is-cockpit-layout .is-cockpit-floating[data-cockpit-slot="bottom"] { width: 300px; }
 body.is-cockpit-layout .is-cockpit-floating[data-panel-id="engine"] { width: 188px; }
 body.is-cockpit-layout .is-cockpit-floating .component-panel-title { cursor: grab; }
 body.is-cockpit-layout .is-cockpit-floating.is-dragging .component-panel-title { cursor: grabbing; }
@@ -4145,7 +4110,7 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .power-button {
   justify-content: space-between;
   gap: var(--u2);
   width: 100%;
-  min-height: var(--control-h);
+  min-height: var(--control-h-flat);
   margin: 0 0 var(--u2);
   border: 1px solid var(--cockpit-phosphor);
   border-radius: 0;
@@ -4223,10 +4188,6 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track 
   background: var(--cockpit-phosphor);
 }
 
-body.is-cockpit-layout .cockpit-slot-left .is-cockpit-expanded { left: 0; }
-body.is-cockpit-layout .cockpit-slot-right .is-cockpit-expanded { right: 0; }
-body.is-cockpit-layout .cockpit-slot-bottom .is-cockpit-expanded { bottom: 0; }
-
 /* The rule that used to live here was `display: revert !important` on every
    expanded module's children, to undo the blanket hide above. `revert` goes back
    to the USER-AGENT value — `block` for a div — and `!important` made it beat
@@ -4269,48 +4230,32 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded #ship-status {
   display: none !important;
 }
 
+/* The maker's mark runs the full width of the bay on one line. It used to be
+   boxed to 120px to leave room for a help badge beside it, which wrapped
+   "Vektor R/T Reversing Drive" onto two ragged lines in a panel that had the
+   room all along. */
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .engine-brand-row {
   position: relative;
   display: flex !important;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 4px 0;
+  flex: 1 1 auto;
+  gap: 0;
+  width: 100%;
+  min-height: var(--u2);
+  padding: var(--u) 0;
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .engine-brand-name {
   display: block !important;
-  max-width: 120px;
+  flex: 1 1 auto;
+  width: 100%;
   color: var(--cockpit-phosphor);
-  font: 700 0.61rem/1.15 "Courier New", monospace;
-  letter-spacing: 0.07em;
+  font: 700 var(--type-m)/1.2 "Courier New", monospace;
+  letter-spacing: 0.04em;
   text-align: center;
   text-transform: uppercase;
-  white-space: normal;
-}
-
-body.is-cockpit-layout .engine-panel.is-cockpit-expanded .engine-help-button {
-  display: grid;
-  flex: 0 0 18px;
-  width: 18px;
-  height: 18px;
-  min-height: 0;
-  place-items: center;
-  border: 1px solid var(--cockpit-phosphor);
-  border-radius: 50%;
-  padding: 0;
-  color: var(--cockpit-phosphor);
-  background: transparent;
-  font: 700 0.64rem/1 "Courier New", monospace;
-  cursor: help;
-}
-
-body.is-cockpit-layout .engine-panel.is-cockpit-expanded .engine-help-button:hover,
-body.is-cockpit-layout .engine-panel.is-cockpit-expanded .engine-help-button:focus-visible {
-  color: #010808;
-  background: var(--cockpit-phosphor);
-  outline: none;
+  white-space: nowrap;
 }
 
 .cockpit-config-panel {
@@ -4445,22 +4390,6 @@ body.is-cockpit-layout.is-viewport-fullscreen .cockpit-toolbar {
 body.is-cockpit-layout.is-viewport-fullscreen .component-stack { display: none; }
 body.is-cockpit-layout.is-viewport-fullscreen .viewport-panel { grid-area: stage; position: relative; inset: auto; }
 body.is-cockpit-layout.is-viewport-fullscreen .viewport-panel #game { width: 100%; height: 100%; aspect-ratio: auto; }
-body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-left,
-body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-right {
-  top: 54px;
-  bottom: 46px;
-  width: 44px;
-  overflow: hidden;
-}
-body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-left { left: 6px; }
-body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-right { right: 6px; }
-body.is-cockpit-layout.is-viewport-fullscreen .cockpit-slot-bottom {
-  right: 50px;
-  bottom: 4px;
-  left: 50px;
-  display: flex;
-  justify-content: center;
-}
 /* Panorama used to push the mission readout down onto its own floating strip.
    It lives in the toolbar now, so that margin only made the bar taller in one
    mode than the other. */
@@ -4472,20 +4401,6 @@ body.is-cockpit-layout.is-viewport-fullscreen .cockpit-objective {
   body.is-cockpit-layout .space-panel {
     grid-template-columns: minmax(0, 1fr);
   }
-
-  body.is-cockpit-layout .cockpit-slot-left,
-  body.is-cockpit-layout .cockpit-slot-right { width: 62px; overflow: hidden; }
-  body.is-cockpit-layout .cockpit-slot-left:has(.is-cockpit-expanded) { width: min(300px, calc(100% - 76px)); }
-  body.is-cockpit-layout .cockpit-slot-right:has(.is-cockpit-expanded) { width: min(240px, calc(100% - 76px)); }
-  body.is-cockpit-layout .cockpit-slot-left .cockpit-module-summary,
-  body.is-cockpit-layout .cockpit-slot-right .cockpit-module-summary { display: none !important; }
-  body.is-cockpit-layout .cockpit-slot-left .component-panel-title strong,
-  body.is-cockpit-layout .cockpit-slot-right .component-panel-title strong { font-size: 0.62rem; text-align: center; overflow: hidden; text-overflow: ellipsis; }
-  body.is-cockpit-layout .cockpit-slot-left .is-cockpit-module:not(.is-cockpit-expanded) .component-panel-title strong,
-  body.is-cockpit-layout .cockpit-slot-right .is-cockpit-module:not(.is-cockpit-expanded) .component-panel-title strong { display: none; }
-  body.is-cockpit-layout .cockpit-slot-left .is-cockpit-module:not(.is-cockpit-expanded) .cockpit-module-code,
-  body.is-cockpit-layout .cockpit-slot-right .is-cockpit-module:not(.is-cockpit-expanded) .cockpit-module-code { display: block !important; color: #dbe6f5; font-size: 0.62rem; text-align: center; }
-  body.is-cockpit-layout .cockpit-slot-bottom { right: 76px; left: 76px; }
   body.is-cockpit-layout .journey-panel { width: min(390px, calc(100% - 160px)); }
 }
 
@@ -4498,7 +4413,6 @@ body.is-cockpit-layout.is-viewport-fullscreen .cockpit-objective {
   }
   .cockpit-toolbar { flex-wrap: wrap; }
   .cockpit-toolbar-spacer { display: none; }
-  .cockpit-slot-bottom { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #cockpit-objective-route { display: none; }
   .cockpit-objective > span:first-child { display: block; }
   body.is-cockpit-layout .viewport-panel { min-height: 300px; }
@@ -4567,13 +4481,9 @@ body.is-cockpit-layout .quick-links {
   display: none;
 }
 
-body.is-cockpit-layout:not(.is-viewport-fullscreen) .cockpit-slot-bottom {
-  bottom: 42px;
-}
-
 /* Shared 1980s cockpit control language. Power remains the reference design;
    every other module uses the same hard outline and inverse active state. */
-body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):not(.engine-help-button) {
+body.is-cockpit-layout .is-cockpit-floating button:not(.power-button) {
   min-height: var(--control-h);
   border: 1px solid var(--cockpit-phosphor);
   border-radius: 0;
@@ -4586,8 +4496,8 @@ body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):not(.engin
   text-transform: uppercase;
 }
 
-body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):not(.engine-help-button):hover:not(:disabled),
-body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):not(.engine-help-button):focus-visible:not(:disabled) {
+body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):hover:not(:disabled),
+body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):focus-visible:not(:disabled) {
   color: var(--cockpit-phosphor);
   border-color: var(--cockpit-phosphor);
   background: color-mix(in srgb, var(--cockpit-phosphor) 12%, transparent);
@@ -4596,14 +4506,14 @@ body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):not(.engin
   outline-offset: 2px;
 }
 
-body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):not(.engine-help-button):active:not(:disabled),
-body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):not(.engine-help-button)[aria-pressed="true"] {
+body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):active:not(:disabled),
+body.is-cockpit-layout .is-cockpit-floating button:not(.power-button)[aria-pressed="true"] {
   color: #010808;
   background: var(--cockpit-phosphor);
   box-shadow: none;
 }
 
-body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):not(.engine-help-button):disabled {
+body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):disabled {
   border-color: color-mix(in srgb, var(--cockpit-phosphor) 28%, transparent);
   color: color-mix(in srgb, var(--cockpit-phosphor) 38%, transparent);
   background: transparent;
@@ -4628,14 +4538,6 @@ body.is-cockpit-layout .is-cockpit-floating .dock-button {
   align-items: center;
   justify-content: center;
   width: 100%;
-}
-
-/* A maker's mark, not a control: it sits inside a row rather than defining one. */
-body.is-cockpit-layout .is-cockpit-floating .engine-help-button {
-  width: 16px;
-  height: 16px;
-  min-height: 0;
-  padding: 0;
 }
 
 body.is-cockpit-layout .is-cockpit-floating .arm-toggle {
@@ -4725,7 +4627,7 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-expanded .component-panel-t
   letter-spacing: 0.11em;
 }
 
-body.is-cockpit-layout .is-cockpit-module.is-cockpit-expanded .component-panel-title span:not(.cockpit-module-code):not(.cockpit-module-summary):not(.engine-brand-row) {
+body.is-cockpit-layout .is-cockpit-module.is-cockpit-expanded .component-panel-title span:not(.cockpit-module-code):not(.cockpit-module-summary):not(.engine-brand-row):not(.engine-brand-name) {
   display: block;
   margin-top: 2px;
   color: color-mix(in srgb, var(--cockpit-phosphor) 68%, transparent);
@@ -4825,9 +4727,17 @@ body.is-cockpit-layout .scanner-panel.is-cockpit-expanded .scan-button {
 }
 
 /* Tractor and shield are hold controls: broad bars with status immediately below. */
-body.is-cockpit-layout .collector-panel.is-cockpit-expanded .tractor-button,
 body.is-cockpit-layout .shield-panel.is-cockpit-expanded .shield-button {
-  min-height: 42px;
+  min-height: 40px;
+}
+
+/* HOLD FIELD is the panic target. It is pressed constantly while flying, often
+   in a hurry and often while something else is going wrong, so it gets the
+   large size class rather than the ordinary hold-control height. */
+body.is-cockpit-layout .collector-panel.is-cockpit-expanded .tractor-button {
+  min-height: var(--control-h-lg);
+  font-size: var(--type-l);
+  letter-spacing: 0.12em;
 }
 
 body.is-cockpit-layout .collector-panel.is-cockpit-expanded > span {
@@ -5268,13 +5178,6 @@ body.is-cockpit-layout .beacon-locator-panel.is-cockpit-expanded .system-readout
 
 body.is-cockpit-layout .processor-claw.is-plugged {
   background: transparent;
-}
-
-/* Module bay -------------------------------------------------------------
-   One physical drawer replaces the three invisible screen-spanning launcher
-   regions. Its tab is the only exposed control while the drawer is closed. */
-body.is-cockpit-layout .cockpit-slot {
-  display: none !important;
 }
 
 .cockpit-module-tray {

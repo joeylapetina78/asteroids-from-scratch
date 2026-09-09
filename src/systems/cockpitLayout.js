@@ -1,8 +1,15 @@
-export const COCKPIT_SLOT = Object.freeze({
-  LEFT: "left",
-  RIGHT: "right",
-  BOTTOM: "bottom",
-});
+// What the cockpit remembers about how the player has arranged it.
+//
+// This file used to also carry a docking-rail scheme: three fixed slots (left,
+// right, bottom) and four presets that assigned every instrument to one of
+// them. The cockpit was rebuilt around a module bay and free placement, and the
+// rails were never filled again — `applyAssignments` stopped reading the
+// assignments, the three slot containers stayed empty, and the only surviving
+// effect of choosing a preset was that it wiped `floatingPositions`. A control
+// whose sole remaining function was destroying the player's arrangement.
+//
+// Removed rather than repaired: instruments are placed by hand now, onto the
+// grid, and that is the whole model. See docs/panel-mounting-standard.md.
 
 export const DEFAULT_COCKPIT_PHOSPHOR = "#7dffe0";
 
@@ -23,56 +30,11 @@ export const COCKPIT_MODULE_IDS = Object.freeze([
   "scanner",
 ]);
 
-const COMMON = {
-  processor: COCKPIT_SLOT.LEFT,
-  cargo: COCKPIT_SLOT.RIGHT,
-  "tow-cable": COCKPIT_SLOT.LEFT,
-  "moss-seeder": COCKPIT_SLOT.LEFT,
-  "beacon-bay": COCKPIT_SLOT.LEFT,
-  "moss-harvester": COCKPIT_SLOT.LEFT,
-  hull: COCKPIT_SLOT.RIGHT,
-  engine: COCKPIT_SLOT.RIGHT,
-  "beacon-locator": COCKPIT_SLOT.RIGHT,
-  shield: COCKPIT_SLOT.RIGHT,
-  cloak: COCKPIT_SLOT.RIGHT,
-  miner: COCKPIT_SLOT.BOTTOM,
-  collector: COCKPIT_SLOT.BOTTOM,
-  scanner: COCKPIT_SLOT.BOTTOM,
-};
-
-export const COCKPIT_PRESETS = Object.freeze({
-  mining: Object.freeze({ ...COMMON }),
-  hauling: Object.freeze({
-    ...COMMON,
-    scanner: COCKPIT_SLOT.RIGHT,
-    "tow-cable": COCKPIT_SLOT.LEFT,
-    collector: COCKPIT_SLOT.RIGHT,
-    cargo: COCKPIT_SLOT.BOTTOM,
-  }),
-  exploration: Object.freeze({
-    ...COMMON,
-    scanner: COCKPIT_SLOT.LEFT,
-    "beacon-bay": COCKPIT_SLOT.LEFT,
-    miner: COCKPIT_SLOT.RIGHT,
-    "moss-harvester": COCKPIT_SLOT.BOTTOM,
-  }),
-  recovery: Object.freeze({
-    ...COMMON,
-    "tow-cable": COCKPIT_SLOT.LEFT,
-    scanner: COCKPIT_SLOT.RIGHT,
-    collector: COCKPIT_SLOT.RIGHT,
-    cargo: COCKPIT_SLOT.BOTTOM,
-  }),
-});
-
 export function createCockpitLayoutState(source = null) {
-  const preset = COCKPIT_PRESETS[source?.preset] ? source.preset : "mining";
-  const assignments = normalizeAssignments(source?.assignments, COCKPIT_PRESETS[preset]);
-
   return {
-    version: 4,
-    preset,
-    assignments,
+    // v5 drops `preset` and `assignments`. Old saves carrying them simply lose
+    // two fields nothing read; there is nothing to migrate.
+    version: 5,
     floatingPositions: normalizeFloatingPositions(source?.floatingPositions),
     openModules: normalizeOpenModules(source?.openModules),
     trayOpen: source?.trayOpen === true,
@@ -80,6 +42,18 @@ export function createCockpitLayoutState(source = null) {
     processorClawTarget: normalizeClawTarget(source?.processorClawTarget),
     phosphorColor: normalizePhosphorColor(source?.phosphorColor),
   };
+}
+
+// Put the desk back to bare: nothing floating, nothing open, the bay shut. The
+// phosphor colour is deliberately kept — it is the player's, not part of an
+// arrangement, and losing it on a layout reset was never the intent.
+export function resetCockpitLayout(state) {
+  state.floatingPositions = {};
+  state.openModules = [];
+  state.trayOpen = false;
+  state.processorClawPosition = null;
+  state.processorClawTarget = "cargo";
+  return state;
 }
 
 function normalizePoint(point) {
@@ -90,35 +64,6 @@ function normalizePoint(point) {
 
 function normalizeClawTarget(target) {
   return ["engine", "miner", "scanner", "collector", "hull", "cargo"].includes(target) ? target : "cargo";
-}
-
-export function applyCockpitPreset(state, preset) {
-  const resolvedPreset = COCKPIT_PRESETS[preset] ? preset : "mining";
-  state.preset = resolvedPreset;
-  state.assignments = { ...COCKPIT_PRESETS[resolvedPreset] };
-  state.floatingPositions = {};
-  state.openModules = [];
-  state.trayOpen = false;
-  state.processorClawPosition = null;
-  state.processorClawTarget = "cargo";
-  return state;
-}
-
-export function assignCockpitModule(state, moduleId, slot) {
-  if (!COCKPIT_MODULE_IDS.includes(moduleId) || !Object.values(COCKPIT_SLOT).includes(slot)) {
-    return false;
-  }
-
-  state.preset = "custom";
-  state.assignments[moduleId] = slot;
-  return true;
-}
-
-function normalizeAssignments(assignments, fallback) {
-  return Object.fromEntries(COCKPIT_MODULE_IDS.map((moduleId) => {
-    const slot = assignments?.[moduleId];
-    return [moduleId, Object.values(COCKPIT_SLOT).includes(slot) ? slot : fallback[moduleId]];
-  }));
 }
 
 function normalizeFloatingPositions(positions) {
