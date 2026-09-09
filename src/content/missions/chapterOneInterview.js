@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260908-1855-2f42a441";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260908-1911-da7e283e";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -570,13 +570,7 @@ export const chapterOneInterviewMission = {
       ],
       transitions: [
         {
-          eventType: "site.enteredViewport",
-          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          requiresCondition: yardExchangeIdentityNeedsReview,
-          nextStepId: "yard-traffic-check",
-        },
-        {
-          eventType: "site.nearby",
+          eventType: "authority.identityRequested",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
           requiresCondition: yardExchangeIdentityNeedsReview,
           nextStepId: "yard-traffic-check",
@@ -639,13 +633,7 @@ export const chapterOneInterviewMission = {
       ],
       transitions: [
         {
-          eventType: "site.enteredViewport",
-          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          requiresCondition: yardExchangeIdentityNeedsReview,
-          nextStepId: "yard-traffic-check",
-        },
-        {
-          eventType: "site.nearby",
+          eventType: "authority.identityRequested",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
           requiresCondition: yardExchangeIdentityNeedsReview,
           nextStepId: "yard-traffic-check",
@@ -675,13 +663,7 @@ export const chapterOneInterviewMission = {
       ],
       transitions: [
         {
-          eventType: "site.enteredViewport",
-          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          requiresCondition: yardExchangeIdentityNeedsReview,
-          nextStepId: "yard-traffic-check",
-        },
-        {
-          eventType: "site.nearby",
+          eventType: "authority.identityRequested",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
           requiresCondition: yardExchangeIdentityNeedsReview,
           nextStepId: "yard-traffic-check",
@@ -728,19 +710,13 @@ export const chapterOneInterviewMission = {
           nextStepId: "dock-yard-exchange",
         },
         {
-          eventType: "site.enteredViewport",
+          // The paperwork beat begins when the world's patrol actually scans
+          // this ship and asks for identity. Merely seeing the destination is
+          // not an inspection and must not let the mission stage one early.
+          eventType: "authority.identityRequested",
           payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
           requiresCondition: yardExchangeIdentityNeedsReview,
           setFlag: "yardExchangeInView",
-          delayMs: 800,
-          nextStepId: "yard-traffic-check",
-        },
-        {
-          eventType: "site.nearby",
-          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
-          requiresCondition: yardExchangeIdentityNeedsReview,
-          setFlag: "yardExchangeInView",
-          delayMs: 800,
           nextStepId: "yard-traffic-check",
         },
       ],

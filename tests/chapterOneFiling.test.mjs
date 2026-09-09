@@ -55,3 +55,25 @@ test("goToStepIfFlags is a declared action, not an undeclared one that silently 
   assert.ok(MISSION_ACTION_TYPES.includes("goToStepIfFlags"), "the action is in the schema");
   assert.deepEqual([...MISSION_ACTION_DEFINITIONS.goToStepIfFlags.required].sort(), ["flags", "stepId"]);
 });
+
+test("the arrival paperwork beat waits for a real patrol identity request", () => {
+  const flightBeatIds = ["try-scanner", "power-on", "first-thrust", "find-yard-exchange"];
+
+  flightBeatIds.forEach((beatId) => {
+    const transitions = beatById.get(beatId).transitions.filter(
+      (transition) => transition.nextStepId === "yard-traffic-check",
+    );
+    assert.equal(transitions.length, 1, `${beatId} has one route into the traffic check`);
+    assert.equal(transitions[0].eventType, "authority.identityRequested",
+      `${beatId} waits for the patrol's actual request`);
+  });
+
+  const prematureEvents = new Set(["site.enteredViewport", "site.nearby"]);
+  assert.equal(
+    flightBeatIds.some((beatId) => beatById.get(beatId).transitions.some(
+      (transition) => transition.nextStepId === "yard-traffic-check" && prematureEvents.has(transition.eventType),
+    )),
+    false,
+    "proximity alone never stages an inspection",
+  );
+});
