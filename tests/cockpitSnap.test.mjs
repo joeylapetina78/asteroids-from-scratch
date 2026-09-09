@@ -1,16 +1,55 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { alignCockpitPanel, createResponsiveCockpitPosition, restoreResponsiveCockpitPosition, snapCockpitPanel } from "../src/systems/cockpitSnap.js";
+import {
+  COCKPIT_PANEL_FLANGE,
+  COCKPIT_RECT_GRID,
+  alignCockpitPanel,
+  ceilToColumn,
+  floorToColumn,
+  createResponsiveCockpitPosition,
+  getCockpitRingStep,
+  getCockpitScope,
+  restoreResponsiveCockpitPosition,
+  snapCockpitPanel,
+  snapCockpitPanelToBay,
+} from "../src/systems/cockpitSnap.js";
 
-test("panels outside the viewport snap to the rectangular bay grid", () => {
+test("panels outside the viewport snap their CONTENT box to the bay grid", () => {
   const result = snapCockpitPanel(
     { x: 51, y: 107 },
     { width: 120, height: 80 },
     { width: 1600, height: 900 },
   );
 
+  // The border box sits a flange short of the column so that the content edge
+  // — the thing the reader sees lined up — lands exactly on it.
+  assert.deepEqual(result, { x: 44, y: 116, region: "bay" });
+  assert.equal((result.x + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
+  assert.equal((result.y + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
+});
+
+test("a panel with no flange still snaps its own edge", () => {
+  const result = snapCockpitPanel(
+    { x: 51, y: 107 },
+    { width: 120, height: 80 },
+    { width: 1600, height: 900 },
+    { flange: 0 },
+  );
+
   assert.deepEqual(result, { x: 48, y: 96, region: "bay" });
+});
+
+test("the scope publishes one ring step for both the snap and the stylesheet", () => {
+  const wide = getCockpitScope({ width: 1440, height: 900 });
+  assert.deepEqual(
+    { centerX: wide.centerX, centerY: wide.centerY, radius: wide.radius },
+    { centerX: 720, centerY: 450, radius: 450 },
+  );
+  assert.equal(wide.ringStep, getCockpitRingStep(450));
+
+  // The floor matters: on a short desk the computed step would fall under it.
+  assert.equal(getCockpitScope({ width: 1000, height: 640 }).ringStep, 48);
 });
 
 test("internal controls align their horizontal and vertical centerlines", () => {
@@ -67,4 +106,28 @@ test("an unsnapped panel scales inward around its own center", () => {
   const restored = restoreResponsiveCockpitPosition(saved, { width: 200, height: 100 }, { width: 800, height: 450 });
 
   assert.deepEqual(restored, { x: 550, y: 325 });
+});
+
+test("the bay snap puts a first-opened panel's content on a column", () => {
+  const placed = snapCockpitPanelToBay({ x: 190, y: 94 });
+
+  assert.equal((placed.x + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
+  assert.equal((placed.y + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
+  // No radial branch: a default position near the viewport centre must not be
+  // dragged onto a ring, or the free-slot search it came from is undone.
+  const nearCentre = snapCockpitPanelToBay({ x: 700, y: 440 });
+  assert.deepEqual(nearCentre, { x: 692, y: 452 });
+});
+
+test("quantized clamp bounds never escape the limit they came from", () => {
+  // A floor rounds up and a ceiling rounds down, so a clamped panel lands on a
+  // column WITHOUT being pushed back outside the bound.
+  assert.ok(ceilToColumn(44) >= 44);
+  assert.ok(floorToColumn(1212) <= 1212);
+  assert.equal((ceilToColumn(44) + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
+  assert.equal((floorToColumn(1212) + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
+  // A bound already on the grid is left exactly where it is.
+  const onGrid = ceilToColumn(44);
+  assert.equal(ceilToColumn(onGrid), onGrid);
+  assert.equal(floorToColumn(onGrid), onGrid);
 });

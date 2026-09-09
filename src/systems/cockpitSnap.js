@@ -2,19 +2,46 @@ export const COCKPIT_RECT_GRID = 24;
 export const COCKPIT_RADIAL_DIVISIONS = 24;
 export const COCKPIT_ALIGNMENT_THRESHOLD = 11;
 
-export function snapCockpitPanel(position, panelSize, deskSize) {
+// A panel's flange — its padding and border — is BLEED. It hangs outside the
+// grid so that what the reader actually sees lined up, the CONTENT box, is what
+// lands on a column. Snapping the border box instead put every meter, label and
+// button a flange-width off the lattice on every panel at once.
+//
+// Must match `--panel-flange` in styles.css.
+export const COCKPIT_PANEL_FLANGE = 4;
+
+// One definition of the ring spacing, used by the snap AND published to CSS so
+// the rings the player is aiming at are the rings that were drawn. These used to
+// disagree — the snap computed this while the stylesheet drew a fixed 65px
+// period, so at a 1000x640 desk the panel jumped to rings 48px apart under a
+// guide that showed them 65px apart.
+export function getCockpitRingStep(scopeRadius) {
+  return Math.max(48, Math.round(scopeRadius / 7));
+}
+
+// The circular docking zone over the viewport: centre, radius and ring pitch.
+// `main.js` hands the same numbers to the stylesheet.
+export function getCockpitScope(deskSize) {
+  const width = Math.max(1, deskSize?.width ?? 1);
+  const height = Math.max(1, deskSize?.height ?? 1);
+  const radius = Math.min(width, height) / 2;
+  return { centerX: width / 2, centerY: height / 2, radius, ringStep: getCockpitRingStep(radius) };
+}
+
+export function snapCockpitPanel(position, panelSize, deskSize, { flange = COCKPIT_PANEL_FLANGE } = {}) {
   const panelCenter = {
     x: position.x + panelSize.width / 2,
     y: position.y + panelSize.height / 2,
   };
-  const scopeCenter = { x: deskSize.width / 2, y: deskSize.height / 2 };
+  const scope = getCockpitScope(deskSize);
+  const scopeCenter = { x: scope.centerX, y: scope.centerY };
   const dx = panelCenter.x - scopeCenter.x;
   const dy = panelCenter.y - scopeCenter.y;
   const distance = Math.hypot(dx, dy);
-  const scopeRadius = Math.min(deskSize.width, deskSize.height) / 2;
+  const scopeRadius = scope.radius;
 
   if (distance <= scopeRadius) {
-    const ringStep = Math.max(48, Math.round(scopeRadius / 7));
+    const ringStep = scope.ringStep;
     const angleStep = (Math.PI * 2) / COCKPIT_RADIAL_DIVISIONS;
     const snappedRadius = Math.round(distance / ringStep) * ringStep;
     const snappedAngle = Math.round(Math.atan2(dy, dx) / angleStep) * angleStep;
@@ -26,10 +53,42 @@ export function snapCockpitPanel(position, panelSize, deskSize) {
   }
 
   return {
-    x: Math.round(position.x / COCKPIT_RECT_GRID) * COCKPIT_RECT_GRID,
-    y: Math.round(position.y / COCKPIT_RECT_GRID) * COCKPIT_RECT_GRID,
+    x: snapToColumn(position.x, flange),
+    y: snapToColumn(position.y, flange),
     region: "bay",
   };
+}
+
+// The rectangular bay snap on its own, with no radial branch.
+//
+// Used for a panel's FIRST appearance, where the position came from the tray
+// edge and an automatic search for a free slot rather than from the player's
+// hand. Running that through the full snap would pull a newly opened
+// instrument onto a viewport ring and undo the overlap search; running it
+// through nothing at all is what left every never-dragged panel sitting 16px
+// off the lattice with its meters and labels off every column.
+export function snapCockpitPanelToBay(position, { flange = COCKPIT_PANEL_FLANGE } = {}) {
+  return {
+    x: snapToColumn(position.x, flange),
+    y: snapToColumn(position.y, flange),
+  };
+}
+
+// Clamp bounds, quantized. A floor rounds UP and a ceiling rounds DOWN, so
+// snapping a bound can never push a panel back past the limit it was clamped to.
+export function ceilToColumn(edge, flange = COCKPIT_PANEL_FLANGE) {
+  return Math.ceil((edge + flange) / COCKPIT_RECT_GRID) * COCKPIT_RECT_GRID - flange;
+}
+
+export function floorToColumn(edge, flange = COCKPIT_PANEL_FLANGE) {
+  return Math.floor((edge + flange) / COCKPIT_RECT_GRID) * COCKPIT_RECT_GRID - flange;
+}
+
+// Round the CONTENT edge onto a lattice line, then hand back where the border
+// box has to sit for that to be true.
+function snapToColumn(edge, flange) {
+  const content = edge + flange;
+  return Math.round(content / COCKPIT_RECT_GRID) * COCKPIT_RECT_GRID - flange;
 }
 
 export function alignCockpitPanel(position, movingAnchors, referenceAnchors, threshold = COCKPIT_ALIGNMENT_THRESHOLD) {

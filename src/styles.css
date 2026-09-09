@@ -54,7 +54,14 @@ body {
 
 /* Visible only while an instrument is held. The rectangular lattice describes
    the side bays; the circular overlay describes the viewport's radial docking
-   geometry. Both use the selected phosphor so the guide belongs to the HUD. */
+   geometry. Both use the selected phosphor so the guide belongs to the HUD.
+   `--cockpit-scope-size` and `--cockpit-ring-step` are published by main.js
+   from the SAME numbers the snap uses; the fallbacks are only for the frame
+   before the first drag.
+
+   Two weights. Major 24px is where panels land; minor 8px is where controls
+   and meter cells land. Every third minor line is a major line, so a small
+   button aligned to one and a panel aligned to the other never disagree. */
 body.is-cockpit-layout .cockpit-snap-grid {
   position: absolute;
   inset: 0;
@@ -62,27 +69,36 @@ body.is-cockpit-layout .cockpit-snap-grid {
   display: none;
   pointer-events: none;
   background-image:
-    linear-gradient(color-mix(in srgb, var(--cockpit-phosphor) 13%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--cockpit-phosphor) 13%, transparent) 1px, transparent 1px);
-  background-size: 24px 24px;
+    linear-gradient(color-mix(in srgb, var(--cockpit-phosphor) 26%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--cockpit-phosphor) 26%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--cockpit-phosphor) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--cockpit-phosphor) 10%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px, 24px 24px, 8px 8px, 8px 8px;
 }
 
 body.is-cockpit-layout .cockpit-snap-grid.is-active {
   display: block;
 }
 
+/* Centred on the desk, because that is where the snap centres it. Anchoring
+   this to `top: 0` and sizing it from viewport units agreed with the maths only
+   while the desk filled a landscape window. */
 body.is-cockpit-layout .cockpit-snap-grid-scope {
   position: absolute;
-  top: 0;
+  top: 50%;
   left: 50%;
-  width: min(100vw, 100vh);
-  height: min(100vw, 100vh);
-  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 28%, transparent);
+  width: var(--cockpit-scope-size, min(100vw, 100vh));
+  height: var(--cockpit-scope-size, min(100vw, 100vh));
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 42%, transparent);
   border-radius: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   background-image:
-    repeating-radial-gradient(circle, transparent 0 63px, color-mix(in srgb, var(--cockpit-phosphor) 18%, transparent) 64px 65px),
-    repeating-conic-gradient(from 0deg, transparent 0deg 14.72deg, color-mix(in srgb, var(--cockpit-phosphor) 16%, transparent) 14.72deg 15deg);
+    repeating-radial-gradient(
+      circle,
+      transparent 0 calc(var(--cockpit-ring-step, 64px) - 1px),
+      color-mix(in srgb, var(--cockpit-phosphor) 30%, transparent) calc(var(--cockpit-ring-step, 64px) - 1px) var(--cockpit-ring-step, 64px)
+    ),
+    repeating-conic-gradient(from 0deg, transparent 0deg 14.72deg, color-mix(in srgb, var(--cockpit-phosphor) 26%, transparent) 14.72deg 15deg);
   background-color: rgba(2, 8, 10, 0.12);
 }
 
@@ -3711,6 +3727,47 @@ body.is-cockpit-layout .component-stack {
 body.is-cockpit-layout .space-panel {
   --cockpit-phosphor: #7dffe0;
   --cockpit-amber: #ffd36b;
+
+  /* ── The panel mounting standard ──────────────────────────────────────────
+     Ship parts are built by different companies with their own house styles,
+     and that variety is the point. So the grid governs FIT, never FACE.
+     Ships get refitted and parts get swapped between hulls, which is why an
+     industry mounting standard exists in the first place: a panel that does
+     not drop into a standard bay does not sell.
+
+     STRUCTURAL (below) is the bay. A brand may not override it.
+     EXPRESSIVE — colour, typeface, button size, meter fill, bezel, whether
+     they put their name on it — belongs to the manufacturer, and only has to
+     land on a multiple of `--u2`. See the `[data-brand]` blocks.
+
+     Chaos needs a constant to read as chaos. With the footprint fixed, the
+     difference between a cheap part and a precision one reads as character
+     rather than as an accident.
+
+     `COCKPIT_PANEL_FLANGE` in cockpitSnap.js MUST match `--panel-flange`:
+     the snap puts a panel's CONTENT box on a column, not its border box, so
+     the flange hangs outside the grid as bleed. */
+  --u: 4px;
+  --u2: 8px;
+  --grid-major: 24px;
+  --panel-flange: 4px;
+  --panel-content-full: 216px;  /* 9 columns */
+  --panel-content-half: 96px;   /* 4 columns; 96 + 24 gutter + 96 = 216 */
+  --panel-width-full: 224px;    /* content + two flanges */
+  --panel-width-half: 104px;
+  /* Meter cells are a fixed pitch, never a fraction of the panel, so two
+     instruments from different makers still line up when stacked. Segment
+     COUNT and shape stay expressive; the pitch does not. */
+  --meter-pitch: 12px;          /* 8 bar + 4 gap */
+  --meter-bar: 8px;
+  --meter-h: 16px;
+  /* Default control height. A brand may set another multiple of --u2. */
+  --control-h: 32px;
+  --type-xs: 8px;
+  --type-s: 10px;
+  --type-m: 12px;
+  --type-l: 16px;
+
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto;
@@ -3890,8 +3947,8 @@ body.is-cockpit-layout .is-cockpit-module {
   width: 100%;
   min-width: 0;
   max-width: none;
-  min-height: 34px;
-  padding: 4px 5px;
+  min-height: 32px;
+  padding: var(--panel-flange);
   transform: none !important;
   overflow: hidden;
   border-color: color-mix(in srgb, var(--cockpit-phosphor) 38%, transparent);
@@ -3990,8 +4047,8 @@ body.is-cockpit-layout .is-cockpit-floating.is-dragging .component-panel-title {
 
 .cockpit-module-launcher {
   width: 100%;
-  min-height: 34px;
-  padding: 4px 5px;
+  min-height: 32px;
+  padding: var(--panel-flange);
   border: 1px dashed color-mix(in srgb, var(--cockpit-phosphor) 42%, transparent);
   border-radius: 0;
   background: rgba(0, 10, 9, 0.62);
@@ -4009,12 +4066,51 @@ body.is-cockpit-layout .is-cockpit-floating.is-dragging .component-panel-title {
   letter-spacing: 0.1em;
 }
 
+/* Controls sit on the minor grid. The HEIGHT is the manufacturer's call —
+   a chunky switch or a slim one — but it comes from `--control-h`, so
+   whatever they choose is a multiple of 8 and still stacks cleanly. */
 body.is-cockpit-layout .is-cockpit-floating button,
 body.is-cockpit-layout .is-cockpit-floating select {
+  min-height: var(--control-h);
   border-radius: 0;
-  padding: 4px 6px;
+  padding: var(--u) var(--u2);
   font-family: inherit;
-  font-size: 0.68rem;
+  font-size: var(--type-s);
+}
+
+/* ── Manufacturer identity ───────────────────────────────────────────────────
+   The expressive layer. Everything below is a house style and may be argued
+   with freely; nothing below is allowed to set a width, a flange, or any value
+   that is not a multiple of --u2. Control height and meter grain arrive as
+   custom properties from `panelMakers.js` rather than being written here, so a
+   maker cannot accidentally choose an off-grid one.
+
+   Two houses so far, plus the unsigned salvage-market fitment. The point of
+   the mounting standard is that these can look as different as they like. */
+
+/* Rook — Yard Exchange's own fitment. Cheap, legible, unembarrassed. Wide
+   tracking, blunt meters, name stamped on the front. */
+body.is-cockpit-layout .is-cockpit-module[data-brand="rook"] .component-panel-title strong {
+  letter-spacing: 0.12em;
+}
+
+body.is-cockpit-layout .is-cockpit-floating[data-brand="rook"] .component-meter-track > .is-segmented-meter > i {
+  border-width: 1px;
+}
+
+/* Vektor — precision drives for people who can fly them. Tight type, an amber
+   maker's mark, a switch with real travel on it. */
+body.is-cockpit-layout .is-cockpit-module[data-brand="vektor"] .component-panel-title strong {
+  letter-spacing: 0.02em;
+}
+
+body.is-cockpit-layout .is-cockpit-floating[data-brand="vektor"] .engine-brand-name {
+  color: var(--cockpit-amber);
+}
+
+/* Unsigned. Whoever built it did not put their name on it. */
+body.is-cockpit-layout .is-cockpit-floating[data-brand="generic"] .engine-brand-name {
+  visibility: hidden;
 }
 
 /* Engine is the visual prototype for the stripped 1980s instrument language:
@@ -4025,7 +4121,7 @@ body.is-cockpit-layout .cockpit-module-launcher[data-panel-id="engine"] > span:l
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded {
-  padding: 6px;
+  padding: var(--panel-flange);
   border: 0;
   color: var(--cockpit-phosphor);
   background: transparent;
@@ -4033,7 +4129,7 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded {
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-panel-title {
-  margin: 0 0 7px;
+  margin: 0 0 var(--u2);
   padding: 0;
   border: 0;
 }
@@ -4047,13 +4143,13 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .power-button {
   display: flex !important;
   align-items: stretch;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--u2);
   width: 100%;
-  min-height: 40px;
-  margin: 0 0 8px;
+  min-height: var(--control-h);
+  margin: 0 0 var(--u2);
   border: 1px solid var(--cockpit-phosphor);
   border-radius: 0;
-  padding: 4px;
+  padding: var(--u);
   color: var(--cockpit-phosphor);
   background: transparent;
   font-family: "Courier New", monospace;
@@ -4077,7 +4173,7 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .power-button-label {
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .power-button-state {
   display: grid;
-  flex: 0 0 42px;
+  flex: 0 0 40px;
   place-items: center;
   color: #010808;
   background: var(--cockpit-phosphor);
@@ -4094,35 +4190,31 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .power-button[aria-pres
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter {
-  margin: 0 0 7px;
+  margin: 0 0 var(--u2);
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-label {
-  margin-top: 4px;
-  font: 0.62rem/1 "Courier New", monospace;
+  margin-top: var(--u);
+  font: var(--type-s)/1 "Courier New", monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-label strong {
-  font-size: 0.72rem;
+  font-size: var(--type-m);
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track {
-  height: 18px;
+  height: var(--meter-h);
   border: 0;
   border-radius: 0;
   background: transparent;
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track span {
-  display: grid;
-  grid-template-columns: repeat(16, minmax(0, 1fr));
   align-items: end;
-  gap: 3px;
   background: transparent;
   box-shadow: none;
-  transition: clip-path 140ms steps(16, end);
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track i {
@@ -4482,14 +4574,14 @@ body.is-cockpit-layout:not(.is-viewport-fullscreen) .cockpit-slot-bottom {
 /* Shared 1980s cockpit control language. Power remains the reference design;
    every other module uses the same hard outline and inverse active state. */
 body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):not(.engine-help-button) {
-  min-height: 36px;
+  min-height: var(--control-h);
   border: 1px solid var(--cockpit-phosphor);
   border-radius: 0;
-  padding: 6px 9px;
+  padding: var(--u) var(--u2);
   color: var(--cockpit-phosphor);
   background: transparent;
   box-shadow: none;
-  font: 700 0.72rem/1.05 "Courier New", monospace;
+  font: 700 var(--type-m)/1 "Courier New", monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -4519,6 +4611,9 @@ body.is-cockpit-layout .is-cockpit-floating button:not(.power-button):not(.engin
   cursor: default;
 }
 
+/* The full-width action controls. Their HEIGHT comes from the shared control
+   rule above via `--control-h`, which is always a multiple of 8, so what a
+   maker chooses is expressive and still lands on the grid. */
 body.is-cockpit-layout .is-cockpit-floating .scan-button,
 body.is-cockpit-layout .is-cockpit-floating .tractor-button,
 body.is-cockpit-layout .is-cockpit-floating .shield-button,
@@ -4526,8 +4621,21 @@ body.is-cockpit-layout .is-cockpit-floating .cloak-button,
 body.is-cockpit-layout .is-cockpit-floating .tow-cable-button,
 body.is-cockpit-layout .is-cockpit-floating .moss-harvester-button,
 body.is-cockpit-layout .is-cockpit-floating .moss-seeder-button,
+body.is-cockpit-layout .is-cockpit-floating .sell-button,
+body.is-cockpit-layout .is-cockpit-floating .repair-button,
 body.is-cockpit-layout .is-cockpit-floating .dock-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
+}
+
+/* A maker's mark, not a control: it sits inside a row rather than defining one. */
+body.is-cockpit-layout .is-cockpit-floating .engine-help-button {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
 }
 
 body.is-cockpit-layout .is-cockpit-floating .arm-toggle {
@@ -4585,7 +4693,7 @@ body.is-cockpit-layout .processor-panel.is-cockpit-expanded .processor-outputs l
    Expanded modules are instruments laid on the console, not modern windows. */
 body.is-cockpit-layout .is-cockpit-module.is-cockpit-expanded {
   max-height: calc(100vh - 92px);
-  padding: 5px;
+  padding: var(--panel-flange);
   overflow: visible;
   border: 0 !important;
   color: var(--cockpit-phosphor);
@@ -4706,9 +4814,9 @@ body.is-cockpit-layout .processor-panel.is-cockpit-expanded .processor-output-sh
 /* Scanner: one unmistakable round pulse key and its remaining charge. */
 body.is-cockpit-layout .scanner-panel.is-cockpit-expanded .scan-button {
   display: grid !important;
-  width: 68px;
-  height: 68px;
-  min-height: 68px;
+  width: 64px;
+  height: 64px;
+  min-height: 64px;
   margin: 0 auto;
   place-items: center;
   border-radius: 50% !important;
@@ -4762,31 +4870,26 @@ body.is-cockpit-layout .beacon-bay-panel.is-cockpit-expanded .beacon-bay-slot {
 
 body.is-cockpit-layout .beacon-bay-panel.is-cockpit-expanded .beacon-bay-button {
   min-width: 0;
-  min-height: 30px;
-  padding: 4px;
+  min-height: var(--control-h);
+  padding: var(--u);
 }
 
 /* Hull: two monochrome segmented condition strips, then identity and docking. */
 body.is-cockpit-layout .hull-panel.is-cockpit-expanded {
   display: grid;
-  gap: 5px;
+  gap: var(--u);
 }
 
 body.is-cockpit-layout .hull-panel.is-cockpit-expanded .component-meter {
-  gap: 3px;
+  gap: var(--u);
 }
 
 body.is-cockpit-layout .hull-panel.is-cockpit-expanded .component-meter-track {
   order: 1;
-  height: 9px;
+  height: var(--u2);
   border: 0;
   border-radius: 0;
   background: transparent;
-}
-
-body.is-cockpit-layout .hull-panel.is-cockpit-expanded .component-meter-track span {
-  border-radius: 0;
-  background: repeating-linear-gradient(90deg, var(--cockpit-phosphor) 0 8px, transparent 8px 11px);
 }
 
 /* Physical side bays ------------------------------------------------------
@@ -4922,12 +5025,24 @@ body.is-cockpit-layout .processor-panel.is-cockpit-chamber .processor-outputs {
 }
 
 /* Fixed meter cells: the bar never scales. State changes only switch whole
-   cells on and off, like a bank of early LED blocks. */
+   cells on and off, like a bank of early LED blocks.
+
+   The PITCH is structural — cells are laid on a fixed 8/12/24px stride rather
+   than as fractions of the panel, so a Rook strip and a Vektor gauge still line
+   up with each other when the two panels are stacked. Cells used to be `1fr` of
+   an off-grid width, which is why HULL rendered twelve 15.1px cells and ENGINE
+   sixteen 10.6px ones: the same component at two incompatible scales.
+
+   The COUNT and the bar width inside that stride are the maker's, set from
+   `panelMakers.js`. That is where a blunt commodity strip and a precision
+   readout are allowed to differ. */
 body.is-cockpit-layout .component-meter-track > .is-segmented-meter {
   display: grid !important;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: var(--meter-pitch);
+  justify-content: start;
   align-items: stretch;
-  gap: 3px;
+  gap: 0;
   width: 100%;
   height: 100%;
   border-radius: 0;
@@ -4938,13 +5053,12 @@ body.is-cockpit-layout .component-meter-track > .is-segmented-meter {
 }
 
 body.is-cockpit-layout .meter-fuel .component-meter-track > .is-segmented-meter {
-  grid-template-columns: repeat(16, minmax(0, 1fr));
   align-items: end;
 }
 
 body.is-cockpit-layout .component-meter-track > .is-segmented-meter > i {
   display: block;
-  width: 100%;
+  width: var(--meter-bar);
   height: 100%;
   border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 24%, transparent);
   background: transparent;
@@ -5124,13 +5238,15 @@ body.is-cockpit-layout:not(.is-viewport-fullscreen) .viewport-panel #game {
   background: transparent;
 }
 
-/* Two physical instrument sizes. */
+/* Two physical instrument sizes — the only two bays the standard defines.
+   Content is 9 columns or 4; two halves plus a one-column gutter occupy
+   exactly one full bay. */
 body.is-cockpit-layout .is-cockpit-floating.is-panel-full {
-  width: 224px !important;
+  width: var(--panel-width-full) !important;
 }
 
 body.is-cockpit-layout .is-cockpit-floating.is-panel-half {
-  width: 108px !important;
+  width: var(--panel-width-half) !important;
 }
 
 body.is-cockpit-layout .beacon-locator-panel.is-cockpit-expanded #ship-scan {
@@ -5470,8 +5586,8 @@ body.is-cockpit-layout .hull-panel.is-cockpit-expanded .hull-docking-lock {
 }
 
 body.is-cockpit-layout .hull-panel.is-cockpit-expanded .hull-docking-lock .dock-button {
-  min-height: 34px;
-  margin-top: 2px;
+  min-height: var(--control-h);
+  margin-top: var(--u);
 }
 
 /* Utility panels: no inner cards, just the instrument, state, and quantity. */
