@@ -3770,10 +3770,18 @@ body.is-cockpit-layout .space-panel {
   /* Default control height. A brand may set another multiple of --minor;
      the ladder is 12 / 24 / 36 / 48 / 60 / 72. */
   --control-h: 36px;
-  /* A size class that is FUNCTIONAL rather than expressive, so it is structural
-     and a maker does not get to argue with it: a panic target, hit repeatedly
-     under pressure, where missing it costs the player something. */
+  /* Size classes that are FUNCTIONAL rather than expressive, so they are
+     structural and a maker does not get to argue with them.
+
+     `lg` is a panic target: hit repeatedly under pressure, where missing it
+     costs the player something.
+
+     `primary` is an instrument's main switch. Whoever built the panel, the one
+     control that turns the thing on has to be as findable as the dock button
+     next to it — so it does NOT take the maker's `--control-h`. Vektor's
+     low-profile house style still shapes its secondary controls. */
   --control-h-lg: 60px;
+  --control-h-primary: 36px;
   --type-xs: 8px;
   --type-s: 10px;
   --type-m: 12px;
@@ -4114,8 +4122,10 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .power-button {
   justify-content: space-between;
   gap: var(--minor);
   width: 100%;
-  height: var(--control-h);
-  margin: 0 0 var(--minor);
+  height: var(--control-h-primary);
+  /* No bottom margin: the maker's plate tucks straight under the switch and
+     carries the gap down to the fuel gauge itself. */
+  margin: 0;
   border: 1px solid var(--cockpit-phosphor);
   border-radius: 0;
   padding: 0;
@@ -4229,25 +4239,36 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-expanded .component-panel-t
   display: block;
 }
 
-body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-panel-title > div > strong,
+/* The engine's name stays. It used to be hidden because the maker's plate sat
+   in the title bar and served as the heading; with the plate moved down under
+   the switch, hiding this as well left the title bar zero pixels tall — no
+   name, and no grab handle, because the drag listeners live on the title. An
+   instrument you cannot pick up is worse than one with a label on it.
+
+   The running status still goes: the switch says on or off by itself. */
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded #ship-status {
   display: none !important;
 }
 
-/* The maker's mark runs the full width of the bay on one line. It used to be
-   boxed to 120px to leave room for a help badge beside it, which wrapped
-   "Vektor R/T Reversing Drive" onto two ragged lines in a panel that had the
-   room all along. */
+/* The maker's plate. It runs the full width of the bay on one line, tucked
+   close under the switch it names — a label stamped on the control, not a
+   heading over the panel, which is what it read as while it sat up in the title
+   bar competing with the instrument's own name.
+   
+   Four above and twelve below: near enough to belong to the switch, far enough
+   off the fuel gauge to stop being mistaken for its label. The panel is a grid
+   with its own 8px row gap, so the top margin pulls BACK against that gap to
+   close the plate onto the switch, and the bottom one adds to it. */
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .engine-brand-row {
   position: relative;
   display: flex !important;
   align-items: center;
   justify-content: center;
-  flex: 1 1 auto;
   gap: 0;
   width: 100%;
-  min-height: var(--minor);
-  padding: var(--u) 0;
+  height: var(--minor);
+  margin: calc(var(--u) * -1) 0 var(--u);
+  padding: 0;
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .engine-brand-name {
@@ -4255,7 +4276,8 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .engine-brand-name {
   flex: 1 1 auto;
   width: 100%;
   color: var(--cockpit-phosphor);
-  font: 700 var(--type-m)/1.2 "Courier New", monospace;
+  /* Line-height 1 so the plate's box is exactly one minor row. */
+  font: 700 var(--type-m)/1 "Courier New", monospace;
   letter-spacing: 0.04em;
   text-align: center;
   text-transform: uppercase;
@@ -4631,7 +4653,7 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-expanded .component-panel-t
   letter-spacing: 0.11em;
 }
 
-body.is-cockpit-layout .is-cockpit-module.is-cockpit-expanded .component-panel-title span:not(.cockpit-module-code):not(.cockpit-module-summary):not(.engine-brand-row):not(.engine-brand-name) {
+body.is-cockpit-layout .is-cockpit-module.is-cockpit-expanded .component-panel-title span:not(.cockpit-module-code):not(.cockpit-module-summary) {
   display: block;
   margin-top: 2px;
   color: color-mix(in srgb, var(--cockpit-phosphor) 68%, transparent);

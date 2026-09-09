@@ -42,6 +42,7 @@ Defined as custom properties on `.space-panel` in `styles.css`.
 | `--meter-pitch` | 12/24/36px | fixed stride, set from the maker's grain |
 | `--control-h` | 36px | default; the ladder is 12/24/36/48/60/72 |
 | `--control-h-lg` | 60px | the panic target — functional, so structural |
+| `--control-h-primary` | 36px | an instrument's main switch, whoever built it |
 | `--type-*` | 8/10/12/16px | the whole type scale |
 
 Three rules cover everything else:
@@ -93,9 +94,10 @@ chunky 36px switches), `vektor` (precision, tight type, amber maker's mark,
 18-cell meters, low-profile 24px controls), `generic` (unsigned salvage-market
 fitment).
 
-Vektor's low profile is why the engine's power switch sits flatter than the
-hull's dock button. That is the house style, not a one-off exception — fit a Rook
-drive and the same panel's switch gets taller.
+Vektor's low profile shapes its SECONDARY controls. The one control that turns
+an instrument on is not a stylistic choice: `--control-h-primary` is structural,
+so the engine's power switch is the same size as the hull's dock button whoever
+built the drive.
 
 ## The guide draws what the snap does
 

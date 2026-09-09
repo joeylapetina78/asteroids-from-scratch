@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260909-1728-51ac80a8" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260909-1757-1591032c" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260909-1728-51ac80a8</span>
+      <span class="build-tag">build: fresh-20260909-1757-1591032c</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -391,15 +391,17 @@
                 <div>
                   <strong>Engine</strong>
                   <span id="ship-status">ship offline</span>
-                  <span class="engine-brand-row">
-                    <span id="engine-model-name" class="engine-brand-name">Vektor R/T Reversing Drive</span>
-                  </span>
                 </div>
               </div>
               <button id="ship-power" class="power-button" type="button" aria-pressed="false">
                 <span class="power-button-label">Power</span>
                 <span id="ship-power-state" class="power-button-state">On</span>
               </button>
+              <!-- The maker's plate reads as a label ON the switch, so it sits
+                   tucked under it rather than up in the title. -->
+              <div class="engine-brand-row">
+                <span id="engine-model-name" class="engine-brand-name">Vektor R/T Reversing Drive</span>
+              </div>
               <div class="component-meter meter-fuel" aria-label="Fuel level">
                 <div class="component-meter-track" aria-hidden="true">
                   <span id="fuel-fill">
@@ -1023,6 +1025,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260909-1728-51ac80a8"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260909-1757-1591032c"></script>
   </body>
 </html>
