@@ -216,3 +216,30 @@ the attributes are removed so it stops announcing itself as a button.
 > title's own click handler therefore matches the element the handler is on, and
 > silently swallows every attempt to bring an instrument out of the bay. The
 > guard has to exclude the title itself.
+
+## Campaign staging, and what a dead chamber looks like
+
+Two more things Campaign stages for one run without touching the shared desk.
+
+**The bay starts shut.** The induction's first instruction is to open the module
+bay, and a bay left open in Explorer answers that instruction before it is given.
+Held in `campaignTrayWasOpen` and written back by `persistCockpitDefault`, so the
+staging never reaches the store; opening the bay by hand spends it.
+
+**The processor starts dead**, and now looks it. `CAMPAIGN_BROKEN_COMPONENT_IDS`
+has always put the skiff's processor at `stage: "failed"`, but the only visible
+sign was an amber flag on a bay row the player has to open the bay to see. A
+chamber is the size of a wall, so a dead one now reads from across the cockpit:
+hazard paint over the bay, the painted designation gone to rust, and the fault
+stencilled under the name at wall scale.
+
+Everything in that treatment is deliberately faint. Ore drifts across this wall
+and the ore has to win — a bay you cannot read material against is worse than
+one that does not announce its fault loudly enough.
+
+> **Two gotchas.** Chambers are permanently `is-cockpit-expanded`, and that state
+> hides `.cockpit-module-summary` with `!important`; the dead-chamber rule has to
+> say `display: block !important` to paint the fault line. And the chamber is
+> `display: none` at the very start of Campaign — it is revealed during the
+> induction — so the treatment cannot be judged at t=0; force the fault in
+> Explorer to iterate on it.

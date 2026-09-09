@@ -5880,6 +5880,61 @@ body.is-cockpit-layout .journey-panel .journey-profile strong {
   );
 }
 
+/* A DEAD CHAMBER ---------------------------------------------------------
+   The amber flag on the bay row says a unit is broken; it says it in a strip
+   the player has to open the module bay to see. The chamber itself is the size
+   of a wall, and on the skiff Rook issues it is dead from the first minute, so
+   it should look dead from across the cockpit: the designation goes out, the
+   bay carries hazard paint, and the fault is stencilled under the name.
+
+   Everything here stays faint. Ore still drifts across this wall and the ore
+   has to win — a bay you cannot read material against is worse than one that
+   does not announce its fault loudly enough. */
+body.is-cockpit-layout .is-cockpit-chamber.is-module-faulted::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 180, 84, 0.055) 0 14px,
+    transparent 14px 28px
+  );
+}
+
+/* The designation is painted on a wall, and the power behind it is out. */
+body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber.is-module-faulted .component-panel-title strong {
+  color: color-mix(in srgb, #ffb454 44%, #14100a);
+  opacity: 0.46;
+}
+
+/* The line under the name normally says what the bay is for. On a dead unit it
+   carries the fault instead, stencilled at a size that reads without opening
+   anything — this is the same "NOT FUNCTIONING · ERR" the bay row shows, just
+   painted at wall scale. */
+body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber.is-module-faulted .cockpit-module-summary {
+  /* Chambers are permanently `is-cockpit-expanded`, and that state hides the
+     summary with `!important` — it is bay-row furniture everywhere else. On a
+     dead chamber it is the one line worth painting on the wall. */
+  display: block !important;
+  color: #ffb454 !important;
+  font-family: "Eurostile Extended", "Microgramma D Extended", "Arial Narrow", sans-serif;
+  font-size: clamp(0.46rem, 1.05vh, 0.66rem) !important;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  opacity: 0.62;
+  margin-top: 0.6em;
+}
+
+/* A dead unit's own description is a promise it cannot keep: nothing is
+   arriving here to be refined. The fault line above says what is true. */
+body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber.is-module-faulted
+  .component-panel-title span:not(.cockpit-module-code):not(.cockpit-module-summary) {
+  display: none;
+}
+
 .processor-all-materials.is-faulted {
   color: #ffb454;
   font-size: 0.52rem;
