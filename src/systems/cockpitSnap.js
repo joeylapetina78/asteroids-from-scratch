@@ -1,4 +1,14 @@
 export const COCKPIT_RECT_GRID = 24;
+
+// Panels lock to lines AND to the midpoints between them, so the player can
+// offset by half a column when they want to. That is only safe because the
+// minor grid inside a panel is also 12: a panel parked on a midpoint shifts its
+// whole interior by half a column, and if the interior rhythm were 8 every
+// meter cell and baseline in it would come off the lattice — a misalignment
+// that would appear ONLY on panels the player chose to offset, and so would
+// read as their mistake rather than the system's.
+export const COCKPIT_SNAP_STRIDE = COCKPIT_RECT_GRID / 2;
+
 export const COCKPIT_RADIAL_DIVISIONS = 24;
 export const COCKPIT_ALIGNMENT_THRESHOLD = 11;
 
@@ -77,18 +87,18 @@ export function snapCockpitPanelToBay(position, { flange = COCKPIT_PANEL_FLANGE 
 // Clamp bounds, quantized. A floor rounds UP and a ceiling rounds DOWN, so
 // snapping a bound can never push a panel back past the limit it was clamped to.
 export function ceilToColumn(edge, flange = COCKPIT_PANEL_FLANGE) {
-  return Math.ceil((edge + flange) / COCKPIT_RECT_GRID) * COCKPIT_RECT_GRID - flange;
+  return Math.ceil((edge + flange) / COCKPIT_SNAP_STRIDE) * COCKPIT_SNAP_STRIDE - flange;
 }
 
 export function floorToColumn(edge, flange = COCKPIT_PANEL_FLANGE) {
-  return Math.floor((edge + flange) / COCKPIT_RECT_GRID) * COCKPIT_RECT_GRID - flange;
+  return Math.floor((edge + flange) / COCKPIT_SNAP_STRIDE) * COCKPIT_SNAP_STRIDE - flange;
 }
 
 // Round the CONTENT edge onto a lattice line, then hand back where the border
 // box has to sit for that to be true.
 function snapToColumn(edge, flange) {
   const content = edge + flange;
-  return Math.round(content / COCKPIT_RECT_GRID) * COCKPIT_RECT_GRID - flange;
+  return Math.round(content / COCKPIT_SNAP_STRIDE) * COCKPIT_SNAP_STRIDE - flange;
 }
 
 export function alignCockpitPanel(position, movingAnchors, referenceAnchors, threshold = COCKPIT_ALIGNMENT_THRESHOLD) {

@@ -32,21 +32,44 @@ Defined as custom properties on `.space-panel` in `styles.css`.
 | Token | Value | Meaning |
 |---|---|---|
 | `--u` | 4px | the atom |
-| `--u2` | 8px | minor grid: controls, meter cells, baselines |
+| `--minor` | 12px | minor grid: controls, meter cells, baselines |
 | `--grid-major` | 24px | columns and rows; where panels land |
 | `--panel-flange` | 4px | padding/border; hangs OUTSIDE the grid as bleed |
 | `--panel-content-full` | 216px | 9 columns |
 | `--panel-content-half` | 96px | 4 columns; `96 + 24 gutter + 96 = 216` |
 | `--panel-width-full` | 224px | content + two flanges |
 | `--panel-width-half` | 104px | |
-| `--meter-pitch` | 8/12/24px | fixed stride, set from the maker's grain |
+| `--meter-pitch` | 12/24/36px | fixed stride, set from the maker's grain |
+| `--control-h` | 36px | default; the ladder is 12/24/36/48/60/72 |
+| `--control-h-lg` | 60px | the panic target — functional, so structural |
 | `--type-*` | 8/10/12/16px | the whole type scale |
 
-Two rules cover everything else:
+Three rules cover everything else:
 
-1. **Every dimension is a multiple of `--u2`** (or `--u` for fine detail).
+1. **Every dimension is a multiple of `--minor`** (or `--u` for fine detail).
 2. **The snap targets the CONTENT box, not the border box.** The flange is bleed.
    `COCKPIT_PANEL_FLANGE` in `cockpitSnap.js` must match `--panel-flange`.
+3. **The minor grid is exactly half the major one.** This is load-bearing — see
+   below.
+
+## Why the minor grid is 12 and not 8
+
+Panels lock to lines **and to the midpoints between them**, so the player can
+offset an instrument by half a column when they want to. `COCKPIT_SNAP_STRIDE`
+is therefore `COCKPIT_RECT_GRID / 2`.
+
+A panel parked on a midpoint shifts its whole interior by half a column. If the
+interior rhythm were 8px, every meter cell, control edge and baseline inside it
+would come off the lattice the moment the player used that freedom — and the
+misalignment would appear *only* on panels they chose to offset, so it would read
+as their mistake rather than the system's. Making the minor grid exactly half the
+major one means any legal placement, line or midpoint, keeps the interior on a
+drawn line.
+
+The cost was re-quantizing the control ladder from 8s to 12s, which is why Rook
+switches are 36 and Vektor's are 24. `tests/panelMakers.test.mjs` asserts the
+half relationship directly, because breaking it would silently reintroduce the
+whole class of bug.
 
 ## Expressive — the face. This is the manufacturer's.
 
@@ -58,16 +81,21 @@ Control height and meter grain arrive as custom properties from
 `content/ships/panelMakers.js` rather than being written in CSS, so a maker
 cannot accidentally choose an off-grid value. `tests/panelMakers.test.mjs`
 asserts that every grain tiles 216px exactly and every control height is a
-multiple of 8.
+multiple of the minor grid.
 
 Identity lives in `[data-brand="…"]` blocks. `main.js` stamps the attribute from
 `getPanelMakerId()`. The **engine** panel is the exception that proves the model:
 its maker is whoever built the drive currently fitted, so it is re-stamped in
 `updateCockpitDisplay()` when the drive is swapped.
 
-Makers so far: `rook` (cheap, legible, wide tracking, coarse 9-cell meters),
-`vektor` (precision, tight type, amber maker's mark, fine 18-cell meters),
-`generic` (unsigned salvage-market fitment).
+Makers so far: `rook` (cheap, legible, wide tracking, coarse 9-cell meters,
+chunky 36px switches), `vektor` (precision, tight type, amber maker's mark,
+18-cell meters, low-profile 24px controls), `generic` (unsigned salvage-market
+fitment).
+
+Vektor's low profile is why the engine's power switch sits flatter than the
+hull's dock button. That is the house style, not a one-off exception — fit a Rook
+drive and the same panel's switch gets taller.
 
 ## The guide draws what the snap does
 
@@ -79,9 +107,10 @@ while the maths used `max(48, radius / 7)` around the desk centre. On a 1000×64
 desk the player was aiming at rings 48px apart under a guide showing them 65px
 apart.
 
-The guide is drawn at two weights: major 24px for panel placement, minor 8px for
-controls. Every third minor line is a major line, so a small control aligned to
-one and a panel aligned to the other can never disagree.
+The guide is drawn at two weights: major 24px for panel placement, minor 12px for
+controls. Every second minor line is a major line, so a small control aligned to
+one and a panel aligned to the other can never disagree — and neither can a panel
+parked on a midpoint.
 
 ## Placement paths that must stay on the grid
 

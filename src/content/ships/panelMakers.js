@@ -23,27 +23,30 @@
 // is the maker's, and picking it picks the character: a nine-cell strip is a
 // blunt commodity part, twenty-seven is a precision readout somebody paid for.
 //
-// Legal grains are the divisors of 216 that keep the pitch on the 8px minor
+// Legal grains are the divisors of 216 that keep the pitch on the 12px minor
 // grid. Anything else cannot tile the bay and is rejected by the tests.
 export const PANEL_CONTENT_WIDTH = 216;
+export const PANEL_MINOR_GRID = 12;
 
 export const METER_GRAINS = Object.freeze({
+  blunt: Object.freeze({ cells: 6, pitch: 36, bar: 32 }),
   coarse: Object.freeze({ cells: 9, pitch: 24, bar: 20 }),
   standard: Object.freeze({ cells: 18, pitch: 12, bar: 8 }),
-  fine: Object.freeze({ cells: 27, pitch: 8, bar: 6 }),
 });
 
 export const DEFAULT_PANEL_MAKER_ID = "generic";
 
 export const PANEL_MAKERS = Object.freeze({
   // The house that fits out Yard Exchange's starter hulls. Cheap, legible,
-  // unembarrassed: big type, blunt meters, name stamped on everything.
-  rook: Object.freeze({ id: "rook", brand: "Rook", meterGrain: "coarse", controlHeight: 32 }),
-  // Precision drives for people who can fly them. Fine gauges, tight type,
-  // a switch with real travel on it.
-  vektor: Object.freeze({ id: "vektor", brand: "Vektor", meterGrain: "standard", controlHeight: 40 }),
+  // unembarrassed: big type, blunt meters, chunky switches you can hit with a
+  // glove on, name stamped on everything.
+  rook: Object.freeze({ id: "rook", brand: "Rook", meterGrain: "coarse", controlHeight: 36 }),
+  // Precision drives for people who can fly them. Fine gauges, tight type, and
+  // low-profile controls — which is why the engine's power switch sits flatter
+  // than the hull's dock button. That is the house, not a one-off exception.
+  vektor: Object.freeze({ id: "vektor", brand: "Vektor", meterGrain: "standard", controlHeight: 24 }),
   // Unbranded salvage-market fitment. Whoever made it did not sign it.
-  generic: Object.freeze({ id: "generic", brand: null, meterGrain: "standard", controlHeight: 32 }),
+  generic: Object.freeze({ id: "generic", brand: null, meterGrain: "standard", controlHeight: 36 }),
 });
 
 // Which maker built each panel, where that is not decided by fitted equipment.

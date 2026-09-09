@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   COCKPIT_PANEL_FLANGE,
   COCKPIT_RECT_GRID,
+  COCKPIT_SNAP_STRIDE,
   alignCockpitPanel,
   ceilToColumn,
   floorToColumn,
@@ -24,9 +25,9 @@ test("panels outside the viewport snap their CONTENT box to the bay grid", () =>
 
   // The border box sits a flange short of the column so that the content edge
   // — the thing the reader sees lined up — lands exactly on it.
-  assert.deepEqual(result, { x: 44, y: 116, region: "bay" });
-  assert.equal((result.x + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
-  assert.equal((result.y + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
+  assert.deepEqual(result, { x: 56, y: 104, region: "bay" });
+  assert.equal((result.x + COCKPIT_PANEL_FLANGE) % COCKPIT_SNAP_STRIDE, 0);
+  assert.equal((result.y + COCKPIT_PANEL_FLANGE) % COCKPIT_SNAP_STRIDE, 0);
 });
 
 test("a panel with no flange still snaps its own edge", () => {
@@ -37,7 +38,7 @@ test("a panel with no flange still snaps its own edge", () => {
     { flange: 0 },
   );
 
-  assert.deepEqual(result, { x: 48, y: 96, region: "bay" });
+  assert.deepEqual(result, { x: 48, y: 108, region: "bay" });
 });
 
 test("the scope publishes one ring step for both the snap and the stylesheet", () => {
@@ -111,12 +112,12 @@ test("an unsnapped panel scales inward around its own center", () => {
 test("the bay snap puts a first-opened panel's content on a column", () => {
   const placed = snapCockpitPanelToBay({ x: 190, y: 94 });
 
-  assert.equal((placed.x + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
-  assert.equal((placed.y + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
+  assert.equal((placed.x + COCKPIT_PANEL_FLANGE) % COCKPIT_SNAP_STRIDE, 0);
+  assert.equal((placed.y + COCKPIT_PANEL_FLANGE) % COCKPIT_SNAP_STRIDE, 0);
   // No radial branch: a default position near the viewport centre must not be
   // dragged onto a ring, or the free-slot search it came from is undone.
   const nearCentre = snapCockpitPanelToBay({ x: 700, y: 440 });
-  assert.deepEqual(nearCentre, { x: 692, y: 452 });
+  assert.deepEqual(nearCentre, { x: 704, y: 440 });
 });
 
 test("quantized clamp bounds never escape the limit they came from", () => {
@@ -124,10 +125,23 @@ test("quantized clamp bounds never escape the limit they came from", () => {
   // column WITHOUT being pushed back outside the bound.
   assert.ok(ceilToColumn(44) >= 44);
   assert.ok(floorToColumn(1212) <= 1212);
-  assert.equal((ceilToColumn(44) + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
-  assert.equal((floorToColumn(1212) + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
+  assert.equal((ceilToColumn(44) + COCKPIT_PANEL_FLANGE) % COCKPIT_SNAP_STRIDE, 0);
+  assert.equal((floorToColumn(1212) + COCKPIT_PANEL_FLANGE) % COCKPIT_SNAP_STRIDE, 0);
   // A bound already on the grid is left exactly where it is.
   const onGrid = ceilToColumn(44);
   assert.equal(ceilToColumn(onGrid), onGrid);
   assert.equal(floorToColumn(onGrid), onGrid);
+});
+
+test("a panel can be parked on a midpoint as well as on a line", () => {
+  // Half a column is a legal, reachable place to put an instrument — that is
+  // the whole point of the stride being half the major grid.
+  assert.equal(COCKPIT_SNAP_STRIDE * 2, COCKPIT_RECT_GRID);
+
+  const onLine = snapCockpitPanelToBay({ x: 44, y: 44 });
+  const onMidpoint = snapCockpitPanelToBay({ x: 56, y: 56 });
+
+  assert.equal((onLine.x + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, 0);
+  assert.equal((onMidpoint.x + COCKPIT_PANEL_FLANGE) % COCKPIT_RECT_GRID, COCKPIT_SNAP_STRIDE);
+  assert.notEqual(onLine.x, onMidpoint.x);
 });

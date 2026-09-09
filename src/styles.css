@@ -73,7 +73,7 @@ body.is-cockpit-layout .cockpit-snap-grid {
     linear-gradient(90deg, color-mix(in srgb, var(--cockpit-phosphor) 26%, transparent) 1px, transparent 1px),
     linear-gradient(color-mix(in srgb, var(--cockpit-phosphor) 10%, transparent) 1px, transparent 1px),
     linear-gradient(90deg, color-mix(in srgb, var(--cockpit-phosphor) 10%, transparent) 1px, transparent 1px);
-  background-size: 24px 24px, 24px 24px, 8px 8px, 8px 8px;
+  background-size: 24px 24px, 24px 24px, 12px 12px, 12px 12px;
 }
 
 body.is-cockpit-layout .cockpit-snap-grid.is-active {
@@ -3738,7 +3738,7 @@ body.is-cockpit-layout .space-panel {
      STRUCTURAL (below) is the bay. A brand may not override it.
      EXPRESSIVE — colour, typeface, button size, meter fill, bezel, whether
      they put their name on it — belongs to the manufacturer, and only has to
-     land on a multiple of `--u2`. See the `[data-brand]` blocks.
+     land on a multiple of `--minor`. See the `[data-brand]` blocks.
 
      Chaos needs a constant to read as chaos. With the footprint fixed, the
      difference between a cheap part and a precision one reads as character
@@ -3748,7 +3748,13 @@ body.is-cockpit-layout .space-panel {
      the snap puts a panel's CONTENT box on a column, not its border box, so
      the flange hangs outside the grid as bleed. */
   --u: 4px;
-  --u2: 8px;
+  /* The minor grid is EXACTLY half the major one. That is the constraint that
+     lets a panel lock to a line or to a midpoint and still have every meter
+     cell, control edge and baseline inside it land on a drawn line. At 8px it
+     did not: half of 24 is 12, and a half-offset panel put its whole interior
+     off the lattice — a misalignment that would have appeared only on panels
+     the player chose to offset, and so read as their fault. */
+  --minor: 12px;
   --grid-major: 24px;
   --panel-flange: 4px;
   --panel-content-full: 216px;  /* 9 columns */
@@ -3760,16 +3766,14 @@ body.is-cockpit-layout .space-panel {
      COUNT and shape stay expressive; the pitch does not. */
   --meter-pitch: 12px;          /* 8 bar + 4 gap */
   --meter-bar: 8px;
-  --meter-h: 16px;
-  /* Default control height. A brand may set another multiple of --u2. */
-  --control-h: 32px;
-  /* Two size classes that are FUNCTIONAL rather than expressive, so they are
-     structural and a maker does not get to argue with them.
-     `lg` is a panic target: a control hit repeatedly under pressure, where
-     missing it costs the player something. `flat` is for a control that has to
-     share a crowded panel without dominating it. */
-  --control-h-lg: 64px;
-  --control-h-flat: 32px;
+  --meter-h: 24px;
+  /* Default control height. A brand may set another multiple of --minor;
+     the ladder is 12 / 24 / 36 / 48 / 60 / 72. */
+  --control-h: 36px;
+  /* A size class that is FUNCTIONAL rather than expressive, so it is structural
+     and a maker does not get to argue with it: a panic target, hit repeatedly
+     under pressure, where missing it costs the player something. */
+  --control-h-lg: 60px;
   --type-xs: 8px;
   --type-s: 10px;
   --type-m: 12px;
@@ -3914,7 +3918,7 @@ body.is-cockpit-layout .is-cockpit-module {
   width: 100%;
   min-width: 0;
   max-width: none;
-  min-height: 32px;
+  min-height: 36px;
   padding: var(--panel-flange);
   transform: none !important;
   overflow: hidden;
@@ -4012,7 +4016,7 @@ body.is-cockpit-layout .is-cockpit-floating.is-dragging .component-panel-title {
 
 .cockpit-module-launcher {
   width: 100%;
-  min-height: 32px;
+  min-height: 36px;
   padding: var(--panel-flange);
   border: 1px dashed color-mix(in srgb, var(--cockpit-phosphor) 42%, transparent);
   border-radius: 0;
@@ -4038,7 +4042,7 @@ body.is-cockpit-layout .is-cockpit-floating button,
 body.is-cockpit-layout .is-cockpit-floating select {
   min-height: var(--control-h);
   border-radius: 0;
-  padding: var(--u) var(--u2);
+  padding: var(--u) var(--minor);
   font-family: inherit;
   font-size: var(--type-s);
 }
@@ -4046,7 +4050,7 @@ body.is-cockpit-layout .is-cockpit-floating select {
 /* ── Manufacturer identity ───────────────────────────────────────────────────
    The expressive layer. Everything below is a house style and may be argued
    with freely; nothing below is allowed to set a width, a flange, or any value
-   that is not a multiple of --u2. Control height and meter grain arrive as
+   that is not a multiple of --minor. Control height and meter grain arrive as
    custom properties from `panelMakers.js` rather than being written here, so a
    maker cannot accidentally choose an off-grid one.
 
@@ -4094,7 +4098,7 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded {
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-panel-title {
-  margin: 0 0 var(--u2);
+  margin: 0 0 var(--minor);
   padding: 0;
   border: 0;
 }
@@ -4108,13 +4112,13 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .power-button {
   display: flex !important;
   align-items: stretch;
   justify-content: space-between;
-  gap: var(--u2);
+  gap: var(--minor);
   width: 100%;
-  min-height: var(--control-h-flat);
-  margin: 0 0 var(--u2);
+  height: var(--control-h);
+  margin: 0 0 var(--minor);
   border: 1px solid var(--cockpit-phosphor);
   border-radius: 0;
-  padding: var(--u);
+  padding: 0;
   color: var(--cockpit-phosphor);
   background: transparent;
   font-family: "Courier New", monospace;
@@ -4138,7 +4142,7 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .power-button-label {
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .power-button-state {
   display: grid;
-  flex: 0 0 40px;
+  flex: 0 0 36px;
   place-items: center;
   color: #010808;
   background: var(--cockpit-phosphor);
@@ -4155,7 +4159,7 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .power-button[aria-pres
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter {
-  margin: 0 0 var(--u2);
+  margin: 0 0 var(--minor);
 }
 
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-label {
@@ -4242,7 +4246,7 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .engine-brand-row {
   flex: 1 1 auto;
   gap: 0;
   width: 100%;
-  min-height: var(--u2);
+  min-height: var(--minor);
   padding: var(--u) 0;
 }
 
@@ -4487,7 +4491,7 @@ body.is-cockpit-layout .is-cockpit-floating button:not(.power-button) {
   min-height: var(--control-h);
   border: 1px solid var(--cockpit-phosphor);
   border-radius: 0;
-  padding: var(--u) var(--u2);
+  padding: var(--u) var(--minor);
   color: var(--cockpit-phosphor);
   background: transparent;
   box-shadow: none;
@@ -4716,9 +4720,9 @@ body.is-cockpit-layout .processor-panel.is-cockpit-expanded .processor-output-sh
 /* Scanner: one unmistakable round pulse key and its remaining charge. */
 body.is-cockpit-layout .scanner-panel.is-cockpit-expanded .scan-button {
   display: grid !important;
-  width: 64px;
-  height: 64px;
-  min-height: 64px;
+  width: var(--control-h-lg);
+  height: var(--control-h-lg);
+  min-height: var(--control-h-lg);
   margin: 0 auto;
   place-items: center;
   border-radius: 50% !important;
@@ -4728,7 +4732,7 @@ body.is-cockpit-layout .scanner-panel.is-cockpit-expanded .scan-button {
 
 /* Tractor and shield are hold controls: broad bars with status immediately below. */
 body.is-cockpit-layout .shield-panel.is-cockpit-expanded .shield-button {
-  min-height: 40px;
+  min-height: var(--control-h);
 }
 
 /* HOLD FIELD is the panic target. It is pressed constantly while flying, often
@@ -4796,7 +4800,7 @@ body.is-cockpit-layout .hull-panel.is-cockpit-expanded .component-meter {
 
 body.is-cockpit-layout .hull-panel.is-cockpit-expanded .component-meter-track {
   order: 1;
-  height: var(--u2);
+  height: var(--minor);
   border: 0;
   border-radius: 0;
   background: transparent;

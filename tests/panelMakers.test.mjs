@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   METER_GRAINS,
   PANEL_CONTENT_WIDTH,
+  PANEL_MINOR_GRID,
   PANEL_MAKERS,
   getMeterGrain,
   getPanelMaker,
@@ -23,17 +24,29 @@ test("every meter grain tiles the panel content width exactly", () => {
   });
 });
 
-test("every meter grain sits on the 8px minor grid, bar inside pitch", () => {
+test("every meter grain sits on the minor grid, bar inside pitch", () => {
   Object.entries(METER_GRAINS).forEach(([name, grain]) => {
-    assert.equal(grain.pitch % 4, 0, `${name} pitch is off the grid`);
+    assert.equal(grain.pitch % PANEL_MINOR_GRID, 0, `${name} pitch is off the grid`);
     assert.ok(grain.bar < grain.pitch, `${name} bar does not fit its pitch`);
   });
 });
 
-test("every maker's control height is a multiple of eight", () => {
+test("every maker's control height is a multiple of the minor grid", () => {
   Object.values(PANEL_MAKERS).forEach((maker) => {
-    assert.equal(maker.controlHeight % 8, 0, `${maker.id} control height is off the grid`);
+    assert.equal(
+      maker.controlHeight % PANEL_MINOR_GRID,
+      0,
+      `${maker.id} control height is off the grid`,
+    );
   });
+});
+
+// The constraint that makes half-offset placement safe: a panel parked on a
+// midpoint moves its whole interior by half a column, so the minor grid has to
+// BE that half or nothing inside it lands on a drawn line any more.
+test("the minor grid is exactly half the major one", () => {
+  assert.equal(PANEL_MINOR_GRID * 2, 24);
+  assert.equal(PANEL_CONTENT_WIDTH % PANEL_MINOR_GRID, 0);
 });
 
 test("the engine's maker follows the fitted drive, not a table", () => {
