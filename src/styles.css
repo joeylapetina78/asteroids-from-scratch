@@ -4019,8 +4019,17 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-floating {
 
 body.is-cockpit-layout .is-cockpit-floating[data-panel-id="processor"] { width: 320px; }
 body.is-cockpit-layout .is-cockpit-floating[data-panel-id="engine"] { width: 188px; }
-body.is-cockpit-layout .is-cockpit-floating .component-panel-title { cursor: grab; }
-body.is-cockpit-layout .is-cockpit-floating.is-dragging .component-panel-title { cursor: grabbing; }
+/* Everything that is not a control is somewhere to pick the instrument up by. */
+body.is-cockpit-layout .is-cockpit-floating { cursor: grab; }
+body.is-cockpit-layout .is-cockpit-floating.is-dragging,
+body.is-cockpit-layout .is-cockpit-floating.is-dragging * { cursor: grabbing; }
+body.is-cockpit-layout .is-cockpit-floating button,
+body.is-cockpit-layout .is-cockpit-floating select,
+body.is-cockpit-layout .is-cockpit-floating input,
+body.is-cockpit-layout .is-cockpit-floating a,
+body.is-cockpit-layout .is-cockpit-floating label { cursor: pointer; }
+/* Racked in the bay it is a control, not a thing to move. */
+body.is-cockpit-layout .is-cockpit-module:not(.is-cockpit-floating) .component-panel-title { cursor: pointer; }
 
 .cockpit-module-launcher {
   width: 100%;
@@ -4239,13 +4248,14 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-expanded .component-panel-t
   display: block;
 }
 
-/* The engine's name stays. It used to be hidden because the maker's plate sat
-   in the title bar and served as the heading; with the plate moved down under
-   the switch, hiding this as well left the title bar zero pixels tall — no
-   name, and no grab handle, because the drag listeners live on the title. An
-   instrument you cannot pick up is worse than one with a label on it.
-
-   The running status still goes: the switch says on or off by itself. */
+/* Stripped: no heading, no status line. The switch says on or off by itself and
+   the maker's plate underneath says what it is, which is the whole of what this
+   instrument has to tell you when it is working.
+   
+   Hiding the name was only unsafe while the title bar was the drag handle — a
+   zero-height title meant an instrument that could not be picked up. Now that
+   the whole panel is the handle, the heading has no job left. */
+body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-panel-title > div > strong,
 body.is-cockpit-layout .engine-panel.is-cockpit-expanded #ship-status {
   display: none !important;
 }

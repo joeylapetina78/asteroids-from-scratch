@@ -162,3 +162,33 @@ campaign silently wiped a hull carefully parked in Explorer.
 Note that this branch reads `initialDevStart`, not `state._devStartId`. The
 latter is only assigned this early for free-play starts, so it is `undefined` at
 cockpit-setup time in the one mode the branch exists for.
+
+## How an instrument is handled
+
+**The module bay is the on/off switch, at both ends.** Click an instrument in
+the rack to bring it out; click its launcher — left behind in the rack while it
+is out — to stow it. A floating panel does not close when clicked.
+
+That last part is not squeamishness. Once the whole panel became a drag surface,
+"click it" and "start to move it" are the same gesture, and a hand that slipped
+would put an instrument away mid-flight.
+
+**Everything on a floating instrument that is not a control is somewhere to pick
+it up by.** Drag listeners live on the panel, not on its title bar, and bail
+only when the pointer went down on something in `CONTROL_SELECTOR`.
+
+This is what frees a panel from having to carry a heading. The engine's only
+visible title was its maker's plate; moving that plate under the switch left the
+title bar zero pixels tall, which — while the title was the handle — meant an
+instrument that could not be picked up at all. With the whole panel live, the
+engine can be as stripped as its design wants: one switch, one plate, one gauge.
+
+The title's `role="button"` and `tabindex` move with the job. Racked, the title
+is the control that brings the instrument out. Floating, it is just a label, and
+the attributes are removed so it stops announcing itself as a button.
+
+> **Trap:** `CONTROL_SELECTOR` includes `[role='button']`, and the racked title
+> carries that role itself. A bare `closest(CONTROL_SELECTOR)` check inside the
+> title's own click handler therefore matches the element the handler is on, and
+> silently swallows every attempt to bring an instrument out of the bay. The
+> guard has to exclude the title itself.
