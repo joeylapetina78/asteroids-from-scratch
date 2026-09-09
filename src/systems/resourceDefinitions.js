@@ -2,15 +2,31 @@
 // share the shape but have unique colors and rarity weights. Weight is
 // relative frequency WITHIN the family — higher = appears more often.
 
+// `density` is how a material BEHAVES in the cockpit bays, on the same footing
+// as shape: one number per family that decides how hard a piece is to shove,
+// how long it keeps coasting, and how live it is off a contact. 1 is ordinary
+// rock. Below 1 skitters and stalls near the inlet; above 1 ploughs through a
+// drifting cloud and carries to the far wall.
+//
+// It is deliberately a FEEL figure, not a real specific gravity. Aluminium
+// really is lighter than iron, but "structural is the heavy family" is the
+// thing the player can learn by watching the hold, and it agrees with the
+// colour lanes and the shapes they already read.
 export const FAMILIES = {
-  volatile:   { shape: "circle",   label: "Volatile" },
-  structural: { shape: "square",   label: "Structural" },
-  industrial: { shape: "triangle", label: "Industrial" },
-  conductor:  { shape: "hexagon",  label: "Conductor" },
-  energy:     { shape: "octagon",  label: "Energy" },
-  advanced:   { shape: "diamond",  label: "Advanced" },
-  strange:    { shape: "shard",    label: "Strange" },
+  volatile:   { shape: "circle",   label: "Volatile",   density: 0.55 },
+  structural: { shape: "square",   label: "Structural", density: 1.75 },
+  industrial: { shape: "triangle", label: "Industrial", density: 1.3 },
+  conductor:  { shape: "hexagon",  label: "Conductor",  density: 1.15 },
+  energy:     { shape: "octagon",  label: "Energy",     density: 0.85 },
+  advanced:   { shape: "diamond",  label: "Advanced",   density: 1.0 },
+  // Strange material has no business being consistent about anything.
+  strange:    { shape: "shard",    label: "Strange",    density: 0.35 },
 };
+
+// The usable range. A ratio wider than this makes a light unit pinned against a
+// wall by a heavy one jitter instead of squeezing out.
+export const MIN_RESOURCE_DENSITY = 0.3;
+export const MAX_RESOURCE_DENSITY = 2.2;
 
 // Resource records are the shared material vocabulary for the world. Systems
 // ask these records about use, value, and appearance instead of maintaining
@@ -24,7 +40,7 @@ export const FAMILY_MEMBERS = {
   volatile: [
     { id: "water-ice",   color: "#2bd9f7", weight: 3, value: 30, institutionalFeedstockValue: 30, effectiveYield: 1, processOutputs: { fuel: 250, "hull-repair": 4 } },
     { id: "methane-ice", color: "#15918c", weight: 2, value: 50, institutionalFeedstockValue: 38, effectiveYield: 1.25, processOutputs: { fuel: 320, "hull-repair": 4 } },
-    { id: "hydrogen",    color: "#4967e8", weight: 1, value: 80, processOutputs: { fuel: 400, "hull-repair": 4 } },
+    { id: "hydrogen",    color: "#4967e8", weight: 1, value: 80, density: 0.3, processOutputs: { fuel: 400, "hull-repair": 4 } },
   ],
   // Structural is the efficient hull-patch material, and hull-repair yields keep
   // SPRC's structural equivalence ratio (iron-nickel 1 : aluminum 2 : titanium 3)
@@ -34,7 +50,7 @@ export const FAMILY_MEMBERS = {
   structural: [
     { id: "iron-nickel", color: "#d93b24", weight: 3, value: 20, institutionalFeedstockValue: 20, effectiveYield: 1, processOutputs: { ammo: 250, "hull-repair": 20 } },
     { id: "aluminum",    color: "#c77222", weight: 2, value: 35, institutionalFeedstockValue: 30, effectiveYield: 1.5, processOutputs: { ammo: 300, "hull-repair": 40 } },
-    { id: "titanium",    color: "#87451f", weight: 1, value: 60, processOutputs: { ammo: 400, "hull-repair": 60 } },
+    { id: "titanium",    color: "#87451f", weight: 1, value: 60, density: 2.1, processOutputs: { ammo: 400, "hull-repair": 60 } },
   ],
   industrial: [
     { id: "silicate",     color: "#9a642e", weight: 3, value: 15, institutionalFeedstockValue: 15, effectiveYield: 1, processOutputs: { ammo: 180, "hull-repair": 8 } },
@@ -95,6 +111,18 @@ export function getResourceFamily(resourceId) {
 
 export function getResourceShape(resourceId) {
   return FAMILIES[getResourceFamily(resourceId)]?.shape ?? "square";
+}
+
+// Family sets the feel; a member may argue with its family within the range.
+export function getResourceDensity(resourceId) {
+  const definition = getResourceDefinition(resourceId);
+  const density = definition?.density ?? FAMILIES[getResourceFamily(resourceId)]?.density ?? 1;
+  return clampDensity(density);
+}
+
+export function clampDensity(density) {
+  if (!Number.isFinite(density)) return 1;
+  return Math.min(MAX_RESOURCE_DENSITY, Math.max(MIN_RESOURCE_DENSITY, density));
 }
 
 export function getResourceColor(resourceId) {

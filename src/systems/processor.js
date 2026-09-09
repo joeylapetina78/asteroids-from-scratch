@@ -1,5 +1,5 @@
-import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260908-2102-2b391a0a";
-import { RESOURCE_COLOR, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260908-2102-2b391a0a";
+import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260909-1728-51ac80a8";
+import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260909-1728-51ac80a8";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -7,7 +7,12 @@ const SIDE_PIPE_LIP_HEIGHT = 72;
 const SIDE_PIPE_LIP_DEPTH = 26;
 const SIDE_PIPE_NECK_LENGTH = 14;
 const SIDE_PIPE_NECK_HEIGHT = 38;
-const BOUNCE = 0.18;
+// Raised from 0.18 once density landed. At 0.18 a contact multiplied relative
+// velocity by -0.18, which is very nearly perfectly inelastic: two pieces that
+// touched left the contact travelling together, which IS a clump. Density
+// breaks the symmetry between materials; this is what stops any two pieces
+// merging into one body regardless of what they are made of.
+const BOUNCE = 0.26;
 const FLOOR_FRICTION = 0.82;
 const SOLVER_STEPS = 4;
 const ANGULAR_DRAG = 0.86;
@@ -50,6 +55,30 @@ const COMPACTION_DRAG = 0.9;
 // at full speed coasts roughly two thirds of the way across before it gives up,
 // which is far enough to mingle and near enough that the bay goes still.
 const DRIFT_DAMPING = 0.991;
+
+// How far a material's density moves it off the shared feel figures.
+//
+// Everything in the bay used to be physically identical: equal mass, one
+// restitution, one damping. Identical pieces in near-perfectly inelastic
+// contact all decelerating at the same rate is a recipe for a clump — nothing
+// ever diverges from its neighbours, so the whole burst arrives at rest as one
+// body. Density is the single number that breaks that symmetry, and it does it
+// in three places at once, which is why one dial per material is enough.
+//
+// DRIFT is per-frame and therefore brutally sensitive; see DRIFT_DAMPING above.
+// The spread here keeps the heavy end short of 0.997, where material stops
+// giving up and packs against the far wall.
+const DRIFT_DENSITY_SPREAD = 0.004;
+const MIN_DRIFT_DAMPING = 0.985;
+const MAX_DRIFT_DAMPING = 0.9955;
+
+// Denser material is livelier off a contact — metal rings, ice is dead and
+// brittle. This is the lever that actually stops pieces travelling as a block:
+// restitution is what decides whether two units leave a contact together or
+// apart.
+const BOUNCE_DENSITY_SPREAD = 0.12;
+const MIN_UNIT_BOUNCE = 0.1;
+const MAX_UNIT_BOUNCE = 0.42;
 // Minimum spacing, in seconds, between units actually entering the bay.
 //
 // The slot pattern cycled `units.length % 4`, so a burst of more than four
@@ -108,16 +137,60 @@ export function getProcessorConsumptionQuantity(quantity, amountPerUnit, headroo
 // `direction` is the outward normal for `first` — the way the solver just
 // pushed it. Units already separating are left alone; only an approach
 // produces an impulse, so resting contacts do not buzz.
-function exchangeMomentum(first, second, axis, direction) {
+export function exchangeMomentum(first, second, axis, direction) {
   const relative = first[axis] - second[axis];
 
   if (relative * direction >= 0) {
     return;
   }
 
-  const transfer = ((1 + BOUNCE) / 2) * relative;
-  first[axis] -= transfer;
-  second[axis] += transfer;
+  // Mass-weighted, so a titanium block hands a drifting ice shard most of its
+  // speed and barely notices, instead of the two splitting the difference and
+  // sailing off together. With equal masses this is exactly the old
+  // ((1 + BOUNCE) / 2) * relative.
+  const firstMass = getUnitMass(first);
+  const secondMass = getUnitMass(second);
+  const totalMass = firstMass + secondMass;
+  const restitution = getPairBounce(first, second);
+
+  first[axis] -= (1 + restitution) * (secondMass / totalMass) * relative;
+  second[axis] += (1 + restitution) * (firstMass / totalMass) * relative;
+}
+
+// Area, not edge length: a ten-stack is drawn bigger and should shove like it.
+// `massReference` is the size of a single unit in THIS bay, so the cargo hold's
+// smaller unit scale does not make all of its material lighter than the
+// processor's — the two never touch, and only ratios inside one bay matter.
+export function getUnitMass(unit) {
+  const reference = unit.massReference || UNIT_SIZE;
+  const scale = (unit.size || reference) / reference;
+  return Math.max(0.05, getUnitDensity(unit) * scale * scale);
+}
+
+function getUnitDensity(unit) {
+  return clampDensity(unit.density ?? 1);
+}
+
+export function getUnitBounce(unit) {
+  return clamp(
+    BOUNCE + (getUnitDensity(unit) - 1) * BOUNCE_DENSITY_SPREAD,
+    MIN_UNIT_BOUNCE,
+    MAX_UNIT_BOUNCE,
+  );
+}
+
+// A contact has one restitution, not two. Averaging keeps a dead ice shard from
+// making a metal contact dead and vice versa.
+function getPairBounce(first, second) {
+  return (getUnitBounce(first) + getUnitBounce(second)) / 2;
+}
+
+export function getUnitDriftDamping(unit) {
+  return clamp(
+    DRIFT_DAMPING + (getUnitDensity(unit) - 1) * DRIFT_DENSITY_SPREAD,
+    MIN_DRIFT_DAMPING,
+    MAX_DRIFT_DAMPING,
+  );
 }
 
 export class Processor {
@@ -203,6 +276,10 @@ export class Processor {
       // isn't a real resource type); fall back to the resource lookups.
       color: metadata.color ?? RESOURCE_COLOR[type] ?? "#ff7452",
       shape: metadata.shape ?? getResourceShape(type),
+      // How this material behaves once it is loose in the bay. Metadata wins so
+      // a sealed container can be heavy without being a real resource type.
+      density: metadata.density ?? getResourceDensity(type),
+      massReference: this.getUnitSize(1),
       x: shootsLeft
         ? inletX - size / 2 + Math.random() * 9
         : shootsRight
@@ -362,6 +439,11 @@ export class Processor {
       label: unit.label ?? null,
       quantity: unit.quantity ?? 1,
       size: unit.size ?? this.getUnitSize(unit.quantity ?? 1),
+      // Derived rather than persisted: density belongs to the material, so a
+      // reload picks up any retuning of the table instead of restoring a
+      // snapshot of yesterday's feel.
+      density: unit.density ?? getResourceDensity(unit.type),
+      massReference: this.getUnitSize(1),
     }));
   }
 
@@ -403,6 +485,11 @@ export class Processor {
 
       unit.vy += GRAVITY * this.gravityScale * deltaSeconds;
 
+      // Deliberately NOT divided by mass. This is the hold being thrown about
+      // by the ship, which is a pseudo-force: every piece of loose material
+      // feels the same acceleration whatever it weighs, exactly as gravity does
+      // on the line above. Dividing it by mass here would be the gravity-era
+      // mistake in a new place.
       if (ambient) {
         unit.vx += ambient.x * deltaSeconds;
         unit.vy += ambient.y * deltaSeconds;
@@ -438,8 +525,12 @@ export class Processor {
     if (this.gravityScale === 0) {
       this.units.forEach((unit) => {
         if (compactingUnits?.has(unit) || unit.inPipe) return;
-        unit.vx *= DRIFT_DAMPING;
-        unit.vy *= DRIFT_DAMPING;
+        // Per material. Light material stalls near the inlet and heavy material
+        // carries to the back, so a mixed load sorts itself along the bay
+        // instead of stopping together in one lump.
+        const damping = getUnitDriftDamping(unit);
+        unit.vx *= damping;
+        unit.vy *= damping;
       });
     }
 
@@ -696,19 +787,27 @@ export class Processor {
       return;
     }
 
+    // Separation is shared by INVERSE mass, so the light one gets out of the
+    // way. Splitting every overlap 50/50 meant a drifting shard could displace
+    // a ten-stack of titanium as easily as the other way round, which reads as
+    // everything being made of the same stuff — and it is what let a burst
+    // settle into an evenly spaced lattice instead of sorting itself out.
+    const firstMass = getUnitMass(first);
+    const secondMass = getUnitMass(second);
+    const firstShare = secondMass / (firstMass + secondMass);
+    const secondShare = 1 - firstShare;
+
     if (overlapX < overlapY) {
-      const push = overlapX / 2;
       const direction = firstCenterX < secondCenterX ? -1 : 1;
-      first.x += push * direction;
-      second.x -= push * direction;
+      first.x += overlapX * firstShare * direction;
+      second.x -= overlapX * secondShare * direction;
       exchangeMomentum(first, second, "vx", direction);
       first.angularVelocity += direction * Math.abs(second.vy) * 0.003;
       second.angularVelocity -= direction * Math.abs(first.vy) * 0.003;
     } else {
-      const push = overlapY / 2;
       const direction = firstCenterY < secondCenterY ? -1 : 1;
-      first.y += push * direction;
-      second.y -= push * direction;
+      first.y += overlapY * firstShare * direction;
+      second.y -= overlapY * secondShare * direction;
       exchangeMomentum(first, second, "vy", direction);
       const spin = (secondCenterX - firstCenterX) * 0.004;
       first.angularVelocity -= spin;
@@ -829,6 +928,8 @@ export class Processor {
         ...metadata,
         color: bundle.color ?? RESOURCE_COLOR[bundle.type] ?? "#ff7452",
         shape: bundle.shape ?? getResourceShape(bundle.type),
+        density: bundle.density ?? getResourceDensity(bundle.type),
+        massReference: this.getUnitSize(1),
         quantity: 1,
         size,
         x: clamp(centerX - size / 2 + Math.cos(angle) * 5, 0, this.canvas.width - size),
@@ -936,6 +1037,11 @@ export class Processor {
         ...compaction.metadata,
         color: RESOURCE_COLOR[compaction.type] ?? "#ff7452",
         shape: getResourceShape(compaction.type),
+        // A stack is ten of the same material, so it keeps that material's
+        // density and gets its weight from being bigger. Ten ice shards
+        // gathered into one block still shove like ice.
+        density: compaction.metadata?.density ?? getResourceDensity(compaction.type),
+        massReference: this.getUnitSize(1),
         quantity: COMPACTION_COUNT,
         size,
         x: clamp(compaction.target.x + UNIT_SIZE / 2 - size / 2, 0, this.canvas.width - size),
