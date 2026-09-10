@@ -1,12 +1,11 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260909-2105-1fa497f2";
-import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260909-2105-1fa497f2";
-import { HULL_OUTLINES } from "../content/ships/hullOutlines.js?v=fresh-20260909-2105-1fa497f2";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260909-2126-bba49c43";
+import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260909-2126-bba49c43";
+import { getCraftPerformance } from "../systems/craftPerformance.js?v=fresh-20260909-2126-bba49c43";
+import { HULL_OUTLINES } from "../content/ships/hullOutlines.js?v=fresh-20260909-2126-bba49c43";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
-const DEFAULT_THRUST_POWER = 95;
 const DEFAULT_REVERSE_THRUST_MULTIPLIER = 0.2;
 const DEFAULT_FUEL_BURN_RATE = 6;
-const DEFAULT_MAX_SPEED = 105;
 const DEFAULT_BOOST_THRUST_MULTIPLIER = 4.2;
 const DEFAULT_BOOST_MAX_SPEED_MULTIPLIER = 2.2;
 const DEFAULT_BOOST_DURATION_SECONDS = 0.3;
@@ -94,7 +93,10 @@ const SHIP_FRAMES = {
 };
 
 export class Ship {
-  constructor(x, y, engine, shipFrame = {}) {
+  // `hull` is optional and settable afterwards, because how fast a craft goes
+  // now depends on what it weighs as well as what drives it.
+  constructor(x, y, engine, shipFrame = {}, hull = null) {
+    this.hull = hull;
     this.position = { x, y };
     this.velocity = { x: 0, y: 0 };
     this.angle = -Math.PI / 2;
@@ -183,8 +185,20 @@ export class Ship {
     return this.engine.rotationSpeed ?? DEFAULT_ROTATION_SPEED;
   }
 
+  // The drive, its tune and the hull it is pushing. Momentary states —
+  // environment, panel condition, cloak — layer on top here rather than in
+  // the composition, because they are things happening TO a craft rather than
+  // what it is built from.
+  getCraftPerformance() {
+    return getCraftPerformance({
+      engine: this.engine,
+      engineModel: getEngineModel(this.engine),
+      hull: this.hull,
+    });
+  }
+
   getThrustPower() {
-    return (this.engine.thrustPower ?? DEFAULT_THRUST_POWER) * this.environmentThrustMultiplier * this.conditionThrustMultiplier;
+    return this.getCraftPerformance().thrustPower * this.environmentThrustMultiplier * this.conditionThrustMultiplier;
   }
 
   getReverseThrustMultiplier() {
@@ -198,7 +212,8 @@ export class Ship {
 
   getMaxSpeed() {
     const cloakMultiplier = this.isCloaked ? (this.cloakConfig?.maxSpeedMultiplier ?? 0.78) : 1;
-    return (this.engine.maxSpeed ?? DEFAULT_MAX_SPEED) * cloakMultiplier * this.environmentMaxSpeedMultiplier * this.conditionMaxSpeedMultiplier;
+    return this.getCraftPerformance().maxSpeed
+      * cloakMultiplier * this.environmentMaxSpeedMultiplier * this.conditionMaxSpeedMultiplier;
   }
 
   applyKineticVelocityMultiplier(multiplier = 2) {

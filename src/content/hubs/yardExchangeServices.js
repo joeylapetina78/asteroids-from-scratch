@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260909-2105-1fa497f2";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260909-2105-1fa497f2";
+import { getNpcName } from "../npcs.js?v=fresh-20260909-2126-bba49c43";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260909-2126-bba49c43";
 
 const COMMON_FRONTIER_ORE_VALUES = Object.freeze({
   "water-ice": 30,
@@ -286,8 +286,11 @@ export const hubServiceDefinitions = {
           tags: ["Engine upgrade", "Higher top speed", "More thrust"],
           apply: {
             engine: {
-              thrustPower: 125,
-              maxSpeed: 145,
+              // Scales, not absolutes. As a flat 125/145 this tune would have
+              // made a Vektor owner SLOWER than the drive they had just paid
+              // for; as a multiplier it improves whatever is fitted.
+              thrustPowerScale: 1.32,
+              maxSpeedScale: 1.38,
               fuelBurnRate: 11,
               thrustVisual: {
                 style: "ragged-flame",

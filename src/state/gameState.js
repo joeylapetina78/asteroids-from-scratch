@@ -1,21 +1,21 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260909-2105-1fa497f2";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260909-2105-1fa497f2";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260909-2105-1fa497f2";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260909-2105-1fa497f2";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260909-2105-1fa497f2";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260909-2105-1fa497f2";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260909-2105-1fa497f2";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260909-2105-1fa497f2";
-import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260909-2105-1fa497f2";
-import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260909-2105-1fa497f2";
-import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260909-2105-1fa497f2";
-import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260909-2105-1fa497f2";
-import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260909-2105-1fa497f2";
-import { createInitialIndustrialState } from "../systems/industrialProduction.js?v=fresh-20260909-2105-1fa497f2";
-import { consolidateSprcOwnership } from "../systems/sprcOwnership.js?v=fresh-20260909-2105-1fa497f2";
-import { createInitialNpcDevelopmentState } from "../systems/npcDevelopment.js?v=fresh-20260909-2105-1fa497f2";
-import { createInitialWorldNetwork } from "../systems/worldNetworkRegistry.js?v=fresh-20260909-2105-1fa497f2";
-import { createCockpitLayoutState } from "../systems/cockpitLayout.js?v=fresh-20260909-2105-1fa497f2";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260909-2126-bba49c43";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260909-2126-bba49c43";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260909-2126-bba49c43";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260909-2126-bba49c43";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260909-2126-bba49c43";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260909-2126-bba49c43";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260909-2126-bba49c43";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260909-2126-bba49c43";
+import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260909-2126-bba49c43";
+import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260909-2126-bba49c43";
+import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260909-2126-bba49c43";
+import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260909-2126-bba49c43";
+import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260909-2126-bba49c43";
+import { createInitialIndustrialState } from "../systems/industrialProduction.js?v=fresh-20260909-2126-bba49c43";
+import { consolidateSprcOwnership } from "../systems/sprcOwnership.js?v=fresh-20260909-2126-bba49c43";
+import { createInitialNpcDevelopmentState } from "../systems/npcDevelopment.js?v=fresh-20260909-2126-bba49c43";
+import { createInitialWorldNetwork } from "../systems/worldNetworkRegistry.js?v=fresh-20260909-2126-bba49c43";
+import { createCockpitLayoutState } from "../systems/cockpitLayout.js?v=fresh-20260909-2126-bba49c43";
 
 export function createGameState() {
   const state = {
@@ -170,10 +170,13 @@ export function createGameState() {
         thrustMode: "forward",
         fuel: 2000,
         maxFuel: 2000,
-        thrustPower: 95,
+        // Thrust and top speed are NOT stored here any more: they come from
+        // the fitted drive, scaled by any tune and by hull mass. See
+        // craftPerformance.js. These two are what a tune moves.
+        thrustPowerScale: 1,
+        maxSpeedScale: 1,
         reverseThrustMultiplier: 0.2,
         rotationSpeed: 2.6,
-        maxSpeed: 105,
         fuelBurnRate: 10,
         // Persistent wear/fault state, driven by the shared panel-condition
         // machine (panelMaintenance.js) with engine-specific rules from
@@ -249,6 +252,9 @@ export function createGameState() {
         installed: true,
         integrity: 100,
         maxIntegrity: 100,
+        // What the hull weighs, against a reference of 100. A heavier craft
+        // accelerates and tops out lower; see craftPerformance.js.
+        mass: 100,
         // Onboard patch material converted at the processor (Repair Hull mode).
         // Denominated in integrity points, so it patches the hull 1:1; a full
         // reserve is exactly one full hull repair. Lives here for now because the
