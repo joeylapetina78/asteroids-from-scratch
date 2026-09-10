@@ -1,7 +1,7 @@
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260909-1929-2b226498";
-import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260909-1929-2b226498";
-import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260909-1929-2b226498";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260909-1929-2b226498";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260909-1951-99648e93";
+import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260909-1951-99648e93";
+import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260909-1951-99648e93";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260909-1951-99648e93";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.
@@ -11,6 +11,7 @@ const THREADLING_FLOCKS = 8;
 const LANTERN_HERDS = 5;
 const GRAZER_ATTEMPTS = 42;
 const SKITTER_ATTEMPTS = 40;
+const GREATBLOOM_COUNT = 3;
 
 // ── Striking a bloom ────────────────────────────────────────────────────────
 // A bloom carries a crystal in its bell. Run one down point-first and it gives
@@ -64,8 +65,23 @@ export function createLifeField(asteroids) {
   addLanternHerds(lifeforms, anchors, random);
   addGrazers(lifeforms, anchors, random);
   addSkitters(lifeforms, anchors, random);
+  addGreatblooms(lifeforms, anchors, random);
 
   return lifeforms;
+}
+
+// Rare, and deliberately far out. A greatbloom is a fight rather than scenery,
+// so running into one should feel like having gone somewhere — and there are
+// few enough that the field never turns into a minefield of them.
+function addGreatblooms(lifeforms, anchors, random) {
+  const distant = anchors.filter((anchor) => Math.hypot(anchor.position.x, anchor.position.y) > 2600);
+  const pool = distant.length > 0 ? distant : anchors;
+
+  for (let index = 0; index < GREATBLOOM_COUNT; index += 1) {
+    const anchor = pool[Math.floor(random() * pool.length)];
+    if (!anchor) continue;
+    lifeforms.push(createLifeformNear("greatbloom", anchor, random, 520, 9100 + index));
+  }
 }
 
 export function createHunterRespawn(ship, asteroids, seed) {

@@ -4,7 +4,7 @@ import {
   getGrazingSteerTarget,
   getGrowthScale,
   isRipe,
-} from "../systems/grazing.js?v=fresh-20260909-1929-2b226498";
+} from "../systems/grazing.js?v=fresh-20260909-1951-99648e93";
 
 // How hard a grazer commits once it has locked onto food. Idle wandering keeps
 // the old dreamy steering; a creature crossing a field to a meal does not.
@@ -17,6 +17,30 @@ const GRAZER_FEED_URGENCY = Object.freeze({
 // And it swims faster while it is going somewhere on purpose.
 const GRAZER_FEED_SPEED_SCALE = 1.6;
 
+// ── The greatbloom ──────────────────────────────────────────────────────────
+// A bloom that kept growing. Big enough to swallow the ship whole, and unlike
+// its small kin it does not flee — it closes, engulfs, and then keeps drifting
+// with the player sealed inside.
+//
+// The fight is two jobs at once, and the tuning has to leave room for both:
+// ride the drift so the bell wall does not crush you, and shoot the eye while
+// it crawls around the rim. Every number below trades one against the other.
+
+// About four ship-widths across. Wider is a kinder arena and a duller one; the
+// squeeze IS the fight, so this is the first dial to reach for if it feels
+// unfair rather than tense.
+export const GREATBLOOM_RADIUS = 84;
+// The eye is roughly a whole ordinary bloom, which is what makes it a target
+// worth aiming at rather than a pixel to spray.
+export const GREATBLOOM_EYE_RADIUS = 15;
+export const GREATBLOOM_HEALTH = 12;
+// How long the eye takes to travel from the middle out to the rim once the
+// player is sealed in. Slow enough to read as the animal changing shape.
+const GREATBLOOM_EYE_EMERGE_SECONDS = 1.1;
+// Radians a second the eye crawls around the rim. Fast enough that a player
+// who stops tracking loses it behind them.
+const GREATBLOOM_EYE_ORBIT_SPEED = 0.55;
+
 const LIFE_COLORS = {
   hunter: "#ff5d6c",
   threadling: "#b8f7ff",
@@ -24,6 +48,7 @@ const LIFE_COLORS = {
   skitter: "#d9b3ff",
   lantern: "#ffe98a",
   bloom: "#ff9ed6", // round pulsing drifter — soft rose, fertile/calm zones
+  greatbloom: "#ff6fc4", // the grown one — deeper rose, and it comes for you
   filament: "#c6ff70", // wiggling anchored hairs — alien lime, strange/scanergy zones
 };
 
@@ -57,6 +82,19 @@ export class Lifeform {
     this.perception = getPerception(type);
     this.isAlive = true;
     this.health = type === "hunter" ? 100 : 1;
+    if (type === "greatbloom") {
+      this.health = GREATBLOOM_HEALTH;
+      // Sealed in? The whole behaviour of the animal turns on this.
+      this.isHolding = false;
+      // Where the eye sits, as a fraction from the middle (0) to the rim (1),
+      // and the world angle it sits at. Kept in WORLD space because the bullet
+      // check in game.js needs it there; the draw un-rotates to place it.
+      this.eyeReach = 0;
+      // Wrapped. `seed` arrives as a large hash, so the raw product starts in
+      // the millions — harmless to cos/sin, but it throws away float precision
+      // for no reason and reads as a bug to anyone who prints it.
+      this.eyeAngle = (seed * 0.017) % (Math.PI * 2);
+    }
     this.webTrail = [];
   }
 
@@ -84,6 +122,8 @@ export class Lifeform {
       this.updateLantern(deltaSeconds, world);
     } else if (this.type === "bloom") {
       this.updateBloom(deltaSeconds, world);
+    } else if (this.type === "greatbloom") {
+      this.updateGreatbloom(deltaSeconds, world);
     } else if (this.type === "filament") {
       this.updateFilament(deltaSeconds, world);
     } else {
@@ -250,6 +290,52 @@ export class Lifeform {
     this.avoidAsteroids(world.asteroids, 3.2);
   }
 
+  // Small blooms flee the ship. This one closes on it, and once it has the ship
+  // inside it keeps drifting — which is the fight, because the wall travels
+  // with the animal and the player has to travel with it too.
+  updateGreatbloom(deltaSeconds, world) {
+    const distanceToShip = distance(this.position, world.ship.position);
+
+    if (this.isHolding) {
+      // Still hunting in a sense: it leans toward wherever the ship is inside
+      // it, which drags the far wall onto a player who stops moving.
+      this.applySteer(seek(this, world.ship.position, this.maxSpeed * 0.55), 0.5);
+      this.applySteer(this.wander(deltaSeconds), 1.15);
+    } else if (world.shipPowered && distanceToShip < this.perception) {
+      this.applySteer(seek(this, world.ship.position, this.maxSpeed), 2.1);
+    } else {
+      this.applySteer(this.wander(deltaSeconds), 0.6);
+    }
+
+    this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 320, "greatbloom"), 240), 0.9);
+    this.avoidAsteroids(world.asteroids, 2.4);
+    this.updateGreatbloomEye(deltaSeconds);
+  }
+
+  // Closed up, the eye sits in the middle like any bloom's core. Once the ship
+  // is sealed in, it withdraws to the rim and starts crawling — putting it as
+  // far from the player as the animal can manage, and moving.
+  updateGreatbloomEye(deltaSeconds) {
+    const target = this.isHolding ? 1 : 0;
+    const rate = deltaSeconds / GREATBLOOM_EYE_EMERGE_SECONDS;
+    this.eyeReach = target > this.eyeReach
+      ? Math.min(target, this.eyeReach + rate)
+      : Math.max(target, this.eyeReach - rate);
+
+    if (this.isHolding) {
+      this.eyeAngle = (this.eyeAngle + GREATBLOOM_EYE_ORBIT_SPEED * deltaSeconds) % (Math.PI * 2);
+    }
+  }
+
+  // World-space, so the bullet check and the draw agree on where the eye is.
+  getEyePosition() {
+    const reach = (this.radius - GREATBLOOM_EYE_RADIUS - 4) * (this.eyeReach ?? 0);
+    return {
+      x: this.position.x + Math.cos(this.eyeAngle ?? 0) * reach,
+      y: this.position.y + Math.sin(this.eyeAngle ?? 0) * reach,
+    };
+  }
+
   // Filaments are near-rooted: they hover close to a rock and spread into a
   // field. The wiggle lives in the draw, so they read as waving hairs even
   // while nearly still; they only recoil slightly when the ship is close.
@@ -391,6 +477,8 @@ export class Lifeform {
       drawLantern(context, this);
     } else if (this.type === "bloom") {
       drawBloom(context, this);
+    } else if (this.type === "greatbloom") {
+      drawGreatbloom(context, this, heading);
     } else if (this.type === "filament") {
       drawFilament(context, this);
     } else {
@@ -882,6 +970,96 @@ function drawBloom(context, lifeform) {
   }
 }
 
+// Drawn to be seen from INSIDE. The wall is the thing that matters once the
+// player is sealed in, so it is the brightest part of the animal and the
+// interior stays clear enough to fly and shoot in.
+function drawGreatbloom(context, lifeform, heading) {
+  const beat = 0.5 + Math.sin(lifeform.pulse * 1.5 + lifeform.seed) * 0.5;
+  const bell = lifeform.radius + beat * 4;
+  const holding = lifeform.isHolding === true;
+
+  // Body. Kept very sheer while it is holding — the player has to be able to
+  // read their own ship, their bullets and the field through it.
+  context.fillStyle = holding
+    ? `rgba(255, 111, 196, ${0.05 + beat * 0.03})`
+    : `rgba(255, 111, 196, ${0.1 + beat * 0.07})`;
+  context.beginPath();
+  context.arc(0, 0, bell, 0, Math.PI * 2);
+  context.fill();
+
+  // The wall. This is what hurts, so it is drawn as something solid rather
+  // than as a hint, and it thickens when the animal has something to keep.
+  context.strokeStyle = LIFE_COLORS.greatbloom;
+  context.lineWidth = holding ? 5 : 3;
+  context.beginPath();
+  context.arc(0, 0, bell, 0, Math.PI * 2);
+  context.stroke();
+
+  // An inner band so the player can see the wall coming before it arrives.
+  context.strokeStyle = `rgba(255, 158, 214, ${0.28 + beat * 0.16})`;
+  context.lineWidth = 2;
+  context.beginPath();
+  context.arc(0, 0, bell - 13, 0, Math.PI * 2);
+  context.stroke();
+
+  // Tentacles, trailing behind the direction of travel.
+  context.strokeStyle = "rgba(255, 111, 196, 0.5)";
+  context.lineWidth = 3;
+  for (let index = 0; index < 4; index += 1) {
+    const angle = Math.PI + (index - 1.5) * 0.3;
+    const sway = Math.sin(lifeform.pulse * 2 + index + lifeform.seed) * 9;
+    const baseX = Math.cos(angle) * bell;
+    const baseY = Math.sin(angle) * bell;
+    context.beginPath();
+    context.moveTo(baseX, baseY);
+    context.quadraticCurveTo(baseX * 1.4 + sway, baseY * 1.4, baseX * 1.9, baseY * 1.9 + sway);
+    context.stroke();
+  }
+
+  // The eye. Everything above is drawn in the animal's own rotated frame, so
+  // undo the heading to put the eye at the WORLD angle the collision check
+  // reads — otherwise it drifts off the hitbox whenever the animal turns.
+  context.save();
+  context.rotate(-heading);
+  const reach = (lifeform.radius - GREATBLOOM_EYE_RADIUS - 4) * (lifeform.eyeReach ?? 0);
+  const eyeX = Math.cos(lifeform.eyeAngle ?? 0) * reach;
+  const eyeY = Math.sin(lifeform.eyeAngle ?? 0) * reach;
+  const glare = 0.55 + Math.sin(lifeform.pulse * 5 + lifeform.seed) * 0.3;
+
+  context.fillStyle = `rgba(255, 111, 196, ${0.2 + glare * 0.2})`;
+  context.beginPath();
+  context.arc(eyeX, eyeY, GREATBLOOM_EYE_RADIUS + 6, 0, Math.PI * 2);
+  context.fill();
+
+  context.fillStyle = `rgba(255, 190, 232, ${0.5 + glare * 0.3})`;
+  context.strokeStyle = "#fff0f8";
+  context.lineWidth = 2;
+  context.beginPath();
+  context.arc(eyeX, eyeY, GREATBLOOM_EYE_RADIUS, 0, Math.PI * 2);
+  context.fill();
+  context.stroke();
+
+  context.fillStyle = "#fff0f8";
+  context.beginPath();
+  context.arc(eyeX, eyeY, 4 + glare * 2, 0, Math.PI * 2);
+  context.fill();
+
+  // Wounds show, so the player can tell whether shooting it is working.
+  const wounded = 1 - Math.max(0, lifeform.health) / GREATBLOOM_HEALTH;
+  if (wounded > 0) {
+    context.strokeStyle = `rgba(255, 240, 248, ${0.25 + wounded * 0.6})`;
+    context.lineWidth = 1.5;
+    for (let index = 0; index < Math.ceil(wounded * 6); index += 1) {
+      const crack = lifeform.seed + index * 2.4;
+      context.beginPath();
+      context.moveTo(eyeX + Math.cos(crack) * 4, eyeY + Math.sin(crack) * 4);
+      context.lineTo(eyeX + Math.cos(crack) * GREATBLOOM_EYE_RADIUS, eyeY + Math.sin(crack) * GREATBLOOM_EYE_RADIUS);
+      context.stroke();
+    }
+  }
+  context.restore();
+}
+
 function drawFilament(context, lifeform) {
   const strands = 5;
   const length = 15;
@@ -929,6 +1107,10 @@ function getRadius(type) {
     return 24;
   }
 
+  if (type === "greatbloom") {
+    return GREATBLOOM_RADIUS;
+  }
+
   if (type === "filament") {
     return 16;
   }
@@ -955,6 +1137,12 @@ function getMaxSpeed(type) {
 
   if (type === "bloom") {
     return 46; // languid drift
+  }
+
+  if (type === "greatbloom") {
+    // Slow enough that a powered ship can stay with it, which is the whole
+    // premise of surviving inside one.
+    return 62;
   }
 
   if (type === "filament") {
@@ -985,6 +1173,10 @@ function getMaxForce(type) {
     return 0.09;
   }
 
+  if (type === "greatbloom") {
+    return 0.12;
+  }
+
   if (type === "filament") {
     return 0.08;
   }
@@ -1007,6 +1199,10 @@ function getPerception(type) {
 
   if (type === "bloom") {
     return 150;
+  }
+
+  if (type === "greatbloom") {
+    return 620; // it notices you long before you notice it
   }
 
   if (type === "filament") {
