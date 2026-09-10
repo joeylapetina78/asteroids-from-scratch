@@ -1,6 +1,6 @@
-import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260909-2149-9b7cd4cb";
-import { FIRST_REACH_CARRIERS } from "../content/transportation/firstReachCarriers.js?v=fresh-20260909-2149-9b7cd4cb";
-import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260909-2149-9b7cd4cb";
+import { NpcShip } from "../entities/NpcShip.js?v=fresh-20260909-2151-e5d06bf0";
+import { FIRST_REACH_CARRIERS } from "../content/transportation/firstReachCarriers.js?v=fresh-20260909-2151-e5d06bf0";
+import { createCommercialCraftPublicIdentity } from "./publicIdentity.js?v=fresh-20260909-2151-e5d06bf0";
 
 export const HAULER_PALETTES = Object.freeze(Object.fromEntries(FIRST_REACH_CARRIERS.map((seed) => [seed.institution.id, seed.palette])));
 export const RELIEF_HAULER_PALETTE = Object.freeze({ hullStroke: "#a9a0ff", hullFill: "rgba(137, 125, 255, 0.14)", trainStroke: "#d1ccff", trainFill: "rgba(137, 125, 255, 0.18)", linkStroke: "rgba(190, 183, 255, 0.44)" });
