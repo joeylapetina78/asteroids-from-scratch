@@ -4,7 +4,7 @@ import {
   getGrazingSteerTarget,
   getGrowthScale,
   isRipe,
-} from "../systems/grazing.js?v=fresh-20260909-2010-7252fac4";
+} from "../systems/grazing.js?v=fresh-20260909-2018-af9ff726";
 
 // How hard a grazer commits once it has locked onto food. Idle wandering keeps
 // the old dreamy steering; a creature crossing a field to a meal does not.
@@ -44,7 +44,14 @@ export const GREATBLOOM_HEALTH = 12;
 // last, until it breaks the surface at full size — and it swims at the player
 // the whole way. The rise is the warning, and it is the only warning.
 export const GREATBLOOM_DEEP_RADIUS = 15;
-export const GREATBLOOM_SURFACE_SECONDS = 9;
+// How close it has to get before it commits. Outside this it stays small and
+// keeps pace; inside it, tucked into the ship's wake, it stops hiding.
+export const GREATBLOOM_LUNGE_RANGE = 170;
+// The lunge: small to full size, and a mouthful, in about a second.
+export const GREATBLOOM_LUNGE_SECONDS = 1.05;
+// Sinking back down — after a kill, or after losing the ship. Slower than the
+// lunge, because leaving is not urgent for it.
+export const GREATBLOOM_SINK_SECONDS = 2.6;
 // How far it over- and under-shoots its climb while rising. Large at the start
 // so the first swells read as something huge turning over a long way down;
 // almost gone by the top, so it settles rather than wobbling at full size.
@@ -104,6 +111,9 @@ export class Lifeform {
       // starts at 0; anything placed directly starts up.
       this.surfaceProgress = 1;
       this.isSurfaced = true;
+      // Set when it has eaten and is going back down. It stops hunting, sinks,
+      // and is gone — the wreck it leaves is the tow operator's problem.
+      this.isDeparting = false;
       // Sealed in? The whole behaviour of the animal turns on this.
       this.isHolding = false;
       // Where the eye sits, as a fraction from the middle (0) to the rim (1),
@@ -315,7 +325,7 @@ export class Lifeform {
   // with the animal and the player has to travel with it too.
   updateGreatbloom(deltaSeconds, world) {
     const distanceToShip = distance(this.position, world.ship.position);
-    this.updateGreatbloomRise(deltaSeconds);
+    this.updateGreatbloomRise(deltaSeconds, distanceToShip);
 
     // Until it has you, it goes however fast it needs to. A fixed ceiling means
     // a player who simply flies away never sees the animal again, and the whole
@@ -325,20 +335,39 @@ export class Lifeform {
     //
     // Once it has someone inside it slows right down, because an arena you
     // cannot stay with is not a fight.
-    const shipSpeed = Math.hypot(world.ship.velocity?.x ?? 0, world.ship.velocity?.y ?? 0);
-    this.maxSpeed = this.isHolding
-      ? this.baseMaxSpeed * 0.5
-      : Math.max(this.baseMaxSpeed, shipSpeed * 1.35 + 70);
-
-    // And the acceleration to actually USE that ceiling. Steering force is a
+    // Pace by intent. The urgent numbers belong to the CHASE alone; leaving
+    // them on for every state gave a beast that had lost the ship — or had
+    // already eaten — a fast, twitchy wander that closed hundreds of units by
+    // accident, which read as it still hunting a player who had legitimately
+    // escaped by going dark.
+    //
+    // The acceleration matters as much as the ceiling: steering force is a
     // per-frame velocity change, so the family default of 0.12 is about 15
-    // units per second squared — it would take the animal fourteen seconds to
-    // reach its own top speed, which in practice meant it fell behind a
-    // cruising ship no matter how high the ceiling was set. Chasing, it is
-    // urgent; holding, it goes back to drifting like the jellyfish it is.
-    this.maxForce = this.isHolding ? 0.12 : 0.95;
-
+    // units per second squared, and the animal would need fourteen seconds to
+    // reach its own top speed. It fell behind a cruising ship no matter how
+    // high the ceiling was set.
+    const shipSpeed = Math.hypot(world.ship.velocity?.x ?? 0, world.ship.velocity?.y ?? 0);
     if (this.isHolding) {
+      this.maxSpeed = this.baseMaxSpeed * 0.5;
+      this.maxForce = 0.12;
+    } else if (this.isDeparting) {
+      this.maxSpeed = this.baseMaxSpeed;
+      this.maxForce = 0.35;
+    } else if (world.shipPowered) {
+      this.maxSpeed = Math.max(this.baseMaxSpeed, shipSpeed * 1.35 + 70);
+      this.maxForce = 0.95;
+    } else {
+      // Dark ship: it loses the trail and goes back to drifting.
+      this.maxSpeed = this.baseMaxSpeed * 0.5;
+      this.maxForce = 0.12;
+    }
+
+    if (this.isDeparting) {
+      // Done here. It turns away and sinks as it goes, the same motion as the
+      // rise run backwards.
+      this.applySteer(fleeIfClose(this, world.ship.position, 1400, this.maxSpeed), 1.4);
+      this.applySteer(this.wander(deltaSeconds), 0.5);
+    } else if (this.isHolding) {
       // Still hunting in a sense: it leans toward wherever the ship is inside
       // it, which drags the far wall onto a player who stops moving.
       this.applySteer(seek(this, world.ship.position, this.maxSpeed * 0.55), 0.5);
@@ -368,7 +397,9 @@ export class Lifeform {
   // once it is grown. The trail scales with its own size, so it stays just off
   // your tail as it fills out rather than clipping through you.
   getGreatbloomPursuitTarget(ship) {
-    if (this.isSurfaced) {
+    // Committed — mid-lunge or grown — it goes for the ship. Only while it is
+    // still hiding does it hang back in the wake.
+    if (this.isSurfaced || this.surfaceProgress > 0.15) {
       return ship.position;
     }
 
@@ -384,15 +415,31 @@ export class Lifeform {
     };
   }
 
-  // The climb. Size is an envelope that grows with the ascent, times a swell
-  // that starts wide and narrows — so it gets bigger and smaller and bigger
-  // again, gaining on every cycle, rather than simply inflating.
-  updateGreatbloomRise(deltaSeconds) {
-    if (this.isSurfaced) {
+  // Size is driven by DISTANCE, not by a clock.
+  //
+  // It stays small the whole way in — bobbing, keeping pace, easy to lose track
+  // of — and only commits once it is tucked into the ship's wake. Then it comes
+  // up all at once and takes whoever is there. A timer made the ascent
+  // something that simply happened after nine seconds regardless of where the
+  // animal was, which meant it could finish growing out in the open with
+  // nothing to show for it.
+  //
+  // Break away and it sinks again, so a boost is a real answer rather than a
+  // delay.
+  updateGreatbloomRise(deltaSeconds, distanceToShip) {
+    if (this.isHolding) {
+      // Holding freezes the climb, but the size still has to be maintained —
+      // leaving it wherever it happened to be means the eye is placed off a
+      // stale radius, and at a small one it lands INSIDE the middle rather
+      // than out on the rim where it can be shot.
+      this.radius = GREATBLOOM_RADIUS;
       return;
     }
 
-    this.surfaceProgress = Math.min(1, this.surfaceProgress + deltaSeconds / GREATBLOOM_SURFACE_SECONDS);
+    const committing = !this.isDeparting && distanceToShip <= GREATBLOOM_LUNGE_RANGE;
+    this.surfaceProgress = committing
+      ? Math.min(1, this.surfaceProgress + deltaSeconds / GREATBLOOM_LUNGE_SECONDS)
+      : Math.max(0, this.surfaceProgress - deltaSeconds / GREATBLOOM_SINK_SECONDS);
 
     const climb = this.surfaceProgress * this.surfaceProgress * (3 - 2 * this.surfaceProgress); // smoothstep
     const envelope = GREATBLOOM_DEEP_RADIUS + (GREATBLOOM_RADIUS - GREATBLOOM_DEEP_RADIUS) * climb;
@@ -402,9 +449,15 @@ export class Lifeform {
       envelope * (1 + Math.sin(this.pulse * GREATBLOOM_RISE_BEATS + this.seed) * swell),
     );
 
-    if (this.surfaceProgress >= 1) {
-      this.isSurfaced = true;
+    this.isSurfaced = this.surfaceProgress >= 1;
+    if (this.isSurfaced) {
       this.radius = GREATBLOOM_RADIUS;
+    }
+
+    // Fully back down and on its way out: it is gone. Nothing is dropped,
+    // because nothing was killed.
+    if (this.isDeparting && this.surfaceProgress <= 0) {
+      this.isAlive = false;
     }
   }
 

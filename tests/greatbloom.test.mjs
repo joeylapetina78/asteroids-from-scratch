@@ -5,241 +5,215 @@ import {
   GREATBLOOM_DEEP_RADIUS,
   GREATBLOOM_EYE_RADIUS,
   GREATBLOOM_HEALTH,
+  GREATBLOOM_LUNGE_RANGE,
+  GREATBLOOM_LUNGE_SECONDS,
   GREATBLOOM_RADIUS,
-  GREATBLOOM_SURFACE_SECONDS,
-  Lifeform,
+  GREATBLOOM_SINK_SECONDS,
 } from "../src/entities/Lifeform.js";
 import { BLOOM_KILLS_PER_GREATBLOOM, createSurfacingGreatbloom } from "../src/systems/lifeField.js";
 
-const makeGreatbloom = () => new Lifeform({
-  type: "greatbloom", x: 0, y: 0, velocity: { x: 0, y: 0 }, seed: 9100,
+// A ship at the centre of a 1440x900 view: the camera puts world (0,0) mid-screen.
+const VIEW = { width: 1440, height: 900 };
+const CAMERA = { x: -720, y: -450 };
+
+const summon = (overrides = {}) => createSurfacingGreatbloom({
+  ship: { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 },
+  asteroids: [], camera: CAMERA, view: VIEW, random: () => 0.5, seed: 1, ...overrides,
 });
 
-test("a greatbloom is big enough to hold the ship and takes a fight to kill", () => {
-  const beast = makeGreatbloom();
+const run = (beast, ship, seconds, { powered = true } = {}) => {
+  const steps = Math.round(seconds * 60);
+  for (let step = 0; step < steps; step += 1) {
+    beast.update(1 / 60, { ship, shipPowered: powered, lifeforms: [], asteroids: [], disturbances: [] });
+  }
+};
 
-  assert.equal(beast.radius, GREATBLOOM_RADIUS);
+const still = (x, y) => ({ position: { x, y }, velocity: { x: 0, y: 0 }, angle: 0 });
+
+test("a greatbloom is big enough to hold the ship and takes a fight to kill", () => {
+  const beast = summon();
   assert.equal(beast.health, GREATBLOOM_HEALTH);
   assert.equal(beast.isHolding, false);
   // The ship's collision radius is 18, so there has to be real room to fly in.
   assert.ok(GREATBLOOM_RADIUS - 18 > 40, "the arena would be too tight to survive");
 });
 
-test("the eye starts in the middle and withdraws to the rim once it has you", () => {
-  const beast = makeGreatbloom();
-
-  // Closed up, the eye is the core: dead centre.
-  assert.deepEqual(beast.getEyePosition(), { x: 0, y: 0 });
-
-  beast.isHolding = true;
-  for (let step = 0; step < 200; step += 1) beast.update(1 / 60, {
-    ship: { position: { x: 0, y: 0 } }, shipPowered: true,
-    lifeforms: [], asteroids: [], disturbances: [],
-  });
-
-  assert.equal(beast.eyeReach, 1);
-  const eye = beast.getEyePosition();
-  const reach = Math.hypot(eye.x - beast.position.x, eye.y - beast.position.y);
-  // Out at the rim, and far enough inside it that the whole eye is reachable
-  // rather than half-buried in the wall.
-  assert.ok(Math.abs(reach - (GREATBLOOM_RADIUS - GREATBLOOM_EYE_RADIUS - 4)) < 0.001, `eye sat at ${reach}`);
-});
-
-test("the eye angle stays wrapped however long the fight runs", () => {
-  const beast = makeGreatbloom();
-  beast.isHolding = true;
-
-  // The seed arrives as a large hash, so an unwrapped angle starts in the
-  // millions and only grows.
-  assert.ok(Math.abs(beast.eyeAngle) <= Math.PI * 2);
-
-  for (let step = 0; step < 5000; step += 1) beast.update(1 / 60, {
-    ship: { position: { x: 0, y: 0 } }, shipPowered: true,
-    lifeforms: [], asteroids: [], disturbances: [],
-  });
-
-  assert.ok(Math.abs(beast.eyeAngle) <= Math.PI * 2, `angle ran away to ${beast.eyeAngle}`);
-});
-
-test("it can be worn down one shot at a time", () => {
-  const beast = makeGreatbloom();
-  for (let shot = 0; shot < GREATBLOOM_HEALTH; shot += 1) beast.health -= 1;
-  assert.equal(beast.health, 0);
-});
-
-const tick = (beast, seconds) => {
-  const steps = Math.round(seconds * 60);
-  for (let step = 0; step < steps; step += 1) {
-    beast.update(1 / 60, {
-      ship: { position: { x: 4000, y: 0 } }, shipPowered: true,
-      lifeforms: [], asteroids: [], disturbances: [],
-    });
-  }
-};
-
-// A ship at the centre of a 1440x900 view: the camera puts world (0,0) at the
-// middle of the screen.
-const VIEW = { width: 1440, height: 900 };
-const CAMERA = { x: -720, y: -450 };
-
-test("a summoned one comes up small, and close enough to watch", () => {
-  const ship = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 };
-  const beast = createSurfacingGreatbloom({
-    ship, asteroids: [], camera: CAMERA, view: VIEW, random: () => 0.5, seed: 10,
-  });
-
+test("it comes up small, on screen, and close enough to watch", () => {
+  const beast = summon({ seed: 10 });
   assert.equal(beast.isSurfaced, false);
   assert.equal(beast.surfaceProgress, 0);
   assert.equal(beast.radius, GREATBLOOM_DEEP_RADIUS);
 
-  const reach = Math.hypot(beast.position.x - ship.position.x, beast.position.y - ship.position.y);
-  assert.ok(reach > 140, `surfaced ${reach} away — right on top of the player`);
-  assert.ok(reach < 450, `surfaced ${reach} away — the ascent would happen off screen`);
+  const reach = Math.hypot(beast.position.x, beast.position.y);
+  assert.ok(reach > 140, "surfaced right on top of the player: " + reach);
+  assert.ok(reach < 450, "surfaced too far to watch: " + reach);
 });
 
 test("it comes up out from under a rock the player can see", () => {
-  const ship = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 };
-  const rock = { position: { x: 300, y: 0 } };
-  const beast = createSurfacingGreatbloom({
-    ship, asteroids: [rock], camera: CAMERA, view: VIEW, random: () => 0.5, seed: 3,
-  });
-
+  const beast = summon({ asteroids: [{ position: { x: 300, y: 0 } }], seed: 3 });
   assert.equal(beast.cameFromRock, true);
   assert.deepEqual(beast.position, { x: 300, y: 0 });
 });
 
-// The ascent IS the warning. A rock off the edge of the screen would hide it,
-// and the first the player would know of the animal is being eaten by it.
+// The approach IS the warning. A rock off the edge of the screen would hide it.
 test("a rock off the edge of the screen is not used", () => {
-  const ship = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 };
-  const offScreen = { position: { x: 4000, y: 0 } };
-  const beast = createSurfacingGreatbloom({
-    ship, asteroids: [offScreen], camera: CAMERA, view: VIEW, random: () => 0.5, seed: 4,
-  });
-
+  const beast = summon({ asteroids: [{ position: { x: 4000, y: 0 } }], seed: 4 });
   assert.equal(beast.cameFromRock, false);
-  assert.notDeepEqual(beast.position, offScreen.position);
 });
 
-// "It should be right behind me until it's big enough to eat me."
-test("while rising it chases the wake, and only lunges at the ship once grown", () => {
+// "Stay small till it's right behind me, then get big and get me all at once."
+test("it stays small the whole way in", () => {
+  const beast = summon({ seed: 12 });
+  const ship = still(0, 0);
+  const samples = [];
+
+  for (let step = 0; step < 40; step += 1) {
+    // Held out at arm's length, well beyond the range where it commits.
+    beast.position = { x: GREATBLOOM_LUNGE_RANGE * 3, y: 0 };
+    run(beast, ship, 0.1);
+    samples.push(beast.radius);
+  }
+
+  assert.ok(
+    Math.max(...samples) < GREATBLOOM_RADIUS * 0.5,
+    "swelled to " + Math.max(...samples) + " while still far off",
+  );
+  assert.equal(beast.isSurfaced, false);
+});
+
+test("tucked in behind you it comes up all at once", () => {
+  const beast = summon({ seed: 13 });
+  beast.position = { x: GREATBLOOM_LUNGE_RANGE - 20, y: 0 };
+
+  run(beast, still(0, 0), GREATBLOOM_LUNGE_SECONDS + 0.4);
+
+  assert.equal(beast.isSurfaced, true);
+  assert.equal(beast.radius, GREATBLOOM_RADIUS);
+});
+
+// Boosting away has to be a real answer, not a delay.
+test("break away and it sinks back down", () => {
+  const beast = summon({ seed: 14 });
+  const ship = still(0, 0);
+  beast.position = { x: GREATBLOOM_LUNGE_RANGE - 20, y: 0 };
+  run(beast, ship, GREATBLOOM_LUNGE_SECONDS * 0.6);
+
+  const swollen = beast.radius;
+  assert.ok(swollen > GREATBLOOM_DEEP_RADIUS * 1.5, "it should have started coming up");
+
+  for (let step = 0; step < 240; step += 1) {
+    beast.position = { x: GREATBLOOM_LUNGE_RANGE * 4, y: 0 };
+    run(beast, ship, 1 / 60);
+  }
+
+  assert.ok(beast.radius < swollen, "stayed swollen at " + beast.radius);
+  assert.equal(beast.isSurfaced, false);
+});
+
+test("having eaten, it sinks away and is gone -- it is not a kill", () => {
+  const beast = summon({ seed: 15 });
+  beast.position = { x: 0, y: 0 };
+  beast.surfaceProgress = 1;
+  beast.isSurfaced = true;
+
+  // What game.js does the moment the hull is gone.
+  beast.isHolding = false;
+  beast.isDeparting = true;
+
+  run(beast, still(0, 0), GREATBLOOM_SINK_SECONDS + 1);
+
+  assert.equal(beast.isAlive, false, "it should be gone once it is fully back down");
+  assert.ok(beast.surfaceProgress <= 0);
+});
+
+test("the eye starts in the middle and withdraws to the rim once it has you", () => {
+  const beast = summon({ seed: 16 });
+  assert.deepEqual(beast.getEyePosition(), { x: beast.position.x, y: beast.position.y });
+
+  beast.surfaceProgress = 1;
+  beast.isSurfaced = true;
+  beast.isHolding = true;
+  run(beast, still(beast.position.x, beast.position.y), 3);
+
+  assert.equal(beast.eyeReach, 1);
+  const eye = beast.getEyePosition();
+  const reach = Math.hypot(eye.x - beast.position.x, eye.y - beast.position.y);
+  assert.ok(
+    Math.abs(reach - (GREATBLOOM_RADIUS - GREATBLOOM_EYE_RADIUS - 4)) < 0.001,
+    "eye sat at " + reach,
+  );
+});
+
+test("the eye angle stays wrapped however long the fight runs", () => {
+  const beast = summon({ seed: 17 });
+  beast.isHolding = true;
+  assert.ok(Math.abs(beast.eyeAngle) <= Math.PI * 2);
+  run(beast, still(0, 0), 80);
+  assert.ok(Math.abs(beast.eyeAngle) <= Math.PI * 2, "angle ran away to " + beast.eyeAngle);
+});
+
+// The bug this guards: the chase used to be gated on `perception`, but a summon
+// surfaces outside it, so the boss milled about out of sight and never arrived.
+test("it closes on the ship from further than it could ever perceive", () => {
+  const beast = summon({ seed: 5 });
+  beast.position = { x: 1400, y: 0 };
+  assert.ok(beast.position.x > beast.perception, "the test must start beyond perception to mean anything");
+
+  run(beast, still(0, 0), 10);
+
+  const closed = Math.hypot(beast.position.x, beast.position.y);
+  assert.ok(closed < 1200, "only closed from 1400 to " + Math.round(closed));
+});
+
+test("an unpowered ship still loses it, the same escape a hunter allows", () => {
+  const beast = summon({ seed: 6 });
+  beast.position = { x: 900, y: 0 };
+
+  run(beast, still(0, 0), 10, { powered: false });
+
+  const closed = 900 - Math.hypot(beast.position.x, beast.position.y);
+  assert.ok(closed < 200, "it hunted a dark ship, closing " + Math.round(closed));
+});
+
+test("it goes as fast as it must to stay on a fleeing ship", () => {
+  const beast = summon({ seed: 13 });
+  const ship = { position: { x: 0, y: 0 }, velocity: { x: 231, y: 0 }, angle: 0 };
+
+  run(beast, ship, 1 / 60);
+
+  // A ship at full boost must not simply leave the approach behind.
+  assert.ok(beast.maxSpeed > 231, "only managed " + Math.round(beast.maxSpeed) + " against a boosting ship");
+});
+
+test("while hiding it chases the wake, and lunges at the ship once committed", () => {
+  const beast = summon({ seed: 18 });
   const ship = { position: { x: 0, y: 0 }, velocity: { x: 100, y: 0 }, angle: 0 };
-  const beast = createSurfacingGreatbloom({
-    ship, asteroids: [], camera: CAMERA, view: VIEW, random: () => 0.5, seed: 12,
-  });
 
-  const rising = beast.getGreatbloomPursuitTarget(ship);
-  assert.ok(rising.x < ship.position.x, "it should aim behind a ship travelling +x");
+  beast.surfaceProgress = 0;
+  assert.ok(beast.getGreatbloomPursuitTarget(ship).x < ship.position.x, "should aim behind a ship travelling +x");
 
+  beast.surfaceProgress = 1;
   beast.isSurfaced = true;
   assert.deepEqual(beast.getGreatbloomPursuitTarget(ship), ship.position);
 });
 
-test("it goes as fast as it must to stay on a fleeing ship", () => {
-  const ship = { position: { x: 0, y: 0 }, velocity: { x: 231, y: 0 }, angle: 0 };
-  const beast = createSurfacingGreatbloom({
-    ship, asteroids: [], camera: CAMERA, view: VIEW, random: () => 0.5, seed: 13,
-  });
+test("it slows down once it has someone inside, so the arena can be ridden", () => {
+  const beast = summon({ seed: 8 });
+  const ship = still(0, 0);
+  beast.isSurfaced = true;
+  beast.surfaceProgress = 1;
 
-  beast.update(1 / 60, { ship, shipPowered: true, lifeforms: [], asteroids: [], disturbances: [] });
+  run(beast, ship, 1 / 60);
+  const chasing = beast.maxSpeed;
+  beast.isHolding = true;
+  run(beast, ship, 1 / 60);
 
-  // A ship at full boost must not simply leave the ascent behind.
-  assert.ok(beast.maxSpeed > 231, `only managed ${Math.round(beast.maxSpeed)} against a boosting ship`);
-});
-
-// The whole point of the rise: it swells and shrinks on the way up, each swell
-// reaching further than the last, rather than simply inflating.
-test("it pulses bigger and smaller while it climbs, gaining each time", () => {
-  const ship = { position: { x: 4000, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 };
-  const beast = createSurfacingGreatbloom({ ship, asteroids: [], random: () => 0.5, seed: 7 });
-
-  const samples = [];
-  for (let step = 0; step < 60; step += 1) {
-    tick(beast, GREATBLOOM_SURFACE_SECONDS / 60);
-    samples.push(beast.radius);
-  }
-
-  let shrinks = 0;
-  for (let index = 1; index < samples.length; index += 1) {
-    if (samples[index] < samples[index - 1]) shrinks += 1;
-  }
-
-  assert.ok(shrinks > 4, `only shrank ${shrinks} times — that is an inflation, not a rise`);
-  assert.ok(Math.max(...samples.slice(0, 10)) < GREATBLOOM_RADIUS * 0.7, "it should start well under full size");
-});
-
-test("it reaches full size and stays there", () => {
-  const ship = { position: { x: 4000, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 };
-  const beast = createSurfacingGreatbloom({ ship, asteroids: [], random: () => 0.5, seed: 11 });
-
-  tick(beast, GREATBLOOM_SURFACE_SECONDS + 1);
-  assert.equal(beast.isSurfaced, true);
-  assert.equal(beast.radius, GREATBLOOM_RADIUS);
-
-  // No wobble once it has surfaced.
-  tick(beast, 3);
-  assert.equal(beast.radius, GREATBLOOM_RADIUS);
+  assert.ok(beast.maxSpeed < chasing, "holding should be slower than chasing");
+  // The ship cruises at 105; riding the wall has to be possible without boost.
+  assert.ok(beast.maxSpeed < 105, "holding pace " + beast.maxSpeed + " outruns an unboosted ship");
 });
 
 test("the summon threshold is a whole number of rams", () => {
   assert.ok(Number.isInteger(BLOOM_KILLS_PER_GREATBLOOM));
   assert.ok(BLOOM_KILLS_PER_GREATBLOOM >= 1);
-});
-
-// The bug this guards: the chase used to be gated on `perception`, but a
-// summoned one surfaces up to 900 away — outside it — so the boss politely
-// milled about out of sight and never arrived.
-test("it closes on the ship from further than it could ever perceive", () => {
-  const ship = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 };
-  const beast = createSurfacingGreatbloom({ ship, asteroids: [], random: () => 0.5, seed: 5 });
-  beast.position = { x: 1400, y: 0 };
-
-  const reachOf = () => Math.hypot(beast.position.x - ship.position.x, beast.position.y - ship.position.y);
-  const opening = reachOf();
-  assert.ok(opening > beast.perception, "the test has to start beyond perception to mean anything");
-
-  for (let step = 0; step < 600; step += 1) {
-    beast.update(1 / 60, {
-      ship, shipPowered: true, lifeforms: [], asteroids: [], disturbances: [],
-    });
-  }
-
-  assert.ok(reachOf() < opening - 200, `only closed from ${Math.round(opening)} to ${Math.round(reachOf())}`);
-});
-
-test("an unpowered ship still loses it, the same escape a hunter allows", () => {
-  const ship = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 };
-  const beast = createSurfacingGreatbloom({ ship, asteroids: [], random: () => 0.5, seed: 6 });
-  beast.position = { x: 900, y: 0 };
-  beast.isSurfaced = true;
-  beast.surfaceProgress = 1;
-
-  const opening = Math.hypot(beast.position.x, beast.position.y);
-  for (let step = 0; step < 600; step += 1) {
-    beast.update(1 / 60, {
-      ship, shipPowered: false, lifeforms: [], asteroids: [], disturbances: [],
-    });
-  }
-
-  const closed = opening - Math.hypot(beast.position.x, beast.position.y);
-  assert.ok(closed < 200, `it hunted a dark ship, closing ${Math.round(closed)}`);
-});
-
-test("it slows down once it has someone inside, so the arena can be ridden", () => {
-  const ship = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 };
-  const beast = createSurfacingGreatbloom({ ship, asteroids: [], random: () => 0.5, seed: 8 });
-  beast.isSurfaced = true;
-  beast.surfaceProgress = 1;
-
-  const world = { ship, shipPowered: true, lifeforms: [], asteroids: [], disturbances: [] };
-  beast.update(1 / 60, world);
-  const chasing = beast.maxSpeed;
-
-  beast.isHolding = true;
-  beast.update(1 / 60, world);
-  const holding = beast.maxSpeed;
-
-  assert.ok(holding < chasing, "holding should be slower than chasing");
-  // The ship cruises at 105; riding the wall has to be possible without boost.
-  assert.ok(holding < 105, `holding pace ${holding} outruns an unboosted ship`);
 });
