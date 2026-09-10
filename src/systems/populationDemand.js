@@ -23,11 +23,11 @@
 // and replacing an abstract need with a real recipe later should not require
 // touching the purchase-and-consumption machinery.
 
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260910-1738-a969f080";
-import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260910-1738-a969f080";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260910-1738-a969f080";
-import { settlementExtractionDefinitions, settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260910-1738-a969f080";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260910-1738-a969f080";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260910-1801-b84b485f";
+import { getBundleCost, getUnitCost, recordProduction } from "./costBasis.js?v=fresh-20260910-1801-b84b485f";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260910-1801-b84b485f";
+import { settlementExtractionDefinitions, settlementPopulationProfiles } from "../content/economy/firstReachSettlements.js?v=fresh-20260910-1801-b84b485f";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260910-1801-b84b485f";
 
 export const NEED_KIND = Object.freeze({
   MANUFACTURED: "manufactured",

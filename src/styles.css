@@ -42,6 +42,12 @@ body {
   --z-drawer-paper: 700;
   --z-drawer: 680;
   --z-desk-paper: 560;
+  /* The processor's routing plug and its cable. They are physical objects
+     lying ON the desk rather than parts of a chamber, so they pass in front
+     of the bay they are plugged into and in front of the porthole. At the
+     chamber layer the plug was below both, and a module bay opened over the
+     viewport buried the one control the player has to grab. */
+  --z-chamber-plug-live: 530;
   --z-desk-panel-max: 520;
   --z-desk-panel-min: 30;
   --z-viewport: 20;
@@ -50,6 +56,23 @@ body {
   --z-chamber-pipes: 14;
   --z-chamber-ore: 10;
   --z-chamber-glow: 6;
+
+  /* The mounting standard's 100% figures, repeated at the document root.
+     main.js overwrites all of these from cockpitScale.js, but fixtures that
+     live OUTSIDE `.space-panel` — the paperwork drawer is a sibling of it —
+     read them from here, and they need something to read on the first frame.
+     The cockpit itself carries its own copy further down; that one is more
+     specific and still wins inside the cockpit. */
+  --cockpit-phosphor: #7dffe0;
+  --u: 4px;
+  --minor: 12px;
+  --grid-major: 24px;
+  --control-h: 36px;
+  --type-xs: 8px;
+  --type-s: 10px;
+  --type-m: 12px;
+  --type-l: 16px;
+  --type-xl: 24px;
 }
 
 /* Visible only while an instrument is held. The rectangular lattice describes
@@ -2633,8 +2656,9 @@ body:not(.is-cockpit-layout) .journey-panel {
   background:
     linear-gradient(180deg, rgba(8, 11, 16, 0.94), rgba(5, 7, 11, 0.98)),
     #08090d;
-  border-top: 1px solid rgba(115, 210, 255, 0.18);
-  max-height: 36px;
+  border-top: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 18%, transparent);
+  /* Shut, the drawer IS its lip, so the two heights are the same token. */
+  max-height: var(--control-h);
   overflow: hidden;
   transition: max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -2648,16 +2672,16 @@ body:not(.is-cockpit-layout) .journey-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: calc(var(--u) * 2);
   width: 100%;
-  height: 36px;
+  height: var(--control-h);
   background: transparent;
   border: none;
-  border-bottom: 1px solid #131720;
-  color: rgba(115, 210, 255, 0.5);
+  border-bottom: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 12%, #131720);
+  color: color-mix(in srgb, var(--cockpit-phosphor) 50%, transparent);
   cursor: pointer;
   font: inherit;
-  font-size: 0.74rem;
+  font-size: var(--type-m);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   flex-shrink: 0;
@@ -2665,8 +2689,8 @@ body:not(.is-cockpit-layout) .journey-panel {
 
 .drawer-toggle:hover,
 .drawer-toggle:focus-visible {
-  color: rgba(115, 210, 255, 0.85);
-  background: rgba(115, 210, 255, 0.04);
+  color: color-mix(in srgb, var(--cockpit-phosphor) 85%, transparent);
+  background: color-mix(in srgb, var(--cockpit-phosphor) 5%, transparent);
 }
 
 .paperwork-drawer.is-open .drawer-toggle-arrow {
@@ -4877,39 +4901,54 @@ body.is-cockpit-layout .is-cockpit-chamber .component-panel-title {
   pointer-events: none;
 }
 
-/* The bay's designation, painted on the wall in its lower third — the way a
-   shipping floor marks off an area. It is a label on the space, not a header
-   above it, so it sits out of the way of the ore and does not move as the pile
-   grows. Centred in its own bay on both sides; one used to read as centred and
-   the other as hugging its outer edge, which is what made the pair look
-   lopsided across the desk. */
+/* The bay's designation, stencilled DOWN the outer wall — the way a dock
+   number is painted on the wall of the berth rather than across its floor.
+   It runs vertically for a practical reason as well as a look: laid out
+   horizontally the words needed the bay's full width, and the bay's inner
+   half is under the porthole and, when the module bay is open, under that
+   too. So on any window narrow enough to matter the designation read
+   "PROCESSO" and "ARGO HOLD" — or vanished entirely. Turned on its side it
+   lives in the one strip of the bay that is always visible, whatever else
+   opens over the desk. */
 body.is-cockpit-layout .is-cockpit-chamber .component-panel-title {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 68%;
-  /* Centred in the bay's VISIBLE width, not its true width. The bay now runs on
-     under the scope, and a designation centred across the whole thing had its
-     inner half hidden behind the portal — "PROCESSO", "ARGO HOLD". */
+  top: 0;
+  bottom: 0;
+  left: auto;
+  right: auto;
+  width: auto;
   height: auto;
-  justify-content: center;
+  /* Centred DOWN the wall now, not across the floor. */
+  align-items: center;
+  justify-content: flex-start;
   /* Painted on the rear wall: ore in the chamber canvas passes in front. */
   z-index: 0;
 }
 
 body.is-cockpit-layout .processor-panel.is-cockpit-chamber .component-panel-title {
-  right: var(--chamber-scope-overlap);
+  left: var(--u);
 }
 
 body.is-cockpit-layout .cargo-panel.is-cockpit-chamber .component-panel-title {
-  left: var(--chamber-scope-overlap);
+  right: var(--u);
 }
 
+/* Block flow, not flex: in vertical writing the block axis runs sideways, so
+   the designation and its sub-line stack into two adjacent columns rather
+   than one continuous line of text. */
 body.is-cockpit-layout .is-cockpit-chamber .component-panel-title > div,
 body.is-cockpit-layout .cargo-panel.is-cockpit-chamber .component-panel-title > div {
-  align-items: center;
+  display: block;
+  width: auto;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
   text-align: center;
-  width: 100%;
+}
+
+/* The two spines mirror each other across the porthole: the left wall reads
+   bottom-to-top, the right wall top-to-bottom, the way facing signage does. */
+body.is-cockpit-layout .processor-panel.is-cockpit-chamber .component-panel-title > div {
+  transform: rotate(180deg);
 }
 
 /* Floor markings, not a caption. These bays are industrial space, and the way
@@ -4922,7 +4961,9 @@ body.is-cockpit-layout .cargo-panel.is-cockpit-chamber .component-panel-title > 
    it, the same way the chamber sizing rules further down do. */
 body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber .component-panel-title strong {
   font-family: "Atari Classic Chunky", "Atari Classic", "Eurostile Extended", "Microgramma D Extended", "Arial Black", sans-serif;
-  font-size: clamp(1.5rem, min(6.5vh, 5.5vw), 4rem);
+  /* Driven by height: the line now runs down the bay, so it is the wall's
+     length that has to hold it, not the desk's width. */
+  font-size: clamp(1.25rem, min(6vh, 5vw), 3.5rem);
   text-transform: uppercase;
   letter-spacing: 0.22em;
   /* The tracking is applied to the right of every glyph including the last, so
@@ -4945,7 +4986,7 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber .component-panel-ti
   color: color-mix(in srgb, var(--cockpit-phosphor) 38%, #11181a);
   opacity: 0.42;
   text-shadow: none;
-  margin-top: 0.5em;
+  margin-block-start: 0.5em;
   white-space: nowrap;
 }
 
@@ -5140,9 +5181,11 @@ body.is-cockpit-layout .is-cockpit-module.is-cockpit-chamber {
   z-index: var(--z-chamber-ore) !important;
 }
 
-body.is-cockpit-layout .processor-tether { z-index: var(--z-chamber-pipes); }
+/* The cable goes up with the plug it feeds. Left at the pipe layer it ran
+   behind the bay while the plug floated in front of it, unattached to
+   anything. */
+body.is-cockpit-layout .processor-tether { z-index: var(--z-chamber-plug-live); }
 body.is-cockpit-layout .processor-claw {
-  z-index: 1200;
   border: 0;
 }
 
@@ -5265,7 +5308,7 @@ body.is-cockpit-layout .processor-claw.is-plugged {
   border-radius: 0;
   padding: var(--u);
   color: var(--cockpit-phosphor);
-  background: #000707;
+  background: color-mix(in srgb, var(--cockpit-phosphor) 6%, #000505);
   font: 700 var(--type-s)/1 "Courier New", monospace;
   letter-spacing: 0.09em;
   text-orientation: mixed;
@@ -5524,7 +5567,7 @@ body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:focus-within
 }
 
 body.is-cockpit-layout .processor-claw {
-  z-index: var(--z-chamber-plug);
+  z-index: var(--z-chamber-plug-live);
 }
 
 body.is-cockpit-layout .processor-claw.is-plugged-to-tray {
