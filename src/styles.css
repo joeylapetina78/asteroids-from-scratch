@@ -28,11 +28,19 @@ body {
      drawer paper   documents inside the open drawer ride above its shell
      drawer         the drawer itself
      desk paper     licenses and contracts out on the desk, above the consoles
+     plug live      the routing plug and its cable, in front of the bay
+     module bay     the bay and its tab: chrome, above every instrument
+     chamber live   a chamber the player has OPENED, raised over the desk
      desk panels    ship instruments (30..520, assigned in main.js)
      viewport       the world
-     chamber pipes  processor/cargo tethers and the routing plug
-     chamber ore    material sitting in the chambers
+     chamber pipes  processor/cargo tethers
+     chamber ore    material sitting in a chamber that is not open
      chamber glow   the backing wash behind it
+
+   The three layers in the middle also decide who gets a CLICK: a chamber
+   claims clicks from the window, so what is painted on top of the ore is what
+   the player hits, and what the ore is painted on top of is theirs. See
+   `chamberClickYield` in main.js — it is the same three statements as code.
 
    Overlays that are not part of the desk at all — the observatory, the license
    application, the boot error banner — deliberately sit far above this ladder
@@ -47,7 +55,15 @@ body {
      of the bay they are plugged into and in front of the porthole. At the
      chamber layer the plug was below both, and a module bay opened over the
      viewport buried the one control the player has to grab. */
-  --z-chamber-plug-live: 530;
+  --z-chamber-plug-live: 550;
+  /* The module bay is chrome, not an instrument. Sharing the instrument
+     ceiling meant it only beat a panel by being later in the document, and it
+     had to beat a raised chamber too. */
+  --z-module-bay: 540;
+  /* A chamber the player has pointed somewhere — the hold open to a contract
+     or a supply window. Raised over the desk so the ore is visibly on top of
+     the panels, because in that state the ore is what the click is for. */
+  --z-chamber-ore-live: 525;
   --z-desk-panel-max: 520;
   --z-desk-panel-min: 30;
   --z-viewport: 20;
@@ -2683,14 +2699,25 @@ body:not(.is-cockpit-layout) .journey-panel {
   font: inherit;
   font-size: var(--type-m);
   letter-spacing: 0.12em;
+  transition: color 130ms linear, text-shadow 130ms linear, background-color 130ms linear;
   text-transform: uppercase;
   flex-shrink: 0;
 }
 
+/* Under the cursor the lip comes up to full phosphor and lights, the way a
+   tube brightens where the beam dwells. The arrow inherits the shadow, so the
+   whole pull glows as one thing rather than the word alone. */
 .drawer-toggle:hover,
 .drawer-toggle:focus-visible {
-  color: color-mix(in srgb, var(--cockpit-phosphor) 85%, transparent);
-  background: color-mix(in srgb, var(--cockpit-phosphor) 5%, transparent);
+  color: var(--cockpit-phosphor);
+  background: color-mix(in srgb, var(--cockpit-phosphor) 8%, transparent);
+  text-shadow:
+    0 0 calc(var(--u) * 1.5) color-mix(in srgb, var(--cockpit-phosphor) 75%, transparent),
+    0 0 calc(var(--u) * 3.5) color-mix(in srgb, var(--cockpit-phosphor) 42%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-toggle { transition: none; }
 }
 
 .paperwork-drawer.is-open .drawer-toggle-arrow {
@@ -5283,9 +5310,11 @@ body.is-cockpit-layout .processor-claw.is-plugged {
   transform: translateX(-100%);
   transition: transform 120ms steps(4, end);
   pointer-events: auto;
-  /* The bay slides over the desk, so it rides with the consoles rather than
-     above the paperwork and the journey card. */
-  z-index: var(--z-desk-panel-max);
+  /* The bay slides over the desk, above every instrument and above a raised
+     chamber, but still below the paperwork and the journey card. Its tab is
+     a control the player reaches for constantly and must never lose a click
+     to a rock drifting behind it. */
+  z-index: var(--z-module-bay);
 }
 
 .cockpit-module-tray.is-open {
@@ -6100,6 +6129,20 @@ body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-sell-target::before {
   pointer-events: none;
   border-radius: 2px;
   animation: cargo-outbound-wash 2.6s ease-in-out infinite;
+}
+
+/* An open hold floats. Both of these states mean "click the ore", and the ore
+   was underneath the instruments on that side of the desk — so a rock lying
+   behind the hull readout could be seen but not reliably hit, and whether a
+   click landed on cargo or on a button came down to where the pile had
+   drifted. Raising the chamber puts the ore on top of the panels, which is
+   both the signal that the hold is live and the reason the click is the
+   ore's: `chamberClickYield` in main.js stops yielding to controls for
+   exactly these two classes. The module bay still sits above this, so its tab
+   is never in the argument. */
+body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-deposit-target,
+body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-sell-target {
+  z-index: var(--z-chamber-ore-live) !important;
 }
 
 /* Two destinations, two readings: material leaving against paperwork you signed,

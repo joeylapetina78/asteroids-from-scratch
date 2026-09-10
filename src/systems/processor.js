@@ -1,5 +1,5 @@
-import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260910-1801-b84b485f";
-import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260910-1801-b84b485f";
+import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260910-1823-76eb3d71";
+import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260910-1823-76eb3d71";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -221,6 +221,11 @@ export class Processor {
     // acting on everything loose in the bay — how the ship's own motion is felt
     // in here. See bayInertia.js.
     this.getAmbientAcceleration = options.getAmbientAcceleration ?? null;
+    // `(event) => boolean`. The bay claims clicks from the window (see below),
+    // which puts a drifting rock into a race with every control the bay
+    // happens to pass under — and capture phase means the rock wins it. This
+    // is how the owner says the click belongs to something else.
+    this.shouldYieldClick = options.shouldYieldClick ?? (() => false);
     this.obstacles = [];
     this.units = [];
     this.sparks = [];
@@ -238,6 +243,7 @@ export class Processor {
       this.handleWindowClick = (event) => {
         const bounds = this.canvas.getBoundingClientRect();
 
+        if (this.shouldYieldClick(event)) return;
         if (!bounds.width || !bounds.height) return;
         if (event.clientX < bounds.left || event.clientX > bounds.right) return;
         if (event.clientY < bounds.top || event.clientY > bounds.bottom) return;
