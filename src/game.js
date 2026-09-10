@@ -1,64 +1,64 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260909-1854-f2fad7ca";
-import { steerAroundObstacles } from "./systems/obstacleNavigation.js?v=fresh-20260909-1854-f2fad7ca";
-import { getHullOutline } from "./content/ships/hullOutlines.js?v=fresh-20260909-1854-f2fad7ca";
-import { getBuildProgress } from "./systems/shipyards.js?v=fresh-20260909-1854-f2fad7ca";
-import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260909-1854-f2fad7ca";
-import { infrastructureNavigationObstacles } from "./systems/infrastructureNavigation.js?v=fresh-20260909-1854-f2fad7ca";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260909-1854-f2fad7ca";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260909-1854-f2fad7ca";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260909-1854-f2fad7ca";
-import { Ship } from "./entities/Ship.js?v=fresh-20260909-1854-f2fad7ca";
-import { ShipWreck } from "./entities/ShipWreck.js?v=fresh-20260909-1854-f2fad7ca";
-import { completeWreckSalvage, registerOwnedWreck } from "./systems/wreckRegistry.js?v=fresh-20260909-1854-f2fad7ca";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260909-1854-f2fad7ca";
-import { applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260909-1854-f2fad7ca";
-import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260909-1854-f2fad7ca";
-import { MINER_CONDITION_CONFIG, computeMinerWearPerShot, getMinerStageEffects } from "./systems/minerCondition.js?v=fresh-20260909-1854-f2fad7ca";
-import { COLLECTOR_CONDITION_CONFIG, computeCollectorWearPerSecond, getCollectorStageEffects } from "./systems/collectorCondition.js?v=fresh-20260909-1854-f2fad7ca";
-import { createCamera } from "./systems/camera.js?v=fresh-20260909-1854-f2fad7ca";
-import { createInput } from "./systems/input.js?v=fresh-20260909-1854-f2fad7ca";
-import { createAmbientLifeBatch, createGrazerAtFeast, createHunterNearShip, createHunterRespawn, createLifeField, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260909-1854-f2fad7ca";
-import { ROCKMOSS_CRAWLER_TYPE, ROCKMOSS_STRAINS, pickRockmossStrain } from "./systems/rockmossStrains.js?v=fresh-20260909-1854-f2fad7ca";
-import { GRAZING_DEFAULTS, advanceGrazing, condenseDistantApexGrazers, condenseGrazerPopulation, enforceEcologicalBiomassBudget, findGrazingClusters, getGrazerSporeYield, isRipe } from "./systems/grazing.js?v=fresh-20260909-1854-f2fad7ca";
-import { createRandom, hashNumbers } from "./systems/random.js?v=fresh-20260909-1854-f2fad7ca";
-import { HAULER_PALETTES, RELIEF_HAULER_PALETTE, createNpcRouteShips, createRouteShip } from "./systems/npcRoutes.js?v=fresh-20260909-1854-f2fad7ca";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260909-1854-f2fad7ca";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260909-1854-f2fad7ca";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260909-1854-f2fad7ca";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260909-1854-f2fad7ca";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260909-1854-f2fad7ca";
-import { completeInternalProtectionResponse, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, getAvailablePatrolCraft, markPatrolCraftStatus, servicePatrolCraft, startInternalProtectionResponse } from "./systems/patrolOperations.js?v=fresh-20260909-1854-f2fad7ca";
-import { createPatrolRuntimeActor } from "./systems/patrolRuntime.js?v=fresh-20260909-1854-f2fad7ca";
-import { listPendingPatrolResponses } from "./systems/patrolDispatch.js?v=fresh-20260909-1854-f2fad7ca";
-import { closeProtectionRequestsForThreat, evaluateProtectionThreat, getPlayerProtectionJobsForSite, reviewProtectionRequests } from "./systems/protectionPlanning.js?v=fresh-20260909-1854-f2fad7ca";
-import { completePlayerProtectionRequest, completeProtectionContract, ensureProtectionProviders, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "./systems/protectionProviders.js?v=fresh-20260909-1854-f2fad7ca";
-import { fileAttackReport, nearestActiveReport, resolveAttackReport } from "./systems/securityReports.js?v=fresh-20260909-1854-f2fad7ca";
-import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260909-1854-f2fad7ca";
-import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260909-1854-f2fad7ca";
-import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260909-1854-f2fad7ca";
-import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./systems/worldNetworkRegistry.js?v=fresh-20260909-1854-f2fad7ca";
-import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260909-1854-f2fad7ca";
-import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260909-1854-f2fad7ca";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260909-1854-f2fad7ca";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260909-1854-f2fad7ca";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260909-1854-f2fad7ca";
-import { awardGateBountyToPatrol } from "./systems/gateBounty.js?v=fresh-20260909-1854-f2fad7ca";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260909-1854-f2fad7ca";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260909-1854-f2fad7ca";
-import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260909-1854-f2fad7ca";
-import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260909-1854-f2fad7ca";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260909-1854-f2fad7ca";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260909-1854-f2fad7ca";
-import { createCommercialCraftPublicIdentity, createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260909-1854-f2fad7ca";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260909-1854-f2fad7ca";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260909-1854-f2fad7ca";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260909-1854-f2fad7ca";
-import { getContractGrantedClaimIds, getPlotRestriction } from "./systems/operatingRights.js?v=fresh-20260909-1854-f2fad7ca";
-import { getNearbyWorldSite, getNearestWorldSite, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260909-1854-f2fad7ca";
-import { createGameState } from "./state/gameState.js?v=fresh-20260909-1854-f2fad7ca";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260909-1854-f2fad7ca";
-import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260909-1854-f2fad7ca";
-import { terminateDestroyedActor } from "./systems/actorLifecycle.js?v=fresh-20260909-1854-f2fad7ca";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260909-1929-2b226498";
+import { steerAroundObstacles } from "./systems/obstacleNavigation.js?v=fresh-20260909-1929-2b226498";
+import { getHullOutline } from "./content/ships/hullOutlines.js?v=fresh-20260909-1929-2b226498";
+import { getBuildProgress } from "./systems/shipyards.js?v=fresh-20260909-1929-2b226498";
+import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260909-1929-2b226498";
+import { infrastructureNavigationObstacles } from "./systems/infrastructureNavigation.js?v=fresh-20260909-1929-2b226498";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260909-1929-2b226498";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260909-1929-2b226498";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260909-1929-2b226498";
+import { Ship } from "./entities/Ship.js?v=fresh-20260909-1929-2b226498";
+import { ShipWreck } from "./entities/ShipWreck.js?v=fresh-20260909-1929-2b226498";
+import { completeWreckSalvage, registerOwnedWreck } from "./systems/wreckRegistry.js?v=fresh-20260909-1929-2b226498";
+import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260909-1929-2b226498";
+import { applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260909-1929-2b226498";
+import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260909-1929-2b226498";
+import { MINER_CONDITION_CONFIG, computeMinerWearPerShot, getMinerStageEffects } from "./systems/minerCondition.js?v=fresh-20260909-1929-2b226498";
+import { COLLECTOR_CONDITION_CONFIG, computeCollectorWearPerSecond, getCollectorStageEffects } from "./systems/collectorCondition.js?v=fresh-20260909-1929-2b226498";
+import { createCamera } from "./systems/camera.js?v=fresh-20260909-1929-2b226498";
+import { createInput } from "./systems/input.js?v=fresh-20260909-1929-2b226498";
+import { BLOOM_HARVEST_RESOURCE, createAmbientLifeBatch, createGrazerAtFeast, createHunterNearShip, createHunterRespawn, createLifeField, rollBloomHarvest, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260909-1929-2b226498";
+import { ROCKMOSS_CRAWLER_TYPE, ROCKMOSS_STRAINS, pickRockmossStrain } from "./systems/rockmossStrains.js?v=fresh-20260909-1929-2b226498";
+import { GRAZING_DEFAULTS, advanceGrazing, condenseDistantApexGrazers, condenseGrazerPopulation, enforceEcologicalBiomassBudget, findGrazingClusters, getGrazerSporeYield, isRipe } from "./systems/grazing.js?v=fresh-20260909-1929-2b226498";
+import { createRandom, hashNumbers } from "./systems/random.js?v=fresh-20260909-1929-2b226498";
+import { HAULER_PALETTES, RELIEF_HAULER_PALETTE, createNpcRouteShips, createRouteShip } from "./systems/npcRoutes.js?v=fresh-20260909-1929-2b226498";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260909-1929-2b226498";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260909-1929-2b226498";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260909-1929-2b226498";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260909-1929-2b226498";
+import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260909-1929-2b226498";
+import { completeInternalProtectionResponse, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, getAvailablePatrolCraft, markPatrolCraftStatus, servicePatrolCraft, startInternalProtectionResponse } from "./systems/patrolOperations.js?v=fresh-20260909-1929-2b226498";
+import { createPatrolRuntimeActor } from "./systems/patrolRuntime.js?v=fresh-20260909-1929-2b226498";
+import { listPendingPatrolResponses } from "./systems/patrolDispatch.js?v=fresh-20260909-1929-2b226498";
+import { closeProtectionRequestsForThreat, evaluateProtectionThreat, getPlayerProtectionJobsForSite, reviewProtectionRequests } from "./systems/protectionPlanning.js?v=fresh-20260909-1929-2b226498";
+import { completePlayerProtectionRequest, completeProtectionContract, ensureProtectionProviders, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "./systems/protectionProviders.js?v=fresh-20260909-1929-2b226498";
+import { fileAttackReport, nearestActiveReport, resolveAttackReport } from "./systems/securityReports.js?v=fresh-20260909-1929-2b226498";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260909-1929-2b226498";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260909-1929-2b226498";
+import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260909-1929-2b226498";
+import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./systems/worldNetworkRegistry.js?v=fresh-20260909-1929-2b226498";
+import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260909-1929-2b226498";
+import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260909-1929-2b226498";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260909-1929-2b226498";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260909-1929-2b226498";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260909-1929-2b226498";
+import { awardGateBountyToPatrol } from "./systems/gateBounty.js?v=fresh-20260909-1929-2b226498";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260909-1929-2b226498";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260909-1929-2b226498";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260909-1929-2b226498";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260909-1929-2b226498";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260909-1929-2b226498";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260909-1929-2b226498";
+import { createCommercialCraftPublicIdentity, createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260909-1929-2b226498";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260909-1929-2b226498";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260909-1929-2b226498";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260909-1929-2b226498";
+import { getContractGrantedClaimIds, getPlotRestriction } from "./systems/operatingRights.js?v=fresh-20260909-1929-2b226498";
+import { getNearbyWorldSite, getNearestWorldSite, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260909-1929-2b226498";
+import { createGameState } from "./state/gameState.js?v=fresh-20260909-1929-2b226498";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260909-1929-2b226498";
+import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260909-1929-2b226498";
+import { terminateDestroyedActor } from "./systems/actorLifecycle.js?v=fresh-20260909-1929-2b226498";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -76,6 +76,16 @@ const FIRE_COOLDOWN_SECONDS = 0.18;
 const AMMO_PER_SHOT = 1;
 const SCANERGY_PER_SCAN = 100;
 const SHIP_COLLISION_RADIUS = 18;
+// Striking a bloom. The bell is soft and the ship's nose is the only part of it
+// that is sharp, so this is a question of aim rather than of contact: line the
+// point up and drive it in. A sideways drift through one should part its
+// tentacles and nothing more.
+const BLOOM_BELL_RADIUS = 17;
+// How closely the nose has to be pointed at the bell. cos(50°) ≈ 0.64 — wide
+// enough to feel fair at speed, tight enough that a graze is not a kill.
+const BLOOM_STRIKE_ALIGNMENT = 0.64;
+// Below this the ship is loitering, not running anything down.
+const BLOOM_STRIKE_MIN_SPEED = 46;
 const SHIP_HIT_COOLDOWN_SECONDS = 0.35;
 const PICKUP_COLLECT_RADIUS = 24;
 const COLLECTOR_PULL_FORCE = 1650;
@@ -1264,6 +1274,7 @@ export class Game {
     this.updateIncursionPortalHits();
     this.updateThreadwyrms(deltaSeconds);
     this.updateDriftMouths(deltaSeconds, activeLifeforms);
+    this.updateBloomStrikes(activeLifeforms);
     this.updateLifeformContacts(activeLifeforms);
     this.updateNpcShips(activeAsteroids, deltaSeconds);
     this.updateWorkerShips(deltaSeconds);
@@ -6263,6 +6274,101 @@ export class Game {
     );
   }
 
+  // Blooms drift; the player lines one up and runs it through. The reward for
+  // aiming is the crystal in its bell, so contact alone must not be enough or
+  // the whole thing collapses into "fly around touching lights".
+  updateBloomStrikes(activeLifeforms) {
+    const speed = Math.hypot(this.ship.velocity.x, this.ship.velocity.y);
+    if (speed < BLOOM_STRIKE_MIN_SPEED) {
+      return;
+    }
+
+    const heading = { x: Math.cos(this.ship.angle), y: Math.sin(this.ship.angle) };
+    // The tip of the hull, not its centre. This is the part that does the work.
+    const nose = {
+      x: this.ship.position.x + heading.x * SHIP_COLLISION_RADIUS,
+      y: this.ship.position.y + heading.y * SHIP_COLLISION_RADIUS,
+    };
+
+    activeLifeforms.forEach((lifeform) => {
+      if (lifeform.type !== "bloom" || !lifeform.isAlive) {
+        return;
+      }
+
+      if (distance(nose, lifeform.position) > BLOOM_BELL_RADIUS) {
+        return;
+      }
+
+      const reachX = lifeform.position.x - this.ship.position.x;
+      const reachY = lifeform.position.y - this.ship.position.y;
+      const reach = Math.hypot(reachX, reachY) || 1;
+      const alignment = (heading.x * reachX + heading.y * reachY) / reach;
+      if (alignment < BLOOM_STRIKE_ALIGNMENT) {
+        return;
+      }
+
+      this.burstBloom(lifeform);
+    });
+  }
+
+  burstBloom(bloom) {
+    bloom.isAlive = false;
+
+    // The same burst every other kill in the world uses, in the bloom's own
+    // rose. It already alternates white with the colour it is given, which is
+    // exactly the pink-and-white puff this wants.
+    this.createHunterBurst(bloom, this.ship.velocity, { count: 26, sparkEvery: 2, color: "#ff9ed6" });
+
+    // Its four tentacles come off whole and drift, rather than shattering with
+    // the rest of it. They are the part of a bloom you can see moving, so they
+    // are the part worth keeping for a moment after the animal is gone.
+    for (let index = 0; index < 4; index += 1) {
+      const spread = Math.PI + (index - 1.5) * 0.34;
+      const drift = 34 + Math.random() * 46;
+      this.particles.push({
+        type: "tendril",
+        position: {
+          x: bloom.position.x + Math.cos(spread) * 10,
+          y: bloom.position.y + Math.sin(spread) * 10,
+        },
+        velocity: {
+          x: bloom.velocity.x * 0.5 + Math.cos(spread) * drift + this.ship.velocity.x * 0.05,
+          y: bloom.velocity.y * 0.5 + Math.sin(spread) * drift + this.ship.velocity.y * 0.05,
+        },
+        color: "rgba(255, 158, 214, 0.75)",
+        size: 9 + Math.random() * 4,
+        angle: spread,
+        spin: (Math.random() - 0.5) * 2.4,
+        drag: 0.975,
+        life: 0.9 + Math.random() * 0.5,
+        maxLife: 1.4,
+      });
+    }
+
+    const crystals = rollBloomHarvest();
+    for (let index = 0; index < crystals; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 60 + Math.random() * 90;
+      this.pickups.push(new ResourcePickup({
+        x: bloom.position.x + Math.cos(angle) * 6,
+        y: bloom.position.y + Math.sin(angle) * 6,
+        type: BLOOM_HARVEST_RESOURCE,
+        velocity: {
+          x: bloom.velocity.x * 0.3 + Math.cos(angle) * speed + this.ship.velocity.x * 0.06,
+          y: bloom.velocity.y * 0.3 + Math.sin(angle) * speed + this.ship.velocity.y * 0.06,
+        },
+      }));
+    }
+
+    this.state.ledger.recordEvent(
+      "life.harvested",
+      { type: "bloom", crystals },
+      crystals > 0
+        ? { visible: true, message: `Bloom struck — ${crystals} crystal matrix recovered.` }
+        : { visible: true, message: "Bloom struck — its bell was empty." },
+    );
+  }
+
   updateRockmossSpores() {
     const colonizedSpores = new Set();
 
@@ -8699,6 +8805,14 @@ export class Game {
 
       if (particle.type === "spark") {
         this.context.fillRect(-particle.size * 1.5, -particle.size / 2, particle.size * 3, particle.size);
+      } else if (particle.type === "tendril") {
+        this.context.rotate(particle.angle + (particle.maxLife - particle.life) * particle.spin);
+        this.context.strokeStyle = particle.color;
+        this.context.lineWidth = 1.5;
+        this.context.beginPath();
+        this.context.moveTo(-particle.size / 2, 0);
+        this.context.quadraticCurveTo(0, particle.size * 0.45, particle.size / 2, 0);
+        this.context.stroke();
       } else if (particle.type === "cargo-packet") {
         this.context.strokeStyle = "rgba(255, 255, 255, 0.82)";
         this.context.lineWidth = 1;

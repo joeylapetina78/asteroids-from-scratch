@@ -1,5 +1,5 @@
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260909-1854-f2fad7ca";
-import { getRuntimeWorldSites } from "./worldNetworkRegistry.js?v=fresh-20260909-1854-f2fad7ca";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260909-1929-2b226498";
+import { getRuntimeWorldSites } from "./worldNetworkRegistry.js?v=fresh-20260909-1929-2b226498";
 
 // How closely the world is simulated, place by place.
 //

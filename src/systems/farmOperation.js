@@ -1,6 +1,6 @@
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260909-1854-f2fad7ca";
-import { createFarmInstitutionInstance, createTaviInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260909-1854-f2fad7ca";
-import { createResponseRecord, deriveInventoryNeeds, evaluateAffordability, generateCapabilityResponses, reconcileNeeds, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260909-1854-f2fad7ca";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260909-1929-2b226498";
+import { createFarmInstitutionInstance, createTaviInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260909-1929-2b226498";
+import { createResponseRecord, deriveInventoryNeeds, evaluateAffordability, generateCapabilityResponses, reconcileNeeds, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260909-1929-2b226498";
 
 const INPUT_PRICES = Object.freeze({ water: 20, seed: 35 });
 export const FARM_INSPECTION_SERVICE_ID = "sunward-acre-inspection";

@@ -1,7 +1,7 @@
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260909-1854-f2fad7ca";
-import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260909-1854-f2fad7ca";
-import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260909-1854-f2fad7ca";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260909-1854-f2fad7ca";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260909-1929-2b226498";
+import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260909-1929-2b226498";
+import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260909-1929-2b226498";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260909-1929-2b226498";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.
@@ -11,6 +11,36 @@ const THREADLING_FLOCKS = 8;
 const LANTERN_HERDS = 5;
 const GRAZER_ATTEMPTS = 42;
 const SKITTER_ATTEMPTS = 40;
+
+// ── Striking a bloom ────────────────────────────────────────────────────────
+// A bloom carries a crystal in its bell. Run one down point-first and it gives
+// the crystal up; brush it side-on and nothing happens, which is what turns a
+// drifting pink light into something worth lining up on.
+//
+// Usually one. Sometimes none, which is what stops it being a vending machine.
+// Sometimes two, and once in a blue moon three.
+export const BLOOM_HARVEST_ODDS = Object.freeze([
+  Object.freeze({ crystals: 0, weight: 12 }),
+  Object.freeze({ crystals: 1, weight: 62 }),
+  Object.freeze({ crystals: 2, weight: 22 }),
+  Object.freeze({ crystals: 3, weight: 4 }),
+]);
+
+export const BLOOM_HARVEST_RESOURCE = "crystal-matrix";
+
+export function rollBloomHarvest(random = Math.random) {
+  const total = BLOOM_HARVEST_ODDS.reduce((sum, outcome) => sum + outcome.weight, 0);
+  let roll = random() * total;
+
+  for (const outcome of BLOOM_HARVEST_ODDS) {
+    roll -= outcome.weight;
+    if (roll < 0) return outcome.crystals;
+  }
+
+  // Only reachable if `random` hands back exactly 1, which Math.random never
+  // does but a seeded generator might.
+  return BLOOM_HARVEST_ODDS.at(-1).crystals;
+}
 
 export function createLifeField(asteroids) {
   const random = createRandom(7781);
