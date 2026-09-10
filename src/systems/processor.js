@@ -1,5 +1,5 @@
-import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260910-1837-c98c31c2";
-import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260910-1837-c98c31c2";
+import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260910-1849-b6bf5552";
+import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260910-1849-b6bf5552";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -226,6 +226,9 @@ export class Processor {
     // happens to pass under — and capture phase means the rock wins it. This
     // is how the owner says the click belongs to something else.
     this.shouldYieldClick = options.shouldYieldClick ?? (() => false);
+    // `(unit) => color | null`. Null keeps the material's own edge, which is
+    // the default and the thing to fall back to; anything else overrides it.
+    this.getUnitOutline = options.getUnitOutline ?? (() => null);
     this.obstacles = [];
     this.units = [];
     this.sparks = [];
@@ -561,7 +564,7 @@ export class Processor {
 
     this.units.forEach((unit) => {
       this.context.fillStyle = createVectorResourceFill(this.context, unit.color, unit.size);
-      this.context.strokeStyle = getVectorResourceOutline(unit.color);
+      this.context.strokeStyle = this.getUnitOutline(unit) ?? getVectorResourceOutline(unit.color);
       this.context.lineWidth = 2;
       this.context.save();
       this.context.translate(unit.x + unit.size / 2, unit.y + unit.size / 2);

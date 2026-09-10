@@ -4389,6 +4389,51 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .engine-brand-name {
   font-size: 0.76rem;
 }
 
+/* The same row as the colour picker, with a switch on the end instead of a
+   swatch. Drawn rather than left native so it is the player's phosphor like
+   everything else on this panel. */
+.cockpit-switch-row input[type="checkbox"] {
+  appearance: none;
+  flex: 0 0 auto;
+  width: calc(var(--grid-major) * 2);
+  height: var(--control-h-flat);
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 54%, transparent);
+  border-radius: 0;
+  background: rgba(0, 10, 9, 0.62);
+  cursor: pointer;
+  transition: background-color 120ms linear, border-color 120ms linear;
+}
+
+.cockpit-switch-row input[type="checkbox"]::after {
+  content: "";
+  display: block;
+  width: calc(50% - var(--u));
+  height: 100%;
+  margin-left: var(--u);
+  background: color-mix(in srgb, var(--cockpit-phosphor) 42%, transparent);
+  transition: margin-left 120ms steps(3, end), background-color 120ms linear;
+}
+
+.cockpit-switch-row input[type="checkbox"]:checked {
+  border-color: var(--cockpit-phosphor);
+}
+
+.cockpit-switch-row input[type="checkbox"]:checked::after {
+  margin-left: 50%;
+  background: var(--cockpit-phosphor);
+}
+
+.cockpit-switch-row input[type="checkbox"]:focus-visible {
+  outline: 1px solid var(--cockpit-phosphor);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cockpit-switch-row input[type="checkbox"],
+  .cockpit-switch-row input[type="checkbox"]::after { transition: none; }
+}
+
 .cockpit-color-row span,
 .cockpit-color-row small {
   display: block;

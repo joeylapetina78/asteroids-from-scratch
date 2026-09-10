@@ -45,6 +45,10 @@ export function createCockpitLayoutState(source = null) {
     // bigger cockpit rather than bigger text in the same boxes; see
     // cockpitScale.js.
     typeScale: normalizeTypeScale(source?.typeScale),
+    // Outline loose material in the instrument colour rather than in its own.
+    // Off by default: the material's own edge is what tells the families
+    // apart at a glance. On, the bay reads as one instrument.
+    phosphorOre: source?.phosphorOre === true,
   };
 }
 
