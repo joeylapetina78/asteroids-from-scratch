@@ -1,7 +1,7 @@
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260909-1951-99648e93";
-import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260909-1951-99648e93";
-import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260909-1951-99648e93";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260909-1951-99648e93";
+import { GREATBLOOM_DEEP_RADIUS, Lifeform } from "../entities/Lifeform.js?v=fresh-20260909-2005-8fca43cc";
+import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260909-2005-8fca43cc";
+import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260909-2005-8fca43cc";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260909-2005-8fca43cc";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.
@@ -11,7 +11,6 @@ const THREADLING_FLOCKS = 8;
 const LANTERN_HERDS = 5;
 const GRAZER_ATTEMPTS = 42;
 const SKITTER_ATTEMPTS = 40;
-const GREATBLOOM_COUNT = 3;
 
 // ── Striking a bloom ────────────────────────────────────────────────────────
 // A bloom carries a crystal in its bell. Run one down point-first and it gives
@@ -28,6 +27,10 @@ export const BLOOM_HARVEST_ODDS = Object.freeze([
 ]);
 
 export const BLOOM_HARVEST_RESOURCE = "crystal-matrix";
+
+// Ram this many blooms and something that has been feeding on the same field
+// comes up to see who is doing it.
+export const BLOOM_KILLS_PER_GREATBLOOM = 10;
 
 export function rollBloomHarvest(random = Math.random) {
   const total = BLOOM_HARVEST_ODDS.reduce((sum, outcome) => sum + outcome.weight, 0);
@@ -65,23 +68,47 @@ export function createLifeField(asteroids) {
   addLanternHerds(lifeforms, anchors, random);
   addGrazers(lifeforms, anchors, random);
   addSkitters(lifeforms, anchors, random);
-  addGreatblooms(lifeforms, anchors, random);
 
   return lifeforms;
 }
 
-// Rare, and deliberately far out. A greatbloom is a fight rather than scenery,
-// so running into one should feel like having gone somewhere — and there are
-// few enough that the field never turns into a minefield of them.
-function addGreatblooms(lifeforms, anchors, random) {
-  const distant = anchors.filter((anchor) => Math.hypot(anchor.position.x, anchor.position.y) > 2600);
-  const pool = distant.length > 0 ? distant : anchors;
+// Greatblooms are NOT seeded into the field. One is summoned by what the player
+// does — see `BLOOM_KILLS_PER_GREATBLOOM` — and comes up from below, so putting
+// them in the world as scenery as well would give the same animal two
+// contradictory origin stories.
+//
+// It surfaces out from under a rock where there is one to hand, and out of open
+// space where there is not. Either way it starts small and far under, and comes
+// up swimming at the player.
+export function createSurfacingGreatbloom({ ship, asteroids = [], random = Math.random, seed = 0 }) {
+  const nearbyRock = asteroids
+    .filter((asteroid) => {
+      const reach = Math.hypot(asteroid.position.x - ship.position.x, asteroid.position.y - ship.position.y);
+      return reach > 260 && reach < 900;
+    })
+    .sort(() => random() - 0.5)[0];
 
-  for (let index = 0; index < GREATBLOOM_COUNT; index += 1) {
-    const anchor = pool[Math.floor(random() * pool.length)];
-    if (!anchor) continue;
-    lifeforms.push(createLifeformNear("greatbloom", anchor, random, 520, 9100 + index));
-  }
+  const angle = randomRange(random, 0, Math.PI * 2);
+  const origin = nearbyRock
+    ? { x: nearbyRock.position.x, y: nearbyRock.position.y }
+    : {
+        x: ship.position.x + Math.cos(angle) * randomRange(random, 420, 700),
+        y: ship.position.y + Math.sin(angle) * randomRange(random, 420, 700),
+      };
+
+  const beast = new Lifeform({
+    type: "greatbloom",
+    x: origin.x,
+    y: origin.y,
+    velocity: { x: 0, y: 0 },
+    seed: hashNumbers(seed, Math.round(origin.x), Math.round(origin.y)),
+  });
+
+  beast.surfaceProgress = 0;
+  beast.isSurfaced = false;
+  beast.radius = GREATBLOOM_DEEP_RADIUS;
+  beast.cameFromRock = Boolean(nearbyRock);
+  return beast;
 }
 
 export function createHunterRespawn(ship, asteroids, seed) {

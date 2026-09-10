@@ -1,5 +1,5 @@
-import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260909-1951-99648e93";
-import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260909-1951-99648e93";
+import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260909-2005-8fca43cc";
+import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260909-2005-8fca43cc";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;

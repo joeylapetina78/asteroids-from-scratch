@@ -4,7 +4,7 @@ import {
   getGrazingSteerTarget,
   getGrowthScale,
   isRipe,
-} from "../systems/grazing.js?v=fresh-20260909-1951-99648e93";
+} from "../systems/grazing.js?v=fresh-20260909-2005-8fca43cc";
 
 // How hard a grazer commits once it has locked onto food. Idle wandering keeps
 // the old dreamy steering; a creature crossing a field to a meal does not.
@@ -34,6 +34,22 @@ export const GREATBLOOM_RADIUS = 84;
 // worth aiming at rather than a pixel to spray.
 export const GREATBLOOM_EYE_RADIUS = 15;
 export const GREATBLOOM_HEALTH = 12;
+
+// Rising from the deep.
+//
+// The small blooms already swell and shrink, which reads as them bobbing up
+// toward the surface and sinking back. A greatbloom uses the same motion at a
+// far bigger scale: it comes up at the size of the smallest of its kin and
+// pulses bigger and smaller as it climbs, each swell reaching further than the
+// last, until it breaks the surface at full size — and it swims at the player
+// the whole way. The rise is the warning, and it is the only warning.
+export const GREATBLOOM_DEEP_RADIUS = 15;
+export const GREATBLOOM_SURFACE_SECONDS = 9;
+// How far it over- and under-shoots its climb while rising. Large at the start
+// so the first swells read as something huge turning over a long way down;
+// almost gone by the top, so it settles rather than wobbling at full size.
+const GREATBLOOM_RISE_SWELL = 0.42;
+const GREATBLOOM_RISE_BEATS = 2.1;
 // How long the eye takes to travel from the middle out to the rim once the
 // player is sealed in. Slow enough to read as the animal changing shape.
 const GREATBLOOM_EYE_EMERGE_SECONDS = 1.1;
@@ -84,6 +100,10 @@ export class Lifeform {
     this.health = type === "hunter" ? 100 : 1;
     if (type === "greatbloom") {
       this.health = GREATBLOOM_HEALTH;
+      // 0 while it is still coming up, 1 once it has surfaced. A summoned one
+      // starts at 0; anything placed directly starts up.
+      this.surfaceProgress = 1;
+      this.isSurfaced = true;
       // Sealed in? The whole behaviour of the animal turns on this.
       this.isHolding = false;
       // Where the eye sits, as a fraction from the middle (0) to the rim (1),
@@ -295,13 +315,27 @@ export class Lifeform {
   // with the animal and the player has to travel with it too.
   updateGreatbloom(deltaSeconds, world) {
     const distanceToShip = distance(this.position, world.ship.position);
+    this.updateGreatbloomRise(deltaSeconds);
+
+    // Speed follows the phase. Deep and small it labours; breaking the surface
+    // it is at full pace; holding someone it slows to something a ship can
+    // actually ride, because the arena is only a fight if staying with it is
+    // possible.
+    this.maxSpeed = this.isHolding
+      ? this.baseMaxSpeed * 0.5
+      : this.baseMaxSpeed * (0.45 + 0.55 * (this.surfaceProgress ?? 1));
 
     if (this.isHolding) {
       // Still hunting in a sense: it leans toward wherever the ship is inside
       // it, which drags the far wall onto a player who stops moving.
       this.applySteer(seek(this, world.ship.position, this.maxSpeed * 0.55), 0.5);
       this.applySteer(this.wander(deltaSeconds), 1.15);
-    } else if (world.shipPowered && distanceToShip < this.perception) {
+    } else if (world.shipPowered) {
+      // No perception gate. This one came up BECAUSE of the player and swims at
+      // them the whole way; a distance check meant a summon that surfaced
+      // beyond its own perception simply milled about out of sight forever,
+      // which is a boss that never arrives. Powering down still loses it, the
+      // same escape a hunter allows.
       this.applySteer(seek(this, world.ship.position, this.maxSpeed), 2.1);
     } else {
       this.applySteer(this.wander(deltaSeconds), 0.6);
@@ -310,6 +344,30 @@ export class Lifeform {
     this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 320, "greatbloom"), 240), 0.9);
     this.avoidAsteroids(world.asteroids, 2.4);
     this.updateGreatbloomEye(deltaSeconds);
+  }
+
+  // The climb. Size is an envelope that grows with the ascent, times a swell
+  // that starts wide and narrows — so it gets bigger and smaller and bigger
+  // again, gaining on every cycle, rather than simply inflating.
+  updateGreatbloomRise(deltaSeconds) {
+    if (this.isSurfaced) {
+      return;
+    }
+
+    this.surfaceProgress = Math.min(1, this.surfaceProgress + deltaSeconds / GREATBLOOM_SURFACE_SECONDS);
+
+    const climb = this.surfaceProgress * this.surfaceProgress * (3 - 2 * this.surfaceProgress); // smoothstep
+    const envelope = GREATBLOOM_DEEP_RADIUS + (GREATBLOOM_RADIUS - GREATBLOOM_DEEP_RADIUS) * climb;
+    const swell = GREATBLOOM_RISE_SWELL * (1 - climb);
+    this.radius = Math.max(
+      GREATBLOOM_DEEP_RADIUS,
+      envelope * (1 + Math.sin(this.pulse * GREATBLOOM_RISE_BEATS + this.seed) * swell),
+    );
+
+    if (this.surfaceProgress >= 1) {
+      this.isSurfaced = true;
+      this.radius = GREATBLOOM_RADIUS;
+    }
   }
 
   // Closed up, the eye sits in the middle like any bloom's core. Once the ship
@@ -977,6 +1035,12 @@ function drawGreatbloom(context, lifeform, heading) {
   const beat = 0.5 + Math.sin(lifeform.pulse * 1.5 + lifeform.seed) * 0.5;
   const bell = lifeform.radius + beat * 4;
   const holding = lifeform.isHolding === true;
+  // Still down there. Depth is drawn as thinness rather than as a colour
+  // change, so the same animal reads as far below, then near, then here.
+  const risen = lifeform.isSurfaced === false ? (lifeform.surfaceProgress ?? 0) : 1;
+  const depth = 0.32 + 0.68 * risen;
+  context.save();
+  context.globalAlpha *= depth;
 
   // Body. Kept very sheer while it is holding — the player has to be able to
   // read their own ship, their bullets and the field through it.
@@ -1016,10 +1080,13 @@ function drawGreatbloom(context, lifeform, heading) {
     context.stroke();
   }
 
+  context.restore();
+
   // The eye. Everything above is drawn in the animal's own rotated frame, so
   // undo the heading to put the eye at the WORLD angle the collision check
   // reads — otherwise it drifts off the hitbox whenever the animal turns.
   context.save();
+  context.globalAlpha *= depth;
   context.rotate(-heading);
   const reach = (lifeform.radius - GREATBLOOM_EYE_RADIUS - 4) * (lifeform.eyeReach ?? 0);
   const eyeX = Math.cos(lifeform.eyeAngle ?? 0) * reach;
@@ -1140,9 +1207,14 @@ function getMaxSpeed(type) {
   }
 
   if (type === "greatbloom") {
-    // Slow enough that a powered ship can stay with it, which is the whole
-    // premise of surviving inside one.
-    return 62;
+    // The ship cruises at 105 and boosts to about 231. Sitting between the two
+    // is the whole character of the animal: at an ordinary cruise it runs you
+    // down, and burning the boost gets you away. At 62 it could never arrive at
+    // all, which made it a boss that politely milled about out of sight.
+    //
+    // This is the ceiling for the CHASE. `updateGreatbloom` cuts it while the
+    // beast is still rising and again once it has someone inside.
+    return 118;
   }
 
   if (type === "filament") {
