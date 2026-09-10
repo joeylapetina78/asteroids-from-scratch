@@ -29,7 +29,11 @@ export const CONTENT_COLUMNS_HALF = 4;
 // rather than shrinking proportionally.
 export const MIN_TYPE_SIZE = 8;
 
-export const MIN_SCALE = 1;
+// Below 100% the type floor starts biting before the grid does: the grid keeps
+// shrinking and the text stops, so text grows RELATIVE to its box and the
+// small steps jam together. That is the trade a smaller cockpit makes, and
+// 0.75 is as far as it stays readable.
+export const MIN_SCALE = 0.75;
 export const MAX_SCALE = 2;
 
 export function clampScale(scale) {

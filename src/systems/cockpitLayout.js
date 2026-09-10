@@ -49,7 +49,7 @@ export function createCockpitLayoutState(source = null) {
 }
 
 function normalizeTypeScale(scale) {
-  return Number.isFinite(scale) ? Math.min(2, Math.max(1, scale)) : 1;
+  return Number.isFinite(scale) ? Math.min(2, Math.max(0.75, scale)) : 1;
 }
 
 // Put the desk back to bare: nothing floating, nothing open, the bay shut. The

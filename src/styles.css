@@ -3971,7 +3971,7 @@ body.is-cockpit-layout .is-cockpit-module:not(.is-cockpit-expanded) .cockpit-mod
 body.is-cockpit-layout .is-cockpit-module .component-panel-title strong {
   color: var(--cockpit-phosphor);
   font-family: inherit;
-  font-size: 0.62rem;
+  font-size: var(--type-s);
   font-weight: 700;
   letter-spacing: 0.035em;
   text-transform: uppercase;
@@ -3986,7 +3986,7 @@ body.is-cockpit-layout .is-cockpit-module .component-panel-title span:not(.cockp
   display: block !important;
   margin-top: 1px;
   color: var(--cockpit-phosphor) !important;
-  font-size: 0.53rem !important;
+  font-size: var(--type-xs) !important;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3994,9 +3994,9 @@ body.is-cockpit-layout .is-cockpit-module .component-panel-title span:not(.cockp
 
 .cockpit-module-code {
   display: inline !important;
-  margin-right: 4px;
+  margin-right: var(--u);
   color: var(--cockpit-amber) !important;
-  font-size: 0.52rem !important;
+  font-size: var(--type-xs) !important;
   letter-spacing: 0.08em;
 }
 
@@ -4033,13 +4033,13 @@ body.is-cockpit-layout .is-cockpit-module:not(.is-cockpit-floating) .component-p
 
 .cockpit-module-launcher {
   width: 100%;
-  min-height: 36px;
+  min-height: var(--control-h);
   padding: var(--panel-flange);
   border: 1px dashed color-mix(in srgb, var(--cockpit-phosphor) 42%, transparent);
   border-radius: 0;
   background: rgba(0, 10, 9, 0.62);
   color: var(--cockpit-phosphor);
-  font: 700 0.58rem/1.1 "Courier New", monospace;
+  font: 700 var(--type-s)/1.1 "Courier New", monospace;
   text-align: left;
   text-transform: uppercase;
   cursor: pointer;
@@ -4048,7 +4048,7 @@ body.is-cockpit-layout .is-cockpit-module:not(.is-cockpit-floating) .component-p
 .cockpit-module-launcher-code {
   display: block;
   color: var(--cockpit-amber);
-  font-size: 0.5rem;
+  font-size: var(--type-xs);
   letter-spacing: 0.1em;
 }
 
@@ -5221,14 +5221,16 @@ body.is-cockpit-layout .processor-claw.is-plugged {
   /* Equal gaps top and bottom. At 48/34 the bay hung lower than it sat high,
      so a full module list ran off the bottom of the screen while leaving room
      above it. */
-  top: 48px;
-  bottom: 48px;
+  top: calc(var(--grid-major) * 2);
+  bottom: calc(var(--grid-major) * 2);
   left: 0;
   display: flex;
-  width: 214px;
+  /* Nine columns — the same content width as the bay a module lands in when
+     it comes out onto the desk, so racked and floating are the same size. */
+  width: var(--panel-content-full);
   min-height: 0;
   flex-direction: column;
-  padding: 8px;
+  padding: calc(var(--u) * 2);
   border: 1px solid var(--cockpit-phosphor);
   border-left: 0;
   border-radius: 0;
@@ -5250,19 +5252,21 @@ body.is-cockpit-layout .processor-claw.is-plugged {
 .cockpit-module-tray-tab {
   position: absolute;
   top: 42%;
-  right: -29px;
+  /* A column plus a flange, hung the same distance outside the bay so the
+     tab reads as part of the same fabrication. */
+  right: calc((var(--grid-major) + var(--panel-flange)) * -1);
   display: grid;
-  width: 29px;
-  height: 96px;
+  width: calc(var(--grid-major) + var(--panel-flange));
+  height: calc(var(--grid-major) * 4);
   min-height: 0;
   place-items: center;
   border: 1px solid var(--cockpit-phosphor);
   border-left: 0;
   border-radius: 0;
-  padding: 5px 3px;
+  padding: var(--u);
   color: var(--cockpit-phosphor);
   background: #000707;
-  font: 700 0.58rem/1 "Courier New", monospace;
+  font: 700 var(--type-s)/1 "Courier New", monospace;
   letter-spacing: 0.09em;
   text-orientation: mixed;
   writing-mode: vertical-rl;
@@ -5282,20 +5286,20 @@ body.is-cockpit-layout .processor-claw.is-plugged {
   flex: 0 0 auto;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
-  padding: 2px 3px 7px;
+  gap: calc(var(--u) * 2);
+  padding: 0 var(--u) calc(var(--u) * 2);
   border-bottom: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 46%, transparent);
   font-family: "Courier New", monospace;
 }
 
 .cockpit-module-tray-header strong {
-  font-size: 0.76rem;
+  font-size: var(--type-m);
   letter-spacing: 0.12em;
 }
 
 .cockpit-module-tray-header span {
   color: color-mix(in srgb, var(--cockpit-phosphor) 62%, transparent);
-  font-size: 0.48rem;
+  font-size: var(--type-xs);
   letter-spacing: 0.08em;
 }
 
@@ -5307,10 +5311,10 @@ body.is-cockpit-layout .processor-claw.is-plugged {
   min-height: 0;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--u);
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 7px 4px 7px 0;
+  padding: calc(var(--u) * 2) var(--u) calc(var(--u) * 2) 0;
   direction: rtl;
   scrollbar-color: var(--cockpit-phosphor) transparent;
   scrollbar-width: thin;
@@ -5327,14 +5331,16 @@ body.is-cockpit-layout .processor-claw.is-plugged {
   direction: ltr;
 }
 
+/* A racked row plus its gap is exactly two columns tall, so the rack tiles
+   the bay the same way a meter's grains tile a panel. */
 body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module,
 .cockpit-module-tray-list .cockpit-module-launcher {
   position: relative;
   width: 100%;
-  min-height: 42px;
+  min-height: calc(var(--grid-major) * 2 - var(--u));
   border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 54%, transparent);
   border-radius: 0;
-  padding: 5px 7px;
+  padding: var(--u) calc(var(--u) * 2);
   background: transparent;
   color: var(--cockpit-phosphor);
   text-align: left;
@@ -5410,12 +5416,12 @@ body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:focus-within
 
 .cockpit-processor-outlet {
   display: flex;
-  min-height: 42px;
+  min-height: calc(var(--grid-major) * 2 - var(--u));
   align-items: center;
   justify-content: space-between;
-  padding: 6px 4px 4px 8px;
+  padding: var(--u) var(--u) var(--u) calc(var(--u) * 2);
   color: var(--cockpit-phosphor);
-  font: 700 0.64rem/1 "Courier New", monospace;
+  font: 700 var(--type-s)/1 "Courier New", monospace;
   letter-spacing: 0.08em;
 }
 
@@ -5425,9 +5431,9 @@ body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:focus-within
 }
 
 .cockpit-processor-outlet small {
-  margin-top: 4px;
+  margin-top: var(--u);
   color: color-mix(in srgb, var(--cockpit-phosphor) 62%, transparent);
-  font-size: 0.48rem;
+  font-size: var(--type-xs);
 }
 
 /* A DEAD UNIT ON THE PATCH ROW ------------------------------------------
