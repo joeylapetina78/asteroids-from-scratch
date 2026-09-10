@@ -29,3 +29,21 @@ test("the campaign's broken units are real component states", () => {
     assert.ok(known.has(componentId), `${componentId} is not a panel-backed component`);
   });
 });
+
+// A ship system arriving gets the driver; paperwork keeps the soft chirp.
+// `playPanelReveal` routes on this membership, so a paperwork id leaking into
+// the module list would have the game bolting in a contract.
+test("nothing that is paperwork is also a cockpit module", () => {
+  const paperwork = ["license", "resource-guide", "document", "contract"];
+  const overlap = paperwork.filter((panelId) => COCKPIT_MODULE_IDS.includes(panelId));
+
+  assert.deepEqual(overlap, [], `these would be bolted in: ${overlap}`);
+});
+
+test("the systems a mission hands over are all module-list members", () => {
+  // The ones chapter one grants, in the order the induction gives them.
+  ["hull", "engine", "miner", "cargo", "beacon-locator", "scanner", "collector"]
+    .forEach((panelId) => {
+      assert.ok(COCKPIT_MODULE_IDS.includes(panelId), `${panelId} would arrive silently`);
+    });
+});

@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260909-2018-af9ff726";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260909-2042-af1be5db";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;
@@ -140,6 +140,40 @@ export function createGameAudio() {
   function playPanelReveal() {
     tone({ frequency: 360, endFrequency: 620, duration: 0.09, type: "triangle", volume: 0.075 });
     tone({ frequency: 900, duration: 0.04, delay: 0.07, type: "square", volume: 0.045 });
+  }
+
+  // A module being fastened into the rack.
+  //
+  // Not a chirp. The player is being told that a physical thing has just been
+  // bolted into their ship, so it is a driver: a run of ratchet clicks over a
+  // loading motor, then the bolt seating. The clicks SLOW as they go, because
+  // a fastener that speeds up is one that has stripped its thread.
+  function playPanelBolted(delay = 0) {
+    const clicks = 7;
+    let at = delay;
+
+    for (let index = 0; index < clicks; index += 1) {
+      const bite = index / (clicks - 1);
+      at += 0.03 + bite * 0.03;
+      noiseBurst({ duration: 0.018, volume: 0.052 - bite * 0.014, delay: at });
+      tone({
+        frequency: 1450 - bite * 560,
+        duration: 0.022,
+        delay: at,
+        type: "square",
+        volume: 0.032 - bite * 0.01,
+      });
+    }
+
+    // The motor bogging down under the load, under all of it.
+    tone({
+      frequency: 235, endFrequency: 118, duration: at - delay + 0.04,
+      delay, type: "sawtooth", volume: 0.02,
+    });
+
+    // Seated. One firm, low thunk so the sequence lands rather than trailing off.
+    brownNoiseBurst({ duration: 0.17, volume: 0.052, delay: at + 0.055 });
+    tone({ frequency: 156, endFrequency: 92, duration: 0.15, delay: at + 0.055, type: "triangle", volume: 0.072 });
   }
 
   function chatter(speaker = "Rook", index = 0) {
@@ -295,6 +329,7 @@ export function createGameAudio() {
     playMiningShot,
     playMinerFault,
     playCollectorFault,
+    playPanelBolted,
     playPanelDrop,
     playPanelReveal,
     playPickup,
