@@ -9,6 +9,11 @@ export const COCKPIT_RECT_GRID = 24;
 // read as their mistake rather than the system's.
 export const COCKPIT_SNAP_STRIDE = COCKPIT_RECT_GRID / 2;
 
+// The 100% figures above are defaults. A scaled cockpit has a bigger grid and
+// a bigger flange, and passes both in — a fixed stride would leave every panel
+// position off the very lattice it was drawn against the moment the player
+// changed the size.
+
 export const COCKPIT_RADIAL_DIVISIONS = 24;
 export const COCKPIT_ALIGNMENT_THRESHOLD = 11;
 
@@ -38,7 +43,10 @@ export function getCockpitScope(deskSize) {
   return { centerX: width / 2, centerY: height / 2, radius, ringStep: getCockpitRingStep(radius) };
 }
 
-export function snapCockpitPanel(position, panelSize, deskSize, { flange = COCKPIT_PANEL_FLANGE } = {}) {
+export function snapCockpitPanel(
+  position, panelSize, deskSize,
+  { flange = COCKPIT_PANEL_FLANGE, stride = COCKPIT_SNAP_STRIDE } = {},
+) {
   const panelCenter = {
     x: position.x + panelSize.width / 2,
     y: position.y + panelSize.height / 2,
@@ -63,8 +71,8 @@ export function snapCockpitPanel(position, panelSize, deskSize, { flange = COCKP
   }
 
   return {
-    x: snapToColumn(position.x, flange),
-    y: snapToColumn(position.y, flange),
+    x: snapToColumn(position.x, flange, stride),
+    y: snapToColumn(position.y, flange, stride),
     region: "bay",
   };
 }
@@ -77,28 +85,31 @@ export function snapCockpitPanel(position, panelSize, deskSize, { flange = COCKP
 // instrument onto a viewport ring and undo the overlap search; running it
 // through nothing at all is what left every never-dragged panel sitting 16px
 // off the lattice with its meters and labels off every column.
-export function snapCockpitPanelToBay(position, { flange = COCKPIT_PANEL_FLANGE } = {}) {
+export function snapCockpitPanelToBay(
+  position,
+  { flange = COCKPIT_PANEL_FLANGE, stride = COCKPIT_SNAP_STRIDE } = {},
+) {
   return {
-    x: snapToColumn(position.x, flange),
-    y: snapToColumn(position.y, flange),
+    x: snapToColumn(position.x, flange, stride),
+    y: snapToColumn(position.y, flange, stride),
   };
 }
 
 // Clamp bounds, quantized. A floor rounds UP and a ceiling rounds DOWN, so
 // snapping a bound can never push a panel back past the limit it was clamped to.
-export function ceilToColumn(edge, flange = COCKPIT_PANEL_FLANGE) {
-  return Math.ceil((edge + flange) / COCKPIT_SNAP_STRIDE) * COCKPIT_SNAP_STRIDE - flange;
+export function ceilToColumn(edge, flange = COCKPIT_PANEL_FLANGE, stride = COCKPIT_SNAP_STRIDE) {
+  return Math.ceil((edge + flange) / stride) * stride - flange;
 }
 
-export function floorToColumn(edge, flange = COCKPIT_PANEL_FLANGE) {
-  return Math.floor((edge + flange) / COCKPIT_SNAP_STRIDE) * COCKPIT_SNAP_STRIDE - flange;
+export function floorToColumn(edge, flange = COCKPIT_PANEL_FLANGE, stride = COCKPIT_SNAP_STRIDE) {
+  return Math.floor((edge + flange) / stride) * stride - flange;
 }
 
 // Round the CONTENT edge onto a lattice line, then hand back where the border
 // box has to sit for that to be true.
-function snapToColumn(edge, flange) {
+function snapToColumn(edge, flange, stride = COCKPIT_SNAP_STRIDE) {
   const content = edge + flange;
-  return Math.round(content / COCKPIT_SNAP_STRIDE) * COCKPIT_SNAP_STRIDE - flange;
+  return Math.round(content / stride) * stride - flange;
 }
 
 export function alignCockpitPanel(position, movingAnchors, referenceAnchors, threshold = COCKPIT_ALIGNMENT_THRESHOLD) {

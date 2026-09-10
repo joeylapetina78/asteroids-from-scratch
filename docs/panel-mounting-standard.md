@@ -255,3 +255,52 @@ one that does not announce its fault loudly enough.
 > `display: none` at the very start of Campaign — it is revealed during the
 > induction — so the treatment cannot be judged at t=0; force the fault in
 > Explorer to iterate on it.
+
+## Scaling the whole cockpit
+
+A player who needs bigger text does not want bigger text in the same boxes —
+the boxes are 224px wide and the text would run out of them, taking the
+alignment with it. They want a bigger cockpit.
+
+`cockpitScale.js` takes one number and derives everything from it: the grid,
+the bay footprints, the control ladder, the meter pitches and the type steps.
+Every relationship survives because they are all the same arithmetic.
+
+Everything comes back as **whole pixels**. That is why this is computed in JS
+rather than written as `calc()` in the stylesheet: CSS cannot round, and a
+fractional pixel is what put 20 of this project's 21 type sizes off the lattice
+in the first place. The stylesheet keeps its own literals as the 100% fallback.
+
+Measured at 100 / 130 / 150 / 175%, with three panels open:
+
+| | 100% | 130% | 150% | 175% |
+|---|---|---|---|---|
+| minor grid | 12 | 16 | 18 | 21 |
+| bay content | 216 | 288 | 324 | 378 |
+| body type | 12 | 16 | 18 | 21 |
+| caption type | 8 | 10 | 12 | 14 |
+| off-grid elements | 0 | 0 | 0 | 0 |
+
+### Three things that have to scale with it, and did not at first
+
+- **The maker's dials.** `applyPanelMaker` writes authored 100% figures. Left
+  raw, a Rook switch stayed 36px tall in a cockpit drawn half again as big.
+  Control heights are now scaled and re-snapped to the ladder, and meter pitch
+  is derived from the grain's CELL COUNT rather than its authored pitch, so the
+  cells keep tiling the bay exactly at any size.
+- **The snap stride.** It was a fixed 12. The moment the grid became 18, every
+  panel position was off the very lattice it was drawn against. The snap
+  functions take the live grid now, and changing size re-snaps what is open.
+- **The major grid must round to an EVEN number**, because the minor grid is
+  exactly half of it and half an odd number is not a pixel. That invariant is
+  load-bearing — it is what lets a panel sit on a midpoint without throwing its
+  own interior off the lattice.
+
+### Where the ratio gives
+
+Rounding collapses the bottom type steps onto each other, so each step is
+forced at least a pixel above the one below it. The small end is therefore
+compressed rather than ratio-correct — and it stops being compressed as the
+player scales up: at 100% the two smallest steps are 4px apart, at 175% they
+are 7px apart. Which is the right way round, because scaling up is what
+somebody who cannot read the small text is doing.

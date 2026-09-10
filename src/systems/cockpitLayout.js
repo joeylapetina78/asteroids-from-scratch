@@ -41,7 +41,15 @@ export function createCockpitLayoutState(source = null) {
     processorClawPosition: normalizePoint(source?.processorClawPosition),
     processorClawTarget: normalizeClawTarget(source?.processorClawTarget),
     phosphorColor: normalizePhosphorColor(source?.phosphorColor),
+    // How big the cockpit is drawn. A player who needs bigger text gets a
+    // bigger cockpit rather than bigger text in the same boxes; see
+    // cockpitScale.js.
+    typeScale: normalizeTypeScale(source?.typeScale),
   };
+}
+
+function normalizeTypeScale(scale) {
+  return Number.isFinite(scale) ? Math.min(2, Math.max(1, scale)) : 1;
 }
 
 // Put the desk back to bare: nothing floating, nothing open, the bay shut. The

@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260909-2151-e5d06bf0" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260910-1723-7b622d5f" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260909-2151-e5d06bf0</span>
+      <span class="build-tag">build: fresh-20260910-1723-7b622d5f</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -326,6 +326,14 @@
                 <button id="cockpit-mode-default" type="button" aria-pressed="true">Cockpit</button>
                 <button id="cockpit-mode-panorama" type="button" aria-pressed="false">Panorama</button>
               </div>
+              <label for="cockpit-scale">Size</label>
+              <select id="cockpit-scale">
+                <option value="1">100%</option>
+                <option value="1.15">115%</option>
+                <option value="1.3">130%</option>
+                <option value="1.5">150%</option>
+                <option value="1.75">175%</option>
+              </select>
               <button id="cockpit-configure" type="button" aria-expanded="false">Configure</button>
               <button id="cockpit-reset" type="button">Reset layout</button>
             </div>
@@ -1025,6 +1033,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260909-2151-e5d06bf0"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260910-1723-7b622d5f"></script>
   </body>
 </html>
