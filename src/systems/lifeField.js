@@ -1,7 +1,7 @@
-import { GREATBLOOM_DEEP_RADIUS, Lifeform } from "../entities/Lifeform.js?v=fresh-20260909-2005-8fca43cc";
-import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260909-2005-8fca43cc";
-import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260909-2005-8fca43cc";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260909-2005-8fca43cc";
+import { GREATBLOOM_DEEP_RADIUS, Lifeform } from "../entities/Lifeform.js?v=fresh-20260909-2010-7252fac4";
+import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260909-2010-7252fac4";
+import { pickRockmossStrain } from "./rockmossStrains.js?v=fresh-20260909-2010-7252fac4";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260909-2010-7252fac4";
 
 // Life is seeded near asteroid anchors. Zone profiles weight those anchors so
 // hunters belong to dangerous regions and ambient forms prefer livelier fields.
@@ -80,20 +80,35 @@ export function createLifeField(asteroids) {
 // It surfaces out from under a rock where there is one to hand, and out of open
 // space where there is not. Either way it starts small and far under, and comes
 // up swimming at the player.
-export function createSurfacingGreatbloom({ ship, asteroids = [], random = Math.random, seed = 0 }) {
-  const nearbyRock = asteroids
-    .filter((asteroid) => {
-      const reach = Math.hypot(asteroid.position.x - ship.position.x, asteroid.position.y - ship.position.y);
-      return reach > 260 && reach < 900;
-    })
-    .sort(() => random() - 0.5)[0];
+export function createSurfacingGreatbloom({
+  ship, asteroids = [], camera = null, view = null, random = Math.random, seed = 0,
+}) {
+  // It has to come up somewhere the player is already looking. A rock off the
+  // edge of the screen means the whole ascent — the part that is the warning —
+  // happens where nobody can see it, and the first the player knows of it is
+  // being eaten.
+  const onScreen = (camera && view)
+    ? asteroids.filter((asteroid) => {
+        const screenX = asteroid.position.x - camera.x;
+        const screenY = asteroid.position.y - camera.y;
+        const margin = 90;
+        if (screenX < margin || screenX > view.width - margin) return false;
+        if (screenY < margin || screenY > view.height - margin) return false;
+        // Not directly underneath the ship either; it should surface at a
+        // readable distance and then come.
+        return Math.hypot(asteroid.position.x - ship.position.x, asteroid.position.y - ship.position.y) > 140;
+      })
+    : [];
+
+  const nearbyRock = onScreen.sort(() => random() - 0.5)[0];
 
   const angle = randomRange(random, 0, Math.PI * 2);
   const origin = nearbyRock
     ? { x: nearbyRock.position.x, y: nearbyRock.position.y }
     : {
-        x: ship.position.x + Math.cos(angle) * randomRange(random, 420, 700),
-        y: ship.position.y + Math.sin(angle) * randomRange(random, 420, 700),
+        // No rock in view: it comes out of open space, still on screen.
+        x: ship.position.x + Math.cos(angle) * randomRange(random, 240, 380),
+        y: ship.position.y + Math.sin(angle) * randomRange(random, 240, 380),
       };
 
   const beast = new Lifeform({

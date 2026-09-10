@@ -4,7 +4,7 @@ import {
   getGrazingSteerTarget,
   getGrowthScale,
   isRipe,
-} from "../systems/grazing.js?v=fresh-20260909-2005-8fca43cc";
+} from "../systems/grazing.js?v=fresh-20260909-2010-7252fac4";
 
 // How hard a grazer commits once it has locked onto food. Idle wandering keeps
 // the old dreamy steering; a creature crossing a field to a meal does not.
@@ -317,13 +317,26 @@ export class Lifeform {
     const distanceToShip = distance(this.position, world.ship.position);
     this.updateGreatbloomRise(deltaSeconds);
 
-    // Speed follows the phase. Deep and small it labours; breaking the surface
-    // it is at full pace; holding someone it slows to something a ship can
-    // actually ride, because the arena is only a fight if staying with it is
-    // possible.
+    // Until it has you, it goes however fast it needs to. A fixed ceiling means
+    // a player who simply flies away never sees the animal again, and the whole
+    // ascent — which is the warning, and the best part of it — happens off
+    // screen. So while it is coming up it MATCHES the ship and then some: it
+    // sits on your tail, small and rising, for as long as the climb takes.
+    //
+    // Once it has someone inside it slows right down, because an arena you
+    // cannot stay with is not a fight.
+    const shipSpeed = Math.hypot(world.ship.velocity?.x ?? 0, world.ship.velocity?.y ?? 0);
     this.maxSpeed = this.isHolding
       ? this.baseMaxSpeed * 0.5
-      : this.baseMaxSpeed * (0.45 + 0.55 * (this.surfaceProgress ?? 1));
+      : Math.max(this.baseMaxSpeed, shipSpeed * 1.35 + 70);
+
+    // And the acceleration to actually USE that ceiling. Steering force is a
+    // per-frame velocity change, so the family default of 0.12 is about 15
+    // units per second squared — it would take the animal fourteen seconds to
+    // reach its own top speed, which in practice meant it fell behind a
+    // cruising ship no matter how high the ceiling was set. Chasing, it is
+    // urgent; holding, it goes back to drifting like the jellyfish it is.
+    this.maxForce = this.isHolding ? 0.12 : 0.95;
 
     if (this.isHolding) {
       // Still hunting in a sense: it leans toward wherever the ship is inside
@@ -336,7 +349,12 @@ export class Lifeform {
       // beyond its own perception simply milled about out of sight forever,
       // which is a boss that never arrives. Powering down still loses it, the
       // same escape a hunter allows.
-      this.applySteer(seek(this, world.ship.position, this.maxSpeed), 2.1);
+      //
+      // While it is still rising it chases a point in the ship's WAKE rather
+      // than the ship itself, so it reads as something tailing you rather than
+      // something trying and failing to occupy the same space. It closes on the
+      // ship proper only once it is big enough to swallow one.
+      this.applySteer(seek(this, this.getGreatbloomPursuitTarget(world.ship), this.maxSpeed), 2.1);
     } else {
       this.applySteer(this.wander(deltaSeconds), 0.6);
     }
@@ -344,6 +362,26 @@ export class Lifeform {
     this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 320, "greatbloom"), 240), 0.9);
     this.avoidAsteroids(world.asteroids, 2.4);
     this.updateGreatbloomEye(deltaSeconds);
+  }
+
+  // Where it aims while hunting: your wake while it is still coming up, and you
+  // once it is grown. The trail scales with its own size, so it stays just off
+  // your tail as it fills out rather than clipping through you.
+  getGreatbloomPursuitTarget(ship) {
+    if (this.isSurfaced) {
+      return ship.position;
+    }
+
+    const shipSpeed = Math.hypot(ship.velocity?.x ?? 0, ship.velocity?.y ?? 0);
+    const wake = shipSpeed > 12
+      ? { x: -ship.velocity.x / shipSpeed, y: -ship.velocity.y / shipSpeed }
+      : { x: -Math.cos(ship.angle ?? 0), y: -Math.sin(ship.angle ?? 0) };
+    const trail = this.radius + 22;
+
+    return {
+      x: ship.position.x + wake.x * trail,
+      y: ship.position.y + wake.y * trail,
+    };
   }
 
   // The climb. Size is an envelope that grows with the ascent, times a swell

@@ -77,25 +77,74 @@ const tick = (beast, seconds) => {
   }
 };
 
-test("a summoned one comes up small, from somewhere near but not on top of you", () => {
+// A ship at the centre of a 1440x900 view: the camera puts world (0,0) at the
+// middle of the screen.
+const VIEW = { width: 1440, height: 900 };
+const CAMERA = { x: -720, y: -450 };
+
+test("a summoned one comes up small, and close enough to watch", () => {
   const ship = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 };
-  const beast = createSurfacingGreatbloom({ ship, asteroids: [], random: () => 0.5, seed: 10 });
+  const beast = createSurfacingGreatbloom({
+    ship, asteroids: [], camera: CAMERA, view: VIEW, random: () => 0.5, seed: 10,
+  });
 
   assert.equal(beast.isSurfaced, false);
   assert.equal(beast.surfaceProgress, 0);
   assert.equal(beast.radius, GREATBLOOM_DEEP_RADIUS);
 
   const reach = Math.hypot(beast.position.x - ship.position.x, beast.position.y - ship.position.y);
-  assert.ok(reach > 300, `surfaced ${reach} away — too close to react to`);
+  assert.ok(reach > 140, `surfaced ${reach} away — right on top of the player`);
+  assert.ok(reach < 450, `surfaced ${reach} away — the ascent would happen off screen`);
 });
 
-test("it comes up out from under a rock when there is one to hand", () => {
+test("it comes up out from under a rock the player can see", () => {
   const ship = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 };
-  const rock = { position: { x: 500, y: 0 } };
-  const beast = createSurfacingGreatbloom({ ship, asteroids: [rock], random: () => 0.5, seed: 3 });
+  const rock = { position: { x: 300, y: 0 } };
+  const beast = createSurfacingGreatbloom({
+    ship, asteroids: [rock], camera: CAMERA, view: VIEW, random: () => 0.5, seed: 3,
+  });
 
   assert.equal(beast.cameFromRock, true);
-  assert.deepEqual(beast.position, { x: 500, y: 0 });
+  assert.deepEqual(beast.position, { x: 300, y: 0 });
+});
+
+// The ascent IS the warning. A rock off the edge of the screen would hide it,
+// and the first the player would know of the animal is being eaten by it.
+test("a rock off the edge of the screen is not used", () => {
+  const ship = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 };
+  const offScreen = { position: { x: 4000, y: 0 } };
+  const beast = createSurfacingGreatbloom({
+    ship, asteroids: [offScreen], camera: CAMERA, view: VIEW, random: () => 0.5, seed: 4,
+  });
+
+  assert.equal(beast.cameFromRock, false);
+  assert.notDeepEqual(beast.position, offScreen.position);
+});
+
+// "It should be right behind me until it's big enough to eat me."
+test("while rising it chases the wake, and only lunges at the ship once grown", () => {
+  const ship = { position: { x: 0, y: 0 }, velocity: { x: 100, y: 0 }, angle: 0 };
+  const beast = createSurfacingGreatbloom({
+    ship, asteroids: [], camera: CAMERA, view: VIEW, random: () => 0.5, seed: 12,
+  });
+
+  const rising = beast.getGreatbloomPursuitTarget(ship);
+  assert.ok(rising.x < ship.position.x, "it should aim behind a ship travelling +x");
+
+  beast.isSurfaced = true;
+  assert.deepEqual(beast.getGreatbloomPursuitTarget(ship), ship.position);
+});
+
+test("it goes as fast as it must to stay on a fleeing ship", () => {
+  const ship = { position: { x: 0, y: 0 }, velocity: { x: 231, y: 0 }, angle: 0 };
+  const beast = createSurfacingGreatbloom({
+    ship, asteroids: [], camera: CAMERA, view: VIEW, random: () => 0.5, seed: 13,
+  });
+
+  beast.update(1 / 60, { ship, shipPowered: true, lifeforms: [], asteroids: [], disturbances: [] });
+
+  // A ship at full boost must not simply leave the ascent behind.
+  assert.ok(beast.maxSpeed > 231, `only managed ${Math.round(beast.maxSpeed)} against a boosting ship`);
 });
 
 // The whole point of the rise: it swells and shrinks on the way up, each swell

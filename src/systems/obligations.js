@@ -1,5 +1,5 @@
-import { createPaymentRequest, processPayment } from "./payments.js?v=fresh-20260909-2005-8fca43cc";
-import { ensureInstitution } from "./worldRecords.js?v=fresh-20260909-2005-8fca43cc";
+import { createPaymentRequest, processPayment } from "./payments.js?v=fresh-20260909-2010-7252fac4";
+import { ensureInstitution } from "./worldRecords.js?v=fresh-20260909-2010-7252fac4";
 
 const YARD_EXCHANGE_FINANCE_ID = "institution:yard-exchange-finance";
 
