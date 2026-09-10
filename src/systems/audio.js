@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260909-2102-022e2245";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260909-2105-1fa497f2";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;
@@ -144,52 +144,58 @@ export function createGameAudio() {
 
   // A module being fastened into the rack.
   //
-  // ONE note, not a run of them. This was built from four overlapping
-  // segments to fake a sustain, and every overlap re-attacked — so what came
-  // out was three or four separate pitches in a row, which reads as a riff
-  // rather than as a tool. `tone` can hold a level now, so the drive is a
-  // single sustained note and the only other moment is letting go.
+  // Run backwards from the first drill: it spins UP quickly and then settles
+  // into a long note that sags slightly, rather than winding up slowly and
+  // coasting down at the end. That is the trigger pulled and held — the motor
+  // finding its speed and then bogging into the work.
   //
-  // Low, because this is heavy machinery going into a ship. It climbs across
-  // the drive, but only about a fifth: enough to say something is progressing,
-  // not enough to sound like it is revving. Then the trigger is released and
-  // it spins DOWN — a drill does not stop dead, and the coast is what makes it
-  // read as a motor rather than as a tone.
-  const BOLT_PITCH_LOW = 48;
-  const BOLT_PITCH_HIGH = 74;
-  const BOLT_PITCH_REST = 24;
-  const BOLT_DRIVE_LENGTH = 0.86;
-  // Most of the drive sits at full level; only the last stretch tapers, so it
-  // hands over to the spin-down instead of pumping against it.
-  const BOLT_DRIVE_HOLD = 0.66;
-  const BOLT_COAST_LENGTH = 0.5;
-  // Quiet. It is a background confirmation, not an event.
-  const BOLT_VOLUME = 0.05;
+  // Two moments and no more. An earlier version faked its sustain out of four
+  // overlapping segments, and every overlap re-attacked, so it came out as a
+  // run of separate pitches — a riff rather than a tool. `tone` holds a level
+  // now, so the long part is a single note.
+  //
+  // Low, because this is heavy machinery going into a ship. Quiet, because it
+  // is a background confirmation and not an event.
+  const BOLT_PITCH_START = 24;
+  const BOLT_PITCH_PEAK = 74;
+  const BOLT_PITCH_SETTLE = 48;
+  const BOLT_SPIN_UP_LENGTH = 0.25;
+  const BOLT_DRIVE_LENGTH = 0.43;
+  // Most of the drive sits flat; only the tail tapers.
+  const BOLT_DRIVE_HOLD = 0.33;
+  // The drive opens before the spin-up has finished, so the join is a
+  // crossfade rather than a second attack.
+  const BOLT_DRIVE_AT = 0.16;
+  const BOLT_VOLUME = 0.025;
   // A detuned partner just above the fundamental: two saws beating is the
   // difference between a motor and an organ note.
   const BOLT_DETUNE = 2.02;
 
   function playPanelBolted(delay = 0) {
-    tone({
-      frequency: BOLT_PITCH_LOW, endFrequency: BOLT_PITCH_HIGH,
-      duration: BOLT_DRIVE_LENGTH, hold: BOLT_DRIVE_HOLD,
-      delay, type: "sawtooth", volume: BOLT_VOLUME,
-    });
-    tone({
-      frequency: BOLT_PITCH_LOW * BOLT_DETUNE, endFrequency: BOLT_PITCH_HIGH * BOLT_DETUNE,
-      duration: BOLT_DRIVE_LENGTH, hold: BOLT_DRIVE_HOLD,
-      delay, type: "sawtooth", volume: BOLT_VOLUME * 0.38,
+    const pair = ({ frequency, endFrequency, duration, at, hold = 0, level }) => {
+      tone({ frequency, endFrequency, duration, hold, delay: at, type: "sawtooth", volume: level });
+      tone({
+        frequency: frequency * BOLT_DETUNE,
+        endFrequency: endFrequency * BOLT_DETUNE,
+        duration,
+        hold,
+        delay: at,
+        type: "sawtooth",
+        volume: level * 0.38,
+      });
+    };
+
+    // Trigger pulled: it comes up to speed.
+    pair({
+      frequency: BOLT_PITCH_START, endFrequency: BOLT_PITCH_PEAK,
+      duration: BOLT_SPIN_UP_LENGTH, at: delay, level: BOLT_VOLUME * 0.9,
     });
 
-    // Let go. It coasts down rather than stopping.
-    const releaseAt = delay + BOLT_DRIVE_HOLD;
-    tone({
-      frequency: BOLT_PITCH_HIGH, endFrequency: BOLT_PITCH_REST,
-      duration: BOLT_COAST_LENGTH, delay: releaseAt, type: "sawtooth", volume: BOLT_VOLUME * 0.9,
-    });
-    tone({
-      frequency: BOLT_PITCH_HIGH * BOLT_DETUNE, endFrequency: BOLT_PITCH_REST * BOLT_DETUNE,
-      duration: BOLT_COAST_LENGTH, delay: releaseAt, type: "sawtooth", volume: BOLT_VOLUME * 0.34,
+    // And then it is in the work, holding and bogging a little.
+    pair({
+      frequency: BOLT_PITCH_PEAK, endFrequency: BOLT_PITCH_SETTLE,
+      duration: BOLT_DRIVE_LENGTH, hold: BOLT_DRIVE_HOLD,
+      at: delay + BOLT_DRIVE_AT, level: BOLT_VOLUME,
     });
   }
 
