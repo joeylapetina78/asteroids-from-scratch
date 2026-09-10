@@ -7,6 +7,8 @@ import {
 } from "../src/content/ships/campaignLoadout.js";
 import { shipOffers } from "../src/content/ships/shipOffers.js";
 import { createGameState } from "../src/state/gameState.js";
+import { getCraftPerformance } from "../src/systems/craftPerformance.js";
+import { getEngineModel } from "../src/content/ships/engineModels.js";
 import { MINER_CONDITION_CONFIG } from "../src/systems/minerCondition.js";
 import { accumulatePanelWear, repairPanelCondition } from "../src/systems/panelMaintenance.js";
 
@@ -68,9 +70,26 @@ test("every declared component and panel actually exists", () => {
 test("the company skiff is slow, and that is the game's default engine", () => {
   // Rook's standard drive is what a new state already carries. Campaign does not
   // slow anything down; the explorer start is what speeds it up.
+  //
+  // Speed is composed from the fitted drive, its tune and the hull's mass now,
+  // rather than stored flat on the component — so this asks the same question
+  // of the thing that actually answers it.
   const state = createGameState();
   assert.equal(state.components.engine.engineModelId, "rook-standard-drive");
-  assert.ok(state.components.engine.maxSpeed < 185, "the company drive is slower than the explorer Vektor");
+
+  const skiff = getCraftPerformance({
+    engine: state.components.engine,
+    engineModel: getEngineModel(state.components.engine),
+    hull: state.components.hull,
+  });
+  const explorerVektor = getCraftPerformance({
+    engine: {},
+    engineModel: getEngineModel("vektor-reversing-drive"),
+    hull: state.components.hull,
+  });
+
+  assert.ok(skiff.maxSpeed < explorerVektor.maxSpeed, "the company drive is slower than the explorer Vektor");
+  assert.ok(skiff.maxSpeed < 185, "the company drive is slower than the ship the world hands out");
 });
 
 test("the issued laser is a used unit on the shared ladder, not a special wear rate", () => {
