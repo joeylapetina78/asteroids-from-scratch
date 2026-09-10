@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260909-2054-a98c7e8c";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260909-2057-b77f1414";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;
@@ -144,44 +144,66 @@ export function createGameAudio() {
 
   // A module being fastened into the rack.
   //
-  // Not a chirp. The player is being told that a physical thing has just been
-  // bolted into their ship, so it is a driver: a run of ratchet clicks over a
-  // motor, and then the trigger let go.
+  // A drill, and only a drill. It had ratchet clicks over the top of the motor
+  // and they read as chirps — a bright, chattery UI noise sitting on the one
+  // part that actually sounded like a tool. Gone. What is left is the buzz.
   //
-  // The arc matters more than the timbre. It BUILDS — the clicks start slow,
-  // low and quiet and speed up as they rise, the way a driver does when it
-  // gets going — and then stops almost at once. The first version had this
-  // backwards, opening at its brightest and sagging away into a low thunk,
-  // which reads as something winding down rather than something being driven
-  // home.
-  function playPanelBolted(delay = 0) {
-    const clicks = 9;
-    let at = delay;
+  // Low, because this is heavy machinery going into a ship rather than a
+  // cordless screwdriver. It climbs, but only a little: enough to say that
+  // something is progressing, not enough to sound like it is revving. Then the
+  // trigger is released and it spins DOWN — a drill does not stop dead, and
+  // the coast is what makes it read as a motor rather than a tone.
+  //
+  // Built from overlapping segments because `tone` decays across its own
+  // duration; one long note would sag away to nothing before the spin-down
+  // began, and the two would pump against each other.
+  const BOLT_DRIVE_SEGMENTS = 4;
+  const BOLT_SEGMENT_STAGGER = 0.13;
+  const BOLT_SEGMENT_LENGTH = 0.26;
+  // The whole climb, start to let-go. A fifth of an octave, near enough.
+  const BOLT_PITCH_LOW = 48;
+  const BOLT_PITCH_HIGH = 78;
+  // Where the coast ends. Well below the start, so it clearly winds out.
+  const BOLT_PITCH_REST = 24;
 
-    for (let index = 0; index < clicks; index += 1) {
-      // 0 at the first click, 1 at the last.
-      const wind = index / (clicks - 1);
-      // Spacing narrows: the run accelerates.
-      at += 0.072 - wind * 0.05;
-      noiseBurst({ duration: 0.014, volume: 0.022 + wind * 0.03, delay: at });
+  function playPanelBolted(delay = 0) {
+    const climb = BOLT_PITCH_HIGH - BOLT_PITCH_LOW;
+
+    for (let index = 0; index < BOLT_DRIVE_SEGMENTS; index += 1) {
+      const through = index / BOLT_DRIVE_SEGMENTS;
+      const next = (index + 1) / BOLT_DRIVE_SEGMENTS;
+      const at = delay + index * BOLT_SEGMENT_STAGGER;
+
       tone({
-        frequency: 540 + wind * 960,
-        duration: 0.02,
+        frequency: BOLT_PITCH_LOW + climb * through,
+        endFrequency: BOLT_PITCH_LOW + climb * next,
+        duration: BOLT_SEGMENT_LENGTH,
         delay: at,
-        type: "square",
-        volume: 0.02 + wind * 0.02,
+        type: "sawtooth",
+        volume: 0.075,
+      });
+      // A detuned partner just above the fundamental. Two saws beating against
+      // each other is the difference between a motor and an organ note.
+      tone({
+        frequency: (BOLT_PITCH_LOW + climb * through) * 2.02,
+        endFrequency: (BOLT_PITCH_LOW + climb * next) * 2.02,
+        duration: BOLT_SEGMENT_LENGTH,
+        delay: at,
+        type: "sawtooth",
+        volume: 0.03,
       });
     }
 
-    // The motor spinning up underneath, rising with the clicks.
+    // Let go. It coasts down rather than stopping.
+    const releaseAt = delay + BOLT_DRIVE_SEGMENTS * BOLT_SEGMENT_STAGGER;
     tone({
-      frequency: 88, endFrequency: 300, duration: at - delay,
-      delay, type: "sawtooth", volume: 0.026,
+      frequency: BOLT_PITCH_HIGH, endFrequency: BOLT_PITCH_REST,
+      duration: 0.44, delay: releaseAt, type: "sawtooth", volume: 0.08,
     });
-
-    // Let off. Short and dry — the trigger released, not a long settle.
-    noiseBurst({ duration: 0.05, volume: 0.05, delay: at + 0.012 });
-    tone({ frequency: 1180, endFrequency: 620, duration: 0.05, delay: at + 0.012, type: "square", volume: 0.04 });
+    tone({
+      frequency: BOLT_PITCH_HIGH * 2.02, endFrequency: BOLT_PITCH_REST * 2.02,
+      duration: 0.44, delay: releaseAt, type: "sawtooth", volume: 0.032,
+    });
   }
 
   function chatter(speaker = "Rook", index = 0) {

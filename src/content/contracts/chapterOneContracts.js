@@ -1,4 +1,4 @@
-import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260909-2054-a98c7e8c";
+import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260909-2057-b77f1414";
 
 const RESOURCE_CONTRACTS = [
   {
