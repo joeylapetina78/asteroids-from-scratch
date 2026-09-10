@@ -1435,22 +1435,22 @@ body:not(.is-cockpit-layout) .journey-panel {
   50% { opacity: 1; }
 }
 
-.cargo-panel.is-deposit-target {
-  border-color: rgba(255, 211, 107, 0.82);
-  box-shadow: 0 0 24px rgba(255, 211, 107, 0.18);
-}
-
-.cargo-panel.is-deposit-target #cargo {
-  border-color: rgba(255, 211, 107, 0.82);
-}
-
+/* An open hold is the player's own colour, whatever it is open FOR.
+   Depositing used to light the bay gold and selling lit it green, borrowed
+   from the contract card and the supply window — so the one fixture that is
+   supposed to be the player's instrument changed colour according to who was
+   on the other end of the deal. The state being signalled is the same either
+   way ("the hold is open, put material in it"), and it is signalled on the
+   player's hardware, so it reads in the player's phosphor. */
+.cargo-panel.is-deposit-target,
 .cargo-panel.is-sell-target {
-  border-color: rgba(60, 220, 130, 0.75);
-  box-shadow: 0 0 24px rgba(60, 220, 130, 0.16);
+  border-color: color-mix(in srgb, var(--cockpit-phosphor) 82%, transparent);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--cockpit-phosphor) 18%, transparent);
 }
 
+.cargo-panel.is-deposit-target #cargo,
 .cargo-panel.is-sell-target #cargo {
-  border-color: rgba(60, 220, 130, 0.75);
+  border-color: color-mix(in srgb, var(--cockpit-phosphor) 82%, transparent);
 }
 
 .finley-panel {
@@ -6145,20 +6145,18 @@ body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-sell-target {
   z-index: var(--z-chamber-ore-live) !important;
 }
 
-/* Two destinations, two readings: material leaving against paperwork you signed,
-   and material leaving for money. */
-/* Flat washes. Two destinations, two readings: material leaving against
-   paperwork you signed, and material leaving for money. */
-body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-deposit-target::before {
-  background: color-mix(in srgb, var(--cockpit-phosphor) 14%, transparent);
-}
-
+/* One wash, one colour. Flat rather than a gradient: a radial rising from the
+   bottom read as a candle flame instead of a bay that is lit. */
+body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-deposit-target::before,
 body.is-cockpit-layout .cargo-panel.is-cockpit-chamber.is-sell-target::before {
-  background: rgba(255, 196, 92, 0.14);
+  background: color-mix(in srgb, var(--cockpit-phosphor) 16%, transparent);
 }
 
+/* Down to a low ember rather than most of the way out, so the bay reads as
+   lit the whole time it is open and the throb is the bay breathing rather
+   than a light being switched. */
 @keyframes cargo-outbound-wash {
-  0%, 100% { opacity: 0.45; }
+  0%, 100% { opacity: 0.38; }
   50% { opacity: 1; }
 }
 
