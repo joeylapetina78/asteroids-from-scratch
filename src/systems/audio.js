@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260909-2057-b77f1414";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260909-2102-022e2245";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;
@@ -144,65 +144,52 @@ export function createGameAudio() {
 
   // A module being fastened into the rack.
   //
-  // A drill, and only a drill. It had ratchet clicks over the top of the motor
-  // and they read as chirps — a bright, chattery UI noise sitting on the one
-  // part that actually sounded like a tool. Gone. What is left is the buzz.
+  // ONE note, not a run of them. This was built from four overlapping
+  // segments to fake a sustain, and every overlap re-attacked — so what came
+  // out was three or four separate pitches in a row, which reads as a riff
+  // rather than as a tool. `tone` can hold a level now, so the drive is a
+  // single sustained note and the only other moment is letting go.
   //
-  // Low, because this is heavy machinery going into a ship rather than a
-  // cordless screwdriver. It climbs, but only a little: enough to say that
-  // something is progressing, not enough to sound like it is revving. Then the
-  // trigger is released and it spins DOWN — a drill does not stop dead, and
-  // the coast is what makes it read as a motor rather than a tone.
-  //
-  // Built from overlapping segments because `tone` decays across its own
-  // duration; one long note would sag away to nothing before the spin-down
-  // began, and the two would pump against each other.
-  const BOLT_DRIVE_SEGMENTS = 4;
-  const BOLT_SEGMENT_STAGGER = 0.13;
-  const BOLT_SEGMENT_LENGTH = 0.26;
-  // The whole climb, start to let-go. A fifth of an octave, near enough.
+  // Low, because this is heavy machinery going into a ship. It climbs across
+  // the drive, but only about a fifth: enough to say something is progressing,
+  // not enough to sound like it is revving. Then the trigger is released and
+  // it spins DOWN — a drill does not stop dead, and the coast is what makes it
+  // read as a motor rather than as a tone.
   const BOLT_PITCH_LOW = 48;
-  const BOLT_PITCH_HIGH = 78;
-  // Where the coast ends. Well below the start, so it clearly winds out.
+  const BOLT_PITCH_HIGH = 74;
   const BOLT_PITCH_REST = 24;
+  const BOLT_DRIVE_LENGTH = 0.86;
+  // Most of the drive sits at full level; only the last stretch tapers, so it
+  // hands over to the spin-down instead of pumping against it.
+  const BOLT_DRIVE_HOLD = 0.66;
+  const BOLT_COAST_LENGTH = 0.5;
+  // Quiet. It is a background confirmation, not an event.
+  const BOLT_VOLUME = 0.05;
+  // A detuned partner just above the fundamental: two saws beating is the
+  // difference between a motor and an organ note.
+  const BOLT_DETUNE = 2.02;
 
   function playPanelBolted(delay = 0) {
-    const climb = BOLT_PITCH_HIGH - BOLT_PITCH_LOW;
-
-    for (let index = 0; index < BOLT_DRIVE_SEGMENTS; index += 1) {
-      const through = index / BOLT_DRIVE_SEGMENTS;
-      const next = (index + 1) / BOLT_DRIVE_SEGMENTS;
-      const at = delay + index * BOLT_SEGMENT_STAGGER;
-
-      tone({
-        frequency: BOLT_PITCH_LOW + climb * through,
-        endFrequency: BOLT_PITCH_LOW + climb * next,
-        duration: BOLT_SEGMENT_LENGTH,
-        delay: at,
-        type: "sawtooth",
-        volume: 0.075,
-      });
-      // A detuned partner just above the fundamental. Two saws beating against
-      // each other is the difference between a motor and an organ note.
-      tone({
-        frequency: (BOLT_PITCH_LOW + climb * through) * 2.02,
-        endFrequency: (BOLT_PITCH_LOW + climb * next) * 2.02,
-        duration: BOLT_SEGMENT_LENGTH,
-        delay: at,
-        type: "sawtooth",
-        volume: 0.03,
-      });
-    }
-
-    // Let go. It coasts down rather than stopping.
-    const releaseAt = delay + BOLT_DRIVE_SEGMENTS * BOLT_SEGMENT_STAGGER;
     tone({
-      frequency: BOLT_PITCH_HIGH, endFrequency: BOLT_PITCH_REST,
-      duration: 0.44, delay: releaseAt, type: "sawtooth", volume: 0.08,
+      frequency: BOLT_PITCH_LOW, endFrequency: BOLT_PITCH_HIGH,
+      duration: BOLT_DRIVE_LENGTH, hold: BOLT_DRIVE_HOLD,
+      delay, type: "sawtooth", volume: BOLT_VOLUME,
     });
     tone({
-      frequency: BOLT_PITCH_HIGH * 2.02, endFrequency: BOLT_PITCH_REST * 2.02,
-      duration: 0.44, delay: releaseAt, type: "sawtooth", volume: 0.032,
+      frequency: BOLT_PITCH_LOW * BOLT_DETUNE, endFrequency: BOLT_PITCH_HIGH * BOLT_DETUNE,
+      duration: BOLT_DRIVE_LENGTH, hold: BOLT_DRIVE_HOLD,
+      delay, type: "sawtooth", volume: BOLT_VOLUME * 0.38,
+    });
+
+    // Let go. It coasts down rather than stopping.
+    const releaseAt = delay + BOLT_DRIVE_HOLD;
+    tone({
+      frequency: BOLT_PITCH_HIGH, endFrequency: BOLT_PITCH_REST,
+      duration: BOLT_COAST_LENGTH, delay: releaseAt, type: "sawtooth", volume: BOLT_VOLUME * 0.9,
+    });
+    tone({
+      frequency: BOLT_PITCH_HIGH * BOLT_DETUNE, endFrequency: BOLT_PITCH_REST * BOLT_DETUNE,
+      duration: BOLT_COAST_LENGTH, delay: releaseAt, type: "sawtooth", volume: BOLT_VOLUME * 0.34,
     });
   }
 
@@ -253,7 +240,15 @@ export function createGameAudio() {
     }
   }
 
-  function tone({ frequency, endFrequency = frequency, duration, delay = 0, type = "square", volume = 0.08 }) {
+  // `hold` keeps a note at full level for that many seconds before it starts
+  // decaying. Without it every note decays across its entire duration, which
+  // is right for a blip and wrong for anything that is supposed to be running
+  // — a sustained sound has to be faked out of overlapping notes, and the
+  // re-attack at each overlap is audible as a separate note.
+  function tone({
+    frequency, endFrequency = frequency, duration, delay = 0,
+    type = "square", volume = 0.08, hold = 0,
+  }) {
     if (!isReady()) {
       return;
     }
@@ -269,8 +264,12 @@ export function createGameAudio() {
       oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
     }
 
+    const level = Math.max(0.0001, volume);
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume), start + 0.008);
+    gain.gain.exponentialRampToValueAtTime(level, start + 0.008);
+    if (hold > 0) {
+      gain.gain.setValueAtTime(level, start + Math.min(hold, duration));
+    }
     gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
 
     oscillator.connect(gain);

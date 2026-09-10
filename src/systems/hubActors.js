@@ -1,8 +1,8 @@
-import { ACTOR_ROLE, getActorRecord, listActors } from "./actorRegistry.js?v=fresh-20260909-2057-b77f1414";
-import { getActorCapabilityPortfolio } from "./assetCapabilities.js?v=fresh-20260909-2057-b77f1414";
-import { getPopulationLaborSummary } from "./populationLabor.js?v=fresh-20260909-2057-b77f1414";
-import { getHubTerritory } from "./hubTerritories.js?v=fresh-20260909-2057-b77f1414";
-import { getHubSimulationRecord } from "./simulationMode.js?v=fresh-20260909-2057-b77f1414";
+import { ACTOR_ROLE, getActorRecord, listActors } from "./actorRegistry.js?v=fresh-20260909-2102-022e2245";
+import { getActorCapabilityPortfolio } from "./assetCapabilities.js?v=fresh-20260909-2102-022e2245";
+import { getPopulationLaborSummary } from "./populationLabor.js?v=fresh-20260909-2102-022e2245";
+import { getHubTerritory } from "./hubTerritories.js?v=fresh-20260909-2102-022e2245";
+import { getHubSimulationRecord } from "./simulationMode.js?v=fresh-20260909-2102-022e2245";
 
 // The coherent settlement actor.
 //
