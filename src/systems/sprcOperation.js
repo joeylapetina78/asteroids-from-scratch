@@ -1,18 +1,18 @@
-import { depositCredits } from "./accounts.js?v=fresh-20260909-2139-12040cc9";
-import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260909-2139-12040cc9";
-import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260909-2139-12040cc9";
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260909-2139-12040cc9";
-import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260909-2139-12040cc9";
-import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260909-2139-12040cc9";
-import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260909-2139-12040cc9";
-import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260909-2139-12040cc9";
-import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260909-2139-12040cc9";
-import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260909-2139-12040cc9";
-import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260909-2139-12040cc9";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260909-2139-12040cc9";
-import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260909-2139-12040cc9";
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260909-2139-12040cc9";
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260909-2139-12040cc9";
+import { depositCredits } from "./accounts.js?v=fresh-20260909-2143-e03b84d2";
+import { issueWorldDocument, upsertWorldEntity } from "./worldRecords.js?v=fresh-20260909-2143-e03b84d2";
+import { createNeedRecord, createResponseRecord, evaluateAffordability, generateCapabilityResponses, resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260909-2143-e03b84d2";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260909-2143-e03b84d2";
+import { createSalInstitutionInstance, createSprcInstitutionInstance } from "../content/institutions/institutionInstances.js?v=fresh-20260909-2143-e03b84d2";
+import { matchMaintenanceService } from "./maintenanceService.js?v=fresh-20260909-2143-e03b84d2";
+import { evaluateProcurement, evaluateServicePrice } from "./valuation.js?v=fresh-20260909-2143-e03b84d2";
+import { getBundleCost, getReplacementUnitCost, getUnitCost, recordAcquisition, recordProduction } from "./costBasis.js?v=fresh-20260909-2143-e03b84d2";
+import { getGoodwill, getRelationshipProjection, recordDeliveryOutcome } from "./relationshipProjections.js?v=fresh-20260909-2143-e03b84d2";
+import { explainWorkQueue, orderWorkQueue, resolveWorkQueuePolicy } from "./workQueue.js?v=fresh-20260909-2143-e03b84d2";
+import { getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260909-2143-e03b84d2";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDiagnostic } from "./diagnostics.js?v=fresh-20260909-2143-e03b84d2";
+import { createExtractionOffer, registerExtractionOfferSource } from "./extractionOffers.js?v=fresh-20260909-2143-e03b84d2";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260909-2143-e03b84d2";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260909-2143-e03b84d2";
 
 // SPRC's open purchase orders, offered to anyone who digs.
 //
@@ -676,6 +676,22 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       createOrUpdateNeed(repair, "structural-feedstock", feedstockUnits - allocation.equivalentUnits, allocation);
       return;
     }
+
+    // A plate is structural feedstock AND water ice. Only the feedstock half
+    // was ever checked: the ice went straight into the order's inputs and got
+    // reserved whether the yard had any or not, and the shortfall only
+    // surfaced later as an inventory underflow when the order tried to start.
+    // The parts line next door has always checked every input; this now does
+    // the same.
+    const iceNeeded = batches;
+    const iceAvailable = getAvailable("raw", "water-ice");
+    if (iceAvailable < iceNeeded) {
+      createOrUpdateNeed(repair, "water-ice", iceNeeded - iceAvailable, {
+        itemId: "water-ice", required: iceNeeded, available: iceAvailable, purpose: "hull-plate-production",
+      });
+      return;
+    }
+
     queueProduction(repair, "hull-plate", batches * 2, { ...allocation.items, "water-ice": batches }, batches * PLATE_BATCH_SECONDS);
   }
 
@@ -734,6 +750,38 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       });
   }
 
+  // The same question the repair berth asks before it spends: is this order's
+  // reservation still backed by stock that exists?
+  function productionReservationIsBacked(order) {
+    return Object.entries(order.inputs ?? {})
+      .every(([itemId, amount]) => (sprc.inventories.raw[itemId] ?? 0) >= amount);
+  }
+
+  // Unwind a drifted production order — releasing from the global ledger only
+  // what it actually still holds — and drop it, so the repair that wanted it
+  // reassesses and re-queues against real stock.
+  //
+  // The repair berth has had this since reservations could drift; production
+  // had the same exposure and no guard, so a drifted order threw an inventory
+  // underflow out of the middle of the world tick and killed the frame. A
+  // recoverable refusal is the right answer here too.
+  function reconcileProductionReservation(order) {
+    const dropped = {};
+    Object.entries(order.inputs ?? {}).forEach(([itemId, amount]) => {
+      const held = sprc.inventories.reserved.raw[itemId] ?? 0;
+      const release = Math.min(amount, held);
+      if (release > 0) addReserved("raw", itemId, -release);
+      dropped[itemId] = amount;
+    });
+    order.status = "cancelled";
+    order.cancelledAt = now();
+    sprc.productionQueue = sprc.productionQueue.filter((id) => id !== order.id);
+    appendHistory("production.reservationReconciled", { productionOrderId: order.id, dropped });
+    state.ledger.recordEvent("sprc.productionReservationReconciled", {
+      productionOrderId: order.id, repairOrderId: order.sourceRepairOrderId ?? null, dropped,
+    }, { visible: false });
+  }
+
   function startNextProduction() {
     const maw = sprc.facilities.maw;
     if (maw.status !== "working") return;
@@ -744,6 +792,10 @@ export function createSprcOperation({ state, registerContractDefinition = () => 
       })[0];
       const order = next ? sprc.productionOrders[next.id] : null;
       if (!order) break;
+      if (!productionReservationIsBacked(order)) {
+        reconcileProductionReservation(order);
+        continue;
+      }
       Object.entries(order.inputs).forEach(([itemId, amount]) => {
         removeInventory("raw", itemId, amount);
         addReserved("raw", itemId, -amount);
