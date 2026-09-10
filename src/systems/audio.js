@@ -1,4 +1,4 @@
-import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260909-2042-af1be5db";
+import { getNpcVoiceFrequency } from "../content/npcs.js?v=fresh-20260909-2050-35cebb1d";
 
 const MASTER_VOLUME = 0.84;
 const CHATTER_INTERVAL_SECONDS = 0.055;
@@ -146,34 +146,42 @@ export function createGameAudio() {
   //
   // Not a chirp. The player is being told that a physical thing has just been
   // bolted into their ship, so it is a driver: a run of ratchet clicks over a
-  // loading motor, then the bolt seating. The clicks SLOW as they go, because
-  // a fastener that speeds up is one that has stripped its thread.
+  // motor, and then the trigger let go.
+  //
+  // The arc matters more than the timbre. It BUILDS — the clicks start slow,
+  // low and quiet and speed up as they rise, the way a driver does when it
+  // gets going — and then stops almost at once. The first version had this
+  // backwards, opening at its brightest and sagging away into a low thunk,
+  // which reads as something winding down rather than something being driven
+  // home.
   function playPanelBolted(delay = 0) {
-    const clicks = 7;
+    const clicks = 9;
     let at = delay;
 
     for (let index = 0; index < clicks; index += 1) {
-      const bite = index / (clicks - 1);
-      at += 0.03 + bite * 0.03;
-      noiseBurst({ duration: 0.018, volume: 0.052 - bite * 0.014, delay: at });
+      // 0 at the first click, 1 at the last.
+      const wind = index / (clicks - 1);
+      // Spacing narrows: the run accelerates.
+      at += 0.072 - wind * 0.05;
+      noiseBurst({ duration: 0.014, volume: 0.022 + wind * 0.03, delay: at });
       tone({
-        frequency: 1450 - bite * 560,
-        duration: 0.022,
+        frequency: 540 + wind * 960,
+        duration: 0.02,
         delay: at,
         type: "square",
-        volume: 0.032 - bite * 0.01,
+        volume: 0.02 + wind * 0.02,
       });
     }
 
-    // The motor bogging down under the load, under all of it.
+    // The motor spinning up underneath, rising with the clicks.
     tone({
-      frequency: 235, endFrequency: 118, duration: at - delay + 0.04,
-      delay, type: "sawtooth", volume: 0.02,
+      frequency: 88, endFrequency: 300, duration: at - delay,
+      delay, type: "sawtooth", volume: 0.026,
     });
 
-    // Seated. One firm, low thunk so the sequence lands rather than trailing off.
-    brownNoiseBurst({ duration: 0.17, volume: 0.052, delay: at + 0.055 });
-    tone({ frequency: 156, endFrequency: 92, duration: 0.15, delay: at + 0.055, type: "triangle", volume: 0.072 });
+    // Let off. Short and dry — the trigger released, not a long settle.
+    noiseBurst({ duration: 0.05, volume: 0.05, delay: at + 0.012 });
+    tone({ frequency: 1180, endFrequency: 620, duration: 0.05, delay: at + 0.012, type: "square", volume: 0.04 });
   }
 
   function chatter(speaker = "Rook", index = 0) {
