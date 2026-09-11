@@ -4034,7 +4034,14 @@ body.is-cockpit-layout .is-cockpit-module .component-panel-title strong {
   white-space: nowrap;
 }
 
-body.is-cockpit-layout .is-cockpit-module .component-panel-title span:not(.cockpit-module-summary) {
+/* A racked unit shows its plate, its name and its window; the panel's other
+   spans belong to the instrument's full face and stay hidden until it is out
+   on the desk.
+   `[class^="module-readout"]` is excluded because the window's own contents
+   are spans too, and hiding them blanked every text readout in the bay while
+   leaving the numeric ones — which live on the launcher, outside this
+   selector — working. */
+body.is-cockpit-layout .is-cockpit-module .component-panel-title span:not(.cockpit-module-summary):not([class^="module-readout"]) {
   display: none;
 }
 
@@ -4075,6 +4082,79 @@ body.is-cockpit-layout .is-cockpit-module .component-panel-title span:not(.cockp
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* WHAT A WINDOW CAN SHOW -------------------------------------------------
+   A charge count is a number and wants reading at a glance; a bay of five
+   beacons is a set of slots and wants counting without reading at all; fuel
+   is a level. Rendering them all as one line of small text made them look
+   like the same kind of fact. See moduleReadout.js, which decides which of
+   these a unit gets. */
+.module-readout-value {
+  flex: 0 0 auto;
+  font-size: var(--type-l);
+  letter-spacing: 0.02em;
+}
+
+/* A level's figure sits beside a bar that is already carrying the meaning,
+   so it does not need to shout. */
+.module-readout-value.is-compact {
+  margin-left: auto;
+  font-size: var(--type-s);
+}
+
+.module-readout-unit {
+  flex: 0 1 auto;
+  color: color-mix(in srgb, var(--cockpit-phosphor) 58%, transparent);
+  font-size: var(--type-xs);
+  letter-spacing: 0.16em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-readout-text {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-readout-text.is-quiet {
+  color: color-mix(in srgb, var(--cockpit-phosphor) 55%, transparent);
+}
+
+/* Slots are drawn, not counted out in words: an empty bay is a hole you can
+   see rather than a number you have to read. */
+.module-readout-slots {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 3px;
+}
+
+.module-readout-slots i {
+  display: block;
+  width: var(--u);
+  height: calc(var(--minor) + var(--u));
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 55%, transparent);
+}
+
+.module-readout-slots i.is-filled {
+  background: var(--cockpit-phosphor);
+}
+
+.module-readout-bar {
+  display: block;
+  flex: 1 1 auto;
+  height: var(--u);
+  min-width: 0;
+  background: color-mix(in srgb, var(--cockpit-phosphor) 20%, transparent);
+}
+
+.module-readout-bar i {
+  display: block;
+  height: 100%;
+  background: var(--cockpit-phosphor);
 }
 
 /* Out of its slot, the window is still lit but the unit is not there to be
@@ -4379,7 +4459,7 @@ body.is-cockpit-layout .processor-panel.is-cockpit-expanded .processor-output-de
   line-height: 1.1;
 }
 
-body.is-cockpit-layout .is-cockpit-module.is-cockpit-expanded .component-panel-title span:not(.cockpit-module-summary) {
+body.is-cockpit-layout .is-cockpit-module.is-cockpit-expanded .component-panel-title span:not(.cockpit-module-summary):not([class^="module-readout"]) {
   display: block;
 }
 

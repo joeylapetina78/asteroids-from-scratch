@@ -14,10 +14,10 @@
 // after this lands is attributable to conservation rather than tangled with a
 // retune. See docs/shipbuilding.md.
 
-import { creditPayee } from "./contractTreasury.js?v=fresh-20260910-1956-0d7f82c2";
-import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260910-1956-0d7f82c2";
-import { relationshipFactor } from "./valuation.js?v=fresh-20260910-1956-0d7f82c2";
-import { countHullStrokes, getHullOutline } from "../content/ships/hullOutlines.js?v=fresh-20260910-1956-0d7f82c2";
+import { creditPayee } from "./contractTreasury.js?v=fresh-20260910-2000-2fc8171c";
+import { getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260910-2000-2fc8171c";
+import { relationshipFactor } from "./valuation.js?v=fresh-20260910-2000-2fc8171c";
+import { countHullStrokes, getHullOutline } from "../content/ships/hullOutlines.js?v=fresh-20260910-2000-2fc8171c";
 
 export const SHIPYARD_REFUSAL = Object.freeze({
   NO_YARD: "no-shipyard-in-reach",
