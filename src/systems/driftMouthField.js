@@ -1,6 +1,6 @@
-import { DriftMouth } from "../entities/DriftMouth.js?v=fresh-20260910-1849-b6bf5552";
-import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260910-1849-b6bf5552";
-import { WORLD_ZONES } from "./worldZones.js?v=fresh-20260910-1849-b6bf5552";
+import { DriftMouth } from "../entities/DriftMouth.js?v=fresh-20260910-1948-98883dfd";
+import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260910-1948-98883dfd";
+import { WORLD_ZONES } from "./worldZones.js?v=fresh-20260910-1948-98883dfd";
 
 const MAX_MOUTHS = 2;
 

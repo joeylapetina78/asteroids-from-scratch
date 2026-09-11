@@ -10,7 +10,7 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260910-1849-b6bf5552" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260910-1948-98883dfd" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +57,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260910-1849-b6bf5552</span>
+      <span class="build-tag">build: fresh-20260910-1948-98883dfd</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -354,6 +354,13 @@
               <span><strong>Display phosphor</strong><small>Choose the monochrome instrument color.</small></span>
               <input id="cockpit-phosphor-color" type="color" value="#7dffe0" aria-label="Cockpit phosphor color">
             </label>
+            <div class="cockpit-color-row cockpit-accent-row">
+              <span><strong>Accent</strong><small>The second colour: model codes, and the rail on a module that is out.</small></span>
+              <span class="cockpit-accent-controls">
+                <button id="cockpit-accent-auto" type="button" aria-pressed="true">Auto</button>
+                <input id="cockpit-accent-color" type="color" value="#ffd36b" aria-label="Cockpit accent color">
+              </span>
+            </div>
             <label class="cockpit-color-row cockpit-switch-row" for="cockpit-phosphor-ore">
               <span><strong>Phosphor ore</strong><small>Outline loose material in the instrument color instead of its own.</small></span>
               <input id="cockpit-phosphor-ore" type="checkbox" aria-label="Outline ore in the phosphor color">
@@ -1040,6 +1047,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260910-1849-b6bf5552"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260910-1948-98883dfd"></script>
   </body>
 </html>

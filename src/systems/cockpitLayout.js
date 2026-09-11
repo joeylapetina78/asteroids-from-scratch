@@ -49,7 +49,15 @@ export function createCockpitLayoutState(source = null) {
     // Off by default: the material's own edge is what tells the families
     // apart at a glance. On, the bay reads as one instrument.
     phosphorOre: source?.phosphorOre === true,
+    // The second colour. Null means "derive it from the phosphor", which is
+    // what almost everyone should want; a hex here is the player overruling
+    // the derivation. See cockpitAccent.js.
+    accentColor: normalizeAccentColor(source?.accentColor),
   };
+}
+
+function normalizeAccentColor(color) {
+  return /^#[0-9a-f]{6}$/i.test(color ?? "") ? color.toLowerCase() : null;
 }
 
 function normalizeTypeScale(scale) {

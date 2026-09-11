@@ -3777,6 +3777,11 @@ body.is-cockpit-layout .component-stack {
 
 body.is-cockpit-layout .space-panel {
   --cockpit-phosphor: #7dffe0;
+  /* The second colour. main.js derives this from the phosphor on every
+     colour change (see cockpitAccent.js) and publishes both names; these are
+     the values for the frame before that runs. `--cockpit-amber` is the old
+     name for the same thing, kept so nothing has to be renamed at once. */
+  --cockpit-accent: #ffd36b;
   --cockpit-amber: #ffd36b;
 
   /* ── The panel mounting standard ──────────────────────────────────────────
@@ -4432,6 +4437,33 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .engine-brand-name {
 @media (prefers-reduced-motion: reduce) {
   .cockpit-switch-row input[type="checkbox"],
   .cockpit-switch-row input[type="checkbox"]::after { transition: none; }
+}
+
+.cockpit-accent-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: calc(var(--u) * 2);
+}
+
+.cockpit-accent-controls button {
+  min-width: calc(var(--grid-major) * 2);
+  height: var(--control-h-flat);
+  padding: 0 var(--u);
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 54%, transparent);
+  border-radius: 0;
+  background: rgba(0, 10, 9, 0.62);
+  color: color-mix(in srgb, var(--cockpit-phosphor) 72%, transparent);
+  font: 700 var(--type-s)/1 "Courier New", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+/* Pinned is the state worth seeing at a glance, so it is the lit one. */
+.cockpit-accent-controls button[aria-pressed="false"] {
+  border-color: var(--cockpit-accent);
+  color: var(--cockpit-accent);
 }
 
 .cockpit-color-row span,
