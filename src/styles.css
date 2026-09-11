@@ -4048,6 +4048,86 @@ body.is-cockpit-layout .is-cockpit-module .component-panel-title span:not(.cockp
   white-space: nowrap;
 }
 
+/* THE READOUT WINDOW ------------------------------------------------------
+   The unit's own front-panel display: a recessed window with its own faint
+   glow, lit whether the unit is racked or out on the desk.
+
+   It used to be a line of 8px text — which is MIN_TYPE_SIZE, the legibility
+   floor in cockpitScale.js. The floor is for stencil marks, not for numbers
+   the player is meant to read, and using it here is why the bay felt small
+   even at 100%. */
+.cockpit-module-tray-list .cockpit-module-summary,
+.cockpit-module-tray-list .cockpit-module-launcher-readout {
+  display: flex !important;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: var(--u);
+  margin: 0;
+  padding: 0 var(--u);
+  height: var(--grid-major);
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 26%, transparent);
+  background: #000605;
+  box-shadow: inset 0 0 8px color-mix(in srgb, var(--cockpit-phosphor) 12%, transparent);
+  color: var(--cockpit-phosphor) !important;
+  font: 700 var(--type-s)/1 "Courier New", monospace !important;
+  letter-spacing: 0.06em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Out of its slot, the window is still lit but the unit is not there to be
+   knocked, so it loses the recess. */
+.cockpit-module-tray-list .cockpit-module-launcher-readout {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+  border-color: color-mix(in srgb, var(--cockpit-phosphor) 18%, transparent);
+}
+
+/* The maker's plate. Not the panel's own name cut to four letters, which is
+   what made the bay read "HULL HULL" — see getPanelPlate in panelMakers.js. */
+.cockpit-module-tray-list .cockpit-module-code,
+.cockpit-module-launcher-code {
+  grid-row: 1;
+  grid-column: 1;
+  display: block !important;
+  margin: 0 !important;
+  color: var(--cockpit-accent) !important;
+  font: 700 var(--type-s)/1 "Courier New", monospace !important;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module .component-panel-title strong,
+.cockpit-module-launcher-name {
+  grid-row: 1;
+  grid-column: 2;
+  font-size: var(--type-m);
+  letter-spacing: 0.05em;
+}
+
+/* THE CONNECTOR -----------------------------------------------------------
+   Only the units that can actually route to the processor carry one, which
+   is the whole information it holds. Moved to the top line so it sits with
+   the plate and the name rather than floating over the display. */
+.cockpit-module-tray-list [data-cockpit-route-target="hull"]::after,
+.cockpit-module-tray-list [data-cockpit-route-target="engine"]::after,
+.cockpit-module-tray-list [data-cockpit-route-target="miner"]::after,
+.cockpit-module-tray-list [data-cockpit-route-target="scanner"]::after,
+.cockpit-module-tray-list [data-cockpit-route-target="collector"]::after {
+  content: "⊙";
+  position: absolute;
+  top: var(--u);
+  right: var(--u);
+  transform: none;
+  color: var(--cockpit-phosphor);
+  font: 700 var(--type-l)/1 "Courier New", monospace;
+  opacity: 0.88;
+  pointer-events: none;
+}
+
 .cockpit-module-code {
   display: inline !important;
   margin-right: var(--u);
@@ -4103,8 +4183,7 @@ body.is-cockpit-layout .is-cockpit-module:not(.is-cockpit-floating) .component-p
 
 .cockpit-module-launcher-code {
   display: block;
-  color: var(--cockpit-amber);
-  font-size: var(--type-xs);
+  color: var(--cockpit-accent);
   letter-spacing: 0.1em;
 }
 
@@ -5480,36 +5559,98 @@ body.is-cockpit-layout .processor-claw.is-plugged {
   direction: ltr;
 }
 
-/* A racked row plus its gap is exactly two columns tall, so the rack tiles
-   the bay the same way a meter's grains tile a panel. */
+/* A RACK UNIT ------------------------------------------------------------
+   One row is one unit seen face-on in its slot. That is the whole idea, and
+   it is what decides every part below: a rack unit's front panel carries a
+   maker's plate, a name, a connector, a display, and a rail that tells you
+   whether the unit is seated. Before this the row was a button, a bay and a
+   rack all at once, which is why the code repeated the name and the only
+   sign a module was out was that its readout vanished.
+
+   Two faces, one unit: the panel itself while it is racked, and the
+   placeholder left in the slot while it is out on the desk. They are styled
+   together on purpose — the player should see the same object either way.
+
+   A row plus its gap is exactly three columns tall, so the rack still tiles
+   the bay the way a meter's grains tile a panel. */
 body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module,
 .cockpit-module-tray-list .cockpit-module-launcher {
   position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--u);
   width: 100%;
-  min-height: calc(var(--grid-major) * 2 - var(--u));
+  min-height: calc(var(--grid-major) * 3 - var(--minor));
+  box-sizing: border-box;
   border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 54%, transparent);
   border-radius: 0;
-  padding: var(--u) calc(var(--u) * 2);
-  background: transparent;
+  padding: var(--u) calc(var(--u) * 2) var(--u) calc(var(--u) * 2 + 3px);
+  background: rgba(0, 10, 9, 0.62);
   color: var(--cockpit-phosphor);
   text-align: left;
   pointer-events: auto;
 }
 
-.cockpit-module-tray-list [data-cockpit-route-target="hull"]::after,
-.cockpit-module-tray-list [data-cockpit-route-target="engine"]::after,
-.cockpit-module-tray-list [data-cockpit-route-target="miner"]::after,
-.cockpit-module-tray-list [data-cockpit-route-target="scanner"]::after,
-.cockpit-module-tray-list [data-cockpit-route-target="collector"]::after {
-  content: "⊙";
+/* The seated rail. Solid means the unit is in its slot. */
+body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module::before,
+.cockpit-module-tray-list .cockpit-module-launcher::before {
+  content: "";
   position: absolute;
-  top: 50%;
-  right: 7px;
-  transform: translateY(-50%);
-  color: var(--cockpit-phosphor);
-  font: 700 1rem/1 "Courier New", monospace;
-  opacity: 0.88;
-  pointer-events: none;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--cockpit-phosphor);
+}
+
+/* And broken, in the accent colour, when the slot is empty because the unit
+   is out on the desk. This is the ONLY thing that says where the hardware
+   is; the display keeps running either way. */
+.cockpit-module-tray-list .cockpit-module-launcher {
+  background: transparent;
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--cockpit-phosphor) 30%, transparent);
+}
+
+.cockpit-module-tray-list .cockpit-module-launcher::before {
+  background: repeating-linear-gradient(
+    180deg,
+    var(--cockpit-accent) 0 var(--u),
+    transparent var(--u) calc(var(--u) * 2)
+  );
+}
+
+/* The top line: maker's plate, name, connector. */
+body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module .component-panel-title > div,
+.cockpit-module-tray-list .cockpit-module-launcher {
+  align-items: baseline;
+}
+
+body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module .component-panel-title {
+  display: block;
+  min-width: 0;
+}
+
+body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:not(.is-cockpit-expanded) .component-panel-title > div {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: calc(var(--u) * 2);
+  row-gap: var(--u);
+  height: 100%;
+}
+
+.cockpit-module-tray-list .cockpit-module-launcher {
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: calc(var(--u) * 2);
+}
+
+.cockpit-module-launcher-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body.is-cockpit-layout .cockpit-module-tray-list .is-cockpit-module:hover,

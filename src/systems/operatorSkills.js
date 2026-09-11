@@ -1,4 +1,4 @@
-import { deriveOperatorEvidence } from "./npcDevelopment.js?v=fresh-20260910-1948-98883dfd";
+import { deriveOperatorEvidence } from "./npcDevelopment.js?v=fresh-20260910-1956-0d7f82c2";
 
 // What a person has actually learned to do.
 //

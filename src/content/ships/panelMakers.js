@@ -72,6 +72,33 @@ export function getPanelMaker(makerId) {
 
 // The engine's maker is whoever built the drive that is currently fitted, so it
 // is passed in rather than looked up. Everything else comes from the table.
+// The plate stencilled on a rack unit's face: who built it and which model.
+//
+// This replaces a code that was just the panel's own name cut to four letters,
+// which is why the bay used to read "HULL HULL" and "SCAN SCANNER". A prefix
+// per maker and a model number per unit says something the name does not, and
+// it puts the maker system — the whole reason these panels look different from
+// each other — somewhere the player can actually read it.
+//
+// Rook stamps its name on everything, Vektor numbers its instruments, and
+// salvage-market fitments are unsigned: those get a bare number behind a
+// double dash, which is the yard saying it does not know either.
+export const MAKER_PLATE_PREFIX = Object.freeze({ rook: "RK", vektor: "VK", generic: "——" });
+
+const PANEL_MODEL_NUMBERS = Object.freeze({
+  hull: "114", engine: "22", cargo: "96", processor: "70",
+  miner: "44", collector: "31", scanner: "18",
+  "beacon-locator": "07", "beacon-bay": "09",
+  "tow-cable": "03", "moss-seeder": "12", "moss-harvester": "13",
+  shield: "51", cloak: "60",
+});
+
+export function getPanelPlate(panelId, { engineBrand = null } = {}) {
+  const prefix = MAKER_PLATE_PREFIX[getPanelMakerId(panelId, { engineBrand })] ?? MAKER_PLATE_PREFIX.generic;
+  const model = PANEL_MODEL_NUMBERS[panelId] ?? "00";
+  return `${prefix}·${model}`;
+}
+
 export function getPanelMakerId(panelId, { engineBrand = null } = {}) {
   if (panelId === "engine") {
     const fitted = Object.values(PANEL_MAKERS)
