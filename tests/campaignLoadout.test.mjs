@@ -67,6 +67,13 @@ test("every declared component and panel actually exists", () => {
   });
 });
 
+test("optional late-game modules are absent from the campaign start", () => {
+  ["mossHarvester", "shield", "cloak"].forEach((componentId) => {
+    assert.ok(CAMPAIGN_UNFITTED_COMPONENT_IDS.includes(componentId),
+      `${componentId} must be explicitly absent from the starting skiff`);
+  });
+});
+
 test("the company skiff is slow, and that is the game's default engine", () => {
   // Rook's standard drive is what a new state already carries. Campaign does not
   // slow anything down; the explorer start is what speeds it up.

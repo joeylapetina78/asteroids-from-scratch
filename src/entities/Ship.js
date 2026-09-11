@@ -1,7 +1,7 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260910-2000-2fc8171c";
-import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260910-2000-2fc8171c";
-import { getCraftPerformance } from "../systems/craftPerformance.js?v=fresh-20260910-2000-2fc8171c";
-import { HULL_OUTLINES } from "../content/ships/hullOutlines.js?v=fresh-20260910-2000-2fc8171c";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260910-2116-a2e643d1";
+import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260910-2116-a2e643d1";
+import { getCraftPerformance } from "../systems/craftPerformance.js?v=fresh-20260910-2116-a2e643d1";
+import { HULL_OUTLINES } from "../content/ships/hullOutlines.js?v=fresh-20260910-2116-a2e643d1";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_REVERSE_THRUST_MULTIPLIER = 0.2;

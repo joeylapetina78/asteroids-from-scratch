@@ -41,6 +41,7 @@ export const CAMPAIGN_BROKEN_COMPONENT_IDS = Object.freeze(["processor"]);
 // to quietly hand a Rook hand a scanner it never earned.
 export const CAMPAIGN_UNFITTED_COMPONENT_IDS = Object.freeze([
   "scanner", "collector", "beaconBay", "towCable", "mossSeeder",
+  "mossHarvester", "shield", "cloak",
 ]);
 
 // Panel ids, as used by `setComponentAvailable` and the journey director. A
