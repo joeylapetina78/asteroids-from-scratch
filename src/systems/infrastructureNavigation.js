@@ -1,4 +1,4 @@
-import { facilityOffset } from "./hubLayout.js?v=fresh-20260916-1829-c013bdaf";
+import { facilityOffset } from "./hubLayout.js?v=fresh-20260916-1834-1656a7ca";
 
 // Industrial fixtures are scenery with real footprints. They do not damage an
 // NPC on contact, but commercial pilots should still treat them as occupied
