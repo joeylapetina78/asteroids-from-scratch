@@ -11,7 +11,7 @@
 // Removed rather than repaired: instruments are placed by hand now, onto the
 // grid, and that is the whole model. See docs/panel-mounting-standard.md.
 
-import { normalizeDustSettings } from "./dustDials.js?v=fresh-20260916-1801-027b2ea4";
+import { normalizeDustSettings } from "./dustDials.js?v=fresh-20260916-1829-c013bdaf";
 
 export const DEFAULT_COCKPIT_PHOSPHOR = "#7dffe0";
 
@@ -40,6 +40,8 @@ export function createCockpitLayoutState(source = null) {
     floatingPositions: normalizeFloatingPositions(source?.floatingPositions),
     openModules: normalizeOpenModules(source?.openModules),
     trayOpen: source?.trayOpen === true,
+    // The paperwork bay on the right, the module bay's mirror.
+    paperworkOpen: source?.paperworkOpen === true,
     processorClawPosition: normalizePoint(source?.processorClawPosition),
     processorClawTarget: normalizeClawTarget(source?.processorClawTarget),
     phosphorColor: normalizePhosphorColor(source?.phosphorColor),
@@ -80,6 +82,7 @@ export function resetCockpitLayout(state) {
   state.floatingPositions = {};
   state.openModules = [];
   state.trayOpen = false;
+  state.paperworkOpen = false;
   state.processorClawPosition = null;
   state.processorClawTarget = "cargo";
   return state;

@@ -1,4 +1,4 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260916-1801-027b2ea4";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260916-1829-c013bdaf";
 
 // Where a contract's money actually comes from.
 //

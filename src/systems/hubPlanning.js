@@ -1,7 +1,7 @@
-import { actorHasCapability } from "./assetCapabilities.js?v=fresh-20260916-1801-027b2ea4";
-import { appendHubHistory, getHubActor, listHubActors, upsertHubProject } from "./hubActors.js?v=fresh-20260916-1801-027b2ea4";
-import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260916-1801-027b2ea4";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260916-1801-027b2ea4";
+import { actorHasCapability } from "./assetCapabilities.js?v=fresh-20260916-1829-c013bdaf";
+import { appendHubHistory, getHubActor, listHubActors, upsertHubProject } from "./hubActors.js?v=fresh-20260916-1829-c013bdaf";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260916-1829-c013bdaf";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260916-1829-c013bdaf";
 
 export const HUB_RESPONSE_KIND = Object.freeze({
   IMPORT: "import",

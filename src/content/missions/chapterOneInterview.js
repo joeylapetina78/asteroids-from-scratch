@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260916-1801-027b2ea4";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260916-1829-c013bdaf";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -529,6 +529,15 @@ export const chapterOneInterviewMission = {
       ],
     },
     {
+      // CAMPAIGN PAUSED (2026-09-16). The paperwork drawer became the paperwork
+      // bay on the right edge, and sheets no longer carry a FILE button: they
+      // are filed and unfiled from their cards in the bay, like instruments
+      // from their rack units. This beat still asks for FILE and points the
+      // attention arrow at a button that no longer exists. If the campaign is
+      // picked back up, reword Rook's line and the tasks to "put them away in
+      // the paperwork bay" (attention: the file cards), and have the offered
+      // contract land beside the license as it does now. Quick start skips
+      // this beat entirely and is unaffected.
       id: "reveal-drawer",
       objective: "File your paperwork.",
       tasks: [

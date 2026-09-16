@@ -1,89 +1,89 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260916-1801-027b2ea4";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType, resourceTypesMatch } from "./systems/resourceDefinitions.js?v=fresh-20260916-1801-027b2ea4";
-import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260916-1801-027b2ea4";
-import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260916-1801-027b2ea4";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260916-1801-027b2ea4";
-import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260916-1801-027b2ea4";
-import { accumulatePanelWear, addToTank, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260916-1801-027b2ea4";
-import { CAMPAIGN_ENGINE_LIFETIME_DEGRADATION, CAMPAIGN_ENGINE_PRIOR_SERVICES, CAMPAIGN_ENGINE_START_WEAR, ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260916-1801-027b2ea4";
-import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260916-1801-027b2ea4";
-import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260916-1801-027b2ea4";
-import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260916-1801-027b2ea4";
-import { getMeterGrain, getPanelMaker, getPanelMakerId, getPanelPlate } from "./content/ships/panelMakers.js?v=fresh-20260916-1801-027b2ea4";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260916-1801-027b2ea4";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260916-1801-027b2ea4";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260916-1801-027b2ea4";
-import { Game } from "./game.js?v=fresh-20260916-1801-027b2ea4";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260916-1801-027b2ea4";
-import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260916-1801-027b2ea4";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260916-1801-027b2ea4";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260916-1801-027b2ea4";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260916-1801-027b2ea4";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260916-1829-c013bdaf";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType, resourceTypesMatch } from "./systems/resourceDefinitions.js?v=fresh-20260916-1829-c013bdaf";
+import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260916-1829-c013bdaf";
+import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260916-1829-c013bdaf";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260916-1829-c013bdaf";
+import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260916-1829-c013bdaf";
+import { accumulatePanelWear, addToTank, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260916-1829-c013bdaf";
+import { CAMPAIGN_ENGINE_LIFETIME_DEGRADATION, CAMPAIGN_ENGINE_PRIOR_SERVICES, CAMPAIGN_ENGINE_START_WEAR, ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260916-1829-c013bdaf";
+import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260916-1829-c013bdaf";
+import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260916-1829-c013bdaf";
+import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260916-1829-c013bdaf";
+import { getMeterGrain, getPanelMaker, getPanelMakerId, getPanelPlate } from "./content/ships/panelMakers.js?v=fresh-20260916-1829-c013bdaf";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260916-1829-c013bdaf";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260916-1829-c013bdaf";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260916-1829-c013bdaf";
+import { Game } from "./game.js?v=fresh-20260916-1829-c013bdaf";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260916-1829-c013bdaf";
+import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260916-1829-c013bdaf";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260916-1829-c013bdaf";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260916-1829-c013bdaf";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260916-1829-c013bdaf";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260916-1801-027b2ea4";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260916-1801-027b2ea4";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260916-1801-027b2ea4";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260916-1801-027b2ea4";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260916-1801-027b2ea4";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260916-1801-027b2ea4";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260916-1801-027b2ea4";
-import { getShipAssetId } from "./systems/worldRecords.js?v=fresh-20260916-1801-027b2ea4";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260916-1801-027b2ea4";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260916-1801-027b2ea4";
-import { Processor, getProcessorConsumptionQuantity } from "./systems/processor.js?v=fresh-20260916-1801-027b2ea4";
-import { createBayInertia } from "./systems/bayInertia.js?v=fresh-20260916-1801-027b2ea4";
-import { chamberYieldsClick } from "./systems/chamberClickOwner.js?v=fresh-20260916-1801-027b2ea4";
-import { deriveAccentColor, resolveAccentColor } from "./systems/cockpitAccent.js?v=fresh-20260916-1801-027b2ea4";
-import { describeModuleReadout } from "./systems/moduleReadout.js?v=fresh-20260916-1801-027b2ea4";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260916-1801-027b2ea4";
-import { purchaseSalvageHullFromAuthority, purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260916-1801-027b2ea4";
-import { createGameState } from "./state/gameState.js?v=fresh-20260916-1801-027b2ea4";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260916-1801-027b2ea4";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260916-1801-027b2ea4";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260916-1801-027b2ea4";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260916-1801-027b2ea4";
-import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260916-1801-027b2ea4";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260916-1801-027b2ea4";
-import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260916-1801-027b2ea4";
-import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260916-1801-027b2ea4";
-import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260916-1801-027b2ea4";
-import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260916-1801-027b2ea4";
-import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260916-1801-027b2ea4";
-import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260916-1801-027b2ea4";
-import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS, ROOK_MINING_SEED } from "./content/economy/miningInstitutions.js?v=fresh-20260916-1801-027b2ea4";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260916-1801-027b2ea4";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260916-1801-027b2ea4";
-import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260916-1801-027b2ea4";
-import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260916-1801-027b2ea4";
-import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260916-1801-027b2ea4";
-import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260916-1801-027b2ea4";
-import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260916-1801-027b2ea4";
-import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260916-1801-027b2ea4";
-import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260916-1801-027b2ea4";
-import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260916-1801-027b2ea4";
-import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260916-1801-027b2ea4";
-import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260916-1801-027b2ea4";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260916-1801-027b2ea4";
-import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260916-1801-027b2ea4";
-import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260916-1801-027b2ea4";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260916-1801-027b2ea4";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260916-1801-027b2ea4";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260916-1801-027b2ea4";
-import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260916-1801-027b2ea4";
-import { FLEET_SAMPLE_INTERVAL_MS, HULL_EVENT, auditFleetIntegrity, getFleetSamples, getHullEvents, readFleetCensus, recordFleetSample } from "./systems/fleetCensus.js?v=fresh-20260916-1801-027b2ea4";
-import { clampToViewport, fromAnchoredPosition, hasAnchoredPosition, toAnchoredPosition } from "./systems/panelAnchoring.js?v=fresh-20260916-1801-027b2ea4";
-import { CAMPAIGN_BROKEN_COMPONENT_IDS, CAMPAIGN_FITTED_COMPONENT_IDS, CAMPAIGN_MINER_AMMO, CAMPAIGN_MINER_PRIOR_SERVICES, CAMPAIGN_MINER_WEAR_FRACTION, CAMPAIGN_PANEL_IDS, CAMPAIGN_SHIP_FRAME_ID, CAMPAIGN_SHIP_NAME, CAMPAIGN_UNFITTED_COMPONENT_IDS } from "./content/ships/campaignLoadout.js?v=fresh-20260916-1801-027b2ea4";
-import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260916-1801-027b2ea4";
-import { getCockpitScale, getCockpitScaleProperties } from "./systems/cockpitScale.js?v=fresh-20260916-1801-027b2ea4";
-import { COCKPIT_MODULE_IDS, createCockpitLayoutState, resetCockpitLayout } from "./systems/cockpitLayout.js?v=fresh-20260916-1801-027b2ea4";
-import { DUST_DIALS, DUST_DEFAULTS } from "./systems/dustDials.js?v=fresh-20260916-1801-027b2ea4";
-import { getTaskAttentionTargets } from "./systems/taskAttention.js?v=fresh-20260916-1801-027b2ea4";
-import { shouldShowMissionTaskAttention } from "./systems/missionAttention.js?v=fresh-20260916-1801-027b2ea4";
-import { alignCockpitPanel, createResponsiveCockpitPosition, getCockpitScope, restoreResponsiveCockpitPosition, ceilToColumn, floorToColumn, snapCockpitPanel, snapCockpitPanelToBay } from "./systems/cockpitSnap.js?v=fresh-20260916-1801-027b2ea4";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260916-1829-c013bdaf";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260916-1829-c013bdaf";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260916-1829-c013bdaf";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260916-1829-c013bdaf";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260916-1829-c013bdaf";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260916-1829-c013bdaf";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260916-1829-c013bdaf";
+import { getShipAssetId } from "./systems/worldRecords.js?v=fresh-20260916-1829-c013bdaf";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260916-1829-c013bdaf";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260916-1829-c013bdaf";
+import { Processor, getProcessorConsumptionQuantity } from "./systems/processor.js?v=fresh-20260916-1829-c013bdaf";
+import { createBayInertia } from "./systems/bayInertia.js?v=fresh-20260916-1829-c013bdaf";
+import { chamberYieldsClick } from "./systems/chamberClickOwner.js?v=fresh-20260916-1829-c013bdaf";
+import { deriveAccentColor, resolveAccentColor } from "./systems/cockpitAccent.js?v=fresh-20260916-1829-c013bdaf";
+import { describeModuleReadout } from "./systems/moduleReadout.js?v=fresh-20260916-1829-c013bdaf";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260916-1829-c013bdaf";
+import { purchaseSalvageHullFromAuthority, purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260916-1829-c013bdaf";
+import { createGameState } from "./state/gameState.js?v=fresh-20260916-1829-c013bdaf";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260916-1829-c013bdaf";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260916-1829-c013bdaf";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260916-1829-c013bdaf";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260916-1829-c013bdaf";
+import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260916-1829-c013bdaf";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260916-1829-c013bdaf";
+import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260916-1829-c013bdaf";
+import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260916-1829-c013bdaf";
+import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260916-1829-c013bdaf";
+import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260916-1829-c013bdaf";
+import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260916-1829-c013bdaf";
+import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260916-1829-c013bdaf";
+import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS, ROOK_MINING_SEED } from "./content/economy/miningInstitutions.js?v=fresh-20260916-1829-c013bdaf";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260916-1829-c013bdaf";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260916-1829-c013bdaf";
+import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260916-1829-c013bdaf";
+import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260916-1829-c013bdaf";
+import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260916-1829-c013bdaf";
+import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260916-1829-c013bdaf";
+import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260916-1829-c013bdaf";
+import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260916-1829-c013bdaf";
+import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260916-1829-c013bdaf";
+import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260916-1829-c013bdaf";
+import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260916-1829-c013bdaf";
+import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260916-1829-c013bdaf";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260916-1829-c013bdaf";
+import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260916-1829-c013bdaf";
+import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260916-1829-c013bdaf";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260916-1829-c013bdaf";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260916-1829-c013bdaf";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260916-1829-c013bdaf";
+import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260916-1829-c013bdaf";
+import { FLEET_SAMPLE_INTERVAL_MS, HULL_EVENT, auditFleetIntegrity, getFleetSamples, getHullEvents, readFleetCensus, recordFleetSample } from "./systems/fleetCensus.js?v=fresh-20260916-1829-c013bdaf";
+import { clampToViewport, fromAnchoredPosition, hasAnchoredPosition, toAnchoredPosition } from "./systems/panelAnchoring.js?v=fresh-20260916-1829-c013bdaf";
+import { CAMPAIGN_BROKEN_COMPONENT_IDS, CAMPAIGN_FITTED_COMPONENT_IDS, CAMPAIGN_MINER_AMMO, CAMPAIGN_MINER_PRIOR_SERVICES, CAMPAIGN_MINER_WEAR_FRACTION, CAMPAIGN_PANEL_IDS, CAMPAIGN_SHIP_FRAME_ID, CAMPAIGN_SHIP_NAME, CAMPAIGN_UNFITTED_COMPONENT_IDS } from "./content/ships/campaignLoadout.js?v=fresh-20260916-1829-c013bdaf";
+import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260916-1829-c013bdaf";
+import { getCockpitScale, getCockpitScaleProperties } from "./systems/cockpitScale.js?v=fresh-20260916-1829-c013bdaf";
+import { COCKPIT_MODULE_IDS, createCockpitLayoutState, resetCockpitLayout } from "./systems/cockpitLayout.js?v=fresh-20260916-1829-c013bdaf";
+import { DUST_DIALS, DUST_DEFAULTS } from "./systems/dustDials.js?v=fresh-20260916-1829-c013bdaf";
+import { getTaskAttentionTargets } from "./systems/taskAttention.js?v=fresh-20260916-1829-c013bdaf";
+import { shouldShowMissionTaskAttention } from "./systems/missionAttention.js?v=fresh-20260916-1829-c013bdaf";
+import { alignCockpitPanel, createResponsiveCockpitPosition, getCockpitScope, restoreResponsiveCockpitPosition, ceilToColumn, floorToColumn, snapCockpitPanel, snapCockpitPanelToBay } from "./systems/cockpitSnap.js?v=fresh-20260916-1829-c013bdaf";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -202,7 +202,6 @@ const STARTER_REGION_NAME = storyRegions.starterRegion.name;
 const DEEP_SPACE_REGION_NAME = storyRegions.deepSpace.name;
 const JOURNEY_CHARACTER_DELAY_MS = 18;
 const ATTENTION_ONCE_MS = 1800;
-const PAPERWORK_DRAWER_AUTO_CLOSE_MS = 900;
 // Aliased rather than re-declared: the strain table owns this id now, so the
 // spore's type and its appearance can never drift apart.
 const ROCKMOSS_CRAWLER_RESOURCE = ROCKMOSS_CRAWLER_TYPE;
@@ -611,19 +610,22 @@ const getChamberObstacles = (chamberCanvas) => {
     });
   }
 
-  const tray = document.querySelector(".cockpit-module-tray");
-  if (tray && tray.classList.contains("is-open")) {
-    const trayBounds = tray.getBoundingClientRect();
-    if (trayBounds.width && trayBounds.right > chamberBounds.left) {
-      obstacles.push({
-        kind: "rect",
-        x: toLocalX(trayBounds.left),
-        y: toLocalY(trayBounds.top),
-        w: trayBounds.width * scaleX,
-        h: trayBounds.height * scaleY,
-      });
-    }
-  }
+  // The two bays: the module bay over the processor's side, the paperwork
+  // bay over the cargo hold's. Each is a wall for whichever chamber it
+  // overlaps, and neither for the other.
+  [document.querySelector(".cockpit-module-tray"), paperworkDrawer].forEach((bay) => {
+    if (!bay || !bay.classList.contains("is-open")) return;
+    const bayBounds = bay.getBoundingClientRect();
+    if (!bayBounds.width) return;
+    if (bayBounds.right <= chamberBounds.left || bayBounds.left >= chamberBounds.right) return;
+    obstacles.push({
+      kind: "rect",
+      x: toLocalX(bayBounds.left),
+      y: toLocalY(bayBounds.top),
+      w: bayBounds.width * scaleX,
+      h: bayBounds.height * scaleY,
+    });
+  });
 
   return obstacles;
 };
@@ -916,7 +918,6 @@ function sayEngineOwnersBrief() {
 }
 let bringPanelToFront = () => {};
 let positionPanelById = () => {};
-let settleDrawerPanels = () => {};
 let openModuleBay = () => {};
 let movePaperPanelToDesk = () => {};
 let movePaperPanelToDrawer = () => {};
@@ -944,7 +945,6 @@ let floatCockpitPanelById = () => {};
 // hidden at boot, so it cannot be measured until it is first shown.
 let rescueJourneyPanel = () => {};
 let contractPulledFromDrawer = false;
-let openDrawerPaperKey = null;
 const collapsedPaperworkGroups = new Set();
 let renderedPaperworkFileKey = "";
 let renderedLedgerVersion = -1;
@@ -1367,7 +1367,7 @@ contractFileStack?.addEventListener("click", (event) => {
   }
 
   activeDepositContractId = null;
-  togglePaperworkFileInDrawer(file.dataset.paperFileKind, file.dataset.paperFileId);
+  togglePaperworkFile(file.dataset.paperFileKind, file.dataset.paperFileId);
   updateHudDisplay();
 });
 
@@ -1436,18 +1436,40 @@ if (helpArrowsToggle) {
   });
 }
 
-drawerToggle?.addEventListener("click", () => {
-  const isOpen = paperworkDrawer.classList.toggle("is-open");
-  drawerToggle.setAttribute("aria-expanded", String(isOpen));
-  // Opening the drawer is a step the induction can ask for and wait on.
-  if (isOpen) {
+// The paperwork bay, open or shut. The module bay's `setTrayOpen`, mirrored:
+// the wall arriving shoves the cargo hold's material the same way the module
+// bay shoves the processor's, and the state is the desk's, kept with it.
+function setPaperworkBayOpen(isOpen) {
+  if (!paperworkDrawer) return;
+  const wasOpen = paperworkDrawer.classList.contains("is-open");
+  paperworkDrawer.classList.toggle("is-open", isOpen);
+  drawerToggle?.setAttribute("aria-expanded", String(isOpen));
+  drawerToggle?.setAttribute("aria-label", `${isOpen ? "Close" : "Open"} paperwork bay`);
+  if (state.ui?.cockpit) state.ui.cockpit.paperworkOpen = isOpen;
+  if (isOpen && !wasOpen) {
+    const shove = () => {
+      const wall = getChamberObstacles(cargoCanvas).find((obstacle) => obstacle.kind === "rect");
+      if (wall) cargoHold.shoveFrom(wall);
+    };
+    let shoved = false;
+    const once = () => { if (shoved) return; shoved = true; shove(); };
+    paperworkDrawer.addEventListener("transitionend", once, { once: true });
+    window.setTimeout(once, 200);
+  }
+}
+
+drawerToggle?.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  const willOpen = !paperworkDrawer.classList.contains("is-open");
+  setPaperworkBayOpen(willOpen);
+  // Opening the bay is a step the induction can ask for and wait on.
+  if (willOpen) {
     state.ledger.recordEvent("paperwork.drawerOpened", {}, { visible: false });
     updateLedgerDrivenSystems();
-    // Shut, the shelf cannot be measured, so nothing filed in it has been
-    // settled since boot; once it is open and has its height, put every
-    // document back within the shelf's edges.
-    window.setTimeout(settleDrawerPanels, 360);
   }
+  persistCockpitDefault();
+  saveNow();
 });
 
 renderProcessorOutputs();
@@ -2864,6 +2886,8 @@ function pullDocumentToCenter(documentId) {
 
 function renderDocumentReader(documentId) {
   const record = state.worldRecords?.documents?.[documentId] ?? null;
+  const reader = document.querySelector("[data-panel-id='document']");
+  if (reader) reader.dataset.documentId = record ? documentId : "";
 
   if (!record) {
     documentTitle.textContent = "Document";
@@ -4440,7 +4464,7 @@ function renderContractFileStack(currentContract = contractManager.getCurrentCon
   const renderKey = JSON.stringify({
     files: files.map((file) => [file.kind, file.id, file.meta, file.status, file.group]),
     currentContractId: currentContract?.id ?? null,
-    openDrawerPaperKey,
+    out: files.map((file) => isPaperworkFileOut(file.kind, file.id)),
     collapsedGroups: [...collapsedPaperworkGroups].sort(),
   });
 
@@ -4478,7 +4502,7 @@ function renderContractFileStack(currentContract = contractManager.getCurrentCon
       file.type = "button";
       file.className = "contract-file-card";
       file.classList.toggle("is-current", fileRecord.kind === "contract" && currentContract?.id === fileRecord.id);
-      file.classList.toggle("is-drawer-open", openDrawerPaperKey === `${fileRecord.kind}:${fileRecord.id}`);
+      file.classList.toggle("is-out", isPaperworkFileOut(fileRecord.kind, fileRecord.id));
       file.dataset.paperFileKind = fileRecord.kind;
       file.dataset.paperFileId = fileRecord.id;
 
@@ -4536,15 +4560,40 @@ function getPaperworkFiles() {
   return [...contractFiles, ...documentFiles, ...referenceFiles].sort((a, b) => a.sort.localeCompare(b.sort));
 }
 
-function togglePaperworkFileInDrawer(kind, id) {
-  const key = `${kind}:${id}`;
-  const shelf = document.querySelector("#paperwork-drawer .drawer-shelf");
-  let panel = null;
+// Which sheet a file card stands for. The contract and document readers are
+// one sheet each, showing whichever record was last asked for; the license
+// and the field guide are their own sheets.
+function getPaperworkFilePanelId(kind, id) {
+  if (kind === "contract") return "contract";
+  if (kind === "panel") return id;
+  const record = state.worldRecords?.documents?.[id];
+  return record?.type === "pilot-license" ? "license" : "document";
+}
 
-  if (!shelf) return;
-  if (openDrawerPaperKey === key) {
-    openDrawerPaperKey = null;
-    shelf.querySelectorAll(":scope > .component-panel").forEach((candidate) => candidate.classList.remove("is-drawer-selected"));
+// A file is OUT when its sheet is on the desk showing it. For the shared
+// readers that means the sheet is out AND turned to this record; the other
+// records on the same reader are filed even though the sheet is not.
+function isPaperworkFileOut(kind, id) {
+  const panelId = getPaperworkFilePanelId(kind, id);
+  const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
+  if (!panel || panel.closest("#paperwork-drawer")) return false;
+  if (panel.classList.contains("is-component-locked")) return false;
+  if (kind === "contract") return contractManager.getCurrentContract()?.id === id;
+  if (panelId === "document") return panel.dataset.documentId === id;
+  return true;
+}
+
+// Click a card: out if it is filed, filed if it is out. The module bay's
+// gesture, for paper. A record whose reader is already out showing a
+// different record turns the reader to it and brings it forward — one
+// sheet, one thing on it — rather than putting the sheet away.
+function togglePaperworkFile(kind, id) {
+  const panelId = getPaperworkFilePanelId(kind, id);
+  const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
+  if (!panel) return;
+
+  if (isPaperworkFileOut(kind, id)) {
+    movePaperPanelToDrawer(panelId);
     renderContractFileStack();
     return;
   }
@@ -4552,32 +4601,18 @@ function togglePaperworkFileInDrawer(kind, id) {
   if (kind === "contract") {
     contractManager.focusContract(id);
     renderContract();
-    panel = document.querySelector("[data-panel-id='contract']");
-  } else if (kind === "panel") {
-    panel = document.querySelector(`[data-panel-id="${id}"]`);
-  } else {
-    const record = state.worldRecords?.documents?.[id];
-    if (record?.type === "pilot-license") {
-      panel = document.querySelector("[data-panel-id='license']");
-    } else {
-      renderDocumentReader(id);
-      panel = document.querySelector("[data-panel-id='document']");
-      panel?.classList.remove("is-component-locked");
-    }
+  } else if (panelId === "document") {
+    renderDocumentReader(id);
+    panel.classList.remove("is-component-locked");
   }
 
-  if (!panel) return;
-  if (!panel.closest("#paperwork-drawer")) {
-    panel.style.transform = "";
-    panel.style.zIndex = String(DRAWER_PAPER_Z_INDEX);
-    shelf.appendChild(panel);
+  if (panel.closest("#paperwork-drawer")) {
+    movePaperPanelToDesk(panelId);
+  } else {
+    bringPanelToFront(panel);
+    playPanelReveal(panel);
   }
-  shelf.querySelectorAll(":scope > .component-panel").forEach((candidate) => {
-    candidate.classList.toggle("is-drawer-selected", candidate === panel);
-  });
-  openDrawerPaperKey = key;
   renderContractFileStack();
-  updatePaperworkControlLabels();
 }
 
 function getContractFileGroup(contract) {
@@ -5528,31 +5563,15 @@ function setupPaperworkControls() {
     const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
     const title = panel?.querySelector(".component-panel-title");
 
-    if (!panel || !title || title.querySelector(".paper-file-button")) {
+    if (!panel || !title || title.querySelector(".paper-panel-controls")) {
       return;
     }
 
+    // No FILE / DESK button. A sheet is filed and unfiled from its card in
+    // the paperwork bay, the way an instrument is switched from its rack
+    // unit; the only controls left on a sheet are the ones that fold it.
     const controls = document.createElement("div");
     controls.className = "paper-panel-controls";
-    const button = document.createElement("button");
-    button.className = "paper-file-button paper-panel-control";
-    button.type = "button";
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-
-      if (!canMovePaperPanel(panelId)) {
-        return;
-      }
-
-      if (panel.closest("#paperwork-drawer")) {
-        movePaperPanelToDesk(panelId);
-      } else {
-        movePaperPanelToDrawer(panelId);
-      }
-
-      updatePaperworkControlLabels();
-    });
-    controls.append(button);
 
     if (panelId === "resource-guide") {
       const foldButton = document.createElement("button");
@@ -7896,6 +7915,12 @@ function setupCockpitLayout() {
   patchPanel.append(observatoryButton, cockpitBuildTag, cockpitModeLinks);
   moduleTray.append(trayToggle, trayHeader, trayList, patchPanel);
   spacePanel?.append(moduleTray, snapGrid, processorRouteSocket, cargoRouteSocket);
+  // The paperwork bay is the module bay's mirror and is positioned off the
+  // same box, so it moves in beside it. (It is authored as a body-level
+  // sibling, from when it was a drawer along the bottom of the page.)
+  if (paperworkDrawer && spacePanel && paperworkDrawer.parentElement !== spacePanel) {
+    spacePanel.append(paperworkDrawer);
+  }
 
   openModuleBay = () => setTrayOpen(true);
   const setTrayOpen = (isOpen) => {
@@ -8756,6 +8781,7 @@ function setupCockpitLayout() {
     });
   };
   setTrayOpen(state.ui.cockpit.trayOpen);
+  setPaperworkBayOpen(state.ui.cockpit.paperworkOpen === true);
   publishSnapScope();
   setupProcessorClaw();
   // During the induction the issued license is already on the dashboard. Its
@@ -9449,14 +9475,6 @@ function makePanelsDraggable() {
   bringPanelToFront = setPanelTop;
   movePaperPanelToDesk = (panelId) => movePaperPanel(panelId, "desk");
   movePaperPanelToDrawer = (panelId) => movePaperPanel(panelId, "drawer");
-  settleDrawerPanels = () => {
-    document.querySelectorAll("#paperwork-drawer .drawer-shelf > .component-panel").forEach((panel) => {
-      const offset = offsetsByPanelId.get(panel.dataset.panelId);
-      if (!offset || !isPanelMeasurable(panel)) return;
-      applyPanelOffset(panel, offset, { clamp: true });
-      savePanelLayout(panel, offset);
-    });
-  };
 
   positionPanelById = (panelId, position = null) => {
     const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
@@ -9475,6 +9493,37 @@ function makePanelsDraggable() {
     savePanelLayout(panel, offset);
   };
 
+  // The middle of the viewport, or the first clear column to the right of
+  // whatever sheet is already there, then the left. Offsets are in the drag
+  // code's terms: a translate from wherever CSS put the sheet, on the 20px grid.
+  function findFreeDeskSpotForPaper(panel) {
+    const hud = document.querySelector(".hud");
+    const hudRect = hud.getBoundingClientRect();
+    const viewportRegion = document.querySelector(".space-panel")?.getBoundingClientRect();
+    const panelWidth = panel.offsetWidth || 220;
+    const panelHeight = panel.offsetHeight || 320;
+    const centerX = viewportRegion?.width ? viewportRegion.left - hudRect.left + viewportRegion.width / 2 : hudRect.width / 2;
+    const centerY = viewportRegion?.height ? viewportRegion.top - hudRect.top + viewportRegion.height / 2 : hudRect.height / 2;
+    const snap = (value) => Math.round(value / gridSize) * gridSize;
+    const others = [...document.querySelectorAll(".hud > .component-panel")]
+      .filter((other) => other !== panel && PAPERWORK_PANEL_IDS.includes(other.dataset.panelId)
+        && !other.classList.contains("is-component-locked") && !other.hidden)
+      .map((other) => other.getBoundingClientRect())
+      .filter((rect) => rect.width && rect.height)
+      .map((rect) => ({ left: rect.left - hudRect.left, top: rect.top - hudRect.top, right: rect.right - hudRect.left, bottom: rect.bottom - hudRect.top }));
+    const overlaps = (left, top) => others.some((rect) => left < rect.right && left + panelWidth > rect.left && top < rect.bottom && top + panelHeight > rect.top);
+    const top = snap(centerY - panelHeight / 2);
+    const candidates = [snap(centerX - panelWidth / 2)];
+    // Columns outward from the centre, right first, as far as the desk goes.
+    for (let step = 1; step <= 6; step += 1) {
+      candidates.push(snap(centerX - panelWidth / 2 + step * (panelWidth + gridSize)));
+      candidates.push(snap(centerX - panelWidth / 2 - step * (panelWidth + gridSize)));
+    }
+    const fits = (left) => left >= 0 && left + panelWidth <= hudRect.width;
+    const left = candidates.find((candidate) => fits(candidate) && !overlaps(candidate, top)) ?? candidates[0];
+    return { x: left, y: top };
+  }
+
   function movePaperPanel(panelId, destination) {
     const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
     const offset = offsetsByPanelId.get(panelId);
@@ -9486,17 +9535,12 @@ function makePanelsDraggable() {
     }
 
     if (destination === "drawer") {
+      // Filed: the sheet goes back into the shelf, where it is not drawn. Its
+      // pixel offset is meaningless there and is zeroed, but the ANCHOR — where
+      // the pilot keeps this sheet on the desk — is carried through the save
+      // untouched, which is what brings it back out to the same spot.
       shelf.appendChild(panel);
-      // A document's LAYER follows where it is filed. Its z-index was decided
-      // once at boot and never revisited, so paper that started on the desk kept
-      // a desk layer after being filed and sat behind the drawer it was in.
       panel.style.zIndex = String(DRAWER_PAPER_Z_INDEX);
-      shelf.querySelectorAll(":scope > .component-panel").forEach((candidate) => {
-        candidate.classList.toggle("is-drawer-selected", candidate === panel);
-      });
-      openDrawerPaperKey = panelId === "contract" && contractManager.getCurrentContract()
-        ? `contract:${contractManager.getCurrentContract().id}`
-        : `panel:${panelId}`;
       offset.x = 0;
       offset.y = 0;
       state.ledger.recordEvent(
@@ -9508,34 +9552,21 @@ function makePanelsDraggable() {
         { visible: false },
       );
       updateLedgerDrivenSystems();
-      paperworkDrawer.classList.add("is-open");
-      drawerToggle?.setAttribute("aria-expanded", "true");
-      window.setTimeout(() => {
-        paperworkDrawer.classList.remove("is-open");
-        drawerToggle?.setAttribute("aria-expanded", "false");
-      }, PAPERWORK_DRAWER_AUTO_CLOSE_MS);
     } else {
-      if (panel.classList.contains("is-drawer-selected")) openDrawerPaperKey = null;
-      panel.classList.remove("is-drawer-selected");
       hud.appendChild(panel);
       panel.style.zIndex = String(DESK_PAPER_MIN_Z_INDEX);
-      // Centred on the desk rather than dropped at an authored corner. The
-      // license's layout default put it hard against the top edge with its
-      // title bar clipped off-screen — unreadable, and un-draggable by the one
-      // handle it has. A document pulled out of the drawer is the thing the
-      // player was just told to look at, so it lands where they are looking.
-      const hudRect = hud.getBoundingClientRect();
-      const viewportRegion = document.querySelector(".space-panel")?.getBoundingClientRect();
-      const panelWidth = panel.offsetWidth || 220;
-      const panelHeight = panel.offsetHeight || 320;
-      const targetCenterX = viewportRegion?.width
-        ? viewportRegion.left - hudRect.left + viewportRegion.width / 2
-        : hudRect.width / 2;
-      const targetCenterY = viewportRegion?.height
-        ? viewportRegion.top - hudRect.top + viewportRegion.height / 2
-        : hudRect.height / 2;
-      offset.x = Math.round((targetCenterX - panelWidth / 2) / 20) * 20;
-      offset.y = Math.round((targetCenterY - panelHeight / 2) / 20) * 20;
+      // Out: where the pilot last had it, if they have ever had it out; the
+      // record's anchor survives filing for exactly this. A sheet with no
+      // history lands in the middle of the viewport — the thing they were just
+      // told to look at, where they are looking — or beside whatever is already
+      // there, so two sheets brought out in a row sit side by side.
+      const remembered = getSavedPanelLayout(loadPanelLayout(), panelId);
+      const restored = hasAnchoredPosition(remembered) && applyAnchoredPanelPosition(panel, offset, remembered);
+      if (!restored) {
+        const spot = findFreeDeskSpotForPaper(panel);
+        offset.x = spot.x;
+        offset.y = spot.y;
+      }
       setPanelTop(panel);
       // Taking a document OUT is as teachable as putting one away, and only the
       // filing half was ever reported. A beat could ask the player to fetch

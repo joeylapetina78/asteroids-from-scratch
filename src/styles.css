@@ -2748,98 +2748,34 @@ body:not(.is-cockpit-layout) .journey-panel {
   border-color: rgba(115, 210, 255, 0.28);
 }
 
-/* ── Paperwork drawer ─────────────────────────────────────────────────────── */
+/* ── Paperwork bay ────────────────────────────────────────────────────────── */
 
+/* The module bay's mirror, on the right edge. Same fabrication: a column the
+   width of a full panel, a vertical tab hung outside it, a header, a list
+   that gives when the bay is short. It slides over the cargo hold the way the
+   module bay slides over the processor, and shoves the material the same way.
+   The sheets filed in it are never drawn here — a card stands for each one,
+   and the sheet is on the desk or it is nowhere. */
 .paperwork-drawer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
+  position: absolute;
+  top: calc(var(--grid-major) * 2);
+  bottom: calc(var(--grid-major) * 2);
   right: 0;
-  /* Normal ship consoles are capped below this layer in main.js. Paperwork
-     inside the drawer rides above it; Journey stays above everything. */
-  z-index: var(--z-drawer);
-  background:
-    linear-gradient(180deg, rgba(8, 11, 16, 0.94), rgba(5, 7, 11, 0.98)),
-    #08090d;
-  border-top: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 18%, transparent);
-  /* Shut, the drawer IS its lip, so the two heights are the same token. */
-  max-height: var(--control-h);
-  overflow: hidden;
-  transition: max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.paperwork-drawer.is-open {
-  max-height: min(90vh, 820px);
-  box-shadow: 0 -18px 70px rgba(0, 0, 0, 0.45);
-}
-
-.drawer-toggle {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: calc(var(--u) * 2);
-  width: 100%;
-  height: var(--control-h);
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 12%, #131720);
-  color: color-mix(in srgb, var(--cockpit-phosphor) 50%, transparent);
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--type-m);
-  letter-spacing: 0.12em;
-  transition: color 130ms linear, text-shadow 130ms linear, background-color 130ms linear;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-/* Under the cursor the lip comes up to full phosphor and lights, the way a
-   tube brightens where the beam dwells. The arrow inherits the shadow, so the
-   whole pull glows as one thing rather than the word alone. */
-.drawer-toggle:hover,
-.drawer-toggle:focus-visible {
+  width: var(--panel-content-full);
+  min-height: 0;
+  flex-direction: column;
+  padding: calc(var(--u) * 2);
+  border: 1px solid var(--cockpit-phosphor);
+  border-right: 0;
+  border-radius: 0;
   color: var(--cockpit-phosphor);
-  background: color-mix(in srgb, var(--cockpit-phosphor) 8%, transparent);
-  text-shadow:
-    0 0 calc(var(--u) * 1.5) color-mix(in srgb, var(--cockpit-phosphor) 75%, transparent),
-    0 0 calc(var(--u) * 3.5) color-mix(in srgb, var(--cockpit-phosphor) 42%, transparent);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .drawer-toggle { transition: none; }
-}
-
-.paperwork-drawer.is-open .drawer-toggle-arrow {
-  display: inline-block;
-  transform: rotate(180deg);
-}
-
-/* Documents ride above the drawer they are filed in. */
-.paperwork-drawer .component-panel {
-  z-index: var(--z-drawer-paper);
-}
-
-.drawer-shelf {
-  display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  align-items: flex-start;
-  gap: 16px;
-  height: min(76vh, 700px);
-  min-height: 520px;
-  padding: 18px 24px 48px;
-  overflow: auto;
-}
-
-/* Filed, the field guide is the same foldout it is on the desk — same width,
-   same two leaves. The shelf flows: the file stack on the left, then the
-   documents side to side and onto the next row, each plus whatever nudge
-   the player last gave it. */
-
-/* The drawer sits beside the cockpit, not inside it, so it inherited the
-   page's sans type while the same paper on the desk was set in the cockpit's
-   mono. One document, one face. */
-body.is-cockpit-layout .paperwork-drawer {
+  background: rgba(0, 6, 7, 0.97);
+  box-shadow: -7px 0 0 rgba(0, 0, 0, 0.34);
+  transform: translateX(100%);
+  transition: transform 120ms steps(4, end);
+  pointer-events: auto;
+  z-index: var(--z-module-bay);
   --type-xs: 8px;
   --type-s: 10px;
   --type-m: 12px;
@@ -2847,128 +2783,200 @@ body.is-cockpit-layout .paperwork-drawer {
   font-family: "Courier New", "Lucida Console", monospace;
 }
 
-.contract-file-stack {
-  position: relative;
+.paperwork-drawer.is-open {
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paperwork-drawer { transition: none; }
+}
+
+.drawer-toggle {
+  position: absolute;
+  top: 42%;
+  left: calc((var(--grid-major) + var(--panel-flange)) * -1);
   display: grid;
-  align-content: start;
-  gap: 8px;
-  min-width: 190px;
-  max-height: 100%;
-  overflow-y: auto;
-  grid-column: 1;
-  grid-row: 1;
-  min-width: 0;
-  padding-right: var(--u);
-  pointer-events: auto;
-  /* Filed papers carry the drawer-paper z-index from their desktop life.
-     Keep the index one layer above them so a wide/translated paper can never
-     become an invisible click shield over the controls on the left. */
-  z-index: calc(var(--z-drawer-paper) + 1);
-  scrollbar-color: var(--cockpit-phosphor) transparent;
-  scrollbar-width: thin;
-}
-
-.contract-file-stack[hidden] {
-  display: none;
-}
-
-.contract-file-card {
-  display: grid;
-  gap: 4px;
-  width: 190px;
-  border: 1px solid rgba(115, 210, 255, 0.28);
-  border-radius: 7px 7px 4px 4px;
-  padding: 9px 10px;
-  background:
-    linear-gradient(180deg, rgba(10, 20, 28, 0.95), rgba(6, 9, 15, 0.98)),
-    #080b12;
-  color: #dce8fb;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-  box-shadow: inset 0 1px 0 rgba(115, 210, 255, 0.12);
-  pointer-events: auto;
-  touch-action: manipulation;
-}
-
-.contract-file-card:hover,
-.contract-file-card:focus-visible,
-.contract-file-card.is-current,
-.contract-file-card.is-drawer-open {
-  border-color: rgba(115, 210, 255, 0.78);
-  box-shadow: 0 0 18px rgba(115, 210, 255, 0.12), inset 0 1px 0 rgba(115, 210, 255, 0.2);
-}
-
-.contract-file-card strong {
-  font-size: 0.86rem;
-}
-
-.contract-file-card span,
-.contract-file-card em {
-  color: #93a1b8;
-  font-size: 0.72rem;
-  font-style: normal;
-}
-
-.contract-file-card em {
-  color: #ffd36b;
+  width: calc(var(--grid-major) + var(--panel-flange));
+  height: calc(var(--grid-major) * 4);
+  min-height: 0;
+  place-items: center;
+  border: 1px solid var(--cockpit-phosphor);
+  border-right: 0;
+  border-radius: 0;
+  padding: var(--u);
+  color: var(--cockpit-phosphor);
+  background: color-mix(in srgb, var(--cockpit-phosphor) 6%, #000505);
+  font: 700 var(--type-s)/1 "Courier New", monospace;
+  letter-spacing: 0.09em;
+  text-orientation: mixed;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  writing-mode: vertical-rl;
+  cursor: pointer;
 }
 
-.paperwork-drawer .component-panel {
-  position: relative;
-  flex-shrink: 0;
-  grid-column: 2;
-  grid-row: 1;
-  justify-self: start;
-  max-height: calc(min(90vh, 820px) - 92px);
+.drawer-toggle:hover,
+.drawer-toggle:focus-visible {
+  background: color-mix(in srgb, var(--cockpit-phosphor) 16%, #000505);
+  outline: 0;
+}
+
+.paperwork-bay-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--u) * 2);
+  padding: 0 var(--u) calc(var(--u) * 2);
+  border-bottom: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 46%, transparent);
+}
+
+.paperwork-bay-header strong {
+  font-size: var(--type-m);
+  letter-spacing: 0.12em;
+}
+
+.paperwork-bay-header span {
+  color: color-mix(in srgb, var(--cockpit-phosphor) 62%, transparent);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+}
+
+.drawer-shelf {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  padding-top: calc(var(--u) * 2);
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-color: var(--cockpit-phosphor) transparent;
   scrollbar-width: thin;
 }
 
+/* A filed sheet is in the bay in the sense that its card is. The sheet itself
+   waits here unseen until its card brings it out. */
+.drawer-shelf > .component-panel {
+  display: none !important;
+}
+
+.contract-file-stack {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.contract-file-stack[hidden] {
+  display: none;
+}
+
+/* A file card. Paper in a rack of instruments: a folder with its spine
+   toward the bay's edge and its tab cut across the top, cream where the
+   instruments are phosphor, ink where they are light. The status line is the
+   one thing on it drawn in the cockpit colour, because that is the part that
+   changes. Out on the desk, the spine lights in the accent, the way a rack
+   unit's rail lights when its display is out. */
+.contract-file-card {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 34%, #2a2418);
+  border-left: 4px solid color-mix(in srgb, var(--cockpit-phosphor) 22%, #4a4030);
+  border-radius: 0 6px 3px 0;
+  background:
+    linear-gradient(90deg, rgba(255, 244, 214, 0.06), transparent 40%),
+    linear-gradient(180deg, #e9dfc4, #d9cca9);
+  color: #221d14;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+/* The tab across the top of the folder. */
+.contract-file-card::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -4px;
+  width: 38%;
+  height: 4px;
+  border-radius: 0 3px 0 0;
+  background: color-mix(in srgb, var(--cockpit-phosphor) 30%, #b9a97f);
+}
+
+.contract-file-card:hover,
+.contract-file-card:focus-visible {
+  background:
+    linear-gradient(90deg, rgba(255, 244, 214, 0.1), transparent 40%),
+    linear-gradient(180deg, #f3ead2, #e3d6b4);
+  outline: 0;
+}
+
+.contract-file-card.is-current {
+  border-color: color-mix(in srgb, var(--cockpit-phosphor) 70%, #2a2418);
+}
+
+.contract-file-card.is-out {
+  border-left-color: var(--cockpit-accent);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35), -2px 0 8px color-mix(in srgb, var(--cockpit-accent) 45%, transparent);
+}
+
+.contract-file-card.is-out::after {
+  content: "OUT";
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  color: var(--cockpit-accent);
+  font: 700 var(--type-xs)/1 "Courier New", monospace;
+  letter-spacing: 0.12em;
+}
+
+.contract-file-card strong {
+  padding-right: 30px;
+  font-size: var(--type-m);
+  line-height: 1.2;
+}
+
+.contract-file-card span,
+.contract-file-card em {
+  color: #5c5240;
+  font-size: var(--type-xs);
+  font-style: normal;
+  letter-spacing: 0.03em;
+}
+
+.contract-file-card em {
+  color: color-mix(in srgb, var(--cockpit-phosphor) 65%, #221d14);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.contract-file-group-title {
+  color: var(--cockpit-phosphor);
+}
+
 .contract-file-stack::-webkit-scrollbar,
-.paperwork-drawer .component-panel::-webkit-scrollbar {
+.drawer-shelf::-webkit-scrollbar {
   width: 6px;
 }
 
 .contract-file-stack::-webkit-scrollbar-track,
-.paperwork-drawer .component-panel::-webkit-scrollbar-track {
+.drawer-shelf::-webkit-scrollbar-track {
   background: transparent;
 }
 
 .contract-file-stack::-webkit-scrollbar-thumb,
-.paperwork-drawer .component-panel::-webkit-scrollbar-thumb {
+.drawer-shelf::-webkit-scrollbar-thumb {
   border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 55%, transparent);
   border-radius: 0;
   background: color-mix(in srgb, var(--cockpit-phosphor) 68%, #00100e);
-}
-
-.paperwork-drawer.is-open .drawer-shelf > .component-panel:not(.is-drawer-selected) {
-  display: none;
-}
-
-.paperwork-drawer .drawer-shelf > .component-panel.is-drawer-selected {
-  display: grid;
-}
-
-.paperwork-drawer .contract-panel,
-.paperwork-drawer .document-panel {
-  width: min(560px, 100%);
-}
-
-@media (max-width: 700px) {
-  .drawer-shelf {
-    grid-template-columns: minmax(150px, 38%) minmax(0, 1fr);
-    gap: 10px;
-    padding-inline: 12px;
-  }
-
-  .contract-file-card {
-    width: 100%;
-  }
 }
 
 /* ── License Panel (HUD card) ─────────────────────────────────────────────── */

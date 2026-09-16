@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap" />
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260916-1801-027b2ea4" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260916-1829-c013bdaf" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -62,7 +62,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260916-1801-027b2ea4</span>
+      <span class="build-tag">build: fresh-20260916-1829-c013bdaf</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -951,11 +951,16 @@
       </div>
     </main>
 
-    <div id="paperwork-drawer" class="paperwork-drawer" aria-label="Paperwork drawer">
-      <button id="drawer-toggle" class="drawer-toggle" type="button" aria-expanded="false">
+    <!-- The paperwork bay: the module bay's mirror on the right edge. Every
+         file the pilot holds is racked here as a card with its face showing;
+         click a card and the sheet comes out onto the desk, click it again
+         and the sheet goes back. The sheets themselves live in the shelf
+         while filed, unseen, and on the desk while out. -->
+    <div id="paperwork-drawer" class="paperwork-drawer" aria-label="Paperwork bay">
+      <button id="drawer-toggle" class="drawer-toggle" type="button" aria-expanded="false" aria-label="Open paperwork bay">
         <span class="drawer-toggle-label">Paperwork</span>
-        <span class="drawer-toggle-arrow" aria-hidden="true">&#9650;</span>
       </button>
+      <header class="paperwork-bay-header"><strong>PAPERWORK</strong><span>FILE / UNFILE</span></header>
       <div class="drawer-shelf">
         <div id="contract-file-stack" class="contract-file-stack" aria-label="Contract files"></div>
 
@@ -1104,6 +1109,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260916-1801-027b2ea4"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260916-1829-c013bdaf"></script>
   </body>
 </html>
