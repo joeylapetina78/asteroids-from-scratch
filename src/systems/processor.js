@@ -1,5 +1,5 @@
-import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260915-2057-ac0a9fc1";
-import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260915-2057-ac0a9fc1";
+import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260915-2119-b800b8df";
+import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260915-2119-b800b8df";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -21,6 +21,27 @@ const COLLISION_COMPRESSION = 0.9;
 const TRIANGLE_SLOPE_PUSH = 0.42;
 const MAX_ANGULAR_VELOCITY = 1.8;
 const COMPACTION_COUNT = 10;
+// Crush dust goes back where the ore came from. A dusted unit still bursts
+// outward for a beat — the burst is the hit — and then the pipe draws the cloud
+// back down its own throat. The draw ramps rather than snapping so the dust
+// visibly turns before it streams; a cloud that reversed on one frame read as
+// the burst playing backwards.
+const DUST_FREE_FLIGHT_SECONDS = 0.12;
+const DUST_SUCTION_RAMP_SECONDS = 0.16;
+const DUST_SUCTION_SPEED = 1500;
+const DUST_SUCTION_STEER = 14;
+const DUST_LIFE_SECONDS = 1.4;
+// The pull is not straight down the throat. Each grain is asked to run a little
+// across the line to the mouth as well as along it, so the cloud swirls in
+// rather than streaming in. The across share falls off as the grain closes,
+// which is what tightens the swirl into the lip instead of orbiting it.
+const DUST_SWIRL_SHARE = 0.85;
+const DUST_SWIRL_FALLOFF_RADIUS = 140;
+// Drawn as phosphor: a faint additive halo under a translucent core, in the
+// ore's own colour. Opaque squares read as grit thrown at the screen.
+const DUST_CORE_ALPHA = 0.42;
+const DUST_HALO_ALPHA = 0.16;
+const DUST_HALO_SCALE = 3.2;
 
 // Bursting a ten-stack and re-gathering one are two different moments, and they
 // used to run into each other. `startCompaction` is called every frame the
@@ -543,10 +564,37 @@ export class Processor {
       });
     }
 
+    const mouth = this.getPipeMouth();
     this.sparks.forEach((spark) => {
       spark.life -= deltaSeconds;
-      spark.vx *= 0.94;
-      spark.vy *= 0.94;
+      spark.age = (spark.age ?? 0) + deltaSeconds;
+      if (spark.sinkToPipe && spark.age >= DUST_FREE_FLIGHT_SECONDS) {
+        // Steer the grain's velocity toward the mouth. Steering, not a
+        // spring: a spring overshoots and the dust would orbit the lip; steered
+        // velocity converges on a straight run in and stays there.
+        const dx = mouth.x - spark.x;
+        const dy = mouth.y - spark.y;
+        const distance = Math.hypot(dx, dy) || 1;
+        if (distance <= mouth.radius) {
+          spark.life = 0;
+          return;
+        }
+        const pull = clamp((spark.age - DUST_FREE_FLIGHT_SECONDS) / DUST_SUCTION_RAMP_SECONDS, 0, 1);
+        const inX = dx / distance;
+        const inY = dy / distance;
+        // Across-the-line share, in the grain's own spin direction, tightening
+        // to nothing at the lip.
+        const swirl = DUST_SWIRL_SHARE * spark.spin * clamp(distance / DUST_SWIRL_FALLOFF_RADIUS, 0, 1);
+        const norm = Math.hypot(1, swirl);
+        const wantVx = ((inX - inY * swirl) / norm) * DUST_SUCTION_SPEED;
+        const wantVy = ((inY + inX * swirl) / norm) * DUST_SUCTION_SPEED;
+        const steer = Math.min(1, DUST_SUCTION_STEER * pull * deltaSeconds);
+        spark.vx += (wantVx - spark.vx) * steer;
+        spark.vy += (wantVy - spark.vy) * steer;
+      } else {
+        spark.vx *= 0.94;
+        spark.vy *= 0.94;
+      }
       spark.x += spark.vx * deltaSeconds;
       spark.y += spark.vy * deltaSeconds;
     });
@@ -591,12 +639,49 @@ export class Processor {
       this.context.restore();
     });
 
+    // Dust on its way back to the pipe is drawn as phosphor — additive, so
+    // grains crossing each other brighten rather than stack — and stays lit
+    // until the pipe takes it. The gather flash keeps its own hard grit and
+    // its own clock.
+    const dust = this.sparks.filter((spark) => spark.sinkToPipe);
+    if (dust.length) {
+      this.context.save();
+      this.context.globalCompositeOperation = "lighter";
+      dust.forEach((spark) => {
+        const centerX = spark.x + spark.size / 2;
+        const centerY = spark.y + spark.size / 2;
+        const fade = clamp(spark.life / spark.maxLife, 0, 1);
+        this.context.fillStyle = spark.color;
+        this.context.globalAlpha = DUST_HALO_ALPHA * fade;
+        this.context.beginPath();
+        this.context.arc(centerX, centerY, spark.size * DUST_HALO_SCALE, 0, Math.PI * 2);
+        this.context.fill();
+        this.context.globalAlpha = DUST_CORE_ALPHA * fade;
+        this.context.beginPath();
+        this.context.arc(centerX, centerY, spark.size * 0.7, 0, Math.PI * 2);
+        this.context.fill();
+      });
+      this.context.restore();
+    }
     this.sparks.forEach((spark) => {
+      if (spark.sinkToPipe) return;
       this.context.globalAlpha = Math.max(0, spark.life / spark.maxLife);
       this.context.fillStyle = spark.color;
       this.context.fillRect(spark.x, spark.y, spark.size, spark.size);
       this.context.globalAlpha = 1;
     });
+  }
+
+  // Where the throat of the pipe is, in canvas pixels, and how close a grain of
+  // dust has to get before the pipe has it. The side pipe's throat is the dark
+  // interior of its ring; the top pipe's is its neck.
+  getPipeMouth() {
+    if (this.inletSide) {
+      return { x: this.getPipeCenterX(), y: this.getPipeCenterY(), radius: SIDE_PIPE_LIP_HEIGHT * 0.3 };
+    }
+    const pipeWidth = 78;
+    const pipeX = this.spawnFromLeft ? 12 : this.canvas.width / 2 - pipeWidth / 2;
+    return { x: pipeX + pipeWidth / 2, y: 28, radius: 10 };
   }
 
   drawPipe() {
@@ -907,6 +992,7 @@ export class Processor {
   }
 
   createCrushSparks(unit) {
+    const spin = Math.random() < 0.5 ? -1 : 1;
     for (let index = 0; index < 18; index += 1) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 40 + Math.random() * 170;
@@ -918,8 +1004,13 @@ export class Processor {
         vy: Math.sin(angle) * speed,
         color: index % 4 === 0 ? "#ffffff" : unit.color,
         size: 2 + Math.random() * 3,
-        life: 0.25 + Math.random() * 0.35,
-        maxLife: 0.6,
+        // Long enough to make the trip; the pipe ends it on arrival, so the
+        // life is a safety net for a grain that somehow never gets there.
+        life: DUST_LIFE_SECONDS,
+        maxLife: DUST_LIFE_SECONDS,
+        sinkToPipe: true,
+        // One handedness per crush, so the whole cloud swirls the same way.
+        spin,
       });
     }
   }

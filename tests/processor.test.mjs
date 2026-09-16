@@ -39,7 +39,10 @@ test("a partially processed ten-stack explodes its remainder into individual uni
   assert.ok(processor.units.every((unit) => unit.quantity === 1));
   assert.ok(processor.units.every((unit) => unit.vx !== 0 || unit.vy !== 0));
   assert.ok(new Set(processor.units.map((unit) => Math.sign(unit.vx))).size > 1);
-  assert.equal(processor.sparks.length, 18);
+  // One crush burst for the processed share, and every grain of it goes back
+  // to the pipe.
+  assert.ok(processor.sparks.length > 0);
+  assert.ok(processor.sparks.every((spark) => spark.sinkToPipe));
 });
 
 // Runs the processor's own update loop, which is where the settle window and the
