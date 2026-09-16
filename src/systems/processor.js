@@ -1,5 +1,6 @@
-import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260915-2119-b800b8df";
-import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260915-2119-b800b8df";
+import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260915-2134-e6602ab8";
+import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260915-2134-e6602ab8";
+import { normalizeDustSettings } from "./dustDials.js?v=fresh-20260915-2134-e6602ab8";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;
@@ -25,23 +26,18 @@ const COMPACTION_COUNT = 10;
 // outward for a beat — the burst is the hit — and then the pipe draws the cloud
 // back down its own throat. The draw ramps rather than snapping so the dust
 // visibly turns before it streams; a cloud that reversed on one frame read as
-// the burst playing backwards.
-const DUST_FREE_FLIGHT_SECONDS = 0.12;
-const DUST_SUCTION_RAMP_SECONDS = 0.16;
-const DUST_SUCTION_SPEED = 1500;
-const DUST_SUCTION_STEER = 14;
+// the burst playing backwards. The pull is not straight down the throat
+// either: each grain runs a little across the line to the mouth as well as
+// along it, so the cloud swirls in, and that across share falls off as the
+// grain closes, which is what tightens the swirl into the lip instead of
+// orbiting it. Drawn as phosphor: a faint additive halo under a translucent
+// core, in the ore's own colour. Opaque squares read as grit thrown at the
+// screen.
+//
+// Every figure in that is a dial on the cockpit's configure panel — see
+// dustDials.js for the table and setDustSettings below for how a chamber
+// takes a new set. Only the safety-net life is fixed.
 const DUST_LIFE_SECONDS = 1.4;
-// The pull is not straight down the throat. Each grain is asked to run a little
-// across the line to the mouth as well as along it, so the cloud swirls in
-// rather than streaming in. The across share falls off as the grain closes,
-// which is what tightens the swirl into the lip instead of orbiting it.
-const DUST_SWIRL_SHARE = 0.85;
-const DUST_SWIRL_FALLOFF_RADIUS = 140;
-// Drawn as phosphor: a faint additive halo under a translucent core, in the
-// ore's own colour. Opaque squares read as grit thrown at the screen.
-const DUST_CORE_ALPHA = 0.42;
-const DUST_HALO_ALPHA = 0.16;
-const DUST_HALO_SCALE = 3.2;
 
 // Bursting a ten-stack and re-gathering one are two different moments, and they
 // used to run into each other. `startCompaction` is called every frame the
@@ -253,6 +249,7 @@ export class Processor {
     this.obstacles = [];
     this.units = [];
     this.sparks = [];
+    this.dust = normalizeDustSettings(options.dust);
     this.compaction = null;
     this.lastFrameTime = 0;
 
@@ -568,7 +565,7 @@ export class Processor {
     this.sparks.forEach((spark) => {
       spark.life -= deltaSeconds;
       spark.age = (spark.age ?? 0) + deltaSeconds;
-      if (spark.sinkToPipe && spark.age >= DUST_FREE_FLIGHT_SECONDS) {
+      if (spark.sinkToPipe && spark.age >= this.dust.freeFlight) {
         // Steer the grain's velocity toward the mouth. Steering, not a
         // spring: a spring overshoots and the dust would orbit the lip; steered
         // velocity converges on a straight run in and stays there.
@@ -579,16 +576,16 @@ export class Processor {
           spark.life = 0;
           return;
         }
-        const pull = clamp((spark.age - DUST_FREE_FLIGHT_SECONDS) / DUST_SUCTION_RAMP_SECONDS, 0, 1);
+        const pull = clamp((spark.age - this.dust.freeFlight) / this.dust.ramp, 0, 1);
         const inX = dx / distance;
         const inY = dy / distance;
         // Across-the-line share, in the grain's own spin direction, tightening
         // to nothing at the lip.
-        const swirl = DUST_SWIRL_SHARE * spark.spin * clamp(distance / DUST_SWIRL_FALLOFF_RADIUS, 0, 1);
+        const swirl = this.dust.swirl * spark.spin * clamp(distance / this.dust.swirlRadius, 0, 1);
         const norm = Math.hypot(1, swirl);
-        const wantVx = ((inX - inY * swirl) / norm) * DUST_SUCTION_SPEED;
-        const wantVy = ((inY + inX * swirl) / norm) * DUST_SUCTION_SPEED;
-        const steer = Math.min(1, DUST_SUCTION_STEER * pull * deltaSeconds);
+        const wantVx = ((inX - inY * swirl) / norm) * this.dust.suctionSpeed;
+        const wantVy = ((inY + inX * swirl) / norm) * this.dust.suctionSpeed;
+        const steer = Math.min(1, this.dust.steer * pull * deltaSeconds);
         spark.vx += (wantVx - spark.vx) * steer;
         spark.vy += (wantVy - spark.vy) * steer;
       } else {
@@ -652,11 +649,11 @@ export class Processor {
         const centerY = spark.y + spark.size / 2;
         const fade = clamp(spark.life / spark.maxLife, 0, 1);
         this.context.fillStyle = spark.color;
-        this.context.globalAlpha = DUST_HALO_ALPHA * fade;
+        this.context.globalAlpha = this.dust.haloAlpha * fade;
         this.context.beginPath();
-        this.context.arc(centerX, centerY, spark.size * DUST_HALO_SCALE, 0, Math.PI * 2);
+        this.context.arc(centerX, centerY, spark.size * this.dust.haloScale, 0, Math.PI * 2);
         this.context.fill();
-        this.context.globalAlpha = DUST_CORE_ALPHA * fade;
+        this.context.globalAlpha = this.dust.coreAlpha * fade;
         this.context.beginPath();
         this.context.arc(centerX, centerY, spark.size * 0.7, 0, Math.PI * 2);
         this.context.fill();
@@ -991,11 +988,32 @@ export class Processor {
     return false;
   }
 
+  // Take a new set of sparkle dials. Partial: a key left out keeps its
+  // current value. Dust already in flight picks the change up on its next
+  // frame, which is what lets the pilot turn a dial and watch it.
+  setDustSettings(settings = {}) {
+    this.dust = normalizeDustSettings({ ...this.dust, ...settings });
+    return this.dust;
+  }
+
+  // A crush with nothing crushed, somewhere in the room, so the dials can be
+  // watched without spending ore on it.
+  puffDust(color = "#ffffff") {
+    const size = UNIT_SIZE;
+    const margin = size * 3;
+    this.createCrushSparks({
+      x: margin + Math.random() * Math.max(1, this.canvas.width - margin * 2),
+      y: margin + Math.random() * Math.max(1, this.canvas.height - margin * 2),
+      size,
+      color,
+    });
+  }
+
   createCrushSparks(unit) {
     const spin = Math.random() < 0.5 ? -1 : 1;
-    for (let index = 0; index < 18; index += 1) {
+    for (let index = 0; index < this.dust.grains; index += 1) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 40 + Math.random() * 170;
+      const speed = 40 + Math.random() * this.dust.burstSpeed;
 
       this.sparks.push({
         x: unit.x + unit.size / 2,

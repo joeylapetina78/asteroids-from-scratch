@@ -1,5 +1,5 @@
-import { getRegionProfile } from "./worldRegions.js?v=fresh-20260915-2119-b800b8df";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260915-2119-b800b8df";
+import { getRegionProfile } from "./worldRegions.js?v=fresh-20260915-2134-e6602ab8";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260915-2134-e6602ab8";
 
 // Procedural area identity. The authored zones near origin have handcrafted
 // names, but the rest of infinite space does not — so every location also

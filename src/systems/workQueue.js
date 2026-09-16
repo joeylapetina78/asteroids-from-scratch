@@ -1,5 +1,5 @@
-import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260915-2119-b800b8df";
-import { getActorTraits } from "./actorConfig.js?v=fresh-20260915-2119-b800b8df";
+import { resolveInstitutionPolicy } from "./institutionDecision.js?v=fresh-20260915-2134-e6602ab8";
+import { getActorTraits } from "./actorConfig.js?v=fresh-20260915-2134-e6602ab8";
 
 // How a provider orders the work it has already agreed to do.
 //

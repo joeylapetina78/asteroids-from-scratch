@@ -11,6 +11,8 @@
 // Removed rather than repaired: instruments are placed by hand now, onto the
 // grid, and that is the whole model. See docs/panel-mounting-standard.md.
 
+import { normalizeDustSettings } from "./dustDials.js?v=fresh-20260915-2134-e6602ab8";
+
 export const DEFAULT_COCKPIT_PHOSPHOR = "#7dffe0";
 
 export const COCKPIT_MODULE_IDS = Object.freeze([
@@ -56,6 +58,10 @@ export function createCockpitLayoutState(source = null) {
     // what almost everyone should want; a hex here is the player overruling
     // the derivation. See cockpitAccent.js.
     accentColor: normalizeAccentColor(source?.accentColor),
+    // The sparkle dials: how crush dust bursts, swirls and glows on its way
+    // back into the pipe. Part of the desk, not the ship, for the same reason
+    // as the phosphor — it is how the pilot likes the cockpit to look.
+    dust: normalizeDustSettings(source?.dust),
   };
 }
 
