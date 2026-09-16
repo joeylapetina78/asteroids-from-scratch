@@ -1,18 +1,18 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260910-2116-a2e643d1";
-import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260910-2116-a2e643d1";
-import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260910-2116-a2e643d1";
-import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260910-2116-a2e643d1";
-import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260910-2116-a2e643d1";
-import { getPilotLicense } from "./legalRecords.js?v=fresh-20260910-2116-a2e643d1";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260910-2116-a2e643d1";
-import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260910-2116-a2e643d1";
-import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260910-2116-a2e643d1";
-import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260910-2116-a2e643d1";
-import { getStandingMiningOrderAvailability, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260910-2116-a2e643d1";
-import { payFromIssuer } from "./contractTreasury.js?v=fresh-20260910-2116-a2e643d1";
-import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260910-2116-a2e643d1";
-import { recordAuthorityRevenue } from "./rightsAuthority.js?v=fresh-20260910-2116-a2e643d1";
-import { grantPlayerTerritoryRights } from "./hubTerritories.js?v=fresh-20260910-2116-a2e643d1";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260913-1906-b780c151";
+import { depositCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260913-1906-b780c151";
+import { getContractFulfillmentFromEvent } from "./contractRules.js?v=fresh-20260913-1906-b780c151";
+import { getRegistryEntityIdForSite, rememberRegistrySubject } from "./entityRegistry.js?v=fresh-20260913-1906-b780c151";
+import { PLAYER_ATTRIBUTED_CAUSES } from "./eventLedger.js?v=fresh-20260913-1906-b780c151";
+import { getPilotLicense } from "./legalRecords.js?v=fresh-20260913-1906-b780c151";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260913-1906-b780c151";
+import { createLoanObligation, payObligation } from "./obligations.js?v=fresh-20260913-1906-b780c151";
+import { createControlledShipPublicIdentity } from "./publicIdentity.js?v=fresh-20260913-1906-b780c151";
+import { normalizeResourceType, resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260913-1906-b780c151";
+import { getStandingMiningOrderAvailability, settleStandingMiningOrder } from "./miningOperation.js?v=fresh-20260913-1906-b780c151";
+import { payFromIssuer } from "./contractTreasury.js?v=fresh-20260913-1906-b780c151";
+import { authorizeWreckSalvage } from "./wreckRegistry.js?v=fresh-20260913-1906-b780c151";
+import { recordAuthorityRevenue } from "./rightsAuthority.js?v=fresh-20260913-1906-b780c151";
+import { grantPlayerTerritoryRights } from "./hubTerritories.js?v=fresh-20260913-1906-b780c151";
 
 const CONTRACT_DEFINITIONS = new Map(chapterOneContracts.map((contract) => [contract.id, contract]));
 
@@ -69,6 +69,12 @@ export function createContractManager({ state, onChange = () => {} }) {
   function createContractRecord(definition, completedRunCount = 0, offerSource = null) {
     return {
       ...definition,
+      // The spread is shallow. A lead resolves its position onto the record's
+      // terms, so a second run of the same definition must get its own copy
+      // or it inherits the first run's pin.
+      terms: definition.terms
+        ? { ...definition.terms, sourceLead: definition.terms.sourceLead ? { ...definition.terms.sourceLead } : definition.terms.sourceLead }
+        : definition.terms,
       status: "offered",
       runCount: completedRunCount + 1,
       deliveredAmount: 0,
@@ -120,8 +126,11 @@ export function createContractManager({ state, onChange = () => {} }) {
         return false;
       }
     }
-    if (contract.type === "loan" && !contract.disbursedAt) {
-      disburseLoan(contract);
+    if (contract.type === "loan" && !contract.disbursedAt && !disburseLoan(contract)) {
+      contract.status = "offered";
+      contract.acceptedAt = null;
+      onChange(contract);
+      return false;
     }
     payContractAdvance(contract);
     state.ledger.recordEvent(
@@ -335,7 +344,7 @@ export function createContractManager({ state, onChange = () => {} }) {
       .map((contract) => contract.id);
 
     if (closingContractIds.length === 0) {
-      return;
+      return false;
     }
 
     closingContractIds.forEach((contractId) => {
@@ -634,6 +643,7 @@ export function createContractManager({ state, onChange = () => {} }) {
       maxInterest,
       accountCredits: getCredits(state),
     });
+    return true;
   }
 
   function fulfillContract(contract, fulfillment = {}) {

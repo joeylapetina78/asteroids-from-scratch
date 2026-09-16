@@ -53,9 +53,19 @@ test("the chambers are never listed as open modules", () => {
   assert.deepEqual(layout.openModules, ["hull"]);
 });
 
+test("a fresh processor lead rests at the processor outlet", () => {
+  assert.equal(createCockpitLayoutState().processorClawTarget, "processor");
+  assert.equal(createCockpitLayoutState({ processorClawTarget: "cargo" }).processorClawTarget, "cargo");
+});
+
 test("an invalid phosphor colour falls back rather than sticking", () => {
   assert.equal(createCockpitLayoutState({ phosphorColor: "rgb(1,2,3)" }).phosphorColor, DEFAULT_COCKPIT_PHOSPHOR);
   assert.equal(createCockpitLayoutState({ phosphorColor: "#7DFFE0" }).phosphorColor, "#7dffe0");
+});
+
+test("the velocity vector defaults on and remembers an explicit off preference", () => {
+  assert.equal(createCockpitLayoutState().velocityVector, true);
+  assert.equal(createCockpitLayoutState({ velocityVector: false }).velocityVector, false);
 });
 
 test("a reset clears the arrangement but keeps the player's colour", () => {

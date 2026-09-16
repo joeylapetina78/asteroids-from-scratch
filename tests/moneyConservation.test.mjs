@@ -101,6 +101,17 @@ test("an issuer opens holding what its authored contracts promise", () => {
     "so it can always honour what the content already committed it to");
 });
 
+test("Sable Ledger can fund the starter ship loan it offers", () => {
+  const commitments = getIssuerCommitments("Sable Ledger");
+  assert.equal(commitments, 20_000);
+  assert.ok(getIssuerEndowment("Sable Ledger") >= commitments);
+
+  const state = createWorld();
+  const payout = payFromIssuer(state, { issuer: "Sable Ledger", amount: 20_000, referenceId: "starter-loan" });
+  assert.equal(payout.paid, 20_000);
+  assert.equal(payout.funded, true);
+});
+
 test("issuers exist from world creation, not on first payment", () => {
   const state = createWorld();
   const offices = Object.values(state.logistics.institutions).filter((i) => i.archetypeId === "office");

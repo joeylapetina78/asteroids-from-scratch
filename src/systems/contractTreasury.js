@@ -1,4 +1,4 @@
-import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260910-2116-a2e643d1";
+import { chapterOneContracts } from "../content/contracts/chapterOneContracts.js?v=fresh-20260913-1906-b780c151";
 
 // Where a contract's money actually comes from.
 //
@@ -35,6 +35,7 @@ const MINIMUM_ENDOWMENT = 5_000;
 // The organisations that issue contracts, and the ids their treasuries take.
 const ISSUER_TREASURIES = Object.freeze({
   "Rook": { id: "rook-industries", name: "Rook Industries" },
+  "Sable Ledger": { id: "sable-ledger", name: "Sable Ledger" },
   "Yard Exchange Finance Office": { id: "yard-exchange-finance", name: "Yard Exchange Finance Office" },
   "Reach Transit Commission": { id: "reach-transit-commission", name: "Reach Transit Commission" },
   "Yard Exchange Authority": { id: "yard-exchange-authority", name: "Yard Exchange Authority" },

@@ -4,7 +4,7 @@ import {
   getGrazingSteerTarget,
   getGrowthScale,
   isRipe,
-} from "../systems/grazing.js?v=fresh-20260910-2116-a2e643d1";
+} from "../systems/grazing.js?v=fresh-20260913-1906-b780c151";
 
 // How hard a grazer commits once it has locked onto food. Idle wandering keeps
 // the old dreamy steering; a creature crossing a field to a meal does not.
@@ -74,6 +74,10 @@ const LIFE_COLORS = {
   greatbloom: "#ff6fc4", // the grown one — deeper rose, and it comes for you
   filament: "#c6ff70", // wiggling anchored hairs — alien lime, strange/scanergy zones
 };
+const LANTERN_STAGE_COLORS = ["#ffe98a", "#ff78c8", "#ff4d5a"];
+const LANTERN_STAGE_SPEED = [1, 1.38, 1.72];
+const LANTERN_RETALIATION_DELAY = 0.72;
+const LANTERN_BOLT_SPEED = 365;
 
 // A single Lifeform class covers the current autonomous agents. The type chooses
 // both drawing style and steering recipe: hunters seek, threadlings flock,
@@ -105,6 +109,11 @@ export class Lifeform {
     this.perception = getPerception(type);
     this.isAlive = true;
     this.health = type === "hunter" ? 100 : 1;
+    if (type === "lantern") {
+      this.aimStage = 0;
+      this.retaliationTimer = null;
+      this.pendingShots = [];
+    }
     if (type === "greatbloom") {
       this.health = GREATBLOOM_HEALTH;
       // 0 while it is still coming up, 1 once it has surfaced. A summoned one
@@ -260,6 +269,9 @@ export class Lifeform {
   }
 
   updateLantern(deltaSeconds, world) {
+    const stage = Math.min(2, this.aimStage ?? 0);
+    this.maxSpeed = this.baseMaxSpeed * LANTERN_STAGE_SPEED[stage];
+    this.maxForce = getMaxForce("lantern") * (1 + stage * 0.65);
     const asteroid = findNearestResourceAsteroid(this.position, world.asteroids, 700);
 
     if (asteroid) {
@@ -269,9 +281,9 @@ export class Lifeform {
         x: asteroid.position.x + Math.cos(this.pulse * 0.34 + this.seed + herdOffset) * orbitDistance,
         y: asteroid.position.y + Math.sin(this.pulse * 0.34 + this.seed + herdOffset) * orbitDistance,
       };
-      this.applySteer(seek(this, orbit, this.maxSpeed * 0.78), 0.92);
+      this.applySteer(seek(this, orbit, this.maxSpeed * (0.78 + stage * 0.08)), 0.92 + stage * 0.38);
     } else {
-      this.applySteer(this.wander(deltaSeconds), 0.55);
+      this.applySteer(this.wander(deltaSeconds * (1 + stage * 0.7)), 0.55 + stage * 0.42);
     }
 
     this.applySteer(separate(this, nearbyLifeforms(this, world.lifeforms, 155, "lantern"), 72), 0.78);
@@ -286,6 +298,50 @@ export class Lifeform {
     }
 
     this.avoidAsteroids(world.asteroids, 3.7);
+
+    if (stage === 2 && this.retaliationTimer !== null) {
+      this.retaliationTimer -= deltaSeconds;
+      if (this.retaliationTimer <= 0) {
+        this.pendingShots.push(this.createLanternShot(world.ship));
+        this.retaliationTimer = null;
+        this.isAlive = false;
+      }
+    }
+  }
+
+  hitLantern() {
+    if (this.type !== "lantern" || !this.isAlive || (this.aimStage ?? 0) >= 2) return false;
+    this.aimStage += 1;
+    if (this.aimStage === 2) this.retaliationTimer = LANTERN_RETALIATION_DELAY;
+    return true;
+  }
+
+  createLanternShot(ship) {
+    const targetDistance = distance(this.position, ship.position);
+    const leadSeconds = Math.min(0.65, targetDistance / LANTERN_BOLT_SPEED);
+    const target = {
+      x: ship.position.x + (ship.velocity?.x ?? 0) * leadSeconds,
+      y: ship.position.y + (ship.velocity?.y ?? 0) * leadSeconds,
+    };
+    const direction = normalize(target.x - this.position.x, target.y - this.position.y);
+    return {
+      portalId: null,
+      sourceType: "lantern",
+      playerOnly: true,
+      position: { ...this.position },
+      velocity: { x: direction.x * LANTERN_BOLT_SPEED, y: direction.y * LANTERN_BOLT_SPEED },
+      radius: 5.5,
+      age: 0,
+      maxAge: 3.2,
+      damage: 24,
+      color: LANTERN_STAGE_COLORS[2],
+    };
+  }
+
+  consumeShots() {
+    const shots = this.pendingShots ?? [];
+    this.pendingShots = [];
+    return shots;
   }
 
   updateSkitter(deltaSeconds, world) {
@@ -1058,21 +1114,26 @@ function drawSkitterTrail(context, lifeform, camera) {
 
 function drawLantern(context, lifeform) {
   const glow = 0.55 + Math.sin(lifeform.pulse * 4.2 + lifeform.seed) * 0.24;
+  const stage = Math.min(2, lifeform.aimStage ?? 0);
+  const color = LANTERN_STAGE_COLORS[stage];
+  const agitation = 1 + stage * 0.14;
 
-  context.fillStyle = `rgba(255, 233, 138, ${0.1 + glow * 0.18})`;
-  context.strokeStyle = LIFE_COLORS.lantern;
+  context.fillStyle = stage === 0
+    ? `rgba(255, 233, 138, ${0.1 + glow * 0.18})`
+    : stage === 1 ? `rgba(255, 120, 200, ${0.1 + glow * 0.2})` : `rgba(255, 77, 90, ${0.14 + glow * 0.24})`;
+  context.strokeStyle = color;
   context.lineWidth = 2;
   context.beginPath();
-  context.arc(0, 0, 9 + glow * 3, 0, Math.PI * 2);
+  context.arc(0, 0, (9 + glow * 3) * agitation, 0, Math.PI * 2);
   context.fill();
   context.stroke();
-  context.strokeStyle = "rgba(255, 248, 190, 0.75)";
+  context.strokeStyle = color;
   context.beginPath();
   context.moveTo(-14, 0);
   context.quadraticCurveTo(-2, -9 - glow * 3, 14, 0);
   context.quadraticCurveTo(-2, 9 + glow * 3, -14, 0);
   context.stroke();
-  context.fillStyle = "#fff8be";
+  context.fillStyle = stage === 0 ? "#fff8be" : color;
   context.beginPath();
   context.arc(2, 0, 2.5, 0, Math.PI * 2);
   context.fill();

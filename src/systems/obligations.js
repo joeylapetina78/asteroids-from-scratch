@@ -1,7 +1,7 @@
-import { createPaymentRequest, processPayment } from "./payments.js?v=fresh-20260910-2116-a2e643d1";
-import { ensureInstitution } from "./worldRecords.js?v=fresh-20260910-2116-a2e643d1";
+import { createPaymentRequest, processPayment } from "./payments.js?v=fresh-20260913-1906-b780c151";
+import { ensureInstitution } from "./worldRecords.js?v=fresh-20260913-1906-b780c151";
 
-const YARD_EXCHANGE_FINANCE_ID = "institution:yard-exchange-finance";
+const SABLE_LEDGER_ID = "institution:sable-ledger";
 
 export function createInitialObligations() {
   return {
@@ -27,10 +27,10 @@ export function createLoanObligation(state, contract) {
   const obligationId = `obligation:${contract.id}:${contract.runCount ?? 1}`;
   const creditorEntityId = getCreditorEntityId(contract);
 
-  if (creditorEntityId === YARD_EXCHANGE_FINANCE_ID) {
+  if (creditorEntityId === SABLE_LEDGER_ID) {
     ensureInstitution(state, {
-      id: YARD_EXCHANGE_FINANCE_ID,
-      name: "Yard Exchange Finance Office",
+      id: SABLE_LEDGER_ID,
+      name: "Sable Ledger",
       authorityScope: ["loan", "lien", "ship-title-collateral"],
     });
   }
@@ -186,8 +186,8 @@ function releaseObligationCollateral(state, obligation) {
 }
 
 function getCreditorName(obligation) {
-  if (obligation.creditorEntityId === YARD_EXCHANGE_FINANCE_ID) {
-    return "Yard Exchange Finance Office";
+  if (obligation.creditorEntityId === SABLE_LEDGER_ID) {
+    return "Sable Ledger";
   }
 
   return obligation.creditorEntityId;
@@ -204,8 +204,8 @@ function createEmptyDebtSummary() {
 }
 
 function getCreditorEntityId(contract) {
-  if (contract.issuer === "Yard Exchange Finance Office") {
-    return YARD_EXCHANGE_FINANCE_ID;
+  if (contract.issuer === "Sable Ledger") {
+    return SABLE_LEDGER_ID;
   }
 
   return contract.issuer ? `institution:${contract.issuer.toLowerCase().replaceAll(" ", "-")}` : null;

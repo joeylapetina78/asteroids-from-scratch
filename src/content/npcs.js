@@ -26,10 +26,10 @@ export const npcDefinitions = {
   mako: {
     id: "mako",
     name: "Mr. Mako",
-    role: "finance officer",
+    role: "Sable Ledger deal maker and collector",
     voiceFrequency: 420,
     homeHubIds: ["yard-exchange"],
-    organizations: ["Yard Exchange Finance Office"],
+    organizations: ["Sable Ledger"],
   },
   finley: {
     id: "finley",
@@ -50,10 +50,10 @@ export const npcDefinitions = {
   "rtc-officer": {
     id: "rtc-officer",
     name: "Commissioner Vey",
-    role: "flight rights and territory permits officer",
+    role: "hub authority commissioner: registry, impound, and territory permits",
     voiceFrequency: 455,
     homeHubIds: ["yard-exchange"],
-    organizations: ["Reach Transit Commission"],
+    organizations: ["Yard Exchange Authority", "Reach Transit Commission"],
   },
   "yard-dispatch": {
     id: "yard-dispatch",

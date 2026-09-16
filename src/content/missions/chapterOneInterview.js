@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260910-2116-a2e643d1";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260913-1906-b780c151";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -22,8 +22,12 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
     ],
   },
   {
+    // Route advice is for the route. Once the ship is at Yard Exchange the
+    // haulers passing the dock are not going to get anyone anywhere, so this
+    // and the next one end with the traffic check, before docking.
     id: "first-hauler-seen",
     fromBeat: "first-thrust",
+    throughBeat: "yard-traffic-check",
     eventType: "npc.enteredViewport",
     setFlag: "firstHaulerSeen",
     once: true,
@@ -38,6 +42,7 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
   {
     id: "near-hauler",
     fromBeat: "first-thrust",
+    throughBeat: "yard-traffic-check",
     eventType: "ship.nearObject",
     payloadEquals: { targetType: "npc" },
     setFlag: "nearHauler",
@@ -118,6 +123,49 @@ const ASSESSMENT_FLIGHT_CONSIDERATIONS = [
     ],
   },
   {
+    // Misfires under load: the flame goes out, a puff comes out instead, and at
+    // this stage the ship gets shoved. Rook coaches through it rather than
+    // apologising for it.
+    id: "engine-misfire",
+    fromBeat: "first-thrust",
+    eventType: "engine.misfired",
+    repeatable: true,
+    cooldownMs: 9000,
+    maxRuns: 4,
+    responses: [
+      {
+        speaker: "Rook",
+        text: "That's the drive cutting out. She'll catch. Keep the throttle on and correct for the kick.",
+      },
+      {
+        speaker: "Rook",
+        text: "She fires off-axis when she coughs. Point her back at the beacon.",
+      },
+      {
+        speaker: "Rook",
+        text: "Cough, kick, catch. You're getting the rhythm of her.",
+      },
+      {
+        speaker: "Rook",
+        text: "Still coughing. Still flying.",
+      },
+    ],
+  },
+  {
+    id: "engine-died",
+    fromBeat: "first-thrust",
+    eventType: "ship.panelConditionChanged",
+    payloadEquals: { panel: "engine", to: "failed" },
+    once: true,
+    actions: [
+      {
+        type: "say",
+        speaker: "Rook",
+        text: "There she goes. Call the tow. The fee goes on your paper—I'll keep track.",
+      },
+    ],
+  },
+  {
     id: "left-starter-drift",
     fromBeat: "first-thrust",
     eventType: "zone.entered",
@@ -153,11 +201,11 @@ export const chapterOneInterviewMission = {
     chapterId: "prologue",
     chapterName: "Prologue",
     episodeName: "Do you want to play?",
-    speaker: "Murmur",
-    text: "Welcome to Asteroids RPG. The adventure is waiting. Let's go?",
-    title: "Do you want to play?",
-    objective: "Yes you do.",
-    actionLabel: "Play Asteroids RPG",
+    speaker: "Rook",
+    text: "The universe is looking out for us, oh yes! Here you are at rock bottom, and here I am in need of cheap labor.",
+    title: "Starting Out",
+    objective: "Meet Rook.",
+    actionLabel: "Continue",
   },
   activeChapter: {
     chapterId: "chapter-1",
@@ -174,9 +222,9 @@ export const chapterOneInterviewMission = {
   completion: {
     speaker: "Rook",
     objective: "Assessment complete.",
-    helpText: "Open the Yard Exchange service panel and choose Shipyard. That opens Barvis's ship sale window.",
+    helpText: "Open the Yard Exchange service panel and choose Finance. Mr. Mako has the hull financing ready.",
     acknowledgement: {
-      label: "Thanks, Will Do",
+      label: "Let's Hear It",
       action: "startMission",
       missionId: "chapter-1-new-ship",
     },
@@ -186,29 +234,79 @@ export const chapterOneInterviewMission = {
         minHull: 90,
         maxElapsedSeconds: 120,
         line:
-          "Okay, we did it. Clean hull, good time, and the contract paid out. I have a good feeling about you. I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
+          "Okay. We did it. Clean hull, good time, contract paid out. On that drive. Huh. Okay. The Authority's seen her fly, which means she's for sale. Here's the part where you get a ship.",
       },
       {
         id: "careful",
         minHull: 90,
         line:
-          "Okay, we did it. Contract paid out, and the hull's still clean. Took us a minute, but careful beats expensive. You kept the ship tidy. I like that. I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
+          "Okay. We did it. Contract paid out and the hull's still clean. Took us a minute, but careful beats expensive. You kept her tidy. I notice that sort of thing. And the Authority's seen her fly, which means she's for sale. Here's the part where you get a ship.",
       },
       {
         id: "scuffed",
         minHull: 51,
         line:
-          "We got here and the contract paid out. We picked up some dents along the way, so next time let's keep the expensive parts farther from the rocks. It's not worth much any more. You break it, you buy it. Right! I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
+          "We got here and the contract paid out. We picked up some dents along the way, so next time let's keep the expensive parts farther from the rocks. But she got here. The Authority's seen her fly, which means she's for sale. Dents and all. Here's the part where you get a ship.",
       },
       {
         id: "rough",
         line:
-          "We made it, and the contract still paid out because those were the terms. But this hull had a rough ride, rookie. Let's not make that a habit. It's not worth much any more. You break it, you buy it. Right! I set up a relationship for you with Barvis at Yard Exchange Shipyard. Go see him about getting yourself a ship with a miner, and I'll have work for you.",
+          "We made it, and the contract still paid out because those were the terms. But this hull had a rough ride, rookie. Let's not make that a habit. The Authority's seen her fly, so she's for sale—and you break it, you buy it. Here's the part where you get a ship.",
       },
     ],
   },
-  startBeatId: "show-hull",
+  // The two opening lines are presented before the license application. Once
+  // the player submits it, the issued license lands on the desk here.
+  startBeatId: "show-license",
   considerations: [
+    {
+      // The delivery is the mission's real end condition, and it can be met
+      // from any of the arrival beats: a patrol that starts its check before
+      // the player docks puts the mission in the traffic-check beat, and a
+      // player who docks, powers down and collects from there used to leave
+      // the contract's events landing in a beat that did not listen for them
+      // — paid, and stuck forever short of the shipyard. Whatever beat the
+      // arrival is in, a fulfilled delivery moves to collection and a paid one
+      // completes the interview. `dock-yard-exchange` has its own transitions
+      // for these, so the range stops short of it.
+      id: "delivery-fulfilled-anywhere-on-arrival",
+      fromBeat: "find-yard-exchange",
+      throughBeat: "yard-traffic-check",
+      eventType: "contract.fulfilled",
+      payloadEquals: { contractId: "rook-yard-exchange-delivery" },
+      once: true,
+      allowWhilePending: true,
+      actions: [{ type: "goToStep", stepId: "complete-delivery-contract" }],
+    },
+    {
+      // Docked is half of it. The contract wants the ship OFF as well, and a
+      // player who tethers in and waits is waiting on nothing.
+      id: "docked-yard-power-down-reminder",
+      fromBeat: "find-yard-exchange",
+      throughBeat: "dock-yard-exchange",
+      eventType: "site.docked",
+      payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+      once: true,
+      forbidFlag: "shipPoweredDown",
+      allowWhilePending: true,
+      actions: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text: "Docked. Now power her down—the delivery only counts with the ship off. Power Ship, on the Engine panel.",
+        },
+      ],
+    },
+    {
+      id: "delivery-paid-anywhere-on-arrival",
+      fromBeat: "find-yard-exchange",
+      throughBeat: "yard-traffic-check",
+      eventType: "contract.paid",
+      payloadEquals: { contractId: "rook-yard-exchange-delivery" },
+      once: true,
+      allowWhilePending: true,
+      actions: [{ type: "setFlag", flag: "deliveryContractPaid" }, { type: "completeMission" }],
+    },
     {
       // Switching the hull readout on from the bay. This is the cockpit's
       // replacement for the old desk's "Add panel" button.
@@ -239,11 +337,6 @@ export const chapterOneInterviewMission = {
       setFlag: "hullPanelMoved",
       once: true,
       actions: [
-        {
-          type: "say",
-          speaker: "Rook",
-          text: "Good. Somewhere you'll actually look at it. Paperwork next.",
-        },
       ],
     },
     {
@@ -257,8 +350,8 @@ export const chapterOneInterviewMission = {
       // that asks. A player who files as soon as they can was being made to pull
       // the paper back out and file it again, because the flag only counted
       // inside one beat.
-      fromBeat: "open-drawer",
-      throughBeat: "file-contract",
+      fromBeat: "reveal-drawer",
+      throughBeat: "reveal-drawer",
       eventType: "component.filed",
       payloadEquals: { componentId: "contract", destination: "drawer" },
       setFlag: "contractFiled",
@@ -269,8 +362,8 @@ export const chapterOneInterviewMission = {
       // Observed even while Rook is waiting on an acknowledgement: a player can
       // file paperwork during any of these beats, and it has to count.
       allowWhilePending: true,
-      fromBeat: "open-drawer",
-      throughBeat: "file-contract",
+      fromBeat: "reveal-drawer",
+      throughBeat: "reveal-drawer",
       eventType: "component.filed",
       payloadEquals: { componentId: "license", destination: "drawer" },
       setFlag: "licenseFiled",
@@ -280,56 +373,46 @@ export const chapterOneInterviewMission = {
   ],
   beats: [
     {
-      id: "show-hull",
-      objective: "Open the module bay.",
-      tasks: [
-        { label: "Open the module bay", flag: "moduleBayOpened" },
-      ],
-      helpText:
-        "The module bay is the tab labelled MODULES down the left edge of the viewport. Click it to slide the bay out. Every instrument this ship carries is listed there.",
+      id: "want-stars",
+      objective: "Listen to Rook.",
+      helpText: "Click the finished chatter box to continue.",
       onEnter: [
         { type: "setPaperworkFiling", isEnabled: false },
         {
-          type: "say",
-          speaker: "Rook",
-          text:
-            "All right, rookie. Consider this your assessment test, training and interview all in one. Start by opening the module bay — that MODULES tab on the left. Everything this skiff carries is racked in there.",
-        },
-      ],
-      transitions: [
-        {
-          eventType: "cockpit.moduleBayOpened",
-          setFlag: "moduleBayOpened",
-          delayMs: 900,
-          nextStepId: "broken-processor",
-        },
-      ],
-    },
-    {
-      id: "broken-processor",
-      objective: "Look over the bay.",
-      helpText:
-        "The PROCESSOR module is marked NOT FUNCTIONING with hazard stripes. A working processor refines what you cut into fuel, charges or hull patch; this one cannot, so everything you collect drops straight into cargo.",
-      onEnter: [
-        {
-          type: "say",
-          speaker: "Rook",
-          text:
-            "See the processor there, flagged up amber? It's dead. Has been a while. Don't worry about it for now — not important. It just means whatever you cut goes straight into the hold as ore instead of getting refined on the way home.",
-          acknowledgement: { label: "Understood" },
+          type: "say", speaker: "Rook",
+          text: "You wanna take to the stars, see what's out there, explore the black? You'll need a ship and the proper paperwork to get anywhere.",
+          acknowledgement: { label: "Continue" },
         },
       ],
       onAcknowledge: [
         { type: "clearMessage" },
-        { type: "goToStep", stepId: "show-hull-module" },
+        { type: "goToStep", stepId: "show-license" },
+      ],
+    },
+    {
+      id: "show-license",
+      objective: "Look over your license.",
+      helpText: "Your provisional license is centered on the desk. It carries your identity, employment status and credits.",
+      onEnter: [
+        { type: "showComponent", componentId: "license", componentName: "License" },
+        { type: "placePaperworkOnDesk", componentId: "license" },
+        {
+          type: "say", speaker: "Rook",
+          text: "The good news is, I've got your paperwork right here. Look, it shows you're broke, and it shows that if you're working—you’re working for me.",
+          acknowledgement: { label: "Continue" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "goToStep", stepId: "offer-contract" },
       ],
     },
     {
       id: "show-hull-module",
       objective: "Switch on the Hull display.",
       tasks: [
-        { label: "Switch on the Hull display", flag: "hullPanelAdded" },
-        { label: "Move it clear of the bay", flag: "hullPanelMoved" },
+        { label: "Switch on the Hull display", flag: "hullPanelAdded", attention: "panel:hull" },
+        { label: "Move it clear of the bay", flag: "hullPanelMoved", attention: "panel:hull" },
       ],
       helpText:
         "Click HULL in the module bay to pop it out onto the desk, then drag it by its title bar over to the other side of the screen so the bay is not covering it.",
@@ -341,96 +424,39 @@ export const chapterOneInterviewMission = {
         {
           type: "say",
           speaker: "Rook",
-          text:
-            "Click the Hull readout in the bay to switch it on, then drag it over to the far side of the desk where you can keep an eye on it. She's at 100%. You better keep it that way, ya hear?",
+          text: "The hull readout is in the module bay. Activate it, then drag the display over to the right side of the dashboard where you can keep an eye on it.",
         },
       ],
       transitions: [
         {
           eventType: "component.dragged",
           requiresFlags: ["hullPanelAdded", "hullPanelMoved"],
-          delayMs: 1000,
-          nextStepId: "open-drawer",
+          nextStepId: "hull-display-placed",
         },
       ],
     },
     {
-      id: "open-drawer",
-      objective: "Open the paperwork drawer.",
-      tasks: [
-        { label: "Open the paperwork drawer", flag: "drawerOpened" },
-      ],
-      helpText:
-        "The PAPERWORK tab sits along the bottom edge of the screen. Click it to slide the drawer open.",
-      onEnter: [
-        { type: "setPaperworkFiling", isEnabled: true },
-        {
-          type: "say",
-          speaker: "Rook",
-          text:
-            "Now the paperwork. That tab along the bottom — PAPERWORK — open it up. Your license is filed in there.",
-        },
-      ],
-      transitions: [
-        {
-          eventType: "paperwork.drawerOpened",
-          setFlag: "drawerOpened",
-          delayMs: 700,
-          nextStepId: "license-to-desk",
-        },
-      ],
-    },
-    {
-      id: "license-to-desk",
-      objective: "Put your license on the desk.",
-      tasks: [
-        { label: "Move the license to the desk", flag: "licenseOnDesk" },
-      ],
-      helpText:
-        "Find the License in the open drawer and press DESK on its title bar. The drawer holds every document you carry — licenses, contracts, anything a patrol might ask to see.",
-      onEnter: [
-        { type: "showComponent", componentId: "license", componentName: "License" },
-        {
-          type: "say",
-          speaker: "Rook",
-          text:
-            "Find your license in there and press DESK to pull it out. That drawer is where you store and manage every document you carry. Keep it tidy — when a patrol asks, they don't wait long.",
-        },
-      ],
-      transitions: [
-        {
-          eventType: "component.filed",
-          payloadEquals: { componentId: "license", destination: "desk" },
-          setFlag: "licenseOnDesk",
-          delayMs: 900,
-          nextStepId: "read-your-balance",
-        },
-      ],
-    },
-    {
-      id: "read-your-balance",
-      objective: "Read your balance.",
-      helpText:
-        "Credits are printed on the license itself, near the bottom. It is the only place your balance is shown — the license IS your account.",
+      id: "hull-display-placed",
+      objective: "Listen to Rook.",
+      helpText: "Click the finished chatter box to continue.",
       onEnter: [
         {
           type: "say",
           speaker: "Rook",
-          text:
-            "There she is. Look down the bottom — Credits. That's your money, and the license is where you read it. Go on, have a look at what you're worth.",
-          acknowledgement: { label: "Zero" },
+          text: "Good. Somewhere you'll actually look at it. Now let me see if I can get the viewport back.",
+          acknowledgement: { label: "Continue" },
         },
       ],
       onAcknowledge: [
         { type: "clearMessage" },
-        { type: "goToStep", stepId: "offer-contract" },
+        { type: "goToStep", stepId: "reveal-viewport" },
       ],
     },
     {
       id: "offer-contract",
       objective: "Review Rook's delivery contract.",
       tasks: [
-        { label: "Accept the delivery contract", flag: "offerContractAccepted" },
+        { label: "Accept the delivery contract", flag: "offerContractAccepted", attention: "element:contract-accept" },
       ],
       helpText:
         "Use the Contract panel to accept the delivery terms. The job pays when this VIN docks at Yard Exchange and the ship is powered down.",
@@ -438,8 +464,7 @@ export const chapterOneInterviewMission = {
         {
           type: "say",
           speaker: "Rook",
-          text:
-            "Zero. That's why you're here. So — work. Take this ship to Yard Exchange and it's a thousand credits: two-fifty in your hand the moment you sign, seven-fifty when she's docked and powered down. Read it, then accept it.",
+          text: "And the other good news is the ship. The Authority's got one in impound they've written off as scrap, and they'll let her go for a steal—if she runs, and if they see somebody fly her. Here's your contract. Sign it and I'll put a few credits on your paper up front. Then we show them she flies. Ore Worker 7A3, by the way. Not 'it'.",
         },
         { type: "offerContract", contractId: "rook-yard-exchange-delivery" },
       ],
@@ -449,97 +474,70 @@ export const chapterOneInterviewMission = {
           payloadEquals: { contractId: "rook-yard-exchange-delivery" },
           setFlag: "offerContractAccepted",
           delayMs: 1200,
-          nextStepId: "advance-paid",
+          nextStepId: "reveal-drawer",
         },
       ],
     },
     {
-      id: "advance-paid",
-      objective: "Check your license.",
-      helpText:
-        "Credits on the license has gone from 0 to 250. That is the signing advance, paid out of Rook Industries' own account the moment you accepted.",
-      onEnter: [
-        {
-          type: "say",
-          speaker: "Rook",
-          text:
-            "Signed. Now look at your license again — two-fifty, right there. That's real money out of my account and into yours. The rest lands when this ship is on the pad at Yard Exchange.",
-          acknowledgement: { label: "Got it" },
-        },
-      ],
-      onAcknowledge: [
-        { type: "clearMessage" },
-        { type: "goToStep", stepId: "file-contract" },
-      ],
-    },
-    {
-      id: "file-contract",
+      id: "reveal-drawer",
       objective: "File your paperwork.",
       tasks: [
-        { label: "File the contract", flag: "contractFiled" },
-        { label: "File the license", flag: "licenseFiled" },
+        { label: "File the contract", flag: "contractFiled", attention: "selector:[data-panel-id='contract'] .paper-file-button" },
+        { label: "File the license", flag: "licenseFiled", attention: "selector:[data-panel-id='license'] .paper-file-button" },
       ],
-      helpText:
-        "Press FILE on the Contract, and FILE on the License. Both drop into the Paperwork drawer, where you can pull either back out whenever you need it.",
+      helpText: "Press FILE on both documents. The PAPERWORK drawer will hold them until you need them again.",
       onEnter: [
+        { type: "setFlag", flag: "drawerRevealed" },
         { type: "setPaperworkFiling", isEnabled: true },
-        // Checked BEFORE Rook speaks, so a player who already put everything
-        // away hears the right line instead of being asked to do it again.
-        { type: "goToStepIfFlags", flags: ["contractFiled", "licenseFiled"], stepId: "paperwork-already-filed" },
         {
           type: "say",
           speaker: "Rook",
-          text:
-            "Good, you're on the contract. Now stow both of them — FILE on the contract, FILE on the license. Clean desk before we fly. Do that and I'll get your viewport up.",
+          text: "Welcome to working for me. Rook—Rook Enterprises. Okay, file all the paperwork by clicking the FILE button on each. They'll pop into your paperwork drawer, which you can open when you need them later.",
         },
       ],
       transitions: [
         {
           eventType: "component.filed",
           requiresFlags: ["contractFiled", "licenseFiled"],
-          delayMs: 1200,
-          nextStepId: "show-scanner",
+          actions: [{ type: "clearMessage" }],
+          delayMs: 900,
+          nextStepId: "reveal-module-bay",
         },
       ],
     },
     {
-      // Reached only when the desk was already clear on arrival. Rook has
-      // nothing to teach here, so he says so and moves on.
-      id: "paperwork-already-filed",
-      objective: "Ready to fly.",
-      helpText:
-        "Both documents are already in the Paperwork drawer. Open it any time with the PAPERWORK tab along the bottom.",
+      id: "reveal-module-bay",
+      objective: "Open the module bay.",
+      tasks: [{ label: "Open the module bay", flag: "moduleBayOpened", attention: "selector:.cockpit-module-tray-tab" }],
+      helpText: "Click the MODULES tab on the left to open the newly revealed module bay.",
       onEnter: [
-        { type: "setPaperworkFiling", isEnabled: true },
+        { type: "setFlag", flag: "moduleBayRevealed" },
         {
-          type: "say",
-          speaker: "Rook",
-          text:
-            "Desk's already clear. You filed them without being told — good. That's the last thing I was going to teach you about paper. Let's get your viewport up.",
-          acknowledgement: { label: "Ready" },
+          type: "say", speaker: "Rook",
+          text: "She's been condemned. Lost a fight with an incursion, got scrapped here at the Porch, and the Authority's been sitting on her for a year. Good bones, though. Pop open the module bay and let me get to work.",
         },
       ],
-      onAcknowledge: [
-        { type: "clearMessage" },
-        { type: "goToStep", stepId: "show-scanner" },
+      transitions: [
+        {
+          eventType: "cockpit.moduleBayOpened",
+          setFlag: "moduleBayOpened",
+          actions: [{ type: "clearMessage" }],
+          delayMs: 700,
+          nextStepId: "show-hull-module",
+        },
       ],
     },
     {
-      id: "show-scanner",
-      objective: "Get your bearings.",
-      tasks: [
-        { label: "Add the Beacon Locator to controls", flag: "beaconLocatorAdded" },
-      ],
-      helpText:
-        "Press Add Beacon Locator. It does not need power. It points toward hub beacons remembered by the ship.",
+      id: "reveal-viewport",
+      objective: "Look through the viewport.",
+      helpText: "Click the finished chatter box to continue when you have your bearings.",
       onEnter: [
         { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
         {
           type: "say",
           speaker: "Rook",
-          text:
-            "We're that unpowered ship in the center of the viewport. There's the hub we came from, Scrap Porch, in the lower left corner. Your job is to deliver this ship to the other hub in this zone, the Yard Exchange. Let me add the Beacon Locator so you can follow hub signals.",
-          acknowledgement: { label: "Add Beacon Locator" },
+          text: "Boom, got the viewport working! There we are in the center; that's Scrap Porch in the lower left. We're headed to Yard Exchange. It's not far—which is good, because this thing won't make it far.",
+          acknowledgement: { label: "Continue" },
         },
       ],
       onAcknowledge: [
@@ -554,9 +552,14 @@ export const chapterOneInterviewMission = {
     },
     {
       id: "try-scanner",
-      objective: "Check the beacon locator.",
+      objective: "Set a course for Yard Exchange.",
       tasks: [
-        { label: "Tune beacon to Yard Exchange", flag: "beaconTunedToYard" },
+        {
+          label: "Tune beacon to Yard Exchange",
+          flag: "beaconTunedToYard",
+          attention: "selector:.beacon-locator-panel .system-readout",
+          attentionUnlessActiveBeaconId: "yard-exchange",
+        },
       ],
       helpText:
         "The Beacon Locator starts on Scrap Porch, the hub you came from. Press Next Beacon until it tracks Yard Exchange, your destination.",
@@ -564,8 +567,7 @@ export const chapterOneInterviewMission = {
         {
           type: "say",
           speaker: "Rook",
-          text:
-            "The locator knows the hub beacons in this zone. Right now it is tuned to Scrap Porch, where we came from. Press Next Beacon until it tracks Yard Exchange. Once it is pointing at Yard Exchange, I'll get you the Engine panel so you can get going.",
+          text: "I got the beacon locator working. Activate it and put it where you want it. Click it to switch through the saved locations it can get you to. Set it to Yard Exchange.",
         },
       ],
       transitions: [
@@ -588,7 +590,7 @@ export const chapterOneInterviewMission = {
       id: "show-engine",
       objective: "Switch on the Engine.",
       tasks: [
-        { label: "Switch on the Engine module", flag: "enginePanelAdded" },
+        { label: "Switch on the Engine module", flag: "enginePanelAdded", attention: "panel:engine" },
       ],
       // This beat used to say "Press Add Engine" and hand the player an
       // acknowledgement button. In the cockpit there is no Add button: an
@@ -603,7 +605,7 @@ export const chapterOneInterviewMission = {
         {
           type: "say",
           speaker: "Rook",
-          text: "Good. I've racked the engine in your bay — click it to bring the panel out, and let's get going. Time is money.",
+          text: "Okay... well. That's not so good. Drive's online. It's original—the only thing on her that is. Fire it up and we'll see what we're dealing with.",
         },
       ],
       transitions: [
@@ -620,7 +622,7 @@ export const chapterOneInterviewMission = {
       id: "power-on",
       objective: "Power the ship.",
       tasks: [
-        { label: "Power the ship on", flag: "shipPoweredOn" },
+        { label: "Power the ship on", flag: "shipPoweredOn", attention: "element:ship-power" },
       ],
       helpText:
         "Use the Engine panel and click Power Ship. W thrusts, A/D rotate, and S brakes after the ship is powered.",
@@ -628,7 +630,7 @@ export const chapterOneInterviewMission = {
         {
           type: "say",
           speaker: "Rook",
-          text: "All right, power this baby on and let's get going. Time is money. Controls are on the engine panel.",
+          text: "Power it on. Let's see whether it holds together.",
         },
       ],
       transitions: [
@@ -658,7 +660,7 @@ export const chapterOneInterviewMission = {
         {
           type: "say",
           speaker: "Rook",
-          text: "Good, good. Head out when you're ready.",
+          text: "There. Still turns over. She'll cut out on you and she'll pull—nurse her. Follow the beacon to Yard Exchange, and if she dies on us, we call a tow.",
         },
       ],
       transitions: [
@@ -725,8 +727,8 @@ export const chapterOneInterviewMission = {
       id: "yard-traffic-check",
       objective: "Present ship and pilot identification.",
       tasks: [
-        { label: "Present ship VIN", flag: "yardVinPresented" },
-        { label: "Present pilot license", flag: "yardLicensePresented" },
+        { label: "Present ship VIN", flag: "yardVinPresented", attention: "element:hull-vin" },
+        { label: "Present pilot license", flag: "yardLicensePresented", attention: "element:license-id" },
       ],
       helpText:
         "Yard Exchange traffic control does not know this ship yet. Click the VIN on the Hull panel, then click the Ref number on your License paperwork to present both IDs.",
@@ -814,8 +816,8 @@ export const chapterOneInterviewMission = {
       id: "dock-yard-exchange",
       objective: "Dock and power down at Yard Exchange.",
       tasks: [
-        { label: "Dock at Yard Exchange", flag: "dockedYardExchange" },
-        { label: "Power ship down", flag: "shipPoweredDown" },
+        { label: "Dock at Yard Exchange", flag: "dockedYardExchange", attention: "element:dock-toggle" },
+        { label: "Power ship down", flag: "shipPoweredDown", attention: "element:ship-power" },
       ],
       helpText:
         "Dock at Yard Exchange, then power the ship down. The contract will not accept delivery until this VIN is docked and the ship is off.",
@@ -859,7 +861,7 @@ export const chapterOneInterviewMission = {
       id: "complete-delivery-contract",
       objective: "Complete the delivery contract.",
       tasks: [
-        { label: "Collect your 500 cr payout", flag: "deliveryContractPaid" },
+        { label: "Collect your 500 cr payout", flag: "deliveryContractPaid", attention: "element:contract-accept" },
       ],
       helpText: "The delivery terms are satisfied. Use the Contract panel and press Complete Contract to receive the 500-credit payout.",
       onEnter: [

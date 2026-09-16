@@ -1,7 +1,8 @@
-import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260910-2116-a2e643d1";
-import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260910-2116-a2e643d1";
-import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260910-2116-a2e643d1";
-import { hashNumbers } from "./random.js?v=fresh-20260910-2116-a2e643d1";
+import { InvaderPortal } from "../entities/InvaderPortal.js?v=fresh-20260913-1906-b780c151";
+import { FlightFighter } from "../entities/FlightFighter.js?v=fresh-20260913-1906-b780c151";
+import { RiftSeeder } from "../entities/RiftSeeder.js?v=fresh-20260913-1906-b780c151";
+import { Lifeform } from "../entities/Lifeform.js?v=fresh-20260913-1906-b780c151";
+import { hashNumbers } from "./random.js?v=fresh-20260913-1906-b780c151";
 
 const PORTAL_WAVE_SIZES = [5, 10, 30];
 const BASE_WAVE_SECONDS = 70;
@@ -10,6 +11,7 @@ const MAX_WAVE_SECONDS = 105;
 const PORTAL_HUNTER_ORBIT_RADIUS = 150;
 const PORTAL_SHIELD_GUARD_RADIUS = 950;
 const PORTAL_DEVICE_TYPES = ["rift-sentry", "drag-bloom", "rift-mine"];
+export const RIFT_BLOOM_TYPES = ["drag-bloom", "slip-bloom", "gust-bloom", "venom-bloom", "static-bloom", "thrust-bloom", "brake-bloom", "spiral-bloom", "pulse-bloom"];
 // A wave timer that fires while most of the previous wave is still alive is
 // what let portals spiral out of reach. Waves now hold until the living guard
 // count drops below a fraction of the last wave, rechecking on a short timer.
@@ -36,9 +38,15 @@ export function createIncursionField() {
       portal.devices = createPortalDevices(portal);
       this.portals.push(portal);
       const portalPacing = getPortalPacing(portal, pacing);
-      const spawned = spawnPortalWave(portal, getPacedWaveSize(0, portalPacing), 0);
-      portal.recordWaveFabrication(spawned.length);
-      portal.lastWaveSize = spawned.length;
+      const seeder = new RiftSeeder({ id: `${portal.id}-seeder`, x, y, angle: (portal.seed % 628) / 100, seed: portal.seed, sourcePortalId: portal.id });
+      portal.seederId = seeder.id;
+      portal.scoutingComplete = false;
+      // The Seeder is a parallel expedition, not part of the combat budget.
+      // Wave pressure begins at once and only combat units govern wave hold.
+      const wave = spawnPortalWave(portal, getPacedWaveSize(0, portalPacing), 0);
+      const spawned = [seeder, ...wave];
+      portal.recordWaveFabrication(wave.length);
+      portal.lastWaveSize = wave.length;
       portal.waveCount = 1;
       portal.nextWaveIn = getNextWaveSeconds(portal, portalPacing);
       portal.isWaveHeld = false;
@@ -70,6 +78,10 @@ export function createIncursionField() {
         }
 
         portal.update(deltaSeconds, livingGuardIds, livingUnitIds);
+        if (!portal.scoutingComplete && !lifeforms.some((lifeform) => lifeform.id === portal.seederId && lifeform.isAlive)) {
+          portal.scoutingComplete = true;
+          events.push({ type: "incursion.scoutingComplete", payload: { portalId: portal.id } });
+        }
         if (portal.nextWaveIn > 0) {
           return;
         }
@@ -164,6 +176,24 @@ function createPortalDevices(portal) {
   });
 
   return devices;
+}
+
+export function createSeededDevice(portal, deployment, index) {
+  const roll = Math.abs(hashNumbers(portal.seed, deployment.sequence, index));
+  const isWeapon = roll % 4 < 2;
+  const type = isWeapon ? (roll % 2 ? "rift-sentry" : "rift-mine") : RIFT_BLOOM_TYPES[roll % RIFT_BLOOM_TYPES.length];
+  const large = !isWeapon && roll % 5 === 0;
+  const mobile = isWeapon && roll % 3 !== 0;
+  const radius = large ? 260 : type.endsWith("bloom") ? 130 + (roll % 55) : 22;
+  const maxHealth = type === "rift-sentry" ? 76 : type === "rift-mine" ? 62 : large ? 150 : 94;
+  const across = deployment.heading + Math.PI / 2;
+  return {
+    id: `${portal.id}-seeded-${deployment.sequence}-${index}`,
+    type, position: { ...deployment.position }, radius, hitRadius: type.endsWith("bloom") ? 22 : 22,
+    maxHealth, health: maxHealth, isAlive: true, cooldown: type === "rift-sentry" ? 1.7 : type === "rift-mine" ? 2.5 : 0,
+    pulse: roll * 0.001, large, mobile,
+    motion: mobile ? { origin: { ...deployment.position }, axis: { x: Math.cos(across), y: Math.sin(across) }, distance: 90 + roll % 150, speed: 0.65 + (roll % 60) / 100, phase: (roll % 628) / 100 } : null,
+  };
 }
 
 function spawnPortalWave(portal, count, waveIndex) {

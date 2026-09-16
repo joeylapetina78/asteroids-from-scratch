@@ -1,7 +1,7 @@
-import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260910-2116-a2e643d1";
-import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260910-2116-a2e643d1";
-import { getCraftPerformance } from "../systems/craftPerformance.js?v=fresh-20260910-2116-a2e643d1";
-import { HULL_OUTLINES } from "../content/ships/hullOutlines.js?v=fresh-20260910-2116-a2e643d1";
+import { advanceFlightBody, limitVelocity } from "../systems/flightPhysics.js?v=fresh-20260913-1906-b780c151";
+import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260913-1906-b780c151";
+import { getCraftPerformance } from "../systems/craftPerformance.js?v=fresh-20260913-1906-b780c151";
+import { HULL_OUTLINES } from "../content/ships/hullOutlines.js?v=fresh-20260913-1906-b780c151";
 
 const DEFAULT_ROTATION_SPEED = 2.6;
 const DEFAULT_REVERSE_THRUST_MULTIPLIER = 0.2;
@@ -21,8 +21,10 @@ const miningWorkerFrame = {
   points: MINING_WORKER_OUTLINE.fill.map(([x, y]) => ({ x, y })),
   cockpit: null,
   details: {
-    // The cab, which is the last stroke in the build order.
-    lines: [MINING_WORKER_OUTLINE.strokes[MINING_WORKER_OUTLINE.strokes.length - 1].map(([x, y]) => ({ x, y }))],
+    // The cab, which is the last stroke in the build order. On the player's
+    // hull it stands for the drive: it is drawn once the engine is fitted, so
+    // Rook getting the engine online is visible on the ship itself.
+    engine: [MINING_WORKER_OUTLINE.strokes[MINING_WORKER_OUTLINE.strokes.length - 1].map(([x, y]) => ({ x, y }))],
   },
 };
 
@@ -117,10 +119,63 @@ export class Ship {
     this.conditionMaxSpeedMultiplier = 1;
     this.conditionThrustBlocked = false;
     this.hasKineticOverspeed = false;
+    // Whether the drive is aboard and known to the cockpit; set by the game
+    // before each draw. Frames that mark the engine on the hull read it.
+    this.hasEngineFitted = true;
+    this.engineColor = null;
+    // Puffs out of the exhaust: what comes out when the drive stalls instead
+    // of a flame, or coughs on start-up. Each is {age, life, size, offsets}
+    // in hull-local space, drawn until it fades.
+    this.exhaustPuffs = [];
+  }
+
+  emitExhaustPuff(strength = 1) {
+    const direction = this.thrustVisualDirection === "reverse" ? 1 : -1;
+    const originX = direction > 0 ? 18 : -17;
+    const count = 3 + Math.round(strength * 2);
+    for (let index = 0; index < count; index += 1) {
+      this.exhaustPuffs.push({
+        age: 0,
+        life: 0.35 + Math.random() * 0.3 * strength,
+        size: (2 + Math.random() * 2.5) * strength,
+        x: originX + direction * (2 + Math.random() * 6 * strength),
+        y: (Math.random() - 0.5) * 6 * strength,
+        driftX: direction * (14 + Math.random() * 22) * strength,
+        driftY: (Math.random() - 0.5) * 16,
+      });
+    }
+  }
+
+  updateExhaustPuffs(deltaSeconds) {
+    if (this.exhaustPuffs.length === 0) return;
+    this.exhaustPuffs.forEach((puff) => {
+      puff.age += deltaSeconds;
+      puff.x += puff.driftX * deltaSeconds;
+      puff.y += puff.driftY * deltaSeconds;
+    });
+    this.exhaustPuffs = this.exhaustPuffs.filter((puff) => puff.age < puff.life);
+  }
+
+  drawExhaustPuffs(context) {
+    if (this.exhaustPuffs.length === 0) return;
+    const visual = this.engine.thrustVisual ?? {};
+    context.save();
+    context.strokeStyle = visual.color ?? "#ffb85c";
+    context.lineWidth = 1.5;
+    this.exhaustPuffs.forEach((puff) => {
+      const progress = puff.age / puff.life;
+      context.globalAlpha = (1 - progress) * (this.isCloaked ? 0.3 : 0.85);
+      const radius = puff.size * (1 + progress * 1.8);
+      context.beginPath();
+      context.arc(puff.x, puff.y, radius, 0, Math.PI * 2);
+      context.stroke();
+    });
+    context.restore();
   }
 
   update(deltaSeconds, input) {
     this.boostCooldown = Math.max(0, this.boostCooldown - deltaSeconds);
+    this.updateExhaustPuffs(deltaSeconds);
     const engineModel = getEngineModel(this.engine);
     const canThrust = this.engine.powered && input.isDown("KeyW") && this.engine.fuel > 0 && !this.conditionThrustBlocked;
     const canReverseThrust = engineModel.downControl === "reverse-thrust"
@@ -288,6 +343,7 @@ export class Ship {
     if (this.isThrusting) {
       this.drawThrust(context);
     }
+    this.drawExhaustPuffs(context);
 
     context.restore();
   }
@@ -332,12 +388,21 @@ export class Ship {
     context.strokeStyle = this.displayColor ?? "#7dffe0";
     context.lineWidth = 1.35;
 
-    frame.details.lines?.forEach(([from, to]) => {
+    // A detail is a polyline of any length — the miner's cab is a five-point
+    // box, and reading it as a two-point line drew one edge of it.
+    const strokePolyline = (points) => {
       context.beginPath();
-      context.moveTo(from.x, from.y);
-      context.lineTo(to.x, to.y);
+      points.forEach((point, index) => (index === 0 ? context.moveTo(point.x, point.y) : context.lineTo(point.x, point.y)));
       context.stroke();
-    });
+    };
+    frame.details.lines?.forEach(strokePolyline);
+    // The drive is picked out in the cockpit's second colour, so the ship in
+    // the scope reads with the same two-colour language as the instruments.
+    if (this.hasEngineFitted && frame.details.engine) {
+      context.strokeStyle = this.engineColor ?? this.displayColor ?? "#7dffe0";
+      context.globalAlpha = this.isVisiblyPowered() ? 0.95 : 0.35;
+      frame.details.engine.forEach(strokePolyline);
+    }
 
     frame.details.arcs?.forEach((arc) => {
       context.beginPath();

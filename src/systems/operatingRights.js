@@ -21,8 +21,8 @@
 // Not a `player.canMine` flag: rights are sets the pilot holds (zones, authorities)
 // checked against what each plot carries.
 
-import { RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260910-2116-a2e643d1";
-import { evaluateTerritoryAccess } from "./hubTerritories.js?v=fresh-20260910-2116-a2e643d1";
+import { RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260913-1906-b780c151";
+import { evaluateTerritoryAccess } from "./hubTerritories.js?v=fresh-20260913-1906-b780c151";
 
 const RIGHT_REQUIRING_STATUS = /required|restricted/i;
 // The zone influence at which the ship is considered to have ENTERED a zone —
@@ -112,7 +112,7 @@ export function getPlotRestriction(state, plot, grantedClaimIds = null) {
     sublabel: "MINING RIGHTS REQUIRED",
     detailLines: [
       "MINING RIGHTS REQUIRED",
-      `CLEAR AT ${String(territory?.clearanceOfficeName ?? "Yard Exchange Travel Authority").toUpperCase()}`,
+      `CLEAR AT ${String(territory?.clearanceOfficeName ?? "Yard Exchange Hub Authority").toUpperCase()}`,
     ],
   };
 }

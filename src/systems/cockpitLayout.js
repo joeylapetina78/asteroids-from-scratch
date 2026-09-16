@@ -34,7 +34,7 @@ export function createCockpitLayoutState(source = null) {
   return {
     // v5 drops `preset` and `assignments`. Old saves carrying them simply lose
     // two fields nothing read; there is nothing to migrate.
-    version: 5,
+    version: 6,
     floatingPositions: normalizeFloatingPositions(source?.floatingPositions),
     openModules: normalizeOpenModules(source?.openModules),
     trayOpen: source?.trayOpen === true,
@@ -49,6 +49,9 @@ export function createCockpitLayoutState(source = null) {
     // Off by default: the material's own edge is what tells the families
     // apart at a glance. On, the bay reads as one instrument.
     phosphorOre: source?.phosphorOre === true,
+    // The vector has always been part of the flight display, so old saves and
+    // fresh cockpits retain it unless the player explicitly switches it off.
+    velocityVector: source?.velocityVector !== false,
     // The second colour. Null means "derive it from the phosphor", which is
     // what almost everyone should want; a hex here is the player overruling
     // the derivation. See cockpitAccent.js.
@@ -83,7 +86,7 @@ function normalizePoint(point) {
 }
 
 function normalizeClawTarget(target) {
-  return ["engine", "miner", "scanner", "collector", "hull", "cargo"].includes(target) ? target : "cargo";
+  return ["processor", "engine", "miner", "scanner", "collector", "hull", "cargo"].includes(target) ? target : "processor";
 }
 
 function normalizeFloatingPositions(positions) {

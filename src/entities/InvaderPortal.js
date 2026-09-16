@@ -1,4 +1,4 @@
-import { applyCraftUse, ensureCraftComponents } from "../systems/componentCondition.js?v=fresh-20260910-2116-a2e643d1";
+import { applyCraftUse, ensureCraftComponents } from "../systems/componentCondition.js?v=fresh-20260913-1906-b780c151";
 
 const PORTAL_COMPONENTS = Object.freeze([
   { id: "rift-core", label: "Rift Core", capabilityIds: ["hold-gate"] },
@@ -61,10 +61,14 @@ export class InvaderPortal {
 
   getEncounterState() {
     if (this.age < 5) return { id: "forming", label: "FORMING", color: "#aeeeff" };
-    if (this.isShielded) {
-      return this.isWaveHeld
+    if (this.isWaveHeld) {
+      return this.isShielded
         ? { id: "guarded", label: "GUARDS HOLD", color: "#ffb2d0" }
-        : { id: "shielded", label: "SHIELDED", color: "#ff74ae" };
+        : { id: "raiders-out", label: "RAIDERS OUT", color: "#ffd36b" };
+    }
+    if (!this.scoutingComplete) return { id: "scouting", label: "SEEDING", color: "#e09cff" };
+    if (this.isShielded) {
+      return { id: "shielded", label: "SHIELDED", color: "#ff74ae" };
     }
     if (this.nextWaveIn <= 12) return { id: "charging", label: "REINFORCING", color: "#ffd36b" };
     return { id: "exposed", label: "EXPOSED", color: "#d9a7ff" };
@@ -155,7 +159,6 @@ export class InvaderPortal {
 
     context.restore();
 
-    this.drawDevices(context, camera);
   }
 
   drawDevices(context, camera) {
@@ -166,6 +169,17 @@ export class InvaderPortal {
 
       context.save();
       context.translate(x, y);
+
+      if (device.motion) {
+        const startX = device.motion.origin.x - device.motion.axis.x * device.motion.distance - device.position.x;
+        const startY = device.motion.origin.y - device.motion.axis.y * device.motion.distance - device.position.y;
+        const endX = device.motion.origin.x + device.motion.axis.x * device.motion.distance - device.position.x;
+        const endY = device.motion.origin.y + device.motion.axis.y * device.motion.distance - device.position.y;
+        context.strokeStyle = "rgba(224, 156, 255, 0.24)";
+        context.setLineDash([5, 8]);
+        context.beginPath(); context.moveTo(startX, startY); context.lineTo(endX, endY); context.stroke();
+        context.setLineDash([]);
+      }
 
       if (device.type === "rift-sentry") {
         context.fillStyle = "rgba(255, 116, 174, 0.18)";
@@ -203,8 +217,13 @@ export class InvaderPortal {
         context.arc(0, 0, 4 + pulse * 2, 0, Math.PI * 2);
         context.stroke();
       } else {
-        context.strokeStyle = `rgba(123, 94, 255, ${0.3 + pulse * 0.25})`;
-        context.fillStyle = "rgba(66, 38, 135, 0.08)";
+        const bloomColor = {
+          "drag-bloom": "123, 94, 255", "slip-bloom": "96, 220, 255", "gust-bloom": "255, 218, 112",
+          "venom-bloom": "116, 255, 132", "static-bloom": "255, 255, 255", "thrust-bloom": "255, 126, 72",
+          "brake-bloom": "92, 150, 255", "spiral-bloom": "224, 126, 255", "pulse-bloom": "255, 105, 183",
+        }[device.type] ?? "123, 94, 255";
+        context.strokeStyle = `rgba(${bloomColor}, ${0.3 + pulse * 0.25})`;
+        context.fillStyle = `rgba(${bloomColor}, 0.08)`;
         context.lineWidth = 1.5;
         context.setLineDash([7, 8]);
         context.beginPath();

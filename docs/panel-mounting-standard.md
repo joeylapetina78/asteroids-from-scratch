@@ -304,3 +304,38 @@ compressed rather than ratio-correct — and it stops being compressed as the
 player scales up: at 100% the two smallest steps are 4px apart, at 175% they
 are 7px apart. Which is the right way round, because scaling up is what
 somebody who cannot read the small text is doing.
+
+## Fixed shape: a panel never resizes with what it is reading
+
+Added 2026-09-13. A module out on the desk is a fixed shape on the grid.
+Nothing it reads may change that shape — not a hub coming into range, not a
+long site name, not a badge that appears while patching.
+
+Rules:
+
+- **A line that has nothing to say stays a line.** Use the `is-blank` class
+  (`visibility: hidden`) — never the `hidden` attribute — on readouts that
+  come and go: `#docking-detail` ("Press E to dock" / "Docked" / blank),
+  `#hull-repair-status` ("patching"), `#beacon-recovery-meter`. The space is
+  part of the panel whether or not the words are.
+- **Free text is clipped, not wrapped.** Site names, model names and counts
+  are one line with `text-overflow: ellipsis` (`#docking-target`,
+  `.engine-brand-name`, every `.system-readout > span`). The beacon locator's
+  "Tracking: <name>" is always exactly two lines (`-webkit-line-clamp: 2` with
+  a fixed height) because the four-column panel cannot hold a long name on
+  one.
+- **The bottom edge lands on the lattice.** `snapCockpitPanelHeight(panel)`
+  measures the open module's natural height and rounds it up to whole major
+  rows. It runs INSIDE `floatCockpitPanel` (before the panel is measured for
+  placement) and the floor is removed INSIDE `dockFloatingPanel`, in the same
+  frame as the class change — a timer that did it later showed the rack unit
+  at desk height for a beat. Re-run for every open module on resize and on a
+  cockpit scale change. The processor and cargo chambers are excluded — the
+  scope sizes them.
+
+Audit method: open every module, then push each readout through its states
+(near/far from a hub, short/long names, 0 / 2,500 / absurd counts, meter shown
+and blank) and assert `getBoundingClientRect().height` never changes and
+`(height - 2 × flange) % 24 === 0`. As of this note: hull 224, engine 152,
+beacon locator 152, collector 152, miner 152, scanner 152, beacon bay 176, tow
+cable 200, moss seeder 128 — all constant across states.

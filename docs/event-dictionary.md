@@ -41,7 +41,7 @@ This document is a living manual for authoring. It should grow whenever a new ev
 | `towService.completed` | `requestId`, `haulerId`, `destinationSiteId`, `fee` | Recovery delivered the carrier, invoiced it, and released it into repair handling. |
 | `towService.blocked` | `requestId`, `haulerId`, `reason` | Recovery could not dispatch because route or protected-cash policy failed. |
 | `ship.collision` | `targetType`, `targetName`, `damage` | Ship hit something. |
-| `ship.nearObject` | `targetType`, `targetName` | Ship came close to something noteworthy. |
+| `ship.nearObject` | `targetType`, `targetName`, `resourceId` | Ship came close to something noteworthy. For asteroids `resourceId` is the rock's actual dominant ore (`targetName` is only the audio bucket). |
 
 ## Site, Hub, And Zone Events
 
@@ -52,6 +52,8 @@ This document is a living manual for authoring. It should grow whenever a new ev
 | `site.docked` | `siteId`, `siteName` | The controlled ship docked at a site. |
 | `site.undocked` | `siteId`, `siteName` | The controlled ship undocked from a site. |
 | `site.tetherBroken` | `siteId`, `siteName` | The controlled ship broke a docking tether. |
+| `patrol.laneJumped` | `patrolId`, `patrolName`, `siteId`, `siteName`, `from`, `to` | A flagged patrol that could not fly the intercept in time rode the hub's beacon lane and dropped out ahead of the ship (standoff from there). Hidden. |
+| `patrol.dockingBlocked` | `siteId`, `siteName`, `patrolName` | The ship tried to dock at a hub with clearance pending (a patrol intercepting, or papers requested and not yet seen). Docking is refused until cleared. Hidden; throttled to one per 4 s. |
 | `ship.registryReviewed` | `siteId`, `vin`, `pilotLicenseId`, `checkedDocuments`, `clearance` | A hub reviewed ship/pilot documents through the inspection report. |
 | `zone.entered` | `zoneId`, `zoneName`, `danger`, `tags` | The controlled ship entered a zone profile. |
 
@@ -65,6 +67,10 @@ This document is a living manual for authoring. It should grow whenever a new ev
 | `contract.resourceDeposited` | `contractId`, `resourceType`, `deliveredAmount`, `requiredAmount` | One resource unit was deposited toward a contract. |
 | `contract.fulfilled` | `contractId`, `destinationSiteId`, `shipVin`, `resourceType`, `unitsDelivered` | Terms are satisfied, payment is ready. |
 | `contract.paid` | `contractId`, `creditsPaid`, `accountCredits` | Contract payment was collected into the current account. |
+| `contract.cargoProgress` | `contractId`, `contractGroup`, `resourceType`, `held`, `required`, `remaining`, `milestone` | A matching unit landed in the hold against an active resource-delivery contract. `milestone` is `first`, `half`, `one-more`, `full` or null. Hidden. |
+| `contract.cargoReady` | same as `cargoProgress` | The hold now holds the contract's full count. Once per run. Hidden. |
+| `contract.leadMoved` | `contractId`, `contractGroup`, `beaconId`, `from`, `to`, `resolvedFrom` | The ship arrived at a lead whose ore was gone (mined out since signing) and the pin re-resolved elsewhere. At most twice per run. Hidden. |
+| `contract.leadReached` | `contractId`, `contractGroup`, `beaconId`, `resourceType`, `hasScanner` | The ship arrived at the issuer's lead (`terms.sourceLead`), the area where the ore is believed to be. Once per contract run. Hidden. |
 | `contract.expired` | `contractId`, `sourceNeedId`, `repairOrderId` | Institutional procurement elapsed and released committed funds. |
 | `contract.deadlineExtended` | `contractId`, `inTransitEquivalentUnits` | Procurement was extended because allocated institutional cargo is in transit. |
 | `institution.contractAllocated` | `contractId`, `procurementOrderId`, `supplierInstitutionId`, `equivalentUnits` | An institution reserved a bounded share of public procurement. |
@@ -112,9 +118,15 @@ The older delivery fields still exist for display and compatibility. Future cont
 | Event | Important Payload | Meaning |
 | --- | --- | --- |
 | `weapon.fired` | `weaponType`, `ammoSpent` | Miner/blaster fired. |
-| `asteroid.destroyed` | `resourceType`, `tier`, `finalBreak` | Rock was broken or destroyed. |
-| `resource.mined` | `units`, `totalUnits` | Mining produced resource units. |
+| `miner.armedChanged` | `armed`, `charges` | The Blaster armed switch was flipped on the Miner panel. Hidden. |
+| `engine.misfired` | `stage`, `kicked` | A worn drive cut out under thrust (`engineCondition.js` stage effects). At Emergency `kicked` is true: the ship was shoved sideways and its heading jolted. Hidden. |
+| `engine.startupCough` | `stage` | A worn drive coughed (puff + fault sound) on power-up. Hidden. |
+| `hub.shopShelfOpened` | `siteId`, `serviceId`, `stockGroup` | Buying the last starter offer at a component shop opened its next stock group. Once per shop. Hidden. |
+| `asteroid.destroyed` | `resourceType`, `resourceId`, `brokenBy`, `byPlayer`, `method`, `tier`, `finalBreak` | Rock was broken or destroyed. `resourceType` is the coarse audio bucket (`fuel`/`crystal`/`common`); `resourceId` is the actual dominant ore. `brokenBy` is `player`, `npc`, `tow`, `fighter` or `world`; `method` is `charge` or `hull`. |
+| `resource.mined` | `units`, `totalUnits`, `resourceId`, `brokenBy`, `byPlayer`, `method` | Mining produced resource units. Same attribution fields as `asteroid.destroyed`. |
 | `resource.collected` | `resourceType`, `amount` | Ship collected a loose resource. |
+| `comms.lineClosed` | `speaker`, `messageId` | The player clicked a finished chatter plate closed. What a beat waits on for "after you have read that" (Rook speaks after Vey's greeting is closed). Hidden. |
+| `processor.routed` | `output` | The processor's output was routed (the plug snapped to a panel, or the radio changed). Hidden. |
 | `resource.processed` | `resourceType`, `output`, `amount` | Processor converted a resource. |
 | `life.grazed` | `resourceType`, `amount`, `x`, `y` | Rock-life ate material that was left lying unclaimed. Hidden; the only way loose ore leaves the world without being collected. |
 | `life.surfaced` | `type`, `units`, `x`, `y` | Rock-life emerged at a pile of abandoned material. Hidden. |
@@ -133,7 +145,7 @@ The older delivery fields still exist for display and compatibility. Future cont
 | `npc.enteredViewport` | `npcType`, `npcName` | NPC ship entered view. |
 | `npc.carefulMode` | `npcType`, `npcName`, `reason` | NPC switched route behavior. |
 | `npc.destroyed` | `npcType`, `npcName`, `cause` | NPC ship was destroyed. |
-| `enemy.destroyed` | `enemyType`, `cause` | Hostile life/enemy was destroyed. |
+| `enemy.destroyed` | `enemyType`, `cause`, `byPlayer` | Hostile life/enemy was destroyed. `byPlayer` is derived from `cause` by the attribution rule below, so missions can match it declaratively. |
 | `incursion.waveHeld` | `portalId`, `guardCount`, `holdThreshold` | Portal wave deferred because too many prior guards are still alive. Hidden. |
 
 `cause` matters on destruction events: only `weapon` and `ramming-ship` are player kills. Patrol/hub turret kills (`patrol-defense`, `hub-defense`) and environmental deaths (`asteroid-collision`, `environment`) record the same event but do not set `player.*` signals or count toward `enemy.destroyed.byPlayer` / `npc.destroyed.byPlayer`. Systems judging player behavior should read the `byPlayer` stats, not the `.total` counters.

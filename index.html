@@ -10,7 +10,12 @@
         document.documentElement.classList.add("is-free-play-start");
       }
     </script>
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260910-2116-a2e643d1" />
+    <!-- Chatter type: an early-PC terminal face. Falls back to the local
+         monospace stack if the font host is unreachable. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260915-processor-radial" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -57,7 +62,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260910-2116-a2e643d1</span>
+      <span class="build-tag">build: fresh-20260913-1906-b780c151</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -344,22 +349,36 @@
               </select>
               <button id="cockpit-configure" type="button" aria-expanded="false">Configure</button>
               <button id="cockpit-reset" type="button">Reset layout</button>
+              <div class="cockpit-start-links" role="group" aria-label="Start game mode">
+                <a href="./?resetSave=1&amp;devStart=explorer">Start Explorer</a>
+                <a href="./?resetSave=1&amp;devStart=campaign">Start Campaign</a>
+              </div>
             </div>
           </header>
 
           <aside id="cockpit-help-popover" class="cockpit-help-popover" aria-label="Current help" hidden>
             <strong>What should I do now?</strong>
             <span id="cockpit-help-text">Read the current objective and follow the next prompt.</span>
+            <label class="cockpit-help-option">
+              <input id="help-arrows-toggle" type="checkbox" checked />
+              Show help arrows
+            </label>
           </aside>
 
+          <svg id="viewport-transmission-line" class="viewport-transmission-line" aria-hidden="true" hidden>
+            <line x1="0" y1="0" x2="0" y2="0"></line>
+          </svg>
+          <!-- Chatter plate. This one is the template: main.js clones it so
+               several speakers can hold the screen at once, each on their own
+               plate, and none replacing another. -->
           <aside id="viewport-transmission" class="viewport-transmission" aria-live="polite" hidden>
             <i class="viewport-transmission-leader" aria-hidden="true"></i>
             <div class="viewport-transmission-plate">
-              <strong id="viewport-transmission-speaker">Transmission</strong>
-              <span id="viewport-transmission-text"></span>
+              <strong id="viewport-transmission-speaker" class="viewport-transmission-speaker">Transmission</strong>
+              <span id="viewport-transmission-text" class="viewport-transmission-text"></span>
               <div class="viewport-transmission-actions">
-                <button id="viewport-transmission-decline" type="button" hidden>Not Yet</button>
-                <button id="viewport-transmission-accept" type="button" hidden>Continue</button>
+                <button id="viewport-transmission-decline" class="viewport-transmission-decline" type="button" hidden>Not Yet</button>
+                <button id="viewport-transmission-accept" class="viewport-transmission-accept" type="button" hidden>Continue</button>
               </div>
             </div>
           </aside>
@@ -386,6 +405,10 @@
             <label class="cockpit-color-row cockpit-switch-row" for="cockpit-phosphor-ore">
               <span><strong>Phosphor ore</strong><small>Outline loose material in the instrument color instead of its own.</small></span>
               <input id="cockpit-phosphor-ore" type="checkbox" aria-label="Outline ore in the phosphor color">
+            </label>
+            <label class="cockpit-color-row cockpit-switch-row" for="cockpit-velocity-vector">
+              <span><strong>Velocity vector</strong><small>Show the ship's actual direction and speed independently of its heading.</small></span>
+              <input id="cockpit-velocity-vector" type="checkbox" aria-label="Show ship velocity vector" checked>
             </label>
             <div id="cockpit-config-list" class="cockpit-config-list"></div>
           </section>
@@ -1069,6 +1092,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260910-2116-a2e643d1"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260915-processor-radial"></script>
   </body>
 </html>

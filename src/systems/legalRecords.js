@@ -1,5 +1,5 @@
-import { setCurrentAccountOwner } from "./accounts.js?v=fresh-20260910-2116-a2e643d1";
-import { ensureInstitution, ensurePerson, ensureShipAsset, issueWorldDocument, upsertWorldRelationship, WORLD_RECORD_RELATIONSHIPS } from "./worldRecords.js?v=fresh-20260910-2116-a2e643d1";
+import { setCurrentAccountOwner } from "./accounts.js?v=fresh-20260913-1906-b780c151";
+import { ensureInstitution, ensurePerson, ensureShipAsset, issueWorldDocument, upsertWorldRelationship, WORLD_RECORD_RELATIONSHIPS } from "./worldRecords.js?v=fresh-20260913-1906-b780c151";
 
 const REACH_TRANSIT_COMMISSION_ID = "institution:reach-transit-commission";
 const ROOK_INDUSTRIES_ID = "institution:rook-industries";
@@ -97,27 +97,45 @@ export function registerStarterDeliveryShipRecords(state) {
     authorityScope: ["ship-registration", "yard-exchange", "first-reach"],
   });
 
+  // The paperwork carries the story so the dialogue does not have to. This
+  // hull is a wreck: a working miner lost to an incursion, scrapped at the
+  // Porch, sitting in the Authority's impound. The Authority will sell it —
+  // but only to a licensed pilot under a sponsoring operator, and only once it
+  // has proven it can fly by reaching Yard Exchange under its own power. Rook
+  // holds the delivery rights for that one flight. Nothing more.
   issueWorldDocument(state, {
     document: {
       id: titleId,
       type: "ship-title",
-      title: `${state.ship.name} Company Title`,
-      status: "company-owned",
-      holderEntityId: ROOK_INDUSTRIES_ID,
+      title: `${state.ship.name} Salvage Title`,
+      status: "impounded",
+      summary: "Title to a recovered hull, held in impound by the issuing authority pending sale.",
+      notes: [
+        "Recovered hull. Loss recorded: incursion, Starter Drift. Scrapped at Scrap Porch.",
+        "Released to Rook Industries for one delivery flight to Yard Exchange, for assessment.",
+        "Sale conditional: licensed pilot, sponsoring operator, hull to arrive under its own power.",
+      ],
+      holderEntityId: YARD_EXCHANGE_AUTHORITY_ID,
+      beneficialOwnerEntityId: ROOK_INDUSTRIES_ID,
       issuerEntityId: YARD_EXCHANGE_AUTHORITY_ID,
       assetEntityId: shipEntity.id,
       issuedAt: Date.now(),
     },
     issuerEntityId: YARD_EXCHANGE_AUTHORITY_ID,
-    holderEntityId: ROOK_INDUSTRIES_ID,
+    holderEntityId: YARD_EXCHANGE_AUTHORITY_ID,
     assetEntityId: shipEntity.id,
   });
   issueWorldDocument(state, {
     document: {
       id: registrationId,
       type: "ship-registration",
-      title: `${state.ship.name} Temporary Flight Registration`,
+      title: `${state.ship.name} Delivery Flight Permit`,
       status: "temporary",
+      summary: "A one-trip permit to move an impounded hull between hubs under a sponsoring operator.",
+      notes: [
+        "Valid for one flight: Scrap Porch to Yard Exchange, cleared route only.",
+        "Operator of record: Rook Industries. Expires on arrival.",
+      ],
       holderEntityId: ROOK_INDUSTRIES_ID,
       issuerEntityId: YARD_EXCHANGE_AUTHORITY_ID,
       assetEntityId: shipEntity.id,

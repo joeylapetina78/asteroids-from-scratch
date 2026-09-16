@@ -32,8 +32,8 @@ test("the campaign loadout is exactly the ship Rook actually issues", () => {
 
   assert.deepEqual([...fromOffer].sort(), [...CAMPAIGN_FITTED_COMPONENT_IDS].sort(),
     "the fitted list and the offer's included components must agree");
-  // The three lists must not overlap. A broken unit is aboard but is not a
-  // working fitting, and is deliberately not advertised on the offer.
+  // The three lists must not overlap. Missing shop modules stay absent until
+  // purchase; they are not represented by placeholder racks or failed units.
   CAMPAIGN_UNFITTED_COMPONENT_IDS.forEach((id) => {
     assert.ok(!CAMPAIGN_FITTED_COMPONENT_IDS.includes(id), `${id} cannot be both fitted and not fitted`);
     assert.ok(!CAMPAIGN_BROKEN_COMPONENT_IDS.includes(id), `${id} cannot be both absent and broken`);
@@ -72,6 +72,16 @@ test("optional late-game modules are absent from the campaign start", () => {
     assert.ok(CAMPAIGN_UNFITTED_COMPONENT_IDS.includes(componentId),
       `${componentId} must be explicitly absent from the starting skiff`);
   });
+});
+
+test("Modworks starter modules do not appear aboard before purchase", () => {
+  assert.deepEqual(CAMPAIGN_BROKEN_COMPONENT_IDS, []);
+  ["scanner", "collector", "processor"].forEach((componentId) => {
+    assert.ok(CAMPAIGN_UNFITTED_COMPONENT_IDS.includes(componentId));
+  });
+  assert.ok(!CAMPAIGN_PANEL_IDS.includes("scanner"));
+  assert.ok(!CAMPAIGN_PANEL_IDS.includes("collector"));
+  assert.ok(!CAMPAIGN_PANEL_IDS.includes("processor"));
 });
 
 test("the company skiff is slow, and that is the game's default engine", () => {

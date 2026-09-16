@@ -12,7 +12,7 @@ function buy(state, contractId) {
   return manager.acceptContract(contractId);
 }
 
-test("Travel Authority offers exactly one work pass for each of the nine hubs", () => {
+test("Hub Authority offers exactly one work pass for each of the nine hubs", () => {
   const travel = hubServiceDefinitions["yard-exchange"].find((service) => service.serviceType === "permits");
   assert.equal(travel.contractIds.length, 9);
   assert.ok(travel.contractIds.every((id) => id === "yard-exchange-work-pass" || /^territory-.+-work-pass$/.test(id)));

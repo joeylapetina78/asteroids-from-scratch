@@ -26,13 +26,29 @@ export const ENGINE_CONDITION_CONFIG = {
   // different stage after playtesting. thrustScale/maxSpeedScale multiply the
   // engine's output; misfireChance is per-second probability of a brief thrust
   // dropout of misfireDuration seconds; steerPull is a gentle unwanted drift.
+  // misfireKick is how hard a misfire shoves the ship sideways (units/s of
+  // velocity) and misfireJolt how far it knocks the heading (radians): at
+  // Emergency the drive does not just cough, it fires off-axis and puts the
+  // ship off course. startupCough is the chance the drive coughs on power-up.
   stages: {
-    healthy: { thrustScale: 1, maxSpeedScale: 1, misfireChance: 0, misfireDuration: 0, steerPull: 0 },
-    degraded: { thrustScale: 0.85, maxSpeedScale: 1, misfireChance: 0.11, misfireDuration: 0.4, steerPull: 0 },
-    emergency: { thrustScale: 0.55, maxSpeedScale: 0.85, misfireChance: 0.34, misfireDuration: 0.75, steerPull: 0.16 },
-    failed: { thrustScale: 0, maxSpeedScale: 0.85, misfireChance: 0, misfireDuration: 0, steerPull: 0 },
+    healthy: { thrustScale: 1, maxSpeedScale: 1, misfireChance: 0, misfireDuration: 0, steerPull: 0, misfireKick: 0, misfireJolt: 0, startupCough: 0 },
+    degraded: { thrustScale: 0.85, maxSpeedScale: 1, misfireChance: 0.11, misfireDuration: 0.4, steerPull: 0, misfireKick: 0, misfireJolt: 0, startupCough: 0.35 },
+    emergency: { thrustScale: 0.55, maxSpeedScale: 0.85, misfireChance: 0.34, misfireDuration: 0.75, steerPull: 0.16, misfireKick: 38, misfireJolt: 0.28, startupCough: 1 },
+    failed: { thrustScale: 0, maxSpeedScale: 0.85, misfireChance: 0, misfireDuration: 0, steerPull: 0, misfireKick: 0, misfireJolt: 0, startupCough: 1 },
   },
 };
+
+// Where the campaign skiff's drive starts: Emergency, well into it. The hull
+// was written off after an incursion and the drive is the one thing on it
+// nobody replaced. It should cough, pull, and kick the ship off course on the
+// assessment flight and still have a few minutes of grace before it dies —
+// enough to reach Yard Exchange, not enough to dawdle. Rook services it in
+// The Deal, through the same seam Sal uses.
+export const CAMPAIGN_ENGINE_START_WEAR = 168;
+// A drive that has been serviced this many times and lost this much of its
+// ceiling: a used machine, not a new one that happens to be worn.
+export const CAMPAIGN_ENGINE_PRIOR_SERVICES = 5;
+export const CAMPAIGN_ENGINE_LIFETIME_DEGRADATION = 7;
 
 export function getEngineStageEffects(stage) {
   return ENGINE_CONDITION_CONFIG.stages[stage] ?? ENGINE_CONDITION_CONFIG.stages.healthy;

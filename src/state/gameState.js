@@ -1,21 +1,21 @@
-import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260910-2116-a2e643d1";
-import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260910-2116-a2e643d1";
-import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260910-2116-a2e643d1";
-import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260910-2116-a2e643d1";
-import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260910-2116-a2e643d1";
-import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260910-2116-a2e643d1";
-import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260910-2116-a2e643d1";
-import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260910-2116-a2e643d1";
-import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260910-2116-a2e643d1";
-import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260910-2116-a2e643d1";
-import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260910-2116-a2e643d1";
-import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260910-2116-a2e643d1";
-import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260910-2116-a2e643d1";
-import { createInitialIndustrialState } from "../systems/industrialProduction.js?v=fresh-20260910-2116-a2e643d1";
-import { consolidateSprcOwnership } from "../systems/sprcOwnership.js?v=fresh-20260910-2116-a2e643d1";
-import { createInitialNpcDevelopmentState } from "../systems/npcDevelopment.js?v=fresh-20260910-2116-a2e643d1";
-import { createInitialWorldNetwork } from "../systems/worldNetworkRegistry.js?v=fresh-20260910-2116-a2e643d1";
-import { createCockpitLayoutState } from "../systems/cockpitLayout.js?v=fresh-20260910-2116-a2e643d1";
+import { createEventLedger } from "../systems/eventLedger.js?v=fresh-20260913-1906-b780c151";
+import { PANEL_IDS } from "../systems/componentRegistry.js?v=fresh-20260913-1906-b780c151";
+import { createInitialAccounts } from "../systems/accounts.js?v=fresh-20260913-1906-b780c151";
+import { createInitialHulls } from "../systems/hulls.js?v=fresh-20260913-1906-b780c151";
+import { createInitialObligations } from "../systems/obligations.js?v=fresh-20260913-1906-b780c151";
+import { seedAuthorityFoundation } from "../systems/authoritySeeds.js?v=fresh-20260913-1906-b780c151";
+import { createEmptyWorldRecords } from "../systems/worldRecords.js?v=fresh-20260913-1906-b780c151";
+import { createInitialSprcState } from "../systems/sprcOperation.js?v=fresh-20260913-1906-b780c151";
+import { createInitialLogisticsState } from "../systems/logistics.js?v=fresh-20260913-1906-b780c151";
+import { createInitialPopulationState } from "../systems/populationDemand.js?v=fresh-20260913-1906-b780c151";
+import { createInitialProcurementState } from "../systems/hubProcurement.js?v=fresh-20260913-1906-b780c151";
+import { createInitialTowServiceState } from "../systems/towService.js?v=fresh-20260913-1906-b780c151";
+import { createInitialRightsAuthorities } from "../systems/rightsAuthority.js?v=fresh-20260913-1906-b780c151";
+import { createInitialIndustrialState } from "../systems/industrialProduction.js?v=fresh-20260913-1906-b780c151";
+import { consolidateSprcOwnership } from "../systems/sprcOwnership.js?v=fresh-20260913-1906-b780c151";
+import { createInitialNpcDevelopmentState } from "../systems/npcDevelopment.js?v=fresh-20260913-1906-b780c151";
+import { createInitialWorldNetwork } from "../systems/worldNetworkRegistry.js?v=fresh-20260913-1906-b780c151";
+import { createCockpitLayoutState } from "../systems/cockpitLayout.js?v=fresh-20260913-1906-b780c151";
 
 export function createGameState() {
   const state = {
@@ -43,6 +43,9 @@ export function createGameState() {
       paperwork: {
         filingIntroduced: true,
       },
+      // The help arrows that point at whatever the current task wants clicked.
+      // A player who knows the cockpit can switch them off in the Help box.
+      helpArrows: true,
       cockpit: createCockpitLayoutState(),
       viewportLayout: "default",
       viewportZoom: 1.0,

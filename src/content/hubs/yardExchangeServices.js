@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260910-2116-a2e643d1";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260910-2116-a2e643d1";
+import { getNpcName } from "../npcs.js?v=fresh-20260913-1906-b780c151";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260913-1906-b780c151";
 
 const COMMON_FRONTIER_ORE_VALUES = Object.freeze({
   "water-ice": 30,
@@ -110,23 +110,23 @@ export const hubServiceDefinitions = {
       id: yardExchangeServices.finance,
       npcId: "mako",
       npcName: getNpcName("mako"),
-      organization: "Yard Exchange Finance",
+      organization: "Sable Ledger",
       serviceType: "finance",
-      label: "Finance",
-      description: "Loans and payments.",
+      label: "Mako",
+      description: "Sable Ledger loans, deals, and collections.",
       contractIds: ["mako-starter-ship-loan", "mako-emergency-fuel-loan"],
       missionFirstContractId: "mako-starter-ship-loan",
       defaultUnlocked: false,
-      greeting: "Mako at Finance. Here to talk terms on something, or check your account?",
+      greeting: "Mako, Sable Ledger. Here to make a deal, settle one, or talk about what you owe?",
     },
     {
       id: yardExchangeServices.travelAuthority,
       npcId: "rtc-officer",
       npcName: getNpcName("rtc-officer"),
-      organization: "Reach Transit Commission",
+      organization: "Yard Exchange Authority",
       serviceType: "permits",
-      label: "Travel Authority",
-      description: "Hub jurisdiction work passes.",
+      label: "Hub Authority",
+      description: "Registry, impound, and jurisdiction work passes.",
       contractIds: [
         "yard-exchange-work-pass",
         "territory-scrap-porch-work-pass",
@@ -141,7 +141,7 @@ export const hubServiceDefinitions = {
       offersAllContracts: true,
       defaultUnlocked: true,
       greeting:
-        "Travel Authority. Each settlement governs its own colored jurisdiction; unclaimed frontier is open. A hub work pass clears mining, docking, transit, and trade inside that hub's boundary. Which jurisdiction do you need?",
+        "Yard Exchange Authority. Registry, impound, and work passes—each hub governs its own coloured jurisdiction, the open frontier governs itself. State your business and have your documents ready.",
     },
     {
       id: yardExchangeServices.supply,
@@ -193,7 +193,7 @@ export const hubServiceDefinitions = {
       description: "Component sales and rough ship modifications.",
       defaultUnlocked: false,
       greeting:
-        "Nara Coil at Modworks. Rook said you might be ready for something that pulls its weight.",
+        "Nara Coil. Rook gave me a very short list for you: tractor field, scanner, processor. Buy all three and then I'll show you the interesting shelves.",
       componentOffers: [
         {
           id: "tractor-field-mk1",
@@ -205,6 +205,8 @@ export const hubServiceDefinitions = {
           description:
             "A hungry little sweep field. Hold the panel button to pull loose resource squares into the ship.",
           tags: ["Resource recovery", "Uses scanergy", "Hold to pull"],
+          purchaseMessage:
+            "Tractor field's on. Hold the button on its panel and it pulls loose ore in to you. It runs on scanergy—the purple hexes—so keep some coming.",
         },
         {
           id: "scanner-mk1",
@@ -216,17 +218,23 @@ export const hubServiceDefinitions = {
           description:
             "Pulses a forward cone every few seconds and marks nearby resource-bearing rocks on your display.",
           tags: ["Resource detection", "Auto-pulses", "Forward cone"],
+          purchaseMessage:
+            "Scanner's fitted. It pulses ahead every few seconds and marks what's in the rocks. Each pulse costs scanergy; the purple hexes make it.",
         },
         {
           id: "processor-mk1",
           stockGroup: "starter",
           componentId: "processor",
           componentName: "Processor",
-          price: 600,
+          price: 400,
           title: "Processor Mk I",
           description:
             "Converts collected resources into fuel, charges, or scanergy as they arrive. Set output in the panel.",
           tags: ["Converts resources", "Passive output", "Configurable"],
+          // The lesson's offer says the same and asks the question; this is
+          // what stands if the lesson has already been given.
+          purchaseMessage:
+            "Processor's in. Essential choice: every ore you pick up goes through it, and it's what turns rock into fuel, patches, charges and scanergy instead of dead weight.",
         },
         {
           // The yard has no business selling a pilot the drive already bolted to
@@ -413,7 +421,7 @@ export const hubServiceDefinitions = {
       description: "Murmur's prophecies and future systems.",
       defaultUnlocked: false,
       greeting:
-        "Psst. You. The one with rock dust on the account. Come down the back corridor. I know what this place becomes.",
+        "You're Rook's new pilot. I am Murmur. I watch what comes through the Yard and remember what everyone else forgets. Your ship is going places I would like to see.",
     },
   ],
   "the-ledge": [

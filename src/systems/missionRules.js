@@ -1,4 +1,4 @@
-import { resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260910-2116-a2e643d1";
+import { resourceTypesMatch } from "./resourceDefinitions.js?v=fresh-20260913-1906-b780c151";
 
 export function matchesEventRule(rule, event, { state, flags }) {
   const ruleFlags = flags ?? state.journey.flags;
@@ -27,11 +27,25 @@ export function matchesEventRule(rule, event, { state, flags }) {
     return false;
   }
 
+  // The declarative opposite of requiresFlag: "only until this has happened".
+  // A coaching line that nags about a red rock stops the moment one is mined.
+  if (rule.forbidFlag && (ruleFlags[rule.forbidFlag] || state.journey.globalFlags?.[rule.forbidFlag])) {
+    return false;
+  }
+
+  if (rule.forbidFlags?.some((flag) => ruleFlags[flag] || state.journey.globalFlags?.[flag])) {
+    return false;
+  }
+
   if (rule.eventType !== event.type) {
     return false;
   }
 
   if (!matchesPayload(rule.payloadEquals ?? {}, event.payload ?? {})) {
+    return false;
+  }
+
+  if (!matchesPayloadExclusions(rule.payloadNotEquals ?? {}, event.payload ?? {})) {
     return false;
   }
 
@@ -99,6 +113,19 @@ function matchesPayload(expectedPayload, actualPayload) {
     }
 
     return actualPayload[key] === expectedValue;
+  });
+}
+
+// `payloadNotEquals: { resourceId: ["iron-nickel", "common"] }` — the payload
+// value must match none of the listed values (a scalar is a list of one).
+// `payloadEquals` has a `not:` prefix for a single string, but a rule that
+// wants "any ore except these two" cannot say it that way.
+function matchesPayloadExclusions(excludedPayload, actualPayload) {
+  return Object.entries(excludedPayload).every(([key, excludedValues]) => {
+    const values = Array.isArray(excludedValues) ? excludedValues : [excludedValues];
+    const actual = actualPayload[key];
+
+    return !values.some((value) => (key === "resourceType" ? resourceTypesMatch(actual, value) : actual === value));
   });
 }
 

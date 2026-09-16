@@ -1,9 +1,9 @@
-﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260910-2116-a2e643d1";
-import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260910-2116-a2e643d1";
-import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260910-2116-a2e643d1";
-import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260910-2116-a2e643d1";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260910-2116-a2e643d1";
-import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260910-2116-a2e643d1";
+﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260913-1906-b780c151";
+import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260913-1906-b780c151";
+import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260913-1906-b780c151";
+import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260913-1906-b780c151";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260913-1906-b780c151";
+import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260913-1906-b780c151";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same
@@ -355,6 +355,22 @@ function clampCount(value, minimum, maximum) {
 const ORE_CLUSTER_SEED_NAMESPACE = 9100;
 
 function getOreClusterSeeds(cx, cy, chunkSize, resourceField) {
+  // Pure in (cx, cy, chunkSize) for a given field, and each seed costs a full
+  // resource profile — a few dozen noise samples. Every mining company surveys
+  // 12,000 units around every site at boot, so uncached this was the single
+  // largest cost of startup (~2s of a frozen main thread before the cold open
+  // could take a click). The memo lives on the field instance, not the module,
+  // so bare and versioned imports cannot fork it.
+  const cache = resourceField.oreClusterSeedCache ??= new Map();
+  const cacheKey = `${chunkSize}:${cx}:${cy}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+  const seeds = computeOreClusterSeeds(cx, cy, chunkSize, resourceField);
+  cache.set(cacheKey, seeds);
+  return seeds;
+}
+
+function computeOreClusterSeeds(cx, cy, chunkSize, resourceField) {
   const random = createRandom(hashNumbers(ORE_CLUSTER_SEED_NAMESPACE, cx, cy));
   const count = 2 + Math.floor(random() * 3);
   const centerX = cx * chunkSize;

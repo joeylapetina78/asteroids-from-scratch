@@ -59,7 +59,19 @@ test("a mission that claims no floor never blocks anyone", () => {
   state.journey.completedStepIds = [];
 
   assert.equal(journeyDirector.isCommsFloorHeld(), false);
-  comms.say({ source: COMMS_SOURCES.worldNpc, speaker: "Murmur", text: "Hello." });
+  comms.say({ source: COMMS_SOURCES.worldNpc, speaker: "Rook", text: "Hello." });
+  assert.ok(spoken.includes("Rook"));
+});
+
+test("Murmur cannot speak before the player meets them at Yard Exchange", () => {
+  const { state, comms, spoken } = world();
+  state.journey.mission = { id: "chapter-1-red-work", status: "active" };
+
+  assert.equal(comms.say({ source: COMMS_SOURCES.worldNpc, speaker: "Murmur", text: "Too soon." }), false);
+  assert.ok(!spoken.includes("Murmur"));
+
+  state.hubServices.flags.murmurMet = true;
+  assert.equal(comms.say({ source: COMMS_SOURCES.worldNpc, speaker: "Murmur", text: "Now we have met." }), true);
   assert.ok(spoken.includes("Murmur"));
 });
 
@@ -70,4 +82,23 @@ test("a completed interview releases the floor even if first-thrust was skipped"
   state.journey.mission = { id: "chapter-1-yard-exchange", status: "completed" };
   state.journey.completedStepIds = [];
   assert.equal(journeyDirector.isCommsFloorHeld(), false);
+});
+
+test("NPC chatter waits for the player instead of expiring", () => {
+  const { state, journeyDirector } = world();
+  const originalSetTimeout = globalThis.setTimeout;
+  let timerCount = 0;
+  globalThis.setTimeout = () => {
+    timerCount += 1;
+    return 0;
+  };
+
+  try {
+    journeyDirector.sayAsNpc("Murmur", "I will still be here when you finish reading.");
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+  }
+
+  assert.equal(timerCount, 0, "displayed chatter owns no expiry timer");
+  assert.equal(state.journey.messages.at(-1)?.speaker, "Murmur");
 });

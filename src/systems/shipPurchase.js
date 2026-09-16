@@ -1,6 +1,6 @@
-import { getCurrentShipLegal, getPilotName, updateCurrentShipLegal } from "./legalRecords.js?v=fresh-20260910-2116-a2e643d1";
-import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260910-2116-a2e643d1";
-import { registerHull, setActiveHull } from "./hulls.js?v=fresh-20260910-2116-a2e643d1";
+import { getCurrentShipLegal, getPilotName, updateCurrentShipLegal } from "./legalRecords.js?v=fresh-20260913-1906-b780c151";
+import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260913-1906-b780c151";
+import { registerHull, setActiveHull } from "./hulls.js?v=fresh-20260913-1906-b780c151";
 import {
   WORLD_RECORD_RELATIONSHIPS,
   ensureInstitution,
@@ -9,10 +9,10 @@ import {
   getShipAssetId,
   issueWorldDocument,
   upsertWorldRelationship,
-} from "./worldRecords.js?v=fresh-20260910-2116-a2e643d1";
+} from "./worldRecords.js?v=fresh-20260913-1906-b780c151";
 
 const YARD_EXCHANGE_AUTHORITY_ID = "institution:yard-exchange-authority";
-const YARD_EXCHANGE_FINANCE_ID = "institution:yard-exchange-finance";
+const SABLE_LEDGER_ID = "institution:sable-ledger";
 
 export function purchaseShipOffer(state, offer) {
   if (state.ship.purchasedOfferId) {
@@ -84,7 +84,74 @@ export function purchaseShipOffer(state, offer) {
   return { ok: true };
 }
 
-function registerPurchasedShipLegalRecords(state, { offer, previousVin, purchasedVin, hasStarterLoanLien, sourceContractId }) {
+// The campaign purchase: not a new hull off a lot, but the impounded wreck the
+// player just delivered, sold by the Authority through Rook's arrangement and
+// paid for with Mako's money. The VIN does not change — it is the same ship —
+// so the title moves from the Authority's impound to the pilot's name, the
+// one-trip permit becomes a real registration, and the lien lands on it. The
+// miner and hold were bolted on all along; they are the player's now.
+export const SALVAGE_HULL_OFFER_ID = "authority-salvage-hull";
+export const SALVAGE_HULL_PRICE = 20000;
+
+export function purchaseSalvageHullFromAuthority(state, { price = SALVAGE_HULL_PRICE, loanContractId = "mako-starter-ship-loan" } = {}) {
+  if (state.ship.purchasedOfferId) {
+    return { ok: false, reason: "already-purchased" };
+  }
+  if (!canSpendCredits(state, price)) {
+    state.ledger.recordEvent(
+      "merchant.cannotAfford",
+      { offerId: SALVAGE_HULL_OFFER_ID, shipName: state.ship.name, price, credits: Math.floor(getCredits(state)) },
+      { visible: false },
+    );
+    return { ok: false, reason: "insufficient-credits" };
+  }
+
+  spendCredits(state, price);
+  state.ship.purchasedOfferId = SALVAGE_HULL_OFFER_ID;
+  const vin = state.components.hull.vin;
+  const loan = state.contracts.records[loanContractId];
+  const hasLien = Boolean(loan && ["active", "fulfilled"].includes(loan.status));
+  const offer = {
+    id: SALVAGE_HULL_OFFER_ID,
+    title: state.ship.name,
+    price,
+    includedComponents: ["hull", "engine", "beacon-locator", "miner", "cargo"],
+  };
+
+  state.components.miner.installed = true;
+  state.components.cargoHold.installed = true;
+  state.components.engine.powerLocked = false;
+  // The one-trip permit the hull flew in on expires on arrival, as it says.
+  const permitId = getCurrentShipLegal(state).registrations?.flight?.id ?? null;
+  registerHull(state, { vin, name: state.ship.name, frameId: state.ship.frameId, status: hasLien ? "financed" : "owned" });
+  registerPurchasedShipLegalRecords(state, {
+    offer,
+    previousVin: vin,
+    purchasedVin: vin,
+    hasStarterLoanLien: hasLien,
+    sourceContractId: hasLien ? loan.id : null,
+    titleNotes: [
+      "Recovered hull, sold out of Yard Exchange Authority impound.",
+      "Sale arranged by Rook Industries, sponsoring operator of record.",
+      hasLien ? "Purchase financed; lien held by Sable Ledger until paid." : "Purchase paid in full.",
+    ],
+  });
+  const permit = permitId ? state.worldRecords?.documents?.[permitId] : null;
+  if (permit && permit.status === "temporary") permit.status = "expired";
+  state.ledger.recordEvent("ship.purchased", {
+    offerId: SALVAGE_HULL_OFFER_ID,
+    shipName: state.ship.name,
+    price,
+    creditsRemaining: Math.floor(getCredits(state)),
+    includedComponents: offer.includedComponents,
+    previousVin: vin,
+    shipVin: vin,
+  });
+
+  return { ok: true };
+}
+
+function registerPurchasedShipLegalRecords(state, { offer, previousVin, purchasedVin, hasStarterLoanLien, sourceContractId, titleNotes = null }) {
   const titleId = `title-${purchasedVin.toLowerCase()}`;
   const registrationId = `reg-flight-${purchasedVin.toLowerCase()}`;
   const lienId = `lien-${purchasedVin.toLowerCase()}-starter-finance`;
@@ -95,7 +162,7 @@ function registerPurchasedShipLegalRecords(state, { offer, previousVin, purchase
   updateCurrentShipLegal(state, {
     titleHolder: pilotName,
     titleStatus,
-    lienHolder: hasStarterLoanLien ? "Yard Exchange Finance Office" : null,
+    lienHolder: hasStarterLoanLien ? "Sable Ledger" : null,
     flightLicenseId: registrationId,
     registrations: {
       ...currentShipLegal.registrations,
@@ -119,8 +186,9 @@ function registerPurchasedShipLegalRecords(state, { offer, previousVin, purchase
     shipName: offer.title,
     titleHolder: pilotName,
     status: titleStatus,
-    lienHolder: hasStarterLoanLien ? "Yard Exchange Finance Office" : null,
+    lienHolder: hasStarterLoanLien ? "Sable Ledger" : null,
     sourceContractId,
+    notes: titleNotes ?? undefined,
     issuedAt: Date.now(),
   };
   state.legal.shipRegistrations[registrationId] = {
@@ -140,7 +208,7 @@ function registerPurchasedShipLegalRecords(state, { offer, previousVin, purchase
     type: "ship-registration",
     title: `${offer.title} Flight Registration`,
     status: hasStarterLoanLien ? "held" : "released",
-    heldBy: hasStarterLoanLien ? "Yard Exchange Finance Office" : null,
+    heldBy: hasStarterLoanLien ? "Sable Ledger" : null,
     visibleToPlayer: true,
     canFile: true,
     canRemove: !hasStarterLoanLien,
@@ -155,6 +223,7 @@ function registerPurchasedShipLegalRecords(state, { offer, previousVin, purchase
     titleStatus,
     hasStarterLoanLien,
     sourceContractId,
+    titleNotes,
   });
 
   state.ledger.recordEvent("ship.titleIssued", {
@@ -163,7 +232,7 @@ function registerPurchasedShipLegalRecords(state, { offer, previousVin, purchase
     shipName: offer.title,
     titleHolder: pilotName,
     status: titleStatus,
-    lienHolder: hasStarterLoanLien ? "Yard Exchange Finance Office" : null,
+    lienHolder: hasStarterLoanLien ? "Sable Ledger" : null,
     sourceContractId,
   });
   state.ledger.recordEvent("ship.registered", {
@@ -182,7 +251,7 @@ function registerPurchasedShipLegalRecords(state, { offer, previousVin, purchase
 
   state.legal.liens[lienId] = {
     id: lienId,
-    holder: "Yard Exchange Finance Office",
+    holder: "Sable Ledger",
     contractId: sourceContractId,
     attachedTo: {
       type: "ship-title",
@@ -201,15 +270,15 @@ function registerPurchasedShipLegalRecords(state, { offer, previousVin, purchase
     contractId: sourceContractId,
     shipVin: purchasedVin,
     titleId,
-    holder: "Yard Exchange Finance Office",
+    holder: "Sable Ledger",
   });
 }
 
-function registerPurchasedShipWorldRecords(state, { offer, purchasedVin, titleId, registrationId, lienId, titleStatus, hasStarterLoanLien, sourceContractId }) {
+function registerPurchasedShipWorldRecords(state, { offer, purchasedVin, titleId, registrationId, lienId, titleStatus, hasStarterLoanLien, sourceContractId, titleNotes = null }) {
   const pilotName = getPilotName(state);
   const pilotEntityId = getPilotEntityId(state);
   const shipEntityId = getShipAssetId(purchasedVin);
-  const titleHolderEntityId = hasStarterLoanLien ? YARD_EXCHANGE_FINANCE_ID : pilotEntityId;
+  const titleHolderEntityId = hasStarterLoanLien ? SABLE_LEDGER_ID : pilotEntityId;
 
   ensureInstitution(state, {
     id: YARD_EXCHANGE_AUTHORITY_ID,
@@ -217,8 +286,8 @@ function registerPurchasedShipWorldRecords(state, { offer, purchasedVin, titleId
     authorityScope: ["ship-registration", "yard-exchange", "first-reach"],
   });
   ensureInstitution(state, {
-    id: YARD_EXCHANGE_FINANCE_ID,
-    name: "Yard Exchange Finance Office",
+    id: SABLE_LEDGER_ID,
+    name: "Sable Ledger",
     authorityScope: ["loan", "lien", "ship-title-collateral"],
   });
   ensurePerson(state, {
@@ -238,6 +307,10 @@ function registerPurchasedShipWorldRecords(state, { offer, purchasedVin, titleId
       type: "ship-title",
       title: `${offer.title} Title`,
       status: titleStatus,
+      summary: hasStarterLoanLien
+        ? "Title to a hull held in the pilot's name, with a lender's lien on it until the financing is paid."
+        : "Title to a hull held outright in the pilot's name.",
+      notes: titleNotes ?? undefined,
       assetEntityId: shipEntityId,
       holderEntityId: titleHolderEntityId,
       beneficialOwnerEntityId: pilotEntityId,
@@ -289,8 +362,8 @@ function registerPurchasedShipWorldRecords(state, { offer, purchasedVin, titleId
       type: "lien",
       title: `${offer.title} Starter Finance Lien`,
       status: "active",
-      holderEntityId: YARD_EXCHANGE_FINANCE_ID,
-      issuerEntityId: YARD_EXCHANGE_FINANCE_ID,
+      holderEntityId: SABLE_LEDGER_ID,
+      issuerEntityId: SABLE_LEDGER_ID,
       assetEntityId: shipEntityId,
       collateralDocumentId: titleId,
       contractId: sourceContractId,
@@ -300,8 +373,8 @@ function registerPurchasedShipWorldRecords(state, { offer, purchasedVin, titleId
       },
       issuedAt: Date.now(),
     },
-    issuerEntityId: YARD_EXCHANGE_FINANCE_ID,
-    holderEntityId: YARD_EXCHANGE_FINANCE_ID,
+    issuerEntityId: SABLE_LEDGER_ID,
+    holderEntityId: SABLE_LEDGER_ID,
     assetEntityId: shipEntityId,
   });
   upsertWorldRelationship(state, {

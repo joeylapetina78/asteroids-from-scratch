@@ -1,85 +1,88 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260910-2116-a2e643d1";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType } from "./systems/resourceDefinitions.js?v=fresh-20260910-2116-a2e643d1";
-import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260910-2116-a2e643d1";
-import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260910-2116-a2e643d1";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260910-2116-a2e643d1";
-import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260910-2116-a2e643d1";
-import { accumulatePanelWear, addToTank, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260910-2116-a2e643d1";
-import { ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260910-2116-a2e643d1";
-import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260910-2116-a2e643d1";
-import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260910-2116-a2e643d1";
-import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260910-2116-a2e643d1";
-import { getMeterGrain, getPanelMaker, getPanelMakerId, getPanelPlate } from "./content/ships/panelMakers.js?v=fresh-20260910-2116-a2e643d1";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260910-2116-a2e643d1";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260910-2116-a2e643d1";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260910-2116-a2e643d1";
-import { Game } from "./game.js?v=fresh-20260910-2116-a2e643d1";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260910-2116-a2e643d1";
-import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260910-2116-a2e643d1";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260910-2116-a2e643d1";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260910-2116-a2e643d1";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260910-2116-a2e643d1";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260913-1906-b780c151";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType, resourceTypesMatch } from "./systems/resourceDefinitions.js?v=fresh-20260913-1906-b780c151";
+import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260913-1906-b780c151";
+import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260913-1906-b780c151";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260913-1906-b780c151";
+import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260913-1906-b780c151";
+import { accumulatePanelWear, addToTank, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260913-1906-b780c151";
+import { CAMPAIGN_ENGINE_LIFETIME_DEGRADATION, CAMPAIGN_ENGINE_PRIOR_SERVICES, CAMPAIGN_ENGINE_START_WEAR, ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260913-1906-b780c151";
+import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260913-1906-b780c151";
+import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260913-1906-b780c151";
+import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260913-1906-b780c151";
+import { getMeterGrain, getPanelMaker, getPanelMakerId, getPanelPlate } from "./content/ships/panelMakers.js?v=fresh-20260913-1906-b780c151";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260913-1906-b780c151";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260913-1906-b780c151";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260913-1906-b780c151";
+import { Game } from "./game.js?v=fresh-20260913-1906-b780c151";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260913-1906-b780c151";
+import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260913-1906-b780c151";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260913-1906-b780c151";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260913-1906-b780c151";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260913-1906-b780c151";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260910-2116-a2e643d1";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260910-2116-a2e643d1";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260910-2116-a2e643d1";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260910-2116-a2e643d1";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260910-2116-a2e643d1";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260910-2116-a2e643d1";
-import { getRegistryEntityIdForSite, getRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260910-2116-a2e643d1";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260910-2116-a2e643d1";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260910-2116-a2e643d1";
-import { Processor, getProcessorConsumptionQuantity } from "./systems/processor.js?v=fresh-20260910-2116-a2e643d1";
-import { createBayInertia } from "./systems/bayInertia.js?v=fresh-20260910-2116-a2e643d1";
-import { chamberYieldsClick } from "./systems/chamberClickOwner.js?v=fresh-20260910-2116-a2e643d1";
-import { deriveAccentColor, resolveAccentColor } from "./systems/cockpitAccent.js?v=fresh-20260910-2116-a2e643d1";
-import { describeModuleReadout } from "./systems/moduleReadout.js?v=fresh-20260910-2116-a2e643d1";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260910-2116-a2e643d1";
-import { purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260910-2116-a2e643d1";
-import { createGameState } from "./state/gameState.js?v=fresh-20260910-2116-a2e643d1";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260910-2116-a2e643d1";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260910-2116-a2e643d1";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260910-2116-a2e643d1";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260910-2116-a2e643d1";
-import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260910-2116-a2e643d1";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260910-2116-a2e643d1";
-import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260910-2116-a2e643d1";
-import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260910-2116-a2e643d1";
-import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260910-2116-a2e643d1";
-import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260910-2116-a2e643d1";
-import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260910-2116-a2e643d1";
-import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260910-2116-a2e643d1";
-import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS, ROOK_MINING_SEED } from "./content/economy/miningInstitutions.js?v=fresh-20260910-2116-a2e643d1";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260910-2116-a2e643d1";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260910-2116-a2e643d1";
-import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260910-2116-a2e643d1";
-import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260910-2116-a2e643d1";
-import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260910-2116-a2e643d1";
-import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260910-2116-a2e643d1";
-import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260910-2116-a2e643d1";
-import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260910-2116-a2e643d1";
-import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260910-2116-a2e643d1";
-import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260910-2116-a2e643d1";
-import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260910-2116-a2e643d1";
-import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260910-2116-a2e643d1";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260910-2116-a2e643d1";
-import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260910-2116-a2e643d1";
-import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260910-2116-a2e643d1";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260910-2116-a2e643d1";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260910-2116-a2e643d1";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260910-2116-a2e643d1";
-import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260910-2116-a2e643d1";
-import { FLEET_SAMPLE_INTERVAL_MS, HULL_EVENT, auditFleetIntegrity, getFleetSamples, getHullEvents, readFleetCensus, recordFleetSample } from "./systems/fleetCensus.js?v=fresh-20260910-2116-a2e643d1";
-import { clampToViewport, fromAnchoredPosition, hasAnchoredPosition, toAnchoredPosition } from "./systems/panelAnchoring.js?v=fresh-20260910-2116-a2e643d1";
-import { CAMPAIGN_BROKEN_COMPONENT_IDS, CAMPAIGN_FITTED_COMPONENT_IDS, CAMPAIGN_MINER_AMMO, CAMPAIGN_MINER_PRIOR_SERVICES, CAMPAIGN_MINER_WEAR_FRACTION, CAMPAIGN_PANEL_IDS, CAMPAIGN_SHIP_FRAME_ID, CAMPAIGN_SHIP_NAME, CAMPAIGN_UNFITTED_COMPONENT_IDS } from "./content/ships/campaignLoadout.js?v=fresh-20260910-2116-a2e643d1";
-import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260910-2116-a2e643d1";
-import { getCockpitScale, getCockpitScaleProperties } from "./systems/cockpitScale.js?v=fresh-20260910-2116-a2e643d1";
-import { COCKPIT_MODULE_IDS, createCockpitLayoutState, resetCockpitLayout } from "./systems/cockpitLayout.js?v=fresh-20260910-2116-a2e643d1";
-import { alignCockpitPanel, createResponsiveCockpitPosition, getCockpitScope, restoreResponsiveCockpitPosition, ceilToColumn, floorToColumn, snapCockpitPanel, snapCockpitPanelToBay } from "./systems/cockpitSnap.js?v=fresh-20260910-2116-a2e643d1";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260913-1906-b780c151";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260913-1906-b780c151";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260913-1906-b780c151";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260913-1906-b780c151";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260913-1906-b780c151";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260913-1906-b780c151";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260913-1906-b780c151";
+import { getShipAssetId } from "./systems/worldRecords.js?v=fresh-20260913-1906-b780c151";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260913-1906-b780c151";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260913-1906-b780c151";
+import { Processor, getProcessorConsumptionQuantity } from "./systems/processor.js?v=fresh-20260913-1906-b780c151";
+import { createBayInertia } from "./systems/bayInertia.js?v=fresh-20260913-1906-b780c151";
+import { chamberYieldsClick } from "./systems/chamberClickOwner.js?v=fresh-20260913-1906-b780c151";
+import { deriveAccentColor, resolveAccentColor } from "./systems/cockpitAccent.js?v=fresh-20260913-1906-b780c151";
+import { describeModuleReadout } from "./systems/moduleReadout.js?v=fresh-20260913-1906-b780c151";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260913-1906-b780c151";
+import { purchaseSalvageHullFromAuthority, purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260913-1906-b780c151";
+import { createGameState } from "./state/gameState.js?v=fresh-20260913-1906-b780c151";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260913-1906-b780c151";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260913-1906-b780c151";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260913-1906-b780c151";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260913-1906-b780c151";
+import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260913-1906-b780c151";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260913-1906-b780c151";
+import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260913-1906-b780c151";
+import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260913-1906-b780c151";
+import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260913-1906-b780c151";
+import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260913-1906-b780c151";
+import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260913-1906-b780c151";
+import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260913-1906-b780c151";
+import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS, ROOK_MINING_SEED } from "./content/economy/miningInstitutions.js?v=fresh-20260913-1906-b780c151";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260913-1906-b780c151";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260913-1906-b780c151";
+import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260913-1906-b780c151";
+import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260913-1906-b780c151";
+import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260913-1906-b780c151";
+import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260913-1906-b780c151";
+import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260913-1906-b780c151";
+import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260913-1906-b780c151";
+import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260913-1906-b780c151";
+import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260913-1906-b780c151";
+import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260913-1906-b780c151";
+import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260913-1906-b780c151";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260913-1906-b780c151";
+import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260913-1906-b780c151";
+import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260913-1906-b780c151";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260913-1906-b780c151";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260913-1906-b780c151";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260913-1906-b780c151";
+import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260913-1906-b780c151";
+import { FLEET_SAMPLE_INTERVAL_MS, HULL_EVENT, auditFleetIntegrity, getFleetSamples, getHullEvents, readFleetCensus, recordFleetSample } from "./systems/fleetCensus.js?v=fresh-20260913-1906-b780c151";
+import { clampToViewport, fromAnchoredPosition, hasAnchoredPosition, toAnchoredPosition } from "./systems/panelAnchoring.js?v=fresh-20260913-1906-b780c151";
+import { CAMPAIGN_BROKEN_COMPONENT_IDS, CAMPAIGN_FITTED_COMPONENT_IDS, CAMPAIGN_MINER_AMMO, CAMPAIGN_MINER_PRIOR_SERVICES, CAMPAIGN_MINER_WEAR_FRACTION, CAMPAIGN_PANEL_IDS, CAMPAIGN_SHIP_FRAME_ID, CAMPAIGN_SHIP_NAME, CAMPAIGN_UNFITTED_COMPONENT_IDS } from "./content/ships/campaignLoadout.js?v=fresh-20260913-1906-b780c151";
+import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260913-1906-b780c151";
+import { getCockpitScale, getCockpitScaleProperties } from "./systems/cockpitScale.js?v=fresh-20260913-1906-b780c151";
+import { COCKPIT_MODULE_IDS, createCockpitLayoutState, resetCockpitLayout } from "./systems/cockpitLayout.js?v=fresh-20260913-1906-b780c151";
+import { getTaskAttentionTargets } from "./systems/taskAttention.js?v=fresh-20260913-1906-b780c151";
+import { shouldShowMissionTaskAttention } from "./systems/missionAttention.js?v=fresh-20260913-1906-b780c151";
+import { alignCockpitPanel, createResponsiveCockpitPosition, getCockpitScope, restoreResponsiveCockpitPosition, ceilToColumn, floorToColumn, snapCockpitPanel, snapCockpitPanelToBay } from "./systems/cockpitSnap.js?v=fresh-20260913-1906-b780c151";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -196,7 +199,7 @@ const MURMUR_LIFEFORM_TOUR_MESSAGES = {
 };
 const STARTER_REGION_NAME = storyRegions.starterRegion.name;
 const DEEP_SPACE_REGION_NAME = storyRegions.deepSpace.name;
-const JOURNEY_WORD_DELAY_MS = 34;
+const JOURNEY_CHARACTER_DELAY_MS = 18;
 const ATTENTION_ONCE_MS = 1800;
 const PAPERWORK_DRAWER_AUTO_CLOSE_MS = 900;
 // Aliased rather than re-declared: the strain table owns this id now, so the
@@ -337,11 +340,63 @@ const journeyDeclineButton = document.querySelector("#journey-decline");
 const journeyChapter = document.querySelector("#journey-chapter");
 const journeyHelpText = document.querySelector("#journey-help-text");
 const cockpitHelpText = document.querySelector("#cockpit-help-text");
-const viewportTransmission = document.querySelector("#viewport-transmission");
-const viewportTransmissionSpeaker = document.querySelector("#viewport-transmission-speaker");
-const viewportTransmissionText = document.querySelector("#viewport-transmission-text");
-const viewportTransmissionAccept = document.querySelector("#viewport-transmission-accept");
-const viewportTransmissionDecline = document.querySelector("#viewport-transmission-decline");
+// Chatter plates. Several speakers can hold the screen at once (Rook, a hub
+// desk, Murmur), so the one aside in the markup is a template and the pool
+// grows from it. Each plate binds to one speaker's current line.
+const transmissionTemplate = document.querySelector("#viewport-transmission");
+const transmissionLineTemplate = document.querySelector("#viewport-transmission-line");
+const transmissionPlates = [];
+const MAX_TRANSMISSION_PLATES = 3;
+function createTransmissionPlate(index) {
+  const element = index === 0 ? transmissionTemplate : transmissionTemplate.cloneNode(true);
+  const line = index === 0 ? transmissionLineTemplate : transmissionLineTemplate.cloneNode(true);
+  if (index > 0) {
+    element.removeAttribute("id");
+    line.removeAttribute("id");
+    element.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+    transmissionLineTemplate.after(line);
+    transmissionTemplate.after(element);
+  }
+  element.dataset.plateIndex = String(index);
+  return {
+    index,
+    element,
+    line,
+    plate: element.querySelector(".viewport-transmission-plate"),
+    speakerEl: element.querySelector(".viewport-transmission-speaker"),
+    textEl: element.querySelector(".viewport-transmission-text"),
+    acceptButton: element.querySelector(".viewport-transmission-accept"),
+    declineButton: element.querySelector(".viewport-transmission-decline"),
+    messageId: null,
+    speakerKey: null,
+    typing: null,
+    timers: [],
+    source: null,
+    offScopeSince: null,
+    seenOnScope: false,
+  };
+}
+
+// Boot holds the main thread for about a second. Input made during that
+// freeze is not lost — the browser queues it and delivers the whole burst the
+// instant the thread is free, each event stamped with the moment it actually
+// happened. With the license form first on screen, one stray click or Return
+// from the freeze would press Submit before the player had read a word; on
+// the cold open it walked through both of Rook's lines. Input from before the
+// page could respond was never a decision about what is on screen now, so it
+// is dropped rather than replayed. Registered before every other listener so
+// its capture-phase stop reaches them all; the timestamp is set at the very
+// end of boot, and until then (0) the guard is inert.
+let bootInteractiveAt = 0;
+["click", "keydown", "keyup", "keypress", "submit"].forEach((type) => {
+  document.addEventListener(type, (event) => {
+    if (event.timeStamp < bootInteractiveAt) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
+});
+
 
 // The board's contents are replaced whenever its state changes. Keep one
 // listener on the stable board container so a card click survives that redraw.
@@ -483,6 +538,13 @@ const isFreePlayStart = initialDevStart === "explorer" || initialDevStart === "p
 // arrangement immediately before trying to restore it.
 if (shouldResetSave()) {
   clearSavedProfile();
+  // A reset link is a one-shot command, not a permanent property of the run.
+  // Leaving it in the address meant any later reload cleared the new pilot and
+  // reopened the license application in the middle of the story.
+  const consumedResetUrl = new URL(window.location.href);
+  consumedResetUrl.searchParams.delete("resetSave");
+  consumedResetUrl.searchParams.delete("fresh");
+  window.history.replaceState(null, "", consumedResetUrl);
 }
 
 const savedProfile = loadSavedProfile(state);
@@ -635,7 +697,23 @@ const cargoHold = new Processor(cargoCanvas, handleCargoUnitClick, {
   unitScale: 1.7,
 });
 const game = new Game(canvas, state, updateHudDisplay, receiveCollectedResource, updateWorldDebugDisplay, updateHubDisplay, audio, updateLedgerDrivenSystems);
+// Manager callbacks can render contracts during boot, before the first world-site
+// readout has populated this value.
+let currentSiteState = null;
 let activeHubServiceId = null;
+// Whoever is behind the window the player has open. Their greeting belongs to
+// that window: it goes when the player walks to another window or undocks.
+let activeHubServiceSpeaker = null;
+function dismissHubServiceChatter() {
+  if (!activeHubServiceSpeaker) return;
+  const speaker = activeHubServiceSpeaker;
+  activeHubServiceSpeaker = null;
+  commsDirector.discardQueued((queued) => normalizeSpeakerKey(queued.speaker) === normalizeSpeakerKey(speaker));
+  const line = state.journey.messages.find((message) => normalizeSpeakerKey(message.speaker) === normalizeSpeakerKey(speaker));
+  if (!line || (line.hasAcknowledgement && state.journey.pendingAcknowledgement)) return;
+  journeyDirector.clearMessage({ id: line.id });
+  renderJourney();
+}
 const procurementManager = createHubProcurementOperation({ state });
 const industrialManager = createIndustrialProductionOperation({ state });
 const hubPlanningManager = createHubPlanningOperation({ state });
@@ -690,7 +768,6 @@ const sprcManager = createSprcOperation({
   },
 });
 window.__asteroids.sprc = sprcManager;
-sprcManager.update();
 const miningManager = createMiningOperation({ state, game, sprcOperation: sprcManager });
 const flintMiningManager = createMiningOperation({ state, game, sprcOperation: sprcManager, seed: FLINT_MINING_SEED });
 // The player's sponsor competes on the same terms as everyone else. It gets no
@@ -742,6 +819,41 @@ const journeyDirector = createJourneyDirector({
     contractManager.offerContract(contractId);
     pullContractToCenter(contractId);
   },
+  grantContract: (contractId) => {
+    contractManager.offerContract(contractId);
+    contractManager.acceptContract(contractId);
+    renderContract();
+    updateHudDisplay();
+    saveNow();
+  },
+  buySalvageHull: () => {
+    const result = purchaseSalvageHullFromAuthority(state);
+    if (!result.ok) return;
+    // The hold was on the hull the whole time; it is the player's now. (The
+    // miner Rook showed off in the pitch is already on the board.)
+    setComponentAvailable("cargo", true);
+    renderContract();
+    updateHudDisplay();
+    saveNow();
+  },
+  openModuleBay: () => openModuleBay(),
+  // Nara's demonstration: ore appears as if scooped, the hull takes a dent,
+  // the drive loses some fuel — so the player has something to fix.
+  giveResource: (resourceType, amount = 1) => {
+    for (let index = 0; index < amount; index += 1) receiveCollectedResource({ type: resourceType });
+    updateHudDisplay();
+  },
+  damageHull: (amount) => {
+    const hull = state.components.hull;
+    const safeAmount = Math.max(0, Math.min(amount, hull.integrity - 25));
+    if (safeAmount > 0) game.damageHull(safeAmount);
+    updateHudDisplay();
+  },
+  drainFuel: (amount) => {
+    const engine = state.components.engine;
+    engine.fuel = Math.max(0, engine.fuel - amount);
+    updateHudDisplay();
+  },
   onChange: () => {
     renderJourney();
     updateHudDisplay();
@@ -751,6 +863,8 @@ const journeyDirector = createJourneyDirector({
   unlockHubService,
   requestAttention,
   updatePaperworkControls: updatePaperworkControlLabels,
+  placePaperworkOnDesk: (componentId) => movePaperPanelToDesk(componentId),
+  filePaperwork: (componentId) => movePaperPanelToDrawer(componentId),
   runInspection: (siteId) => {
     const site = game.worldSites.find((candidate) => candidate.id === siteId) ?? currentSiteState?.nearbySite ?? currentSiteState?.dockedSite ?? null;
     if (site) {
@@ -768,6 +882,10 @@ const journeyDirector = createJourneyDirector({
   setViewportLayout: applyViewportLayout,
 });
 const commsDirector = createCommsDirector({ state, journeyDirector });
+// The dock gate reads the desk's open presentations as well as the patrols.
+game.externalClearancePending = (siteId) => pendingHubIdentityPresentations.has(siteId);
+window.__asteroids.journey = journeyDirector;
+window.__asteroids.comms = commsDirector;
 // The manufacturer's owner brief. Its trigger — a "?" badge wedged beside the
 // maker's mark — is gone: it crowded the brand line into two wrapped lines and a
 // help glyph is not part of this instrument language. The writing is kept and
@@ -790,6 +908,8 @@ function sayEngineOwnersBrief() {
 }
 let bringPanelToFront = () => {};
 let positionPanelById = () => {};
+let settleDrawerPanels = () => {};
+let openModuleBay = () => {};
 let movePaperPanelToDesk = () => {};
 let movePaperPanelToDrawer = () => {};
 let cockpitLayoutInitialized = false;
@@ -813,6 +933,9 @@ let dockCockpitPanelById = () => {};
 // hidden at boot, so it cannot be measured until it is first shown.
 let rescueJourneyPanel = () => {};
 let contractPulledFromDrawer = false;
+let openDrawerPaperKey = null;
+const collapsedPaperworkGroups = new Set();
+let renderedPaperworkFileKey = "";
 let renderedLedgerVersion = -1;
 let renderedLedgerEventsKey = "";
 let renderedLedgerStatsKey = "";
@@ -821,9 +944,57 @@ let renderedLedgerFilterKey = "";
 let activeLedgerFilter = "all";
 let renderedWorldEventLogKey = "";
 let lastAudioEventId = 0;
-let journeyTypeTimers = [];
 let _renderedMessageId = null;
-let currentSiteState = null;
+const CAMPAIGN_OPENING_CHATTER = [
+  "The universe is looking out for us, oh yes! Here you are at rock bottom, and here I am in need of cheap labor.",
+  "You wanna take to the stars, see what's out there, explore the black? You'll need a ship and the proper paperwork to get anywhere.",
+];
+// Campaign opens with the license form — the player naming their pilot — and
+// only once that is submitted does Rook speak these two lines over the
+// paperwork he now "has". The stage counts through them; the cold open is
+// live while a license exists, the mission is still only offered, and the
+// lines are not yet done. See isCampaignColdOpen.
+let campaignOpeningStage = 0;
+function isCampaignColdOpen() {
+  return initialDevStart === "campaign"
+    && Boolean(getPilotLicense(state)?.licenseId)
+    && state.journey.mission?.status === "offered"
+    && campaignOpeningStage < CAMPAIGN_OPENING_CHATTER.length;
+}
+let lastTransmissionDismissEventId = 0;
+// Chatter placement and colour constants live up here because the first
+// render runs during boot, before the placement code further down is reached.
+// The rim has four corners, and each speaker has a preferred one, so a voice
+// is always found in its own place rather than wherever it happened to land:
+// Rook top-left (prime), Murmur bottom-right, hubs and patrols top-right then
+// bottom-left. Within a corner the spots run from the corner's home outward,
+// so dodging an instrument is a slide along the rim, not a jump across it.
+// Degrees from the horizontal, positive is down; side -1 is the left rim.
+const RIM_CORNERS = {
+  "top-left": [-30, -20, -40, -10, -50, 0, -60].map((degrees) => ({ side: -1, degrees })),
+  "bottom-right": [30, 20, 40, 10, 50, 0, 60].map((degrees) => ({ side: 1, degrees })),
+  "top-right": [-30, -20, -40, -10, -50, 0, -60].map((degrees) => ({ side: 1, degrees })),
+  "bottom-left": [30, 20, 40, 10, 50, 0, 60].map((degrees) => ({ side: -1, degrees })),
+};
+const SPEAKER_CORNER_ORDER = {
+  rook: ["top-left", "bottom-left", "top-right", "bottom-right"],
+  murmur: ["bottom-right", "bottom-left", "top-right", "top-left"],
+  world: ["top-right", "bottom-left", "bottom-right", "top-left"],
+};
+function rimSpotsForSpeaker(speakerKey = "") {
+  const order = speakerKey.includes("rook") ? SPEAKER_CORNER_ORDER.rook
+    : speakerKey.includes("murmur") ? SPEAKER_CORNER_ORDER.murmur
+    : SPEAKER_CORNER_ORDER.world;
+  return order.flatMap((corner) => RIM_CORNERS[corner]);
+}
+const TRANSMISSION_LABEL_HEIGHT = 38;    // the speaker name above the plate
+const TRANSMISSION_CLEARANCE = 10;
+const PATROL_LINE_COLOR = "#7ee7ff";
+const HUB_LINE_COLOR = "#9ee8ff";
+const TRANSMISSION_PLATE_CORNER = 20;
+// How long the plate takes to fade up before its line starts typing. Matches
+// the `transmission-arrive` animation in styles.css.
+const TRANSMISSION_ARRIVAL_MS = 320;
 let activeDepositContractId = null;
 // Render signature for the hub job board; see renderRookJobBoard. Declared
 // here because dev-start boot code reaches that render during module eval.
@@ -843,6 +1014,7 @@ let lastPermitGrantEventId = 0;
 let lastTowChatterEventId = 0;
 let lastDockingInspectionEventId = 0;
 let lastLifeformTourEventId = 0;
+let lastMurmurStoryEventId = 0;
 let lastSprcChatterEventId = 0;
 let lastWreckContractEventId = 0;
 const pendingHubIdentityPresentations = new Map();
@@ -888,6 +1060,18 @@ hullVin.addEventListener("click", () => {
   });
 });
 
+// The label beside an identity number is part of the thing: a click on
+// "VIN" or "Ref" presents the document the same as a click on the number.
+[hullVin, licenseIdDisplay].forEach((button) => {
+  const row = button?.closest(".vin-plate, .license-card-row");
+  if (!row) return;
+  row.classList.add("is-identity-row");
+  row.addEventListener("click", (event) => {
+    if (event.target === button || event.target.closest("button") || button.disabled) return;
+    button.click();
+  });
+});
+
 licenseIdDisplay.addEventListener("click", () => {
   const licenseId = licenseIdDisplay.dataset.licenseId || null;
   const licenseRecord = licenseId ? (state.legal.pilotLicenses[licenseId] ?? null) : null;
@@ -910,6 +1094,12 @@ towButton.addEventListener("click", () => {
 
 minerArmed.addEventListener("change", () => {
   state.components.miner.armed = minerArmed.checked;
+  // The switch is a thing a mission can ask for: arm it, then put it away.
+  state.ledger.recordEvent(
+    "miner.armedChanged",
+    { armed: minerArmed.checked, charges: Math.floor(state.components.miner.ammo ?? 0) },
+    { visible: false },
+  );
 });
 
 tractorFieldButton.addEventListener("pointerdown", (event) => {
@@ -1032,8 +1222,57 @@ journeyDeclineButton?.addEventListener("click", () => {
   updateHudDisplay();
 });
 
-viewportTransmissionAccept?.addEventListener("click", () => journeyAcceptButton.click());
-viewportTransmissionDecline?.addEventListener("click", () => journeyDeclineButton?.click());
+document.addEventListener("click", (event) => {
+  const plateElement = event.target.closest(".viewport-transmission");
+  if (!plateElement) return;
+  const plate = transmissionPlates.find((candidate) => candidate.element === plateElement);
+  if (!plate) return;
+  if (event.target.closest(".viewport-transmission-accept")) { journeyAcceptButton.click(); return; }
+  if (event.target.closest(".viewport-transmission-decline")) { journeyDeclineButton?.click(); return; }
+  if (!event.target.closest(".viewport-transmission-plate")) return;
+  if (event.target.closest("button")) return;
+  if (plate.typing && !plate.typing.complete) {
+    // The final timer can trail the final painted glyph by a frame. If the
+    // whole line is already visible, this click is the intentional close;
+    // otherwise it is the click-to-finish shortcut.
+    const typingWindowEnded = performance.now() >= plate.typing.expectedCompleteAt;
+    if (!typingWindowEnded && !isPlateTypingFullyShown(plate)) {
+      finishPlateTyping(plate);
+      return;
+    }
+    plate.typing.complete = true;
+  }
+  if (isCampaignColdOpen()) {
+    campaignOpeningStage += 1;
+    if (campaignOpeningStage >= CAMPAIGN_OPENING_CHATTER.length) {
+      // Rook is done talking over the paperwork; the interview begins.
+      journeyDirector.acceptMission();
+      renderContract();
+      saveNow();
+    }
+    renderJourney();
+    updateHudDisplay();
+    return;
+  }
+  // Before the license exists the only way forward is the form's own Submit;
+  // the plate is never a back door into the campaign.
+  if (initialDevStart === "campaign" && state.journey.mission?.status === "offered") return;
+  const message = state.journey.messages.find((candidate) => candidate.id === plate.messageId);
+  if ((message?.hasAcknowledgement && state.journey.pendingAcknowledgement)
+    || state.journey.mission?.status === "offered") {
+    journeyAcceptButton.click();
+  } else {
+    // Nothing is waiting on the player: the click closes THIS speaker's line
+    // and nobody else's. Said as an event, because "after you've read what
+    // Vey had to say" is the cue Rook waits for before he speaks.
+    if (message) {
+      state.ledger.recordEvent("comms.lineClosed", { speaker: message.speaker, messageId: message.id }, { visible: false });
+    }
+    journeyDirector.clearMessage({ id: plate.messageId });
+    renderJourney();
+    updateHudDisplay();
+  }
+}, true);
 
 dockToggleButton.addEventListener("click", () => {
   game.toggleDock();
@@ -1097,6 +1336,14 @@ contractNextButton.addEventListener("click", () => {
 });
 
 contractFileStack?.addEventListener("click", (event) => {
+  const groupToggle = event.target.closest("[data-paperwork-group]");
+  if (groupToggle) {
+    const group = groupToggle.dataset.paperworkGroup;
+    if (collapsedPaperworkGroups.has(group)) collapsedPaperworkGroups.delete(group);
+    else collapsedPaperworkGroups.add(group);
+    renderContractFileStack();
+    return;
+  }
   const file = event.target.closest("[data-paper-file-kind]");
 
   if (!file) {
@@ -1104,11 +1351,7 @@ contractFileStack?.addEventListener("click", (event) => {
   }
 
   activeDepositContractId = null;
-  if (file.dataset.paperFileKind === "contract") {
-    pullContractToCenter(file.dataset.paperFileId);
-  } else {
-    pullDocumentToCenter(file.dataset.paperFileId);
-  }
+  togglePaperworkFileInDrawer(file.dataset.paperFileKind, file.dataset.paperFileId);
   updateHudDisplay();
 });
 
@@ -1167,6 +1410,16 @@ componentCloseButtons.forEach((button) => {
   });
 });
 
+const helpArrowsToggle = document.querySelector("#help-arrows-toggle");
+if (helpArrowsToggle) {
+  helpArrowsToggle.checked = state.ui.helpArrows !== false;
+  helpArrowsToggle.addEventListener("change", () => {
+    state.ui.helpArrows = helpArrowsToggle.checked;
+    updateAttentionCallouts();
+    saveNow();
+  });
+}
+
 drawerToggle?.addEventListener("click", () => {
   const isOpen = paperworkDrawer.classList.toggle("is-open");
   drawerToggle.setAttribute("aria-expanded", String(isOpen));
@@ -1174,6 +1427,10 @@ drawerToggle?.addEventListener("click", () => {
   if (isOpen) {
     state.ledger.recordEvent("paperwork.drawerOpened", {}, { visible: false });
     updateLedgerDrivenSystems();
+    // Shut, the shelf cannot be measured, so nothing filed in it has been
+    // settled since boot; once it is open and has its height, put every
+    // document back within the shelf's edges.
+    window.setTimeout(settleDrawerPanels, 360);
   }
 });
 
@@ -1302,7 +1559,6 @@ if (isFreePlayStart && shouldInitializeDevStart) {
 }
 worldClock.tick();
 worldClock.start();
-registerStarterDeliveryShipRecords(state);
 clearOldPanelLayouts();
 setInitialPaperworkLocations();
 makePanelsDraggable();
@@ -1319,10 +1575,8 @@ if (isFreePlayStart) {
   // it. Now it does, and the tutorial introduces each panel in turn rather than
   // dumping a fitted cockpit on the player.
   //
-  // Nothing had to be carved out for the stripped skiff: the two steps named
-  // `show-scanner` and `try-scanner` are misnamed and teach the BEACON LOCATOR.
-  // The tutorial never installs a scanner, so campaign keeps its loadout intact
-  // while walking the whole sequence.
+  // The stripped skiff's locator beat teaches navigation without pretending
+  // the ship already owns a scanner.
   journeyDirector.start();
 }
 const PANORAMA_LAYOUT_VERSION = "centered-panorama-v3";
@@ -1348,6 +1602,9 @@ if (state.ui.viewportLayout === "fullscreen-background") {
   applyViewportLayout("fullscreen-background");
 }
 if (shouldInitializeDevStart) applyDevStart(initialDevStart);
+// After the dev start, which is what names the campaign hull; the papers
+// carry that name.
+registerStarterDeliveryShipRecords(state);
 // The cockpit class lands during setup, so the journey card is still the legacy
 // slide-out drawer while `applyDevStart` runs and measuring it there proves
 // nothing. Check once the layout has actually settled.
@@ -1391,6 +1648,9 @@ document.addEventListener("visibilitychange", () => {
 });
 
 function updateHudDisplay() {
+  // Control-directed mission help depends on live instrument state (for
+  // example, which beacon is selected), not only on mission-step changes.
+  syncMissionTaskAttention();
   updateAttentionCallouts();
   updateCockpitDisplay();
   renderProcessorOutputs();
@@ -1531,7 +1791,7 @@ function updateHudDisplay() {
       setSegmentedMeter(hullReserveFill, getMeterFraction(reserveValue, maxReserve), getPanelMeterCells("hull"));
     }
     if (hullRepairStatus) {
-      hullRepairStatus.hidden = !isPatching;
+      hullRepairStatus.classList.toggle("is-blank", !isPatching);
     }
   }
 
@@ -1607,14 +1867,14 @@ function updateBeaconBayDisplay() {
 
   const recovery = bayState?.recovery;
   if (!recovery) {
-    beaconRecoveryMeter.hidden = true;
+    beaconRecoveryMeter.classList.add("is-blank");
     setSegmentedMeter(beaconRecoveryFill, 0, getPanelMeterCells("beacon-bay"));
     return;
   }
 
   const bay = bayState.bays?.[recovery.bayIndex];
   const progress = Math.min(1, Math.max(0, recovery.progress ?? 0));
-  beaconRecoveryMeter.hidden = false;
+  beaconRecoveryMeter.classList.remove("is-blank");
   beaconRecoveryLabel.textContent = `Recovering ${bay?.label ?? "beacon"}`;
   setSegmentedMeter(beaconRecoveryFill, progress, getPanelMeterCells("beacon-bay"));
 }
@@ -1854,11 +2114,14 @@ function shouldRestoreViewport(save) {
     return false;
   }
 
-  if (missionId !== "chapter-1-interview") {
+  if (missionId !== "chapter-1-yard-exchange") {
     return true;
   }
 
-  return Boolean(currentStepId && !["show-hull", "drag-panels", "file-contract"].includes(currentStepId));
+  return Boolean(currentStepId && ![
+    "want-stars", "show-license", "offer-contract", "reveal-drawer",
+    "reveal-module-bay", "show-hull-module",
+  ].includes(currentStepId));
 }
 
 function applyDevStart(devStartId) {
@@ -2125,7 +2388,7 @@ function setupExplorerStart() {
 // hull with a miner and cargo hold bolted in. Ugly, slow, and legal", included
 // components Engine, Hull, Docking, Beacon Locator, Miner, Cargo Hold, and the
 // tradeoff line "Eligible for Rook work". This start fits exactly that list and
-// nothing else. No scanner, no processor, no collector, no beacon bay, no tow
+// nothing else. No scanner, processor, collector, beacon bay, or tow
 // cable: every one of those is something to earn.
 //
 // It deliberately does NOT unlock the authored Rook service ladder the way
@@ -2143,6 +2406,18 @@ function setupCampaignStart() {
     installed: true,
     powered: false,
     fuel: state.components.engine.maxFuel,
+  });
+  // The drive is the one thing on this wreck nobody replaced. It leaves the
+  // Porch deep into Emergency: coughing, pulling, kicking the ship off course,
+  // a few minutes of grace before it dies. Rook tunes it in The Deal.
+  Object.assign(state.components.engine.condition, {
+    stage: "emergency",
+    wear: CAMPAIGN_ENGINE_START_WEAR,
+    lifetimeDegradation: CAMPAIGN_ENGINE_LIFETIME_DEGRADATION,
+    maxRecoverableCondition: 100 - CAMPAIGN_ENGINE_LIFETIME_DEGRADATION,
+    currentCondition: Math.max(0, (100 - CAMPAIGN_ENGINE_LIFETIME_DEGRADATION)
+      * (1 - CAMPAIGN_ENGINE_START_WEAR / ENGINE_CONDITION_CONFIG.thresholds.failed)),
+    serviceCount: CAMPAIGN_ENGINE_PRIOR_SERVICES,
   });
   Object.assign(state.components.hull, {
     installed: true,
@@ -2178,9 +2453,9 @@ function setupCampaignStart() {
     activeBeaconId: null,
   });
 
-  // The processor is aboard and dead. Fitted, visible, failed — so the player can
-  // see why raw ore is going straight into the hold, and has something concrete
-  // to want fixed.
+  // Kept as a general hook for future campaign starts that genuinely include a
+  // broken component. This skiff currently has none: Nara sells missing modules,
+  // and they do not appear in the bay before purchase.
   CAMPAIGN_BROKEN_COMPONENT_IDS.forEach((componentId) => {
     const component = state.components[componentId];
     if (!component) return;
@@ -2200,19 +2475,14 @@ function setupCampaignStart() {
     if (state.components[componentId]) state.components[componentId].installed = false;
   });
 
-  // The dead processor is the campaign cockpit's starting point. Every working
-  // instrument remains in the bay until the induction hands it over, but the
-  // failed processor must be visible immediately so raw ore routing has an
-  // in-world explanation rather than looking like a missing feature.
-  setComponentAvailable("processor", true);
-
   state.ship.frameId = CAMPAIGN_SHIP_FRAME_ID;
   state.ship.shape = CAMPAIGN_SHIP_FRAME_ID;
   state.ship.name = CAMPAIGN_SHIP_NAME;
-  // Rook's colours, read from the same seed its NPC craft are painted from, so
-  // the player's skiff is indistinguishable from the rest of the fleet.
-  state.ship.displayColor = ROOK_MINING_SEED.shipPalette.hullStroke;
-  state.ship.displayFill = ROOK_MINING_SEED.shipPalette.hullFill;
+  // Same hull as the fleet, but painted in the player's own cockpit colours:
+  // the hull in the primary, the drive in the secondary. (It used to wear
+  // Rook's fleet paint; the player could not pick their own ship out.)
+  state.ship.displayColor = null;
+  state.ship.displayFill = null;
 
   // Docked at Scrap Porch, which is where the interview narrates from: "we're
   // that unpowered ship in the centre of the viewport… there's the hub we came
@@ -2221,6 +2491,23 @@ function setupCampaignStart() {
   game.placeShipNearSite(chapterOneRoute.startSite.id);
   game.ship.velocity.x = 0;
   game.ship.velocity.y = 0;
+
+  // Rook settled with Scrap Porch when he took the hull out of their lot:
+  // this VIN, under his operating authority, is expected to leave. The
+  // Porch's traffic registry already holds it as cleared, so its patrol has
+  // no first-time check to run on a ship it released this morning. Yard
+  // Exchange has never seen it, and does.
+  const porch = game.worldSites.find((site) => site.id === chapterOneRoute.startSite.id);
+  if (porch && state.components.hull.vin) {
+    rememberRegistrySubject(state, {
+      registryEntityId: getRegistryEntityIdForSite(porch),
+      subjectEntityId: getShipAssetId(state.components.hull.vin),
+      status: "cleared",
+      disposition: "cleared",
+      source: "rook-industries-release",
+      data: { siteId: porch.id, siteName: porch.name, shipVin: state.components.hull.vin, note: "Released from impound to Rook Industries for one delivery flight." },
+    });
+  }
 
   // A Rook hand starts BROKE. The induction asks the player to read their own
   // balance, notice it is zero, and then watch the contract advance land on the
@@ -2344,9 +2631,9 @@ function maybeUnlockMurmur(dockedSite) {
   unlockHubService(chapterOneRoute.destinationSite.id, MURMUR_SERVICE_ID);
   commsDirector.say({
     source: COMMS_SOURCES.worldNpc,
-    speaker: "Murmur",
+    speaker: "Rook",
     text:
-      "Psst. Captain. You have met the desk people, now meet the wall people. I keep the board of things that have not happened yet. Back corridor. Click my name if you want to see the shape of the future.",
+      "Before you head out again, there is one more person you should meet. Calls themself Murmur. Lives around the Yard's back corridor, knows the belt better than they ought to, and says strange things that are useful often enough that I keep listening. Go introduce yourself.",
   });
 }
 
@@ -2364,9 +2651,11 @@ function updateDockingDisplay(siteState) {
   if (!state.components.docking.installed || !site) {
     dockingTarget.textContent = "No target";
     // "No target" and "No dock target" said the same thing twice, side by side,
-    // in a panel narrow enough that the pair wrapped into each other.
+    // in a panel narrow enough that the pair wrapped into each other. The line
+    // goes BLANK, not away: a panel is a fixed shape, and a row that comes and
+    // goes with the nearest hub made the hull grow and shrink in flight.
     dockingDetail.textContent = "";
-    dockingDetail.hidden = true;
+    dockingDetail.classList.add("is-blank");
     dockToggleButton.textContent = "Dock";
     dockToggleButton.disabled = true;
     hullDockingLock.classList.remove("is-docking-active", "is-docking-caution");
@@ -2374,10 +2663,11 @@ function updateDockingDisplay(siteState) {
   }
 
   dockingTarget.textContent = site.name;
-  dockingDetail.textContent = isDocked ? "Docked" : "Press E to dock";
-  dockingDetail.hidden = false;
-  dockToggleButton.textContent = isDocked ? "Undock" : "Dock";
-  dockToggleButton.disabled = false;
+  const clearancePending = !isDocked && game.isDockingClearancePending(site.id);
+  dockingDetail.textContent = isDocked ? "Docked" : clearancePending ? "Awaiting clearance" : "Press E to dock";
+  dockingDetail.classList.remove("is-blank");
+  dockToggleButton.textContent = isDocked ? "Undock" : clearancePending ? "Held" : "Dock";
+  dockToggleButton.disabled = clearancePending;
   hullDockingLock.classList.toggle("is-docking-active", isDocked);
   hullDockingLock.classList.toggle("is-docking-caution", isCaution);
 }
@@ -2393,6 +2683,8 @@ function updateHubServiceDisplay(siteState) {
 
   if (!site) {
     activeHubServiceId = null;
+    // Undocked: the window is behind you, and so is whoever was at it.
+    dismissHubServiceChatter();
     closeDriveThroughWindows();
     hubName.textContent = "Hub";
     hubStatus.textContent = "service window";
@@ -2501,8 +2793,18 @@ function pullContractToCenter(contractId) {
   const hudRect = hud.getBoundingClientRect();
   const panelWidth = contractPanel.offsetWidth || 240;
   const panelHeight = contractPanel.offsetHeight || 320;
-  const centerX = Math.round((hudRect.width / 2 - panelWidth / 2) / 20) * 20;
+  let centerX = Math.round((hudRect.width / 2 - panelWidth / 2) / 20) * 20;
   const centerY = Math.round((hudRect.height / 2 - panelHeight / 2) / 20) * 20;
+
+  // The license is the first sheet centered on the induction desk. Put Rook's
+  // contract beside it rather than covering the document he just discussed.
+  if (initialDevStart === "campaign" && state.journey.currentStepId === "offer-contract") {
+    const licenseRect = document.querySelector("[data-panel-id='license']")?.getBoundingClientRect();
+    if (licenseRect?.width) {
+      const besideLicense = licenseRect.right - hudRect.left + 20;
+      centerX = Math.round(Math.min(besideLicense, hudRect.width - panelWidth - 20) / 20) * 20;
+    }
+  }
 
   positionPanelById("contract", { x: centerX, y: centerY });
   bringPanelToFront(contractPanel);
@@ -2550,7 +2852,7 @@ function renderDocumentReader(documentId) {
   documentTitle.textContent = record.title ?? record.id;
   documentStatus.textContent = record.status ?? "record";
   documentType.textContent = `Type: ${formatDocumentType(record.type)}`;
-  documentSummary.textContent = getDocumentSummary(record);
+  documentSummary.textContent = record.summary ?? getDocumentSummary(record);
   documentFields.replaceChildren(
     ...getDocumentFieldPairs(record).map(([label, value]) => {
       const row = document.createElement("div");
@@ -2604,6 +2906,9 @@ function getDocumentFieldPairs(record) {
   if (record.collateralDocumentId) fields.push(["Collateral", record.collateralDocumentId]);
   if (record.heldByContractId) fields.push(["Held By Contract", record.heldByContractId]);
   if (record.grants?.length) fields.push(["Grants", record.grants.map((grant) => grant.permission).join(", ")]);
+  // A document's own remarks: the wording a clerk stamped on it. This is where
+  // the world explains itself without anyone having to say it out loud.
+  (record.notes ?? []).forEach((note, index) => fields.push([index === 0 ? "Remarks" : "", note]));
 
   return fields;
 }
@@ -2637,11 +2942,17 @@ function renderResourceGuide() {
           const swatch = createResourceGuideSwatch(resource);
           const name = document.createElement("strong");
           const detail = document.createElement("span");
+          const price = document.createElement("span");
 
           item.className = "resource-guide-entry";
           name.textContent = formatResourceName(resource.id);
-          detail.textContent = `${resource.purpose} | ${resource.value} cr`;
-          item.append(swatch, name, detail);
+          // Outputs and price are separate cells so a tight column wraps the
+          // outputs between items and never splits "30 cr" across two lines.
+          detail.className = "resource-guide-outputs";
+          detail.textContent = resource.purpose;
+          price.className = "resource-guide-price";
+          price.textContent = `${resource.value} cr`;
+          item.append(swatch, name, detail, price);
           return item;
         }),
       );
@@ -3172,12 +3483,30 @@ function openHubService(serviceId) {
 
   const behavior = getHubServiceBehavior(service);
   closeDriveThroughWindows({ keepServiceType: service.serviceType });
+  // Walking to another window leaves the last clerk's greeting behind.
+  if (activeHubServiceSpeaker && normalizeSpeakerKey(activeHubServiceSpeaker) !== normalizeSpeakerKey(service.npcName)) {
+    dismissHubServiceChatter();
+  }
   activeHubServiceId = service.id;
+  activeHubServiceSpeaker = service.npcName;
+  // This is the first moment Murmur may speak to the player. Persist the
+  // meeting before their greeting goes through the global comms gate, and keep
+  // the event id so only a later undocking can put them aboard the ship.
+  if (service.id === MURMUR_SERVICE_ID && !state.hubServices.flags.murmurMet) {
+    state.hubServices.flags.murmurMet = true;
+  }
   clearAttention(getHubServiceAttentionTarget(dockedSite.id, service.id));
   hubStatus.textContent = service.organization;
   hubDetail.textContent = `${service.npcName}: ${getHubServicePrompt(service)}`;
   renderHubServiceMenu(dockedSite);
 
+  // The first visit to Vey is a private, scripted ship bargain, not a browse
+  // through the permit catalogue. Her window still GREETS — it is her window,
+  // and Rook's introduction waits its turn behind hers — but the catalogue
+  // stays shut until the mission puts the right papers on the desk.
+  const rookIsIntroducingVey = service.id === yardExchangeServices.travelAuthority
+    && state.journey.mission?.id === "chapter-1-new-ship"
+    && state.journey.currentStepId === "to-the-authority";
   if (service.greeting) {
     commsDirector.say({
       source: COMMS_SOURCES.serviceNpc,
@@ -3185,7 +3514,7 @@ function openHubService(serviceId) {
       text: service.greeting,
     });
   }
-  state.ledger.recordEvent(
+  const serviceOpenedEvent = state.ledger.recordEvent(
     "hub.serviceOpened",
     {
       siteId: dockedSite.id,
@@ -3198,6 +3527,9 @@ function openHubService(serviceId) {
     },
     { visible: false },
   );
+  if (service.id === MURMUR_SERVICE_ID && !state.hubServices.flags.murmurMetEventId) {
+    state.hubServices.flags.murmurMetEventId = serviceOpenedEvent.id;
+  }
 
   if (service.id === FARM_INSPECTION_SERVICE_ID) {
     renderFarmInstitutionSummary();
@@ -3213,6 +3545,11 @@ function openHubService(serviceId) {
       setComponentAvailable("contract", true);
       pullContractToCenter(openContract.id);
     }
+    return;
+  }
+
+  if (rookIsIntroducingVey) {
+    setComponentAvailable("contract", false);
     return;
   }
 
@@ -3483,6 +3820,10 @@ function offerAllHubServiceContracts(site, service) {
 }
 
 function updateLedgerDrivenSystems() {
+  // First, so a line that a new event supersedes is gone before that event's
+  // own reply is delivered below — otherwise the reply would be dismissed by
+  // the very event that produced it.
+  updateWorldTransmissionDismissal();
   syncPlayerCargoCustody();
   updateWreckSalvageOffers();
   sprcManager.update();
@@ -3494,6 +3835,7 @@ function updateLedgerDrivenSystems() {
   updateHubAuthorityMessages();
   updateTowChatter();
   updateSprcChatter();
+  updateMurmurStory();
   updateLifeformTour();
   updateDockingInspection();
 }
@@ -3620,6 +3962,10 @@ function updateLifeformTour() {
       return;
     }
 
+    if (!state.hubServices.flags.murmurAboard) {
+      return;
+    }
+
     const ecologyType = event.payload?.ecologyType;
     const text = MURMUR_LIFEFORM_TOUR_MESSAGES[ecologyType];
 
@@ -3635,6 +3981,29 @@ function updateLifeformTour() {
       requireIdle: true,
       queueIfBlocked: true,
       ttlMs: 16000,
+    });
+  });
+}
+
+function updateMurmurStory() {
+  const events = state.ledger.getEventsAfterId(lastMurmurStoryEventId, { includeHidden: true });
+
+  events.forEach((event) => {
+    lastMurmurStoryEventId = Math.max(lastMurmurStoryEventId, event.id);
+    if (event.type !== "site.undocked"
+      || state.hubServices.flags.murmurAboard
+      || !state.hubServices.flags.murmurMet
+      || event.id <= (state.hubServices.flags.murmurMetEventId ?? Infinity)
+      || event.payload?.siteId !== chapterOneRoute.destinationSite.id) {
+      return;
+    }
+
+    state.hubServices.flags.murmurAboard = true;
+    commsDirector.say({
+      source: COMMS_SOURCES.worldNpc,
+      speaker: "Murmur",
+      text: "Do not turn around. I followed you back from the corridor and found a quiet space aboard. Your ship sees interesting things. I live here now, and I will tell you when it sees something worth noticing.",
+      priority: 55,
     });
   });
 }
@@ -3666,6 +4035,18 @@ function updateRookFollowupOffers() {
   });
 }
 
+// The identity check is ONE conversation with ONE voice: the patrol craft the
+// player can see running it. It used to be two — the craft saying "hold
+// position" and the hub's traffic desk saying "present your papers" — which
+// read as two things talking about the same check. When no patrol is on the
+// scene (a check run from the desk itself), the desk speaks.
+function identityCheckVoice(siteId, siteName, inspectorName = null) {
+  if (inspectorName) return inspectorName;
+  const patrol = (game.activePatrolIntercepts ?? [])
+    .find((candidate) => candidate.isAlive !== false && candidate.site?.id === siteId);
+  return patrol?.name ?? `${siteName ?? "Hub"} Traffic`;
+}
+
 function updateHubAuthorityMessages() {
   const events = state.ledger.getEventsAfterId(lastHubAuthorityEventId, { includeHidden: true });
 
@@ -3673,7 +4054,7 @@ function updateHubAuthorityMessages() {
     lastHubAuthorityEventId = Math.max(lastHubAuthorityEventId, event.id);
 
     if (event.type === "authority.identityRequested") {
-      const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
+      const speaker = identityCheckVoice(event.payload.siteId, event.payload.siteName, event.payload.inspectorName);
       const siteId = event.payload.siteId;
       const site = game.worldSites.find((candidate) => candidate.id === siteId) ?? null;
       const registrySubject = getRegistrySubject(state, {
@@ -3725,7 +4106,7 @@ function updateHubAuthorityMessages() {
       });
     } else if (event.type === "authority.documentPresented") {
       const siteId = event.payload.siteId;
-      const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
+      const speaker = identityCheckVoice(siteId, event.payload.siteName);
       const isVin = event.payload.documentKind === "ship-vin";
       const pending = pendingHubIdentityPresentations.get(siteId);
       markHubIdentityDocumentPresented(siteId, event.payload.documentKind, event.payload);
@@ -3741,7 +4122,7 @@ function updateHubAuthorityMessages() {
         commsDirector.say({ source: COMMS_SOURCES.hubAuthority, speaker, text, priority: 76 });
       }
     } else if (event.type === "authority.inspectionFlagged") {
-      const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
+      const speaker = identityCheckVoice(event.payload.siteId, event.payload.siteName, event.payload.inspectorName);
       const reasons = event.payload.reasons ?? [];
       let text;
 
@@ -3784,7 +4165,7 @@ function updateHubAuthorityMessages() {
         requireIdle: false,
       });
     } else if (event.type === "patrol.standoff") {
-      const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
+      const speaker = identityCheckVoice(event.payload.siteId, event.payload.siteName);
       commsDirector.say({
         source: COMMS_SOURCES.hubAuthority,
         speaker,
@@ -3796,17 +4177,9 @@ function updateHubAuthorityMessages() {
         requireIdle: false,
       });
     } else if (event.type === "patrol.arrived") {
-      const speaker = `${event.payload.patrolName ?? "Patrol"}`;
-      commsDirector.say({
-        source: COMMS_SOURCES.hubAuthority,
-        speaker,
-        text: pick([
-          "Hold position. Running identity check now.",
-          "Stay on your heading. Scanning.",
-          "Don't move. Checking your registry entry.",
-        ]),
-        requireIdle: false,
-      });
+      // Nothing to say yet: the identity request that follows is the patrol's
+      // opening line. A separate "hold position" first made the same craft
+      // sound like two people.
     } else if (event.type === "patrol.cleared") {
       const speaker = `${event.payload.patrolName ?? "Patrol"}`;
       commsDirector.say({
@@ -3823,7 +4196,7 @@ function updateHubAuthorityMessages() {
     } else if (event.type === "authority.identityCleared") {
       pendingHubIdentityPresentations.delete(event.payload.siteId);
     } else if (event.type === "patrol.dockingBlocked") {
-      const speaker = `${event.payload.siteName ?? "Hub"} Traffic`;
+      const speaker = identityCheckVoice(event.payload.siteId, event.payload.siteName);
       commsDirector.say({
         source: COMMS_SOURCES.hubAuthority,
         speaker,
@@ -3831,6 +4204,20 @@ function updateHubAuthorityMessages() {
           "Clearance check in progress. Docking is not approved until review is complete.",
           "Stand down on docking. Your clearance review is not finished.",
           "Docking denied. Inspection is still active — wait for the all clear.",
+        ]),
+        requireIdle: false,
+      });
+    } else if (event.type === "patrol.laneJumped") {
+      // The patrol that just dropped out of the lane ahead of the ship says
+      // so in its own voice — it is on the glass now, and the plate's line
+      // finds it there.
+      commsDirector.say({
+        source: COMMS_SOURCES.hubAuthority,
+        speaker: event.payload.patrolName ?? `${event.payload.siteName ?? "Hub"} Patrol`,
+        text: pick([
+          "Lane priority. Hold position for inspection.",
+          "Dropping out ahead of you on lane priority. Hold position.",
+          `${event.payload.siteName ?? "Hub"} lane authority. Hold position; this is a routine check.`,
         ]),
         requireIdle: false,
       });
@@ -4025,6 +4412,15 @@ function renderContractFileStack(currentContract = contractManager.getCurrentCon
   }
 
   const files = getPaperworkFiles();
+  const renderKey = JSON.stringify({
+    files: files.map((file) => [file.kind, file.id, file.meta, file.status, file.group]),
+    currentContractId: currentContract?.id ?? null,
+    openDrawerPaperKey,
+    collapsedGroups: [...collapsedPaperworkGroups].sort(),
+  });
+
+  if (renderKey === renderedPaperworkFileKey) return;
+  renderedPaperworkFileKey = renderKey;
 
   if (files.length === 0) {
     contractFileStack.replaceChildren();
@@ -4033,8 +4429,22 @@ function renderContractFileStack(currentContract = contractManager.getCurrentCon
   }
 
   contractFileStack.hidden = false;
+  const groups = new Map();
+  files.forEach((fileRecord) => {
+    if (!groups.has(fileRecord.group)) groups.set(fileRecord.group, []);
+    groups.get(fileRecord.group).push(fileRecord);
+  });
+
   contractFileStack.replaceChildren(
-    ...files.map((fileRecord) => {
+    ...[...groups.entries()].flatMap(([group, groupFiles]) => {
+      const heading = document.createElement("button");
+      const isCollapsed = collapsedPaperworkGroups.has(group);
+      heading.type = "button";
+      heading.className = "contract-file-group-title";
+      heading.dataset.paperworkGroup = group;
+      heading.setAttribute("aria-expanded", String(!isCollapsed));
+      heading.textContent = `${isCollapsed ? "▸" : "▾"} ${group}`;
+      return [heading, ...(isCollapsed ? [] : groupFiles.map((fileRecord) => {
       const file = document.createElement("button");
       const title = document.createElement("strong");
       const meta = document.createElement("span");
@@ -4043,6 +4453,7 @@ function renderContractFileStack(currentContract = contractManager.getCurrentCon
       file.type = "button";
       file.className = "contract-file-card";
       file.classList.toggle("is-current", fileRecord.kind === "contract" && currentContract?.id === fileRecord.id);
+      file.classList.toggle("is-drawer-open", openDrawerPaperKey === `${fileRecord.kind}:${fileRecord.id}`);
       file.dataset.paperFileKind = fileRecord.kind;
       file.dataset.paperFileId = fileRecord.id;
 
@@ -4051,20 +4462,27 @@ function renderContractFileStack(currentContract = contractManager.getCurrentCon
       status.textContent = fileRecord.status;
       file.append(title, meta, status);
       return file;
+      }))];
     }),
   );
 }
 
 function getPaperworkFiles() {
-  const contractFiles = contractManager.getVisibleContractIds(currentSiteState?.dockedSite?.id ?? null).map((contractId) => {
-    const contract = state.contracts.records[contractId];
+  const contractFiles = contractManager.getVisibleContractIds(currentSiteState?.dockedSite?.id ?? null)
+    .map((contractId) => state.contracts.records[contractId])
+    // The drawer is the player's paperwork, not the Authority's sales rack.
+    // Unpurchased permits remain available at Vey's window but do not become
+    // files until the player actually acquires them.
+    .filter((contract) => !(contract.type === "permit" && contract.status === "offered"))
+    .map((contract) => {
     return {
       kind: "contract",
       id: contract.id,
       title: contract.title,
       meta: getContractFileMeta(contract),
       status: getContractStatusLabel(contract.status),
-      sort: `1-${contract.offeredAt ?? 0}-${contract.id}`,
+      group: getContractFileGroup(contract),
+      sort: `${getContractFileGroupOrder(contract)}-${contract.offeredAt ?? 0}-${contract.id}`,
     };
   });
 
@@ -4076,10 +4494,77 @@ function getPaperworkFiles() {
       title: document.title ?? document.id,
       meta: getDocumentFileMeta(document),
       status: document.status ?? "record",
-      sort: `2-${document.issuedAt ?? 0}-${document.id}`,
+      group: "Licenses & Records",
+      sort: `5-${document.issuedAt ?? 0}-${document.id}`,
     }));
 
-  return [...contractFiles, ...documentFiles].sort((a, b) => a.sort.localeCompare(b.sort));
+  const referenceFiles = [{
+    kind: "panel",
+    id: "resource-guide",
+    title: "Prospector's Field Guide",
+    meta: "resource reference",
+    status: "reference",
+    group: "References",
+    sort: "6-resource-guide",
+  }];
+
+  return [...contractFiles, ...documentFiles, ...referenceFiles].sort((a, b) => a.sort.localeCompare(b.sort));
+}
+
+function togglePaperworkFileInDrawer(kind, id) {
+  const key = `${kind}:${id}`;
+  const shelf = document.querySelector("#paperwork-drawer .drawer-shelf");
+  let panel = null;
+
+  if (!shelf) return;
+  if (openDrawerPaperKey === key) {
+    openDrawerPaperKey = null;
+    shelf.querySelectorAll(":scope > .component-panel").forEach((candidate) => candidate.classList.remove("is-drawer-selected"));
+    renderContractFileStack();
+    return;
+  }
+
+  if (kind === "contract") {
+    contractManager.focusContract(id);
+    renderContract();
+    panel = document.querySelector("[data-panel-id='contract']");
+  } else if (kind === "panel") {
+    panel = document.querySelector(`[data-panel-id="${id}"]`);
+  } else {
+    const record = state.worldRecords?.documents?.[id];
+    if (record?.type === "pilot-license") {
+      panel = document.querySelector("[data-panel-id='license']");
+    } else {
+      renderDocumentReader(id);
+      panel = document.querySelector("[data-panel-id='document']");
+      panel?.classList.remove("is-component-locked");
+    }
+  }
+
+  if (!panel) return;
+  if (!panel.closest("#paperwork-drawer")) {
+    panel.style.transform = "";
+    panel.style.zIndex = String(DRAWER_PAPER_Z_INDEX);
+    shelf.appendChild(panel);
+  }
+  shelf.querySelectorAll(":scope > .component-panel").forEach((candidate) => {
+    candidate.classList.toggle("is-drawer-selected", candidate === panel);
+  });
+  openDrawerPaperKey = key;
+  renderContractFileStack();
+  updatePaperworkControlLabels();
+}
+
+function getContractFileGroup(contract) {
+  if (["mako-starter-ship-loan", "authority-impound-hull-sale"].includes(contract.id)) return "Current Deal";
+  if (contract.type === "loan") return "Loans";
+  if (contract.type === "permit") return "Hub Permits";
+  if (["active", "fulfilled"].includes(contract.status)) return "Active Work";
+  return "Available Work";
+}
+
+function getContractFileGroupOrder(contract) {
+  return ({ "Current Deal": 1, "Active Work": 2, "Loans": 3, "Available Work": 4, "Hub Permits": 5 })[getContractFileGroup(contract)] ?? 6;
 }
 
 function isDocumentVisibleInDrawer(document) {
@@ -4171,6 +4656,16 @@ function renderContractTerms(contract) {
     contractDestination.textContent = contract.terms.dueLabel;
     contractTertiaryLabel.textContent = "Interest";
     contractReward.textContent = `${contract.terms.interestRate * 100}% / cap ${contract.terms.maxInterest} cr`;
+    return;
+  }
+
+  if (contract.type === "purchase") {
+    contractPrimaryLabel.textContent = "VIN";
+    contractVin.textContent = contract.terms.deliverShipVin;
+    contractSecondaryLabel.textContent = "Disposition fee";
+    contractDestination.textContent = `${(contract.terms.expeditedDispositionFee ?? 0).toLocaleString()} cr`;
+    contractTertiaryLabel.textContent = "Total";
+    contractReward.textContent = `${(contract.terms.price ?? 0).toLocaleString()} cr`;
     return;
   }
 
@@ -4700,7 +5195,11 @@ function getAttentionTarget({ targetType, panelId, siteId, serviceId }) {
 
 function findAttentionElement(targetId) {
   if (targetId.startsWith("panel:")) {
-    return document.querySelector(`[data-panel-id="${targetId.slice("panel:".length)}"]`);
+    // The panel itself — not the stow button left behind in the bay, which
+    // carries the same panel id once the instrument is out on the desk.
+    const panelId = targetId.slice("panel:".length);
+    return document.querySelector(`.component-panel[data-panel-id="${panelId}"]`)
+      ?? document.querySelector(`[data-panel-id="${panelId}"]`);
   }
 
   if (targetId.startsWith("hub-service:")) {
@@ -4715,7 +5214,56 @@ function findAttentionElement(targetId) {
     return document.getElementById(targetId.slice("element:".length));
   }
 
+  // Anything else on the page, by CSS selector — a rack unit's stow button, a
+  // FILE button on one document, the processor's plug.
+  if (targetId.startsWith("selector:")) {
+    try {
+      return document.querySelector(targetId.slice("selector:".length));
+    } catch {
+      return null;
+    }
+  }
+
   return null;
+}
+
+// Mission tasks say what they want clicked. A task carries `attention:
+// "<target>"`; while its flag is unset the arrow points there, and the
+// moment the flag is set the arrow goes. Nothing in the mission has to
+// clear anything.
+function syncMissionTaskAttention() {
+  const journey = state.journey;
+  const wanted = new Map();
+  if (journey.mission?.status === "active") {
+    (journey.mission.tasks ?? []).forEach((task) => {
+      if (!shouldShowMissionTaskAttention(task, {
+        flags: journey.flags,
+        activeBeaconId: state.components.beaconLocator.activeBeaconId,
+      })) return;
+      wanted.set(task.attention, task.label ?? null);
+    });
+  }
+  Object.entries(state.ui.attention.targets).forEach(([targetId, target]) => {
+    if (target.reason === "mission-task" && !wanted.has(targetId)) clearAttention(targetId);
+  });
+  wanted.forEach((label, targetId) => {
+    if (!hasAttention(targetId)) requestAttention({ targetId, mode: "until-clicked", reason: "mission-task", label });
+  });
+}
+
+function syncLiveTaskAttention({ contracts = [], patrol = null } = {}) {
+  const presentedDocumentKinds = patrol
+    ? (pendingHubIdentityPresentations.get(patrol.site?.id)?.kinds ?? new Set())
+    : new Set();
+  const wanted = getTaskAttentionTargets({ contracts, patrol, presentedDocumentKinds });
+  const wantedIds = new Set(wanted.map((target) => target.targetId));
+
+  Object.entries(state.ui.attention.targets).forEach(([targetId, target]) => {
+    if (target.reason === "current-task" && !wantedIds.has(targetId)) clearAttention(targetId);
+  });
+  wanted.forEach(({ targetId, label }) => {
+    if (!hasAttention(targetId)) requestAttention({ targetId, mode: "until-clicked", reason: "current-task", label });
+  });
 }
 
 function playAttentionOnce(element) {
@@ -4729,26 +5277,36 @@ function playAttentionOnce(element) {
   window.setTimeout(() => element.classList.remove("needs-attention-once"), ATTENTION_ONCE_MS);
 }
 
+// ── The alert ──────────────────────────────────────────────────────────────
+// One alert for everything that wants a click: a small triangle beside the
+// thing, pointing at it, nudging toward it, in the OTHER of the cockpit's two
+// colours from the one the thing is drawn in — so it never disappears into
+// what it is pointing at. No label; the arrow is the message.
+//
+// When the thing is not on screen — a VIN on a hull that is racked in the
+// bay, a licence filed in a shut drawer — the arrow points at the next thing
+// to click to get to it, and moves on as each layer opens.
 function updateAttentionCallouts() {
   if (!attentionCalloutLayer) {
+    return;
+  }
+
+  if (state.ui.helpArrows === false) {
+    attentionCalloutLayer.replaceChildren();
     return;
   }
 
   const activeTargetIds = new Set();
 
   Object.entries(state.ui.attention.targets).forEach(([targetId, target]) => {
-    if (!target.label) {
-      return;
-    }
+    const anchor = resolveAttentionAnchor(findAttentionElement(targetId));
 
-    const element = findAttentionElement(targetId);
-
-    if (!element || element.offsetParent === null) {
+    if (!anchor) {
       return;
     }
 
     activeTargetIds.add(targetId);
-    positionAttentionCallout(targetId, target.label, element);
+    positionAttentionArrow(targetId, target.label, anchor);
   });
 
   attentionCalloutLayer.querySelectorAll("[data-callout-target]").forEach((node) => {
@@ -4758,30 +5316,140 @@ function updateAttentionCallouts() {
   });
 }
 
-function positionAttentionCallout(targetId, label, element) {
-  let callout = attentionCalloutLayer.querySelector(`[data-callout-target="${CSS.escape(targetId)}"]`);
-
-  if (!callout) {
-    callout = document.createElement("div");
-    callout.className = "attention-callout";
-    callout.dataset.calloutTarget = targetId;
-    const arrow = document.createElement("span");
-    arrow.className = "attention-callout-arrow";
-    arrow.textContent = "▾";
-    const text = document.createElement("span");
-    text.className = "attention-callout-label";
-    callout.append(arrow, text);
-    attentionCalloutLayer.append(callout);
-  }
-
-  const labelNode = callout.querySelector(".attention-callout-label");
-  if (labelNode.textContent !== label) {
-    labelNode.textContent = label;
-  }
-
+function isElementOnScreen(element) {
+  if (!element || element.offsetParent === null) return false;
   const rect = element.getBoundingClientRect();
-  callout.style.left = `${rect.left + rect.width / 2}px`;
-  callout.style.top = `${rect.top - 26}px`;
+  return rect.width > 0 && rect.height > 0
+    && rect.bottom > 0 && rect.right > 0 && rect.top < window.innerHeight && rect.left < window.innerWidth;
+}
+
+// The thing, or the way to it.
+function resolveAttentionAnchor(element) {
+  if (!element) return null;
+  if (isElementOnScreen(element)) {
+    // A VIN or a licence number is a short button after a label; the arrow
+    // beside the button lands on the label. The whole row is the thing (and
+    // the whole row takes the click).
+    return element.closest(".vin-plate, .license-card-row") ?? element;
+  }
+
+  // Filed in the drawer, and the drawer is shut: the drawer's pull. The
+  // toggle is a bar the width of the screen; the word on it is the thing.
+  if (element.closest("#paperwork-drawer") && !paperworkDrawer?.classList.contains("is-open")) {
+    const pull = drawerToggle?.querySelector(".drawer-toggle-label") ?? drawerToggle;
+    return isElementOnScreen(pull) ? pull : null;
+  }
+
+  // Drawer open, but this document is not the one on the reader: its card in
+  // the list — or the heading of its group, if the group is folded.
+  const paperPanel = element.closest("#paperwork-drawer .component-panel[data-panel-id]");
+  if (paperPanel) {
+    const card = findPaperworkCardForPanel(paperPanel.dataset.panelId);
+    if (isElementOnScreen(card)) return card;
+    const heading = contractFileStack?.querySelector(`[data-paperwork-group="${paperPanel.dataset.panelId === "license" ? "Licenses & Records" : "References"}"]`);
+    return isElementOnScreen(heading) ? heading : null;
+  }
+
+  // On a cockpit module that is racked: its rack unit in the bay — or the
+  // bay's tab, if the bay is shut.
+  const modulePanel = element.closest(".is-cockpit-module[data-panel-id]");
+  if (modulePanel) {
+    const tray = document.querySelector(".cockpit-module-tray");
+    if (tray && !tray.classList.contains("is-open")) {
+      const tab = document.querySelector(".cockpit-module-tray-tab");
+      return isElementOnScreen(tab) ? tab : null;
+    }
+    // A racked module IS its rack unit: the collapsed panel sits in the bay
+    // with its readouts hidden. Point at the unit. (A launcher button stands
+    // in for a module that is out on the desk but scrolled out of view.)
+    if (isElementOnScreen(modulePanel)) return modulePanel;
+    const launcher = document.querySelector(`.cockpit-module-launcher[data-panel-id="${modulePanel.dataset.panelId}"]`);
+    return isElementOnScreen(launcher) ? launcher : null;
+  }
+
+  return null;
+}
+
+function findPaperworkCardForPanel(panelId) {
+  if (!contractFileStack) return null;
+  if (panelId === "license") {
+    const licence = Object.values(state.worldRecords?.documents ?? {}).find((document) => document.type === "pilot-license");
+    return licence ? contractFileStack.querySelector(`[data-paper-file-kind="document"][data-paper-file-id="${CSS.escape(licence.id)}"]`) : null;
+  }
+  if (panelId === "contract") {
+    const current = contractManager.getCurrentContract();
+    return current ? contractFileStack.querySelector(`[data-paper-file-kind="contract"][data-paper-file-id="${CSS.escape(current.id)}"]`) : null;
+  }
+  return contractFileStack.querySelector(`[data-paper-file-kind="panel"][data-paper-file-id="${CSS.escape(panelId)}"]`);
+}
+
+function parseCssColor(value = "") {
+  const hex = /^#([0-9a-f]{6})$/i.exec(value.trim());
+  if (hex) {
+    const number = parseInt(hex[1], 16);
+    return [(number >> 16) & 255, (number >> 8) & 255, number & 255];
+  }
+  const rgb = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i.exec(value);
+  return rgb ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] : null;
+}
+
+function colorDistance(a, b) {
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+}
+
+// Whichever of the two cockpit colours the thing is NOT drawn in. Anything
+// drawn in neither (a plain white button) gets the accent, the colour most
+// of the cockpit is not.
+function alternateCockpitColor(element) {
+  const phosphor = state.ui.cockpit?.phosphorColor ?? "#7dffe0";
+  const accent = state.ui.cockpit?.resolvedAccentColor ?? "#ffd36b";
+  const phosphorRgb = parseCssColor(phosphor);
+  const accentRgb = parseCssColor(accent);
+  if (!phosphorRgb || !accentRgb) return accent;
+
+  const style = getComputedStyle(element);
+  const samples = [style.color, style.borderTopColor, style.borderLeftColor].map(parseCssColor).filter(Boolean);
+  const drawnInAccent = samples.some((sample) => colorDistance(sample, accentRgb) < colorDistance(sample, phosphorRgb) && colorDistance(sample, accentRgb) < 90);
+  return drawnInAccent ? phosphor : accent;
+}
+
+function positionAttentionArrow(targetId, label, anchor) {
+  let arrow = attentionCalloutLayer.querySelector(`[data-callout-target="${CSS.escape(targetId)}"]`);
+
+  if (!arrow) {
+    arrow = document.createElement("div");
+    arrow.className = "attention-arrow";
+    arrow.dataset.calloutTarget = targetId;
+    arrow.setAttribute("role", "img");
+    ["attention-arrow-ghost attention-arrow-ghost-2", "attention-arrow-ghost attention-arrow-ghost-1", "attention-arrow-tip"].forEach((className) => {
+      const layer = document.createElement("span");
+      layer.className = className;
+      arrow.append(layer);
+    });
+    attentionCalloutLayer.append(arrow);
+  }
+
+  const title = label ?? "";
+  if (arrow.getAttribute("aria-label") !== title) {
+    arrow.setAttribute("aria-label", title);
+    arrow.title = title;
+  }
+
+  // Beside the thing on whichever side has room, pointing at it. Left of
+  // centre puts the arrow on the right, and the other way about, so it sits
+  // between the thing and the middle of the screen where the eye is.
+  const rect = anchor.getBoundingClientRect();
+  const gap = 12;
+  const roomRight = window.innerWidth - rect.right;
+  const roomLeft = rect.left;
+  const side = rect.left + rect.width / 2 < window.innerWidth / 2
+    ? (roomRight >= 40 ? "right" : "left")
+    : (roomLeft >= 40 ? "left" : "right");
+
+  arrow.dataset.side = side;
+  arrow.style.top = `${rect.top + rect.height / 2}px`;
+  arrow.style.left = side === "right" ? `${rect.right + gap}px` : `${rect.left - gap}px`;
+  arrow.style.setProperty("--arrow-color", alternateCockpitColor(anchor));
 }
 
 function setPanelHidden(panel, isHidden) {
@@ -4880,6 +5548,10 @@ function setupPaperworkControls() {
         flipButton.title = isFlipped ? "Flip to the first half" : "Flip to the second half";
         flipButton.setAttribute("aria-label", flipButton.title);
         flipButton.setAttribute("aria-pressed", String(isFlipped));
+        // Flip turns a folded guide over to its other leaf. Open flat, both
+        // leaves are already showing and there is nothing to flip.
+        flipButton.hidden = !isFolded;
+        if (!isFolded) panel.classList.remove("is-paper-flipped");
       };
 
       foldButton.addEventListener("click", (event) => {
@@ -4912,13 +5584,15 @@ function updatePaperworkControlLabels() {
       return;
     }
 
-    button.disabled = !canMovePaperPanel(panelId);
-    button.hidden = !state.ui.paperwork?.filingIntroduced;
+    const waitsForCampaignFilingBeat = initialDevStart === "campaign"
+      && state.journey.mission?.id === "chapter-1-yard-exchange"
+      && (panelId === "license" || panelId === "contract")
+      && !state.journey.flags?.drawerRevealed;
+    button.disabled = waitsForCampaignFilingBeat || !canMovePaperPanel(panelId);
+    button.hidden = waitsForCampaignFilingBeat || !state.ui.paperwork?.filingIntroduced;
     button.textContent = isInDrawer ? "Desk" : "File";
     button.title = button.disabled
-      ? panelId === "contract" && contractManager.getCurrentContract()?.status === "offered"
-        ? "Accept this contract before filing it"
-        : "No contract selected"
+      ? "No contract selected"
       : isInDrawer
         ? "Move paperwork to the desktop"
         : "File paperwork in the drawer";
@@ -4927,12 +5601,18 @@ function updatePaperworkControlLabels() {
 }
 
 function canMovePaperPanel(panelId) {
+  if (initialDevStart === "campaign"
+    && state.journey.mission?.id === "chapter-1-yard-exchange"
+    && (panelId === "license" || panelId === "contract")
+    && !state.journey.flags?.drawerRevealed) {
+    return false;
+  }
+
   if (panelId !== "contract") {
     return true;
   }
 
-  const contract = contractManager.getCurrentContract();
-  return Boolean(contract && contract.status !== "offered");
+  return Boolean(contractManager.getCurrentContract());
 }
 
 function focusPanelById(panelId) {
@@ -4944,7 +5624,28 @@ function focusPanelById(panelId) {
 }
 
 function renderJourney(journey = state.journey) {
-  const latestMessage = journey.messages.at(-1) ?? null;
+  // Once a real license exists the application can never be a valid overlay
+  // again, even if a restored DOM/class state or an interrupted render tries
+  // to expose it.
+  if (getPilotLicense(state)?.licenseId
+    && !licenseApplication?.classList.contains("is-dismissed")) {
+    dismissLicenseApplication();
+  }
+  const openingMessage = isCampaignColdOpen()
+      ? {
+          id: `campaign-opening-${campaignOpeningStage}`,
+          speaker: "Rook",
+          text: CAMPAIGN_OPENING_CHATTER[campaignOpeningStage],
+        }
+      : null;
+  // Nothing in the simulation may talk over the authored cold open. Ambient
+  // comms can already exist in the queue while the mission is still offered;
+  // they become visible only after Rook has finished these two lines.
+  const suppressPreMissionAmbient = initialDevStart === "campaign"
+    && journey.mission?.status === "offered";
+  const latestMessage = openingMessage
+    ?? (suppressPreMissionAmbient ? null : journey.messages.at(-1))
+    ?? null;
   const speaker = latestMessage?.speaker ?? "Journey";
   const isOpen = Boolean(latestMessage || journey.pendingAcknowledgement || journey.mission?.status === "offered");
 
@@ -4967,24 +5668,7 @@ function renderJourney(journey = state.journey) {
     panoramaLink.hidden = journey.mission?.status !== "offered";
   }
 
-  const isTrafficCheck = journey.currentStepId === "yard-traffic-check";
-  const vinNeedsAttention = isTrafficCheck && !journey.flags?.yardVinPresented;
-  const licenseNeedsAttention = isTrafficCheck && !journey.flags?.yardLicensePresented;
-
-  hullVin.classList.toggle("needs-id-attention", vinNeedsAttention);
-  licenseIdDisplay.classList.toggle("needs-id-attention", licenseNeedsAttention);
-
-  if (vinNeedsAttention) {
-    requestAttention({ targetId: "element:hull-vin", mode: "until-clicked", reason: "identity-check", label: "Show VIN" });
-  } else {
-    clearAttention("element:hull-vin");
-  }
-
-  if (licenseNeedsAttention) {
-    requestAttention({ targetId: "element:license-id", mode: "until-clicked", reason: "identity-check", label: "Show License" });
-  } else {
-    clearAttention("element:license-id");
-  }
+  syncMissionTaskAttention();
   const identityReady = canPresentIdentityDocuments();
   hullVin.disabled = !identityReady;
   licenseIdDisplay.disabled = !identityReady;
@@ -4992,23 +5676,12 @@ function renderJourney(journey = state.journey) {
   journeyPanel?.classList.toggle("is-journey-speaking", Boolean(latestMessage));
   journeyPanel?.setAttribute("data-speaker", normalizeSpeakerKey(speaker));
 
-  if (viewportTransmission) {
-    const speakerKey = normalizeSpeakerKey(speaker);
-    const hasWorldSource = /traffic|patrol|yard|exchange|station|hub/i.test(speaker);
-    viewportTransmission.hidden = !latestMessage;
-    viewportTransmission.dataset.speaker = speakerKey;
-    viewportTransmission.classList.toggle("has-world-source", hasWorldSource);
-    if (viewportTransmissionSpeaker) viewportTransmissionSpeaker.textContent = speaker;
-    if (viewportTransmissionText) viewportTransmissionText.textContent = latestMessage?.text ?? "";
-    if (viewportTransmissionAccept) {
-      viewportTransmissionAccept.hidden = journeyAcceptButton.hidden;
-      viewportTransmissionAccept.textContent = journeyAcceptButton.textContent;
-    }
-    if (viewportTransmissionDecline) {
-      viewportTransmissionDecline.hidden = journeyDeclineButton?.hidden ?? true;
-      viewportTransmissionDecline.textContent = journeyDeclineButton?.textContent ?? "Not Yet";
-    }
-  }
+  // Every speaker with a line gets a plate; a speaker keeps the plate they
+  // already have, so a follow-up line lands where the last one sat.
+  const activeMessages = openingMessage
+    ? [openingMessage]
+    : suppressPreMissionAmbient ? [] : journey.messages.slice(-MAX_TRANSMISSION_PLATES);
+  renderTransmissionPlates(activeMessages, journey);
 
   if (journeyPortraitArt) {
     journeyPortraitArt.textContent = getSpeakerPortrait(speaker);
@@ -5017,7 +5690,6 @@ function renderJourney(journey = state.journey) {
   const currentMessageId = latestMessage?.id ?? null;
   if (currentMessageId !== _renderedMessageId) {
     _renderedMessageId = currentMessageId;
-    clearJourneyTypeTimers();
     journeyLog.replaceChildren(
       ...journey.messages.slice(-1).map((message) => {
         const line = document.createElement("div");
@@ -5028,15 +5700,482 @@ function renderJourney(journey = state.journey) {
         speaker.textContent = message.speaker;
         text.className = "journey-line-text";
         text.dataset.speaker = message.speaker;
-        typeJourneyText(text, message.text);
+        text.textContent = message.text;
         line.append(speaker, text);
         return line;
       }),
     );
     playJourneyUpdate();
   }
+  const isCampaign = initialDevStart === "campaign";
+  document.body.classList.toggle("is-campaign-induction", isCampaign && journey.mission?.status !== "completed");
+  document.body.classList.toggle("is-campaign-cold-open", isCampaignColdOpen());
+  // Hardware Rook has gotten working stays working. These reveals are set by
+  // the interview's beats as mission flags, and a mission's flags start fresh,
+  // so the moment the next mission began the bay and drawer read as
+  // unrevealed and vanished for the rest of the induction. Latched into the
+  // journey's global flags, which outlive any one mission.
+  journey.globalFlags ??= {};
+  ["drawerRevealed", "moduleBayRevealed"].forEach((flag) => {
+    if (journey.flags?.[flag]) journey.globalFlags[flag] = true;
+  });
+  document.body.classList.toggle("has-campaign-drawer", Boolean(journey.globalFlags.drawerRevealed));
+  document.body.classList.toggle("has-campaign-module-bay", Boolean(journey.globalFlags.moduleBayRevealed));
+  document.body.classList.toggle("has-campaign-viewport", state.ui.panels?.viewport?.available === true);
+  // The license application is a full-screen layer. During that first beat,
+  // lift the plates beside it as body-level siblings so nobody is speaking
+  // invisibly underneath the form. Once the form is submitted, put chatter
+  // back in the cockpit where it follows the viewport rim.
+  const transmissionHome = document.querySelector(".space-panel");
+  transmissionPlates.forEach((plate) => {
+    if (isCampaign && !licenseApplication?.classList.contains("is-dismissed")) {
+      if (plate.element.parentElement !== document.body) document.body.append(plate.element);
+    } else if (transmissionHome && plate.element.parentElement !== transmissionHome) {
+      transmissionHome.append(plate.element);
+    }
+  });
+  positionTransmissionPlates();
   renderObjectives(state);
 }
+
+// Bind each active line to a plate and draw it. A speaker keeps their plate
+// across lines; a plate whose speaker has gone quiet is freed. New plates are
+// created on demand up to the pool size.
+function renderTransmissionPlates(messages, journey) {
+  if (!transmissionTemplate) return;
+  while (transmissionPlates.length < Math.min(MAX_TRANSMISSION_PLATES, Math.max(1, messages.length))) {
+    transmissionPlates.push(createTransmissionPlate(transmissionPlates.length));
+  }
+  const keyOf = (message) => normalizeSpeakerKey(message.speaker);
+  const assignments = new Map();
+  const unclaimed = [...transmissionPlates];
+  // Same speaker first, then whichever plate is free.
+  messages.forEach((message) => {
+    const own = unclaimed.find((plate) => plate.speakerKey === keyOf(message));
+    if (own) { assignments.set(message, own); unclaimed.splice(unclaimed.indexOf(own), 1); }
+  });
+  messages.forEach((message) => {
+    if (assignments.has(message)) return;
+    const free = unclaimed.find((plate) => plate.messageId === null) ?? unclaimed[0];
+    if (!free) return;
+    assignments.set(message, free);
+    unclaimed.splice(unclaimed.indexOf(free), 1);
+  });
+  unclaimed.forEach((plate) => renderTransmissionPlate(plate, null, journey));
+  assignments.forEach((plate, message) => renderTransmissionPlate(plate, message, journey));
+}
+
+function renderTransmissionPlate(plate, message, journey) {
+  const speaker = message?.speaker ?? "";
+  const speakerKey = message ? normalizeSpeakerKey(speaker) : null;
+  const hasWorldSource = Boolean(message) && /traffic|patrol|yard|exchange|station|hub|watch/i.test(speaker);
+  plate.element.hidden = !message;
+  plate.element.dataset.speaker = speakerKey ?? "";
+  plate.element.classList.toggle("has-world-source", hasWorldSource);
+  plate.speakerKey = speakerKey;
+  plate.source = message ? resolveTransmissionSource(speaker, hasWorldSource) : null;
+  // A thing in the scope speaks in the colour the scope draws it in. Anyone
+  // else takes the persona colour from the stylesheet.
+  if (plate.source?.color) plate.element.style.setProperty("--transmission-color", plate.source.color);
+  else plate.element.style.removeProperty("--transmission-color");
+  plate.line?.style.setProperty("--transmission-color",
+    getComputedStyle(plate.element).getPropertyValue("--transmission-color").trim() || "");
+  if (plate.speakerEl) plate.speakerEl.textContent = speaker;
+  // Only the plate holding the open question carries its answer buttons.
+  const asksHere = Boolean(message?.hasAcknowledgement && journey.pendingAcknowledgement);
+  const hasExplicitChoice = Boolean(journey.pendingAcknowledgement?.decline);
+  if (plate.acceptButton) {
+    plate.acceptButton.hidden = !asksHere || !hasExplicitChoice || journeyAcceptButton.hidden;
+    plate.acceptButton.textContent = journeyAcceptButton.textContent;
+  }
+  if (plate.declineButton) {
+    plate.declineButton.hidden = !asksHere || (journeyDeclineButton?.hidden ?? true);
+    plate.declineButton.textContent = journeyDeclineButton?.textContent ?? "Not Yet";
+  }
+
+  const messageId = message?.id ?? null;
+  if (messageId === plate.messageId) return;
+  plate.messageId = messageId;
+  plate.offScopeSince = null;
+  plate.seenOnScope = false;
+  clearPlateTypeTimers(plate);
+  if (!message) {
+    if (plate.textEl) plate.textEl.textContent = "";
+    plate.typing = null;
+    plate.element.classList.remove("is-arriving", "is-rim-placed");
+    if (plate.line) plate.line.hidden = true;
+    return;
+  }
+  if (plate.textEl) plate.textEl.dataset.speaker = speaker;
+  // A new line arrives: the plate and name fade up (from slightly small), and
+  // the words start only once that is done. Restarting the class restarts the
+  // animation; while it runs, position changes are instant so the plate lands
+  // where it belongs rather than sliding in from wherever the last line sat.
+  plate.element.classList.remove("is-arriving");
+  void plate.element.offsetWidth;
+  plate.element.classList.add("is-arriving");
+  typePlateText(plate, message.text, { startDelayMs: TRANSMISSION_ARRIVAL_MS });
+}
+
+// Where on the rim the chatter sits. Its centre is always ON the scope's edge
+// line, and its home is the left rim 30° above the horizontal — dead centre
+// read as boring. It moves only to get out from under something: first a step
+// down the left rim, then across to the same spot on the right (the module
+// rack opening on the left is what usually crowds it), then further down
+// either side. Degrees from the horizontal, positive is down, in order of
+// preference.
+
+// The scope's circle in the transmission host's coordinates. In the cockpit
+// the viewport fills the space panel edge to edge, so the circle is the same
+// figure whether or not the viewport has been switched on yet — the campaign
+// puts the chatter on the rim of a scope the player has not seen, and it is
+// then already in place when the scope lights up around it.
+function getScopeGeometry(hostRect) {
+  const spacePanel = document.querySelector(".space-panel");
+  const canvasRect = canvas?.getBoundingClientRect();
+  const rect = canvasRect?.width && canvasRect?.height ? canvasRect : spacePanel?.getBoundingClientRect();
+  if (!rect?.width || !rect?.height) return null;
+  return {
+    x: rect.left + rect.width / 2 - hostRect.left,
+    y: rect.top + rect.height / 2 - hostRect.top,
+    radius: Math.max(24, Math.min(rect.width, rect.height) / 2 - 18),
+  };
+}
+
+// Plates are placed oldest line first, and each later plate treats the ones
+// already placed as obstacles, so a second speaker takes the next best spot
+// rather than the two fighting over the same one.
+function positionTransmissionPlates() {
+  const placed = [];
+  [...transmissionPlates]
+    .filter((plate) => !plate.element.hidden)
+    .sort((a, b) => (a.messageId ?? 0) - (b.messageId ?? 0))
+    .forEach((plate) => {
+      const footprint = positionTransmissionPlate(plate, placed);
+      if (footprint) placed.push(footprint);
+    });
+}
+
+function positionTransmissionPlate(plate, placedFootprints = []) {
+  const viewportTransmission = plate.element;
+  if (!viewportTransmission || viewportTransmission.hidden) return null;
+  const host = viewportTransmission.parentElement;
+  const circular = state.ui?.viewportLayout !== "fullscreen-background";
+  const hostRect = host?.getBoundingClientRect();
+  const geometry = host && plate.plate && circular && document.body.classList.contains("is-cockpit-layout")
+    ? getScopeGeometry(hostRect) : null;
+  // Panorama layout has no rim: the stylesheet's fallback placement stands.
+  if (!geometry) {
+    viewportTransmission.classList.remove("is-rim-placed");
+    viewportTransmission.style.removeProperty("--rim-x");
+    viewportTransmission.style.removeProperty("--rim-y");
+    return null;
+  }
+  const { x: scopeX, y: scopeY, radius } = geometry;
+
+  // The plate is already its final size: every glyph of the line is laid out
+  // before typing reveals it (see typePlateText).
+  const plateRect = plate.plate.getBoundingClientRect();
+  const halfWidth = plateRect.width / 2;
+  const halfHeight = plateRect.height / 2;
+
+  const toHost = (rect) => ({
+    left: rect.left - hostRect.left - TRANSMISSION_CLEARANCE,
+    top: rect.top - hostRect.top - TRANSMISSION_CLEARANCE,
+    right: rect.right - hostRect.left + TRANSMISSION_CLEARANCE,
+    bottom: rect.bottom - hostRect.top + TRANSMISSION_CLEARANCE,
+  });
+  // Everything the plate must not cover: instruments out on the desk, papers
+  // and windows on the desk (the hub's service menu, a contract, the license),
+  // the open module rack, the open paperwork drawer.
+  const obstacles = [
+    ...document.querySelectorAll(".is-cockpit-module.is-cockpit-floating"),
+    ...[...document.querySelectorAll(".hud > .component-panel")]
+      .filter((panel) => !panel.classList.contains("is-component-locked") && !panel.classList.contains("is-panel-hidden") && !panel.hidden),
+    document.querySelector(".cockpit-module-tray.is-open"),
+    paperworkDrawer?.classList.contains("is-open") ? paperworkDrawer : null,
+  ].filter(Boolean).map((element) => element.getBoundingClientRect())
+    .filter((rect) => rect.width && rect.height)
+    .map(toHost)
+    .concat(placedFootprints);
+  const toolbarBottom = (document.querySelector(".cockpit-toolbar")?.getBoundingClientRect().bottom ?? hostRect.top) - hostRect.top;
+  const bounds = {
+    left: TRANSMISSION_CLEARANCE,
+    top: toolbarBottom + TRANSMISSION_CLEARANCE,
+    right: hostRect.width - TRANSMISSION_CLEARANCE,
+    bottom: hostRect.height - TRANSMISSION_CLEARANCE,
+  };
+  const overlapArea = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
+    * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+
+  let best = null;
+  rimSpotsForSpeaker(plate.speakerKey ?? "").forEach(({ side, degrees }, preference) => {
+    const angle = degrees * Math.PI / 180;
+    const x = scopeX + side * Math.cos(angle) * radius;
+    const y = scopeY + Math.sin(angle) * radius;
+    // The footprint is the plate plus the name above it.
+    const footprint = {
+      left: x - halfWidth,
+      right: x + halfWidth,
+      top: y - halfHeight - TRANSMISSION_LABEL_HEIGHT,
+      bottom: y + halfHeight,
+    };
+    const footprintArea = (footprint.right - footprint.left) * (footprint.bottom - footprint.top);
+    const offscreen = footprintArea - overlapArea(footprint, bounds);
+    const covered = obstacles.reduce((sum, rect) => sum + overlapArea(footprint, rect), 0);
+    // Leaving the desk is worse than covering an instrument; both are far worse
+    // than sliding down from home, which is the only cost of a clean spot.
+    const score = offscreen * 6 + covered + preference * 240;
+    if (!best || score < best.score) best = { x, y, score };
+  });
+
+  viewportTransmission.style.setProperty("--rim-x", `${Math.round(best.x)}px`);
+  viewportTransmission.style.setProperty("--rim-y", `${Math.round(best.y)}px`);
+  viewportTransmission.classList.add("is-rim-placed");
+  return {
+    left: best.x - halfWidth - TRANSMISSION_CLEARANCE,
+    right: best.x + halfWidth + TRANSMISSION_CLEARANCE,
+    top: best.y - halfHeight - TRANSMISSION_LABEL_HEIGHT - TRANSMISSION_CLEARANCE,
+    bottom: best.y + halfHeight + TRANSMISSION_CLEARANCE,
+  };
+}
+
+document.addEventListener("animationend", (event) => {
+  if (event.animationName !== "transmission-arrive") return;
+  event.target.closest?.(".viewport-transmission")?.classList.remove("is-arriving");
+});
+
+// Instruments get dragged and the window gets resized while a line is up, so
+// the placement is re-checked on a slow beat rather than only when a line
+// arrives. A few rect reads five times a second is nothing.
+window.setInterval(() => { positionTransmissionPlates(); updateAttentionCallouts(); }, 200);
+
+// A module out on the desk is a fixed shape on the grid. Its readouts are
+// laid out to hold their space whatever they say (blank lines stay lines,
+// long names are clipped), so the natural height does not move; this rounds
+// it up to whole major rows so the bottom edge lands on the lattice like the
+// sides do. It is applied in the same frame the panel floats and removed in
+// the same frame it docks — a timer doing it later showed the rack unit at
+// desk height for a beat. Re-run on resize, when the lattice itself moves.
+function snapCockpitPanelHeight(panel) {
+  // The side chambers are sized by the scope they stand beside, not by
+  // their contents.
+  if (!panel || panel.dataset.panelId === "processor" || panel.dataset.panelId === "cargo") return;
+  if (!panel.classList.contains("is-cockpit-expanded")) {
+    panel.style.removeProperty("min-height");
+    return;
+  }
+  const major = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--grid-major")) || 24;
+  const style = getComputedStyle(panel);
+  const flange = parseFloat(style.paddingTop) || 0;
+  panel.style.removeProperty("min-height");
+  const natural = panel.getBoundingClientRect().height - flange * 2;
+  const snapped = Math.ceil(natural / major - 0.001) * major;
+  panel.style.minHeight = `${snapped + (style.boxSizing === "border-box" ? flange * 2 : 0)}px`;
+}
+
+function snapCockpitPanelHeights() {
+  document.querySelectorAll(".is-cockpit-module").forEach(snapCockpitPanelHeight);
+}
+
+window.addEventListener("resize", snapCockpitPanelHeights);
+window.addEventListener("resize", positionTransmissionPlates);
+
+// What in the scope is talking. A patrol hails as "<Office> Watch One" and is
+// found by that name among the intercepts on the glass; a hub desk hails as
+// "<Hub> Traffic" or "<Hub> Authority" and is found by the hub's name — failing
+// that, the nearest hub is the one hailing. Each answer carries the colour the
+// scope draws that thing in, so the plate matches what the player is looking
+// at. Colours mirror drawPatrolIntercept and drawWorldSites in game.js.
+function resolveTransmissionSource(speaker = "", hasWorldSource = false) {
+  const spoken = normalizeSpeakerKey(speaker);
+  const patrol = (game.activePatrolIntercepts ?? [])
+    .find((candidate) => candidate.isAlive !== false && candidate.name && spoken === normalizeSpeakerKey(candidate.name));
+  if (patrol) return { kind: "patrol", actor: patrol, color: PATROL_LINE_COLOR };
+  const hubs = (game.worldSites ?? []).filter((site) => site.type === "hub");
+  const named = hubs.find((site) => site.name && spoken.includes(normalizeSpeakerKey(site.name)));
+  if (named) return { kind: "hub", site: named, color: HUB_LINE_COLOR };
+  // A clerk at one of the hub's OWN offices — Vey at the Authority, Nara at
+  // Modworks, Finley at Supply — is the hub talking, and speaks in its colour.
+  // Tenants renting a window there (Rook Industries, Sable Ledger) keep their
+  // own voice. Not a hail, either way: a clerk's line is not dismissed by
+  // walking up to the window, that is how it started.
+  const clerkSite = hubs.find((site) => getHubServices(site.id).some((service) =>
+    service.npcName
+    && normalizeSpeakerKey(service.npcName) === spoken
+    && normalizeSpeakerKey(service.organization ?? "").includes(normalizeSpeakerKey(site.name))));
+  if (clerkSite) return { kind: "clerk", site: clerkSite, color: HUB_LINE_COLOR };
+  if (!hasWorldSource) return null;
+  if (/watch|patrol/.test(spoken)) {
+    const nearestPatrol = (game.activePatrolIntercepts ?? []).find((candidate) => candidate.isAlive !== false);
+    if (nearestPatrol) return { kind: "patrol", actor: nearestPatrol, color: PATROL_LINE_COLOR };
+  }
+  const ship = game.ship?.position;
+  const nearest = ship && hubs.reduce((best, site) => {
+    const distance = Math.hypot(site.position.x - ship.x, site.position.y - ship.y);
+    return !best || distance < best.distance ? { site, distance } : best;
+  }, null)?.site;
+  return nearest ? { kind: "hub", site: nearest, color: HUB_LINE_COLOR } : null;
+}
+
+// A line from something in the scope is ABOUT that thing, and it is done when
+// the player engages with the thing (docks there, opens one of its windows,
+// shows it papers, is cleared by it) or when the thing is no longer in front
+// of them. Rook and the other named voices are not in the scope and are left
+// to the player's click. A line still waiting on an answer is never dismissed.
+const WORLD_TRANSMISSION_ENGAGEMENT_EVENTS = new Set([
+  "site.docked", "hub.serviceOpened", "authority.documentPresented",
+  "authority.identityCleared", "patrol.cleared",
+]);
+const WORLD_TRANSMISSION_OFF_SCOPE_GRACE_MS = 1500;
+
+function speakerBelongsToSource(source, speaker = "") {
+  if (!source) return false;
+  const spoken = normalizeSpeakerKey(speaker);
+  if (source.kind === "hub") return spoken.includes(normalizeSpeakerKey(source.site.name));
+  if (source.kind === "clerk") return false;
+  return spoken === normalizeSpeakerKey(source.actor.name);
+}
+
+function dismissWorldTransmission(plate) {
+  const message = state.journey.messages.find((candidate) => candidate.id === plate.messageId);
+  if (!plate.source || !message) return false;
+  if (message.hasAcknowledgement && state.journey.pendingAcknowledgement) return false;
+  // Whatever else that source had lined up was about the same moment, and the
+  // moment has passed — otherwise its stale hails surface one after another.
+  commsDirector.discardQueued((queued) => speakerBelongsToSource(plate.source, queued.speaker));
+  journeyDirector.clearMessage({ id: message.id });
+  renderJourney();
+  updateHudDisplay();
+  return true;
+}
+
+function eventEngagesSource(source, event) {
+  if (!source || source.kind === "clerk" || !WORLD_TRANSMISSION_ENGAGEMENT_EVENTS.has(event.type)) return false;
+  const payload = event.payload ?? {};
+  if (source.kind === "hub") return payload.siteId === source.site.id;
+  const patrol = source.actor;
+  return payload.patrolName === patrol.name || (payload.siteId && payload.siteId === patrol.site?.id);
+}
+
+function updateWorldTransmissionDismissal() {
+  const events = state.ledger.getEventsAfterId(lastTransmissionDismissEventId, { includeHidden: true });
+  const engaged = new Set();
+  events.forEach((event) => {
+    lastTransmissionDismissEventId = Math.max(lastTransmissionDismissEventId, event.id);
+    transmissionPlates.forEach((plate) => {
+      if (!plate.element.hidden && eventEngagesSource(plate.source, event)) engaged.add(plate);
+    });
+  });
+  engaged.forEach((plate) => dismissWorldTransmission(plate));
+}
+
+// Called every frame by the leader-line updater, which already knows where
+// the source is on the glass. Off the scope for a moment is a swing of the
+// camera; off it for a second and a half is the player having moved on.
+function notePlateSourceOnScope(plate, onScope) {
+  if (onScope) {
+    plate.offScopeSince = null;
+    plate.seenOnScope = true;
+    return;
+  }
+  // A hub can hail from beyond the glass — hub range is wider than the scope.
+  // "Left the screen" only means anything once it was on the screen.
+  if (!plate.seenOnScope) return;
+  plate.offScopeSince ??= performance.now();
+  if (performance.now() - plate.offScopeSince > WORLD_TRANSMISSION_OFF_SCOPE_GRACE_MS) {
+    plate.offScopeSince = null;
+    dismissWorldTransmission(plate);
+  }
+}
+
+function getSourcePosition(source) {
+  if (!source) return null;
+  if (source.kind === "patrol") {
+    const actor = source.actor;
+    if (actor.isAlive === false || !game.activePatrolIntercepts?.includes(actor)) return null;
+    return actor.position ?? null;
+  }
+  return source.site?.position ?? null;
+}
+
+// The thread from the speaker to the plate. It is drawn IN the scope, from the
+// hub (or the rim, when the hub is off the scope) to the point where the ray
+// meets the plate's rounded edge — and stops there, because the plate is dark
+// glass and a line continuing underneath it would show through. Signed-distance
+// of a rounded rectangle, bisected along the ray, finds that edge exactly.
+function roundedRectDistance(px, py, halfWidth, halfHeight, corner) {
+  const qx = Math.abs(px) - halfWidth + corner;
+  const qy = Math.abs(py) - halfHeight + corner;
+  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - corner;
+}
+
+function updateViewportTransmissionLines() {
+  window.requestAnimationFrame(updateViewportTransmissionLines);
+  transmissionPlates.forEach(updateViewportTransmissionLine);
+}
+
+function updateViewportTransmissionLine(platePool) {
+  const viewportTransmissionLine = platePool.line;
+  const viewportTransmission = platePool.element;
+  if (!viewportTransmissionLine) return;
+  const source = getSourcePosition(platePool.source);
+  const plate = platePool.plate;
+  const host = viewportTransmissionLine.parentElement;
+  if (!source || !plate || viewportTransmission.hidden
+    || !viewportTransmission.classList.contains("is-rim-placed")
+    || viewportTransmission.parentElement !== host) {
+    viewportTransmissionLine.hidden = true;
+    return;
+  }
+
+  const hostRect = host.getBoundingClientRect();
+  const scope = canvas.getBoundingClientRect();
+  const scaleX = scope.width / canvas.width;
+  const scaleY = scope.height / canvas.height;
+  const scopeX = scope.left - hostRect.left + scope.width / 2;
+  const scopeY = scope.top - hostRect.top + scope.height / 2;
+  const radius = Math.max(24, Math.min(scope.width, scope.height) / 2 - 18);
+
+  // Where the hub is on the glass, clipped to the rim if it is out of view.
+  let sourceX = scope.left - hostRect.left + (source.x - game.camera.x) * scaleX;
+  let sourceY = scope.top - hostRect.top + (source.y - game.camera.y) * scaleY;
+  const fromScope = Math.hypot(sourceX - scopeX, sourceY - scopeY);
+  notePlateSourceOnScope(platePool, fromScope <= radius * 1.15);
+  if (fromScope > radius) {
+    sourceX = scopeX + (sourceX - scopeX) / fromScope * radius;
+    sourceY = scopeY + (sourceY - scopeY) / fromScope * radius;
+  }
+
+  const plateRect = plate.getBoundingClientRect();
+  const plateX = plateRect.left - hostRect.left + plateRect.width / 2;
+  const plateY = plateRect.top - hostRect.top + plateRect.height / 2;
+  const halfWidth = plateRect.width / 2;
+  const halfHeight = plateRect.height / 2;
+  const dx = sourceX - plateX;
+  const dy = sourceY - plateY;
+  const length = Math.hypot(dx, dy);
+  if (length < 1 || roundedRectDistance(dx, dy, halfWidth, halfHeight, TRANSMISSION_PLATE_CORNER) <= 0) {
+    // The hub is under the plate; nothing to draw.
+    viewportTransmissionLine.hidden = true;
+    return;
+  }
+  let inside = 0;
+  let outside = length;
+  for (let step = 0; step < 14; step += 1) {
+    const mid = (inside + outside) / 2;
+    const distance = roundedRectDistance(dx / length * mid, dy / length * mid, halfWidth, halfHeight, TRANSMISSION_PLATE_CORNER);
+    if (distance < 0) inside = mid; else outside = mid;
+  }
+  const edge = outside + 1.5;
+  const line = viewportTransmissionLine.firstElementChild;
+  line.setAttribute("x1", sourceX.toFixed(1));
+  line.setAttribute("y1", sourceY.toFixed(1));
+  line.setAttribute("x2", (plateX + dx / length * edge).toFixed(1));
+  line.setAttribute("y2", (plateY + dy / length * edge).toFixed(1));
+  viewportTransmissionLine.hidden = false;
+}
+window.requestAnimationFrame(updateViewportTransmissionLines);
 
 function renderObjectives(state) {
   const el = document.getElementById("current-objectives");
@@ -5160,6 +6299,8 @@ function renderObjectives(state) {
       });
     }
   }
+
+  syncLiveTaskAttention({ contracts, patrol });
 
   const activeKeys = new Set(activeItems.map((item) => item.key));
   const completionsByKey = new Map(carriedCompletions.map((item) => [item.key, item]));
@@ -5440,30 +6581,79 @@ function isDisabledControl(control) {
   return Boolean(nestedControl?.disabled || nestedControl?.getAttribute("aria-disabled") === "true");
 }
 
-function typeJourneyText(element, fullText) {
-  clearJourneyTypeTimers();
+function typePlateText(plate, fullText, { startDelayMs = 0 } = {}) {
+  const element = plate.textEl;
+  clearPlateTypeTimers(plate);
+  if (!element) return;
 
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     element.textContent = fullText;
+    plate.typing = null;
     return;
   }
 
-  const words = fullText.split(" ");
+  const characters = [...fullText];
+  const characterSchedule = [];
+  let elapsedMs = startDelayMs;
+  characters.forEach((character) => {
+    characterSchedule.push(elapsedMs);
+    elapsedMs += JOURNEY_CHARACTER_DELAY_MS;
+    if (/[.!?]/.test(character)) elapsedMs += 280;
+    else if (/[,;:]/.test(character)) elapsedMs += 150;
+    else if (/[—–]/.test(character)) elapsedMs += 190;
+  });
+
+  // The whole line is laid out at once — every glyph in place, just not yet
+  // visible — and typing only reveals them. Appending characters as they came
+  // grew the plate the whole time and shoved a half-typed word onto the next
+  // line when it ran out of room, so nothing held still long enough to read.
+  // Now the box is its final size from the first frame and the text fills it
+  // from the top-left without moving.
   element.textContent = "";
+  const glyphs = characters.map((character) => {
+    const glyph = document.createElement("span");
+    glyph.className = "is-untyped";
+    glyph.textContent = character;
+    element.append(glyph);
+    return glyph;
+  });
 
-  words.forEach((word, index) => {
-      const timer = window.setTimeout(() => {
-        element.textContent += `${index === 0 ? "" : " "}${word}`;
-        audio.chatter(element.dataset.speaker, index);
-      }, index * JOURNEY_WORD_DELAY_MS);
-
-    journeyTypeTimers.push(timer);
+  const typing = {
+    fullText,
+    complete: false,
+    revealed: 0,
+    expectedCompleteAt: performance.now() + elapsedMs + 50,
+  };
+  plate.typing = typing;
+  characters.forEach((character, index) => {
+    const timer = window.setTimeout(() => {
+      if (plate.typing !== typing) return;
+      glyphs[index].classList.remove("is-untyped");
+      typing.revealed = index + 1;
+      if (character.trim()) audio.chatter(element.dataset.speaker, index);
+      if (index === characters.length - 1) typing.complete = true;
+    }, characterSchedule[index]);
+    plate.timers.push(timer);
   });
 }
 
-function clearJourneyTypeTimers() {
-  journeyTypeTimers.forEach((timer) => window.clearTimeout(timer));
-  journeyTypeTimers = [];
+function finishPlateTyping(plate) {
+  if (!plate.typing) return;
+  clearPlateTypeTimers(plate);
+  plate.textEl.textContent = plate.typing.fullText;
+  plate.typing.revealed = [...plate.typing.fullText].length;
+  plate.typing.complete = true;
+}
+
+function isPlateTypingFullyShown(plate) {
+  if (!plate.typing) return true;
+  return plate.typing.complete
+    || plate.typing.revealed >= [...plate.typing.fullText].length;
+}
+
+function clearPlateTypeTimers(plate) {
+  plate.timers.forEach((timer) => window.clearTimeout(timer));
+  plate.timers = [];
 }
 
 function setTractorFieldActive(isActive) {
@@ -5664,7 +6854,41 @@ function receiveCollectedResource(resource) {
 
   if (state.components.cargoHold.installed) {
     cargoHold.addUnit(type, metadata);
+    reportContractCargoProgress(type);
   }
+}
+
+// What the hold holds against what an active resource contract wants. Emitted
+// on every matching unit that lands in the hold, with a milestone the coach can
+// key a line to — and `contract.cargoReady`, once, when the count is met, so
+// somebody can say "that's enough, head back".
+function reportContractCargoProgress(collectedType) {
+  Object.values(state.contracts.records ?? {})
+    .filter((contract) => contract.status === "active" && contract.type === "resource-delivery" && contract.terms?.resourceType)
+    .filter((contract) => resourceTypesMatch(collectedType, contract.terms.resourceType))
+    .forEach((contract) => {
+      const held = cargoHold.units
+        .filter((unit) => resourceTypesMatch(unit.type, contract.terms.resourceType))
+        .reduce((total, unit) => total + (unit.quantity ?? 1), 0);
+      const required = Math.max(0, (contract.terms.amount ?? 0) - (contract.deliveredAmount ?? 0));
+      const remaining = Math.max(0, required - held);
+      const milestone = held >= required
+        ? "full"
+        : remaining === 1
+          ? "one-more"
+          : held === 1
+            ? "first"
+            : required > 3 && held === Math.ceil(required / 2)
+              ? "half"
+              : null;
+      const payload = { contractId: contract.id, contractGroup: contract.group ?? null, resourceType: contract.terms.resourceType, held, required, remaining, milestone };
+      state.ledger.recordEvent("contract.cargoProgress", payload, { visible: false });
+      contract.flags ??= {};
+      if (held >= required && !contract.flags.cargoReadyAnnounced) {
+        contract.flags.cargoReadyAnnounced = true;
+        state.ledger.recordEvent("contract.cargoReady", payload, { visible: false });
+      }
+    });
 }
 
 function getResourceUnitMetadata(resource = {}) {
@@ -6498,6 +7722,9 @@ function renderProcessorOutputs() {
     input.checked = output.id === state.components.processor.output;
     input.addEventListener("change", () => {
       state.components.processor.output = output.id;
+      // Every way of routing the processor — the radio, or the plug snapping
+      // to a panel — lands here, so this is the one place to say it happened.
+      state.ledger.recordEvent("processor.routed", { output: output.id }, { visible: false });
     });
 
     detail.className = "processor-output-detail";
@@ -6561,6 +7788,7 @@ function setupCockpitLayout() {
   const configList = document.querySelector("#cockpit-config-list");
   const phosphorColorInput = document.querySelector("#cockpit-phosphor-color");
   const phosphorOreInput = document.querySelector("#cockpit-phosphor-ore");
+  const velocityVectorInput = document.querySelector("#cockpit-velocity-vector");
   const accentColorInput = document.querySelector("#cockpit-accent-color");
   const accentAutoButton = document.querySelector("#cockpit-accent-auto");
   const scaleSelect = document.querySelector("#cockpit-scale");
@@ -6591,8 +7819,8 @@ function setupCockpitLayout() {
   const trayHeader = document.createElement("header");
   const trayList = document.createElement("div");
   const patchPanel = document.createElement("div");
-  const cargoRouteTarget = document.createElement("div");
-  const processorOutlet = document.createElement("div");
+  const processorRouteSocket = document.createElement("div");
+  const cargoRouteSocket = document.createElement("div");
   const observatoryButton = document.createElement("button");
   const cockpitBuildTag = document.createElement("span");
   const snapGrid = document.createElement("div");
@@ -6607,11 +7835,12 @@ function setupCockpitLayout() {
   trayHeader.innerHTML = "<strong>MODULE BAY</strong><span>SELECT / ROUTE</span>";
   trayList.className = "cockpit-module-tray-list";
   patchPanel.className = "cockpit-patch-panel";
-  cargoRouteTarget.className = "cockpit-tray-cargo-socket";
-  cargoRouteTarget.dataset.cockpitRouteTarget = "cargo";
-  cargoRouteTarget.innerHTML = "<span><b>CARGO</b><small>PROCESSOR INPUT</small></span><i aria-hidden=\"true\"></i>";
-  processorOutlet.className = "cockpit-processor-outlet";
-  processorOutlet.innerHTML = "<span><b>PROCESSOR</b><small>ROUTED OUTPUT</small></span><i aria-hidden=\"true\"></i>";
+  processorRouteSocket.className = "processor-route-socket";
+  processorRouteSocket.dataset.cockpitRouteTarget = "processor";
+  processorRouteSocket.setAttribute("aria-label", "Processor output socket");
+  cargoRouteSocket.className = "cargo-route-socket";
+  cargoRouteSocket.dataset.cockpitRouteTarget = "cargo";
+  cargoRouteSocket.setAttribute("aria-label", "Cargo hold processor input socket");
   observatoryButton.type = "button";
   observatoryButton.className = "cockpit-observatory-button";
   observatoryButton.textContent = "OPEN OBSERVATORY";
@@ -6635,10 +7864,11 @@ function setupCockpitLayout() {
     link.textContent = label;
     cockpitModeLinks.append(link);
   });
-  patchPanel.append(processorOutlet, cargoRouteTarget, observatoryButton, cockpitBuildTag, cockpitModeLinks);
+  patchPanel.append(observatoryButton, cockpitBuildTag, cockpitModeLinks);
   moduleTray.append(trayToggle, trayHeader, trayList, patchPanel);
-  spacePanel?.append(moduleTray, snapGrid);
+  spacePanel?.append(moduleTray, snapGrid, processorRouteSocket, cargoRouteSocket);
 
+  openModuleBay = () => setTrayOpen(true);
   const setTrayOpen = (isOpen) => {
     const wasOpen = moduleTray.classList.contains("is-open");
     moduleTray.classList.toggle("is-open", isOpen);
@@ -6727,6 +7957,8 @@ function setupCockpitLayout() {
     });
     if (scaleSelect) scaleSelect.value = String(resolved.scale);
     publishSnapScope();
+    // A new type size changes every natural height; re-floor what is open.
+    snapCockpitPanelHeights();
   }
 
   function applyPhosphorOre(enabled) {
@@ -6734,11 +7966,19 @@ function setupCockpitLayout() {
     if (phosphorOreInput) phosphorOreInput.checked = state.ui.cockpit.phosphorOre;
   }
 
+  function applyVelocityVector(enabled) {
+    state.ui.cockpit.velocityVector = enabled !== false;
+    if (velocityVectorInput) velocityVectorInput.checked = state.ui.cockpit.velocityVector;
+  }
+
   // The accent is published next to the phosphor and recomputed from it, so
   // changing the cockpit colour carries the second colour along with it
   // unless the player has pinned one.
   function applyAccentColor() {
     const accent = resolveAccentColor(state.ui.cockpit.phosphorColor, state.ui.cockpit.accentColor);
+    // The scope paints the ship's drive in this colour; it reads the resolved
+    // value rather than re-deriving it.
+    state.ui.cockpit.resolvedAccentColor = accent;
     document.documentElement.style.setProperty("--cockpit-accent", accent);
     spacePanel?.style.setProperty("--cockpit-accent", accent);
     // The legacy name, kept pointing at the same colour so nothing that still
@@ -6770,6 +8010,7 @@ function setupCockpitLayout() {
   applyCockpitScale(state.ui.cockpit.typeScale ?? 1);
   applyPhosphorColor(state.ui.cockpit.phosphorColor);
   applyPhosphorOre(state.ui.cockpit.phosphorOre);
+  applyVelocityVector(state.ui.cockpit.velocityVector);
 
   // Where you are moves into the status bar. It was the viewport panel's title
   // bar, which meant a full-width band across the screen carrying two words.
@@ -6987,6 +8228,8 @@ function setupCockpitLayout() {
 
   function toggleCockpitPanel(panel, force = null) {
     const shouldOpen = force ?? !panel.classList.contains("is-cockpit-expanded");
+    // Nothing to bring out of an empty rack.
+    if (shouldOpen && panel.classList.contains("is-module-unfitted")) return;
     if (shouldOpen) {
       floatCockpitPanel(panel);
       audio.playPanelDrop();
@@ -7024,6 +8267,9 @@ function setupCockpitLayout() {
     panel.dataset.cockpitSlot = "tray";
     spacePanel.append(panel);
     panel.classList.add("is-cockpit-expanded", "is-cockpit-floating");
+    // The grid floor goes on now, before the panel is measured for where it
+    // lands, so it is placed at the height it will keep.
+    snapCockpitPanelHeight(panel);
     floatingPanelZ = nextFloatingPanelZ();
     panel.style.setProperty("--cockpit-float-z", String(floatingPanelZ));
     const saved = state.ui.cockpit.floatingPositions?.[panelId];
@@ -7055,6 +8301,9 @@ function setupCockpitLayout() {
     panel.style.removeProperty("left");
     panel.style.removeProperty("top");
     panel.style.removeProperty("--cockpit-float-z");
+    // The desk floor comes off with the desk: racked, this element is its
+    // own one-row rack unit.
+    panel.style.removeProperty("min-height");
     if (launcher?.isConnected) launcher.replaceWith(panel);
     else if (panel.parentElement !== trayList) trayList.append(panel);
     panel.dataset.cockpitSlot = "tray";
@@ -7299,6 +8548,10 @@ function setupCockpitLayout() {
     applyPhosphorOre(phosphorOreInput.checked);
     recordConfiguration("phosphor-ore-toggled");
   });
+  velocityVectorInput?.addEventListener("change", () => {
+    applyVelocityVector(velocityVectorInput.checked);
+    recordConfiguration("velocity-vector-toggled");
+  });
   configDoneButton?.addEventListener("click", () => {
     setConfigOpen(false);
     recordConfiguration("configuration-closed");
@@ -7418,11 +8671,17 @@ function setupCockpitLayout() {
   setTrayOpen(state.ui.cockpit.trayOpen);
   publishSnapScope();
   setupProcessorClaw();
-  // The license starts FILED in the paperwork drawer. The induction opens the
-  // drawer with the player, has them pull the license onto the desk, then file
-  // it again — so the drawer is taught as a place documents live rather than as
-  // somewhere paperwork mysteriously went.
-  if (!document.querySelector("[data-panel-id='license']")?.closest("#paperwork-drawer")) {
+  // During the induction the issued license is already on the dashboard. Its
+  // FILE control arrives later with the drawer; document presence and filing
+  // permission are separate facts. Re-assert this on restore because mission
+  // entry actions are not replayed when a saved beat resumes.
+  const licensePanel = document.querySelector("[data-panel-id='license']");
+  const campaignLicenseBelongsOnDesk = initialDevStart === "campaign"
+    && state.ui.panels?.license?.available === true
+    && !state.journey.flags?.drawerRevealed;
+  if (campaignLicenseBelongsOnDesk && licensePanel?.closest("#paperwork-drawer")) {
+    movePaperPanelToDesk("license");
+  } else if (initialDevStart !== "campaign" && !licensePanel?.closest("#paperwork-drawer")) {
     movePaperPanelToDrawer("license");
   }
   applyViewportLayout(state.ui.viewportLayout ?? "default");
@@ -7436,6 +8695,7 @@ function setupCockpitLayout() {
     let clawHovered = false;
     if (!spacePanel || spacePanel.querySelector(".processor-claw")) return;
     const routes = {
+      processor: null,
       engine: "fuel",
       miner: "ammo",
       scanner: "scanergy",
@@ -7459,12 +8719,14 @@ function setupCockpitLayout() {
 
     const saved = state.ui.cockpit.processorClawPosition;
     let position = saved ?? { x: 238, y: 150 };
-    let attachedPanelId = state.ui.cockpit.processorClawTarget ?? "cargo";
+    let attachedPanelId = state.ui.cockpit.processorClawTarget ?? "processor";
     let drag = null;
 
     const updateRouteLabel = () => {
       const output = getSelectedProcessorOutput();
-      claw.setAttribute("aria-label", `Processor output connected to ${output.replace("hull-repair", "repair")}. Drag to reroute.`);
+      claw.setAttribute("aria-label", attachedPanelId === "processor"
+        ? "Processor routing plug seated at processor outlet. Drag to connect an output."
+        : `Processor output connected to ${output.replace("hull-repair", "repair")}. Drag to reroute.`);
       const sourceShapes = processorOutputPanel
         .querySelector(`input[value='${output}']`)
         ?.closest("label")
@@ -7475,7 +8737,12 @@ function setupCockpitLayout() {
         shapeRack.className = "processor-claw-shapes";
         glyph.append(shapeRack);
       }
-      if (attachedPanelId === "cargo" || output === "cargo") {
+      if (attachedPanelId === "processor") {
+        const homeLabel = document.createElement("span");
+        homeLabel.className = "processor-claw-home-label";
+        homeLabel.textContent = "PROCESSOR";
+        shapeRack.replaceChildren(homeLabel);
+      } else if (attachedPanelId === "cargo" || output === "cargo") {
         const allMaterials = document.createElement("span");
         // A working unit routing to cargo takes everything, hence the infinity.
         // A FAILED one is not choosing to take everything — it cannot convert at
@@ -7509,36 +8776,115 @@ function setupCockpitLayout() {
       };
       claw.style.left = `${position.x}px`;
       claw.style.top = `${position.y}px`;
-      const outletRect = processorOutlet.getBoundingClientRect();
-      const startX = outletRect.right - bounds.left;
-      const startY = outletRect.top - bounds.top + outletRect.height / 2;
-      const endX = position.x + clawBounds.width - 2;
-      const endY = position.y + clawBounds.height / 2;
-      const direction = Math.sign(endY - startY) || 1;
-      const corridorX = Math.max(startX, endX) + 44;
-      const radius = Math.min(10, Math.abs(endY - startY) / 2, corridorX - Math.max(startX, endX));
-      cable.setAttribute("d", [
-        `M ${startX} ${startY}`,
-        `H ${corridorX - radius}`,
-        `Q ${corridorX} ${startY} ${corridorX} ${startY + direction * radius}`,
-        `V ${endY - direction * radius}`,
-        `Q ${corridorX} ${endY} ${corridorX - radius} ${endY}`,
-        `H ${endX}`,
-      ].join(" "));
+      const outletRect = processorRouteSocket.getBoundingClientRect();
+      const mouthX = outletRect.left - bounds.left + outletRect.width / 2;
+      const mouthY = outletRect.top - bounds.top + outletRect.height / 2;
+      const clawCenterX = position.x + clawBounds.width / 2;
+      const clawCenterY = position.y + clawBounds.height / 2;
+      const radialAngle = Math.atan2(clawCenterY - mouthY, clawCenterX - mouthX);
+      const radialX = Math.cos(radialAngle);
+      const radialY = Math.sin(radialAngle);
+
+      // Start with the natural radius, then continuously accelerate the last
+      // part of the turn as the plug approaches the bay's outer edge. The
+      // distance is horizontal on purpose: every module row must be completely
+      // level before its nose reaches the tab, regardless of row height.
+      const trayRect = moduleTray.getBoundingClientRect();
+      const trayEdgeX = trayRect.right - bounds.left;
+      const distanceFromTrayEdge = clawCenterX - trayEdgeX;
+      const turnStartDistance = 420;
+      const turnFinishDistance = clawBounds.width / 2 + 42;
+      const approach = clawCenterX < mouthX
+        ? Math.max(0, Math.min(1, (turnStartDistance - distanceFromTrayEdge) / (turnStartDistance - turnFinishDistance)))
+        : 0;
+      const easedApproach = approach * approach * (3 - 2 * approach);
+      // Shortest signed turn to a left-facing horizontal angle. Using a
+      // normalized delta avoids the +/-PI discontinuity that caused the old
+      // visible jump when the pointer crossed the pipe's horizontal axis.
+      const horizontalTurn = Math.atan2(Math.sin(Math.PI - radialAngle), Math.cos(Math.PI - radialAngle));
+      const angle = radialAngle + horizontalTurn * easedApproach;
+      const unitX = Math.cos(angle);
+      const unitY = Math.sin(angle);
+      const angleDegrees = angle * 180 / Math.PI;
+
+      // The housing behaves like a radius from the processor mouth: contacts
+      // always point away from the pipe and the cable always meets the rear.
+      // Following the pointer continuously also avoids a CSS transition lag
+      // that could visually pull the cable loose while the plug was turning.
+      claw.style.setProperty("--processor-claw-angle", `${angleDegrees}deg`);
+      claw.style.setProperty("--processor-claw-counter-angle", `${-angleDegrees}deg`);
+
+      // Begin at the rim, underneath the circular mouth, rather than drawing
+      // through its centre. End at the centre of the plug's rear edge. Both
+      // tangents follow the same radius, so the lead cannot enter a side or
+      // cross underneath the housing on its way to the attachment point.
+      // Clear the complete painted rim (including the rounded cable cap) so no
+      // part of the lead is drawn over any of the pipe's concentric circles.
+      // The visible face extends 12px beyond the logical 42px socket. Clear
+      // that entire opaque face plus the rounded cap of the cable stroke.
+      const mouthRadius = Math.max(1, Math.min(outletRect.width, outletRect.height) / 2 + 15);
+      const plugRearRadius = Math.max(1, clawBounds.width / 2 - 2);
+      const startX = mouthX + radialX * mouthRadius;
+      const startY = mouthY + radialY * mouthRadius;
+      const endX = clawCenterX - unitX * plugRearRadius;
+      const endY = clawCenterY - unitY * plugRearRadius;
+      const span = Math.hypot(endX - startX, endY - startY);
+      const handle = Math.max(12, Math.min(120, span * 0.34));
+      const firstControlX = startX + radialX * handle;
+      const firstControlY = startY + radialY * handle;
+      const rearControlX = endX - unitX * handle;
+      const rearControlY = endY - unitY * handle;
+      cable.setAttribute("d", `M ${startX} ${startY} C ${firstControlX} ${firstControlY}, ${rearControlX} ${rearControlY}, ${endX} ${endY}`);
+    };
+    const positionChamberSockets = () => {
+      if (!spacePanel) return;
+      const bounds = spacePanel.getBoundingClientRect();
+      const setSocket = (socket, chamberCanvas, inletSide) => {
+        const chamberRect = chamberCanvas.getBoundingClientRect();
+        const chamberX = getVisibleChamberCenterX(chamberCanvas, inletSide);
+        const chamberY = getViewportCenterInChamber(chamberCanvas);
+        const x = chamberRect.left - bounds.left + chamberX * chamberRect.width / chamberCanvas.width;
+        const y = chamberRect.top - bounds.top + chamberY * chamberRect.height / chamberCanvas.height;
+        socket.style.left = `${Math.round(x - socket.offsetWidth / 2)}px`;
+        socket.style.top = `${Math.round(y - socket.offsetHeight / 2)}px`;
+      };
+      // Use the exact centres that processor.js uses to paint the existing pipe
+      // mouths. The chamber canvases continue far underneath the viewport, so
+      // their raw inner edges are hidden geometry, not the circles the pilot
+      // can actually see and grab.
+      setSocket(processorRouteSocket, processorCanvas, "right");
+      setSocket(cargoRouteSocket, cargoCanvas, "left");
     };
     const getSnapPosition = (panelId) => {
       if (!spacePanel) return null;
+      positionChamberSockets();
+      const chamberTarget = panelId === "processor"
+        ? processorRouteSocket
+        : panelId === "cargo" ? cargoRouteSocket : null;
       const trayTarget = moduleTray.querySelector(`[data-cockpit-route-target='${panelId}']`);
       const floatingTarget = document.querySelector(`.is-cockpit-floating[data-panel-id='${panelId}']`);
-      const target = trayTarget ?? floatingTarget;
+      const target = chamberTarget ?? trayTarget ?? floatingTarget;
       const bounds = spacePanel.getBoundingClientRect();
       const clawRect = claw.getBoundingClientRect();
+      if (chamberTarget) {
+        const targetRect = chamberTarget.getBoundingClientRect();
+        const flipped = false;
+        return {
+          x: panelId === "processor"
+            ? targetRect.right - bounds.left + 18
+            : targetRect.left - bounds.left - clawRect.width + 2,
+          y: targetRect.top - bounds.top + targetRect.height / 2 - clawRect.height / 2,
+          isTrayTarget: false,
+          flipped,
+        };
+      }
       if (trayTarget) {
         const targetRect = trayTarget.getBoundingClientRect();
         return {
           x: targetRect.right - bounds.left + 8,
           y: targetRect.top - bounds.top + targetRect.height / 2 - clawRect.height / 2,
           isTrayTarget: true,
+          flipped: true,
         };
       }
       if (!target) return null;
@@ -7547,6 +8893,7 @@ function setupCockpitLayout() {
         x: targetRect.left - bounds.left - clawRect.width + 5,
         y: targetRect.top - bounds.top + targetRect.height / 2 - clawRect.height / 2,
         isTrayTarget: false,
+        flipped: true,
       };
     };
     const snapToPanel = (panelId, { dockShift = clawDockShift } = {}) => {
@@ -7561,6 +8908,9 @@ function setupCockpitLayout() {
       attachedPanelId = panelId;
       claw.classList.add("is-plugged");
       claw.classList.toggle("is-plugged-to-tray", snapPosition.isTrayTarget);
+      claw.classList.toggle("is-flipped", snapPosition.flipped);
+      tether.classList.toggle("is-route-home", panelId === "processor");
+      tether.classList.toggle("is-route-cargo", panelId === "cargo");
       claw.dataset.targetPanel = panelId;
       place(snapPosition.x - dockShift, snapPosition.y);
       updateRouteLabel();
@@ -7570,10 +8920,10 @@ function setupCockpitLayout() {
     const findTarget = (clientX, clientY) => {
       const candidates = document.elementsFromPoint(clientX, clientY);
       const direct = candidates.map((element) => element.closest?.("[data-cockpit-route-target]"))
-        .find((element) => element && routes[element.dataset.cockpitRouteTarget]);
+        .find((element) => element && Object.hasOwn(routes, element.dataset.cockpitRouteTarget));
       if (direct) return direct;
-      const magneticTargets = [...moduleTray.querySelectorAll("[data-cockpit-route-target]")]
-        .filter((element) => routes[element.dataset.cockpitRouteTarget])
+      const magneticTargets = [processorRouteSocket, cargoRouteSocket, ...moduleTray.querySelectorAll("[data-cockpit-route-target]")]
+        .filter((element) => Object.hasOwn(routes, element.dataset.cockpitRouteTarget))
         .map((element) => {
           const rect = element.getBoundingClientRect();
           const nearestX = Math.max(rect.left, Math.min(clientX, rect.right));
@@ -7593,6 +8943,7 @@ function setupCockpitLayout() {
       if (!moduleTray.classList.contains("is-open")) setTrayOpen(true);
       attachedPanelId = null;
       claw.classList.remove("is-plugged", "is-plugged-to-tray");
+      tether.classList.remove("is-route-home", "is-route-cargo");
       delete claw.dataset.targetPanel;
       drag = { pointerId: event.pointerId, dx: event.clientX - claw.getBoundingClientRect().left, dy: event.clientY - claw.getBoundingClientRect().top };
       claw.setPointerCapture(event.pointerId);
@@ -7605,6 +8956,7 @@ function setupCockpitLayout() {
       const freeX = event.clientX - bounds.left - drag.dx;
       const freeY = event.clientY - bounds.top - drag.dy;
       const magneticPosition = target ? getSnapPosition(target.dataset.cockpitRouteTarget) : null;
+      claw.classList.toggle("is-flipped", magneticPosition?.flipped === true);
       place(
         magneticPosition ? freeX * 0.58 + magneticPosition.x * 0.42 : freeX,
         magneticPosition ? freeY * 0.58 + magneticPosition.y * 0.42 : freeY,
@@ -7616,15 +8968,18 @@ function setupCockpitLayout() {
       if (!drag || drag.pointerId !== event.pointerId) return;
       const target = findTarget(event.clientX, event.clientY);
       const targetPanelId = target?.dataset.cockpitRouteTarget;
-      const output = targetPanelId ? routes[targetPanelId] : null;
-      if (output) {
+      const output = targetPanelId ? routes[targetPanelId] : undefined;
+      if (targetPanelId === "processor") {
+        snapToPanel("processor");
+        audio.playPanelDrop();
+      } else if (output) {
         if (processorOutputPanel.querySelector(`input[value='${output}']`)) {
           snapToPanel(targetPanelId);
           audio.playPanelDrop();
         }
       }
       if (!attachedPanelId) {
-        snapToPanel("cargo");
+        snapToPanel("processor");
         audio.playPanelDrop();
       }
       clearTargets();
@@ -7645,14 +9000,21 @@ function setupCockpitLayout() {
       if (attachedPanelId && !drag) {
         const clawWidth = claw.getBoundingClientRect().width || 112;
         const fullShift = Math.max(0, clawWidth - dockedProtrusion());
-        const wantsDock = !drag && !clawHovered && performance.now() - clawIdleSince > CLAW_DOCK_DELAY_MS;
+        const wantsDock = claw.classList.contains("is-plugged-to-tray")
+          && !drag && !clawHovered && performance.now() - clawIdleSince > CLAW_DOCK_DELAY_MS;
         const targetShift = wantsDock ? fullShift : 0;
         if (Math.abs(clawDockShift - targetShift) < 0.5) {
           clawDockShift = targetShift;
         } else {
           clawDockShift += (targetShift - clawDockShift) * CLAW_DOCK_EASING;
         }
-        claw.classList.toggle("is-docked", clawDockShift > fullShift * 0.5);
+        const sunk = clawDockShift > fullShift * 0.5;
+        claw.classList.toggle("is-docked", sunk);
+        // Sunk into a racked module it goes UNDER the module's cover, cable and
+        // all; only the nub left outside the bay shows. Out on the desk, or
+        // while it is being reached for, it rides on top so it can be grabbed.
+        claw.classList.toggle("is-sunk-in-tray", sunk && claw.classList.contains("is-plugged-to-tray"));
+        tether.classList.toggle("is-sunk-in-tray", sunk && claw.classList.contains("is-plugged-to-tray"));
         snapToPanel(attachedPanelId);
       }
       keepTrayTabClearOfClaw();
@@ -7682,10 +9044,15 @@ function setupCockpitLayout() {
       tab.style.top = `${Math.round(Math.max(8, Math.min(maxTop, chosen)))}px`;
     }
     requestAnimationFrame(() => {
-      if (!snapToPanel(attachedPanelId)) snapToPanel("cargo");
+      positionChamberSockets();
+      if (!snapToPanel(attachedPanelId)) snapToPanel("processor");
       followAttachedPanel();
     });
-    window.addEventListener("resize", () => attachedPanelId ? snapToPanel(attachedPanelId) : place(position.x, position.y));
+    window.addEventListener("resize", () => {
+      positionChamberSockets();
+      if (attachedPanelId) snapToPanel(attachedPanelId);
+      else place(position.x, position.y);
+    });
   }
 }
 
@@ -7779,7 +9146,28 @@ function updateCockpitDisplay() {
       ?.classList.toggle("is-module-faulted", isFailed);
   });
 
-  const processorFailed = failedPanelIds.has("processor");
+  // An empty rack. A module the cockpit has been shown but the hull does not
+  // carry reads as a slot waiting for hardware, not as a working instrument
+  // with nothing to say. Rook opens the bay on three of these at the end of
+  // the deal: the scanner, the tractor field, and the dead processor's
+  // replacement, so the player's first pay has somewhere to go.
+  COCKPIT_MODULE_IDS.forEach((panelId) => {
+    const componentStateId = COMPONENT_STATE_BY_PANEL_ID[panelId];
+    const component = componentStateId ? state.components[componentStateId] : null;
+    const isUnfitted = Boolean(component) && component.installed === false
+      && state.ui.panels?.[panelId]?.available === true;
+    document.querySelector(`.is-cockpit-module[data-panel-id="${panelId}"]`)
+      ?.classList.toggle("is-module-unfitted", isUnfitted);
+    document.querySelector(`.cockpit-module-launcher[data-panel-id="${panelId}"]`)
+      ?.classList.toggle("is-module-unfitted", isUnfitted);
+    if (isUnfitted) setSummary(panelId, "NOT FITTED · EMPTY RACK");
+  });
+
+  // The chamber is part of the hull; the unit inside it is not. A skiff whose
+  // processor was never fitted (campaign: it died in the incursion and Nara
+  // sells the replacement) has to read ERR here too, or the chamber shows a
+  // working "fuel output" for a part the player has not bought yet.
+  const processorFailed = failedPanelIds.has("processor") || state.components.processor?.installed === false;
   setSummary("processor", processorFailed
     ? "NOT FUNCTIONING · ERR"
     : state.components.processor?.output ? `${state.components.processor.output} output` : "Ready");
@@ -7793,15 +9181,7 @@ function updateCockpitDisplay() {
   document.querySelector(".processor-claw")?.classList.toggle("is-module-faulted", processorFailed);
   document.querySelector(".processor-tether")?.classList.toggle("is-module-faulted", processorFailed);
 
-  const processorOutletRow = document.querySelector(".cockpit-processor-outlet");
-  if (processorOutletRow) {
-    processorOutletRow.classList.toggle("is-module-faulted", processorFailed);
-    const outletCaption = processorOutletRow.querySelector("small");
-    if (outletCaption) {
-      const caption = processorFailed ? "NOT FUNCTIONING" : "ROUTED OUTPUT";
-      if (outletCaption.textContent !== caption) outletCaption.textContent = caption;
-    }
-  }
+  document.querySelector(".processor-route-socket")?.classList.toggle("is-module-faulted", processorFailed);
   setSummary("cargo", "Stored goods");
   setSummary("tow-cable", towCableStatus?.textContent ?? "Idle");
   setSummary("moss-harvester", mossHarvesterStatus?.textContent ?? "Stored");
@@ -7886,9 +9266,15 @@ function makePanelsDraggable() {
     const savedPanel = panelId ? getSavedPanelLayout(savedLayout, panelId) : null;
     const isInDrawer = Boolean(panel.closest("#paperwork-drawer"));
     const startsOnDeskAfterBeingFiled = !isInDrawer && savedPanel?.inDrawer;
+    // In the drawer a document sits where the shelf flows it plus wherever
+    // the player nudged it. A desk default that was never a player's choice
+    // (the guide's old {x:-40, y:440}) can be lying in the drawer profile from
+    // before the shelf flowed at all; it is not a nudge, so it does not apply.
+    const legacyDeskDefaultInDrawer = isInDrawer && savedPanel?.inDrawer
+      && savedPanel.y === defaultPanel.y && Math.abs(savedPanel.x) <= Math.abs(defaultPanel.x);
     const offset = startsOnDeskAfterBeingFiled
       ? { x: defaultPanel.x, y: defaultPanel.y }
-      : isInDrawer && !savedPanel?.inDrawer
+      : isInDrawer && (!savedPanel?.inDrawer || legacyDeskDefaultInDrawer)
       ? { x: 0, y: 0 }
       : { x: savedPanel?.x ?? defaultPanel.x, y: savedPanel?.y ?? defaultPanel.y };
 
@@ -7901,11 +9287,13 @@ function makePanelsDraggable() {
     // A saved desk is restored to where it was ARRANGED, not to the pixel
     // offsets it happened to have on whatever window it was arranged on. The
     // pixel apply above runs first so the panel has a measurable box to work
-    // back from.
-    if (!startsOnDeskAfterBeingFiled && hasAnchoredPosition(savedPanel)) {
+    // back from. This is DESK logic: the drawer is a shelf, its documents flow
+    // in it, and a window-relative anchor re-applied there shoved the field
+    // guide 440px down the shelf and off the screen.
+    if (!isInDrawer && !startsOnDeskAfterBeingFiled && hasAnchoredPosition(savedPanel)) {
       applyAnchoredPanelPosition(panel, offset, savedPanel);
     }
-    rescueOffScreenPanel(panel, offset, defaultPanel);
+    if (!isInDrawer) rescueOffScreenPanel(panel, offset, defaultPanel);
     anchoredPanels.set(panelId, { panel, offset });
     savePanelLayout(panel, offset, { keepAnchor: hasAnchoredPosition(savedPanel) });
 
@@ -7974,6 +9362,15 @@ function makePanelsDraggable() {
   bringPanelToFront = setPanelTop;
   movePaperPanelToDesk = (panelId) => movePaperPanel(panelId, "desk");
   movePaperPanelToDrawer = (panelId) => movePaperPanel(panelId, "drawer");
+  settleDrawerPanels = () => {
+    document.querySelectorAll("#paperwork-drawer .drawer-shelf > .component-panel").forEach((panel) => {
+      const offset = offsetsByPanelId.get(panel.dataset.panelId);
+      if (!offset || !isPanelMeasurable(panel)) return;
+      applyPanelOffset(panel, offset, { clamp: true });
+      savePanelLayout(panel, offset);
+    });
+  };
+
   positionPanelById = (panelId, position = null) => {
     const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
     const offset = offsetsByPanelId.get(panelId);
@@ -8007,6 +9404,12 @@ function makePanelsDraggable() {
       // once at boot and never revisited, so paper that started on the desk kept
       // a desk layer after being filed and sat behind the drawer it was in.
       panel.style.zIndex = String(DRAWER_PAPER_Z_INDEX);
+      shelf.querySelectorAll(":scope > .component-panel").forEach((candidate) => {
+        candidate.classList.toggle("is-drawer-selected", candidate === panel);
+      });
+      openDrawerPaperKey = panelId === "contract" && contractManager.getCurrentContract()
+        ? `contract:${contractManager.getCurrentContract().id}`
+        : `panel:${panelId}`;
       offset.x = 0;
       offset.y = 0;
       state.ledger.recordEvent(
@@ -8025,6 +9428,8 @@ function makePanelsDraggable() {
         drawerToggle?.setAttribute("aria-expanded", "false");
       }, PAPERWORK_DRAWER_AUTO_CLOSE_MS);
     } else {
+      if (panel.classList.contains("is-drawer-selected")) openDrawerPaperKey = null;
+      panel.classList.remove("is-drawer-selected");
       hud.appendChild(panel);
       panel.style.zIndex = String(DESK_PAPER_MIN_Z_INDEX);
       // Centred on the desk rather than dropped at an authored corner. The
@@ -8033,10 +9438,17 @@ function makePanelsDraggable() {
       // handle it has. A document pulled out of the drawer is the thing the
       // player was just told to look at, so it lands where they are looking.
       const hudRect = hud.getBoundingClientRect();
+      const viewportRegion = document.querySelector(".space-panel")?.getBoundingClientRect();
       const panelWidth = panel.offsetWidth || 220;
       const panelHeight = panel.offsetHeight || 320;
-      offset.x = Math.round((hudRect.width / 2 - panelWidth / 2) / 20) * 20;
-      offset.y = Math.round((hudRect.height / 2 - panelHeight / 2) / 20) * 20;
+      const targetCenterX = viewportRegion?.width
+        ? viewportRegion.left - hudRect.left + viewportRegion.width / 2
+        : hudRect.width / 2;
+      const targetCenterY = viewportRegion?.height
+        ? viewportRegion.top - hudRect.top + viewportRegion.height / 2
+        : hudRect.height / 2;
+      offset.x = Math.round((targetCenterX - panelWidth / 2) / 20) * 20;
+      offset.y = Math.round((targetCenterY - panelHeight / 2) / 20) * 20;
       setPanelTop(panel);
       // Taking a document OUT is as teachable as putting one away, and only the
       // filing half was ever reported. A beat could ask the player to fetch
@@ -8264,12 +9676,13 @@ function makePanelsDraggable() {
       adjustX = maxRight - rect.right;
     }
 
-    if (rect.height >= maxBottom - minTop) {
-      adjustY = minTop - rect.top;
-    } else if (rect.top < minTop) {
-      adjustY = minTop - rect.top;
-    } else if (rect.bottom > maxBottom) {
-      adjustY = maxBottom - rect.bottom;
+    // The shelf scrolls, so there is no bottom to clamp against: a document
+    // that flows onto the second row is reached by scrolling, not by being
+    // shoved up onto the row above it. Only the top is a wall — a document
+    // dragged above the shelf's start would be unreachable.
+    const shelfTop = shelfRect.top - shelf.scrollTop + padding;
+    if (rect.top < shelfTop) {
+      adjustY = shelfTop - rect.top;
     }
 
     offset.x = Math.round((offset.x + adjustX) / gridSize) * gridSize;
@@ -8510,6 +9923,23 @@ function buyComponentOffer(offer, service = null) {
     positionPanelById("cargo", { x: 0, y: 0 });
   }
 
+  // Buying the last of the starter list opens the next shelf. Said once, as
+  // an event, so Rook can lean on the player about what is on it.
+  const starterOffers = (service?.componentOffers ?? []).filter((candidate) => (candidate.stockGroup ?? "starter") === "starter");
+  if (
+    (offer.stockGroup ?? "starter") === "starter"
+    && starterOffers.length > 0
+    && starterOffers.every((candidate) => isComponentOfferPurchased(candidate))
+    && !state.hubServices.flags[`shelfOpened:${service?.id}:restock-1`]
+  ) {
+    state.hubServices.flags[`shelfOpened:${service?.id}:restock-1`] = true;
+    state.ledger.recordEvent(
+      "hub.shopShelfOpened",
+      { siteId: currentSiteState?.dockedSite?.id ?? null, serviceId: service?.id ?? null, stockGroup: "restock-1" },
+      { visible: false },
+    );
+  }
+
   state.ledger.recordEvent(
     "component.purchased",
     {
@@ -8529,9 +9959,7 @@ function buyComponentOffer(offer, service = null) {
   commsDirector.say({
     source: COMMS_SOURCES.serviceNpc,
     speaker: service?.npcName ?? "Modworks",
-    text:
-      offer.purchaseMessage ??
-      `${offer.componentName} is bolted in. It will not make you graceful, but it will make you harder to ignore.`,
+    text: offer.purchaseMessage ?? `${offer.componentName} is bolted in.`,
   });
   renderComponentShop(service);
   updateHudDisplay();
@@ -8947,8 +10375,18 @@ function initLicenseApplication() {
     }, { visible: false });
 
     applyIssuedLicense(license);
-    setComponentAvailable("license", true);
     dismissLicenseApplication();
+    // Campaign: the pilot exists, now Rook talks. The license card itself stays
+    // out of sight until the interview's first beat puts it on the desk ("I've
+    // got your paperwork right here"); the mission reveals it, not the form.
+    if (initialDevStart === "campaign") {
+      campaignOpeningStage = 0;
+      renderJourney();
+      updateHudDisplay();
+      saveNow();
+      return;
+    }
+    setComponentAvailable("license", true);
     journeyDirector.acceptMission();
     renderContract();
     saveNow();
@@ -10957,3 +12395,19 @@ window.__asteroids.ledgerBrowser = {
   select: (eventId) => { ledgerSelectedEventId = eventId; renderLedgerBrowser({ force: true }); },
   isPaused: () => ledgerPaused,
 };
+
+// A fresh-start link is its own URL, and the browser caches index.html per URL
+// with no cache headers from the dev server — so "refresh, then click Start
+// Campaign" could still serve an older build for that link. Stamping the href
+// at click time makes every start a new URL the cache has never seen.
+document.addEventListener("click", (event) => {
+  const link = event.target.closest('a[href*="devStart="]');
+  if (!link) return;
+  const url = new URL(link.getAttribute("href"), window.location.href);
+  url.searchParams.set("fresh", String(Date.now()));
+  link.setAttribute("href", `${url.pathname}${url.search}`);
+}, true);
+
+// The first moment input can actually be answered. Everything above ran in one
+// synchronous pass; see the boot-freeze input guard near the top of this file.
+bootInteractiveAt = performance.now();

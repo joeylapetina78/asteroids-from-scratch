@@ -27,6 +27,13 @@ export function createCommsDirector({ state, journeyDirector }) {
     ttlMs = DEFAULT_QUEUE_TTL_MS,
     priority = SOURCE_PRIORITIES[source] ?? 10,
   }) {
+    // Murmur is not a disembodied narrator. Their world commentary only exists
+    // after the player has met them in Yard Exchange's back corridor. The
+    // meeting handler sets this flag before delivering Murmur's introduction.
+    if (String(speaker).toLowerCase() === "murmur" && !state.hubServices?.flags?.murmurMet) {
+      return false;
+    }
+
     const message = {
       id: `${source}:${speaker}:${text}:${acknowledgement?.action ?? "none"}`,
       speaker,
@@ -45,7 +52,7 @@ export function createCommsDirector({ state, journeyDirector }) {
       return false;
     }
 
-    if (requireIdle && hasActiveMessage()) {
+    if (requireIdle && !hasRoomFor(message)) {
       if (queueIfBlocked) {
         enqueue(message);
       }
@@ -64,16 +71,24 @@ export function createCommsDirector({ state, journeyDirector }) {
   function update() {
     pruneExpiredMessages();
 
-    if (hasActiveMessage() || queue.length === 0) {
-      return false;
-    }
-
-    const [nextMessage] = queue.splice(0, 1);
+    // Deliver the first queued line there is room for. Speakers do not wait
+    // for each other; a line waits only while the screen is full of other
+    // speakers, or while the player is being asked something.
+    const index = queue.findIndex((message) => hasRoomFor(message));
+    if (index < 0) return false;
+    const [nextMessage] = queue.splice(index, 1);
     return deliver(nextMessage);
   }
 
+  // Nobody talks over a question. Otherwise a speaker can speak if they
+  // already hold a line (it is replaced) or a slot is free.
+  function hasRoomFor(message) {
+    if (state.journey.pendingAcknowledgement) return false;
+    return journeyDirector.hasRoomFor?.(message.speaker) ?? !hasActiveMessage();
+  }
+
   function clearActiveMessage() {
-    journeyDirector.clearMessage?.();
+    journeyDirector.clearMessage?.({ origin: "world" });
   }
 
   function clearPendingAcknowledgement(action = null) {
@@ -82,6 +97,19 @@ export function createCommsDirector({ state, journeyDirector }) {
 
   function hasActiveMessage() {
     return Boolean(state.journey.pendingAcknowledgement || state.journey.messages.length > 0);
+  }
+
+  // Drop queued lines that no longer apply — a hub's approach hails once the
+  // player has docked there, or flown off. Returns how many were dropped.
+  function discardQueued(predicate) {
+    let dropped = 0;
+    for (let index = queue.length - 1; index >= 0; index -= 1) {
+      if (predicate(queue[index])) {
+        queue.splice(index, 1);
+        dropped += 1;
+      }
+    }
+    return dropped;
   }
 
   function enqueue(message) {
@@ -138,6 +166,7 @@ export function createCommsDirector({ state, journeyDirector }) {
   return {
     clearActiveMessage,
     clearPendingAcknowledgement,
+    discardQueued,
     hasActiveMessage,
     say,
     update,

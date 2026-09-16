@@ -12,7 +12,8 @@
 // `campaignLoadout.test.mjs` pins it against the offer in both directions.
 
 export const CAMPAIGN_SHIP_OFFER_ID = "rook-yard-skiff-miner";
-export const CAMPAIGN_SHIP_NAME = "Rook Yard Skiff";
+// Named the way the impound lot names it: by what it was and what it is.
+export const CAMPAIGN_SHIP_NAME = "Ore Worker 7A3";
 
 // A hand flies a fleet miner, so the player's hull is the ORE WORKER every NPC
 // miner in the world flies — same outline, same cab, painted in the operator's
@@ -27,20 +28,15 @@ export const CAMPAIGN_FITTED_COMPONENT_IDS = Object.freeze([
   "engine", "hull", "docking", "beaconLocator", "miner", "cargoHold",
 ]);
 
-// Bolted in, and dead.
-//
-// The skiff HAS a processor; it does not work, and nobody at Rook has paid to
-// fix it. That is the in-world reason a hand's ore drops straight into the hold
-// instead of being refined on the way home — a visible broken panel rather than
-// an unexplained absence. It is not in `includedComponents` on the offer because
-// a dead unit is not something the yard advertises.
-export const CAMPAIGN_BROKEN_COMPONENT_IDS = Object.freeze(["processor"]);
+// No dead or placeholder modules are pre-installed. Missing equipment first
+// appears as merchandise at Modworks, then enters the bay only when purchased.
+export const CAMPAIGN_BROKEN_COMPONENT_IDS = Object.freeze([]);
 
 // Everything the skiff does not carry at all, listed explicitly rather than left
 // to default to false. A restored save or a future default flip must not be able
 // to quietly hand a Rook hand a scanner it never earned.
 export const CAMPAIGN_UNFITTED_COMPONENT_IDS = Object.freeze([
-  "scanner", "collector", "beaconBay", "towCable", "mossSeeder",
+  "scanner", "collector", "processor", "beaconBay", "towCable", "mossSeeder",
   "mossHarvester", "shield", "cloak",
 ]);
 
@@ -48,11 +44,8 @@ export const CAMPAIGN_UNFITTED_COMPONENT_IDS = Object.freeze([
 // panel shown here that the hull does not carry is a promise the ship cannot
 // keep, so this is derived from the fitted list plus the two frame panels every
 // start needs.
-// The processor panel IS shown, broken. Hiding it would leave the player with an
-// unexplained routing rule; showing a dead one explains itself and puts a repair
-// on the board as something to want.
 export const CAMPAIGN_PANEL_IDS = Object.freeze([
-  "viewport", "engine", "hull", "docking", "beacon-locator", "miner", "cargo", "processor", "contract",
+  "viewport", "engine", "hull", "docking", "beacon-locator", "miner", "cargo", "contract",
 ]);
 
 // The charge a company skiff leaves the yard with. Running dry is a real

@@ -1,4 +1,4 @@
-import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260910-2116-a2e643d1";
+import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260913-1906-b780c151";
 
 const RESOURCE_CONTRACTS = [
   {
@@ -7,7 +7,18 @@ const RESOURCE_CONTRACTS = [
     resourceName: "red ore",
     title: "Red Ore Run",
     amount: 5,
-    summary: (dest) => `Deliver 5 red ore to ${dest}. Red Teeth and the surrounding belt are the best source.`,
+    // Rook's lead: the nearest red cluster northeast of the Yard that is not
+    // inside Red Teeth (whose edge starts barely 600 units out on that
+    // bearing). The first run is meant to stay close to home; the contract
+    // used to send a rookie straight at the hunters.
+    sourceLead: {
+      label: "Rook's red ore lead",
+      fromSiteId: storySites.starterHub.id,
+      bearing: "northeast",
+      maxDistance: 1800,
+      avoidZoneIds: ["red-teeth"],
+    },
+    summary: (dest) => `Deliver 5 red ore to ${dest}. Rook's lead is pinned on your Beacon Locator: red rock northeast of the Yard, short of Red Teeth.`,
   },
   {
     id: "rook-red-resource-run-10",
@@ -16,7 +27,13 @@ const RESOURCE_CONTRACTS = [
     title: "Heavy Red Ore Run",
     amount: 10,
     prerequisites: ["rook-red-resource-run-5"],
-    summary: (dest) => `Deliver 10 red ore to ${dest}. Stock up from the dense belt past Red Teeth.`,
+    sourceLead: {
+      label: "Rook's red ore lead",
+      fromSiteId: storySites.starterHub.id,
+      bearing: "northeast",
+      maxDistance: 2400,
+    },
+    summary: (dest) => `Deliver 10 red ore to ${dest}. The dense belt at the edge of Red Teeth pays better than it looks.`,
   },
   {
     id: "rook-copper-run-5",
@@ -67,7 +84,7 @@ export const chapterOneContracts = [
     type: "delivery",
     title: "Assessment Delivery",
     issuer: "Rook",
-    summary: `Deliver the registered Yard Skiff to ${storySites.starterHub.name}.`,
+    summary: `Fly the impounded hull from Scrap Porch to ${storySites.starterHub.name} under its own power, for the Authority's assessment.`,
     terms: {
       deliverShipVin: "YRDSKF-01-7A3",
       destinationSiteId: chapterOneRoute.destinationSite.id,
@@ -91,14 +108,15 @@ export const chapterOneContracts = [
       "Terms are satisfied when the listed VIN docks at the destination hub with ship power down.",
       "Payment releases when the completed contract is confirmed.",
       "Damage penalties are waived for this assessment contract.",
+      "Hull released from Yard Exchange Authority impound for this flight only. Arrival under own power completes the Authority's sale assessment.",
     ],
   },
   {
     id: "mako-starter-ship-loan",
     type: "loan",
-    title: "Starter Ship Financing",
-    issuer: "Yard Exchange Finance Office",
-    summary: "A financial loan for purchasing one approved starter mining ship.",
+    title: "Sable Ledger Hull Purchase Note",
+    issuer: "Sable Ledger",
+    summary: "A purpose-bound loan arranged by Mr. Mako to fund the purchase of one impounded hull. Rook Industries vouches; the pilot alone owes.",
     terms: {
       principal: 20000,
       interestRate: 0.12,
@@ -111,10 +129,12 @@ export const chapterOneContracts = [
       credits: 20000,
     },
     clauses: [
-      "20,000 credits are deposited to the cash account tied to your provisional ID.",
-      "Accepting creates a loan obligation owed to Yard Exchange Finance Office.",
+      "20,000 credits are advanced by Sable Ledger and deposited to the cash account tied to your provisional ID for the hull purchase.",
+      "Vouched for by Rook Industries, sponsoring operator. The borrower alone is liable. Sable Ledger does not chase; it collects.",
+      "Accepting creates a loan obligation owed to Sable Ledger.",
       "Interest accrues later up to a maximum of 4,500 credits.",
-      "The financed hull title remains lien-held until the obligation is paid off.",
+      "If the sale closes, Sable Ledger holds a lien on the hull until the obligation is paid off.",
+      "Sale condition: the hull operates under Rook Industries contracts while the lien stands.",
     ],
     considerations: [
       {
@@ -123,6 +143,47 @@ export const chapterOneContracts = [
         once: true,
         setFlag: "purposeFulfilled",
       },
+    ],
+  },
+  {
+    id: "authority-impound-hull-sale",
+    type: "purchase",
+    title: "Authority Impound Sale",
+    issuer: "Yard Exchange Authority",
+    summary: "Bill of sale for the assessed impound hull currently bearing VIN YRDSKF-01-7A3.",
+    terms: {
+      deliverShipVin: "YRDSKF-01-7A3",
+      price: 20000,
+      hullValue: 18500,
+      expeditedDispositionFee: 1500,
+      destinationName: "Yard Exchange Authority",
+    },
+    reward: {},
+    clauses: [
+      "18,500 cr assessed recovery value for the impounded hull.",
+      "1,500 cr expedited disposition fee, entered on the Authority schedule and payable with the sale.",
+      "Total consideration: 20,000 cr, paid immediately to Yard Exchange Authority.",
+      "Title transfers to the pilot on payment. Any lender lien attaches separately under the pilot's financing note.",
+      "Sale approved under Rook Industries sponsorship following a successful powered assessment flight.",
+    ],
+  },
+  {
+    id: "rook-sponsored-yard-exchange-work-pass",
+    type: "permit",
+    title: "Rook-Sponsored Yard Exchange Work Pass",
+    issuer: "Rook Industries",
+    summary: "A sponsored operating pass issued once the pilot holds a ship, a provisional license, and Rook Industries authority.",
+    terms: {
+      cost: 0,
+      permitType: "work-pass",
+      authorityId: "yard-exchange-authority",
+      grantTerritoryRights: [{ territoryId: "territory:yard-exchange", rights: ["transit", "docking", "mining", "trade"] }],
+    },
+    reward: {},
+    clauses: [
+      "No fee. Rook Industries countersigns as sponsoring operator.",
+      "Grants standing transit, docking, mining, and trade privileges inside Yard Exchange territory.",
+      "Valid while the pilot's provisional license and Rook Industries sponsorship remain in good standing.",
     ],
   },
   {
@@ -167,6 +228,7 @@ export const chapterOneContracts = [
       destinationName: storySites.starterHub.name,
       sourceClaimIds: contract.sourceClaimIds ?? [],
       sourceClaimLabel: contract.sourceClaimLabel ?? null,
+      sourceLead: contract.sourceLead ?? null,
     },
     reward: {
       creditsPerUnit: 200,
@@ -178,6 +240,9 @@ export const chapterOneContracts = [
       "Resources must be in the cargo hold, not loose in space.",
       contract.sourceClaimIds?.length
         ? "Only ore traced to the marked contract plots counts for this job. Off-plot ore is marked in cargo."
+        : null,
+      contract.sourceLead
+        ? "The issuer's lead is a best guess pinned on your Beacon Locator, not a claim. Ore from anywhere counts."
         : null,
       "Return to Rook Industries for the next available job.",
     ].filter(Boolean),

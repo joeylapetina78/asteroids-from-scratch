@@ -1,5 +1,5 @@
-import { runMissionActions } from "./missionActions.js?v=fresh-20260910-2116-a2e643d1";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260910-2116-a2e643d1";
+import { runMissionActions } from "./missionActions.js?v=fresh-20260913-1906-b780c151";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260913-1906-b780c151";
 
 export function createMissionRunner({ missionDefinition, state, actions }) {
   const beatDefs = missionDefinition.beats ?? missionDefinition.steps;
@@ -12,16 +12,15 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
 
     state.journey.pendingAcknowledgement = null;
     state.journey.messages = [];
-    Object.assign(state.journey, {
-      chapterId: prologue.chapterId,
-      chapterName: prologue.chapterName,
-      episodeName: prologue.episodeName,
-    });
+    // An interlude (a lesson at a shop window) has no chapter of its own and
+    // leaves the current one on the card.
+    assignChapter(state.journey, prologue);
     state.journey.flags = {};
     state.journey.globalFlags ??= {};
     state.journey.currentStepId = null;
     state.journey.completedStepIds = [];
-    state.journey.messages = [];
+    // Only the last mission's own lines go; a hub mid-hail keeps talking.
+    state.journey.messages = (state.journey.messages ?? []).filter((message) => (message.origin ?? "mission") !== "mission");
     actions.say(prologue.speaker, prologue.text);
     setMission({
       id: missionDefinition.id,
@@ -40,11 +39,7 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     const activeChapter = missionDefinition.activeChapter;
 
     state.journey.pendingAcknowledgement = null;
-    Object.assign(state.journey, {
-      chapterId: activeChapter.chapterId,
-      chapterName: activeChapter.chapterName,
-      episodeName: activeChapter.episodeName,
-    });
+    assignChapter(state.journey, activeChapter);
     setMission({
       ...state.journey.mission,
       title: missionDefinition.title,
@@ -63,7 +58,10 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     goToStep(missionDefinition.startBeatId ?? missionDefinition.startStepId);
   }
 
-  function acknowledge() {
+  // A "No" is its own answer. A beat that offers a decline can give it its
+  // own actions (`onDecline`); without them, declining runs `onAcknowledge`
+  // as it always did.
+  function acknowledge(role = "confirm") {
     const acknowledgement = state.journey.pendingAcknowledgement;
 
     if (!acknowledgement) {
@@ -71,7 +69,8 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
     }
 
     state.journey.pendingAcknowledgement = null;
-    runActions(getCurrentStep()?.onAcknowledge ?? []);
+    const step = getCurrentStep();
+    runActions((role === "decline" && step?.onDecline) ? step.onDecline : (step?.onAcknowledge ?? []));
     return true;
   }
 
@@ -201,6 +200,12 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
 
   function setMission(mission) {
     state.journey.mission = mission;
+  }
+
+  function assignChapter(journey, source = {}) {
+    ["chapterId", "chapterName", "episodeName"].forEach((key) => {
+      if (source[key] !== undefined) journey[key] = source[key];
+    });
   }
 
   function getCurrentStep() {

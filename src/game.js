@@ -1,65 +1,66 @@
-﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260910-2116-a2e643d1";
-import { steerAroundObstacles } from "./systems/obstacleNavigation.js?v=fresh-20260910-2116-a2e643d1";
-import { getHullOutline } from "./content/ships/hullOutlines.js?v=fresh-20260910-2116-a2e643d1";
-import { getBuildProgress } from "./systems/shipyards.js?v=fresh-20260910-2116-a2e643d1";
-import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260910-2116-a2e643d1";
-import { infrastructureNavigationObstacles } from "./systems/infrastructureNavigation.js?v=fresh-20260910-2116-a2e643d1";
-import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260910-2116-a2e643d1";
-import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260910-2116-a2e643d1";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260910-2116-a2e643d1";
-import { Ship } from "./entities/Ship.js?v=fresh-20260910-2116-a2e643d1";
-import { ShipWreck } from "./entities/ShipWreck.js?v=fresh-20260910-2116-a2e643d1";
-import { completeWreckSalvage, registerOwnedWreck } from "./systems/wreckRegistry.js?v=fresh-20260910-2116-a2e643d1";
-import { createAsteroidChunks } from "./systems/asteroidField.js?v=fresh-20260910-2116-a2e643d1";
-import { applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260910-2116-a2e643d1";
-import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260910-2116-a2e643d1";
-import { MINER_CONDITION_CONFIG, computeMinerWearPerShot, getMinerStageEffects } from "./systems/minerCondition.js?v=fresh-20260910-2116-a2e643d1";
-import { COLLECTOR_CONDITION_CONFIG, computeCollectorWearPerSecond, getCollectorStageEffects } from "./systems/collectorCondition.js?v=fresh-20260910-2116-a2e643d1";
-import { createCamera } from "./systems/camera.js?v=fresh-20260910-2116-a2e643d1";
-import { createInput } from "./systems/input.js?v=fresh-20260910-2116-a2e643d1";
-import { GREATBLOOM_EYE_RADIUS } from "./entities/Lifeform.js?v=fresh-20260910-2116-a2e643d1";
-import { BLOOM_HARVEST_RESOURCE, BLOOM_KILLS_PER_GREATBLOOM, createAmbientLifeBatch, createGrazerAtFeast, createHunterNearShip, createHunterRespawn, createLifeField, createSurfacingGreatbloom, rollBloomHarvest, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260910-2116-a2e643d1";
-import { ROCKMOSS_CRAWLER_TYPE, ROCKMOSS_STRAINS, pickRockmossStrain } from "./systems/rockmossStrains.js?v=fresh-20260910-2116-a2e643d1";
-import { GRAZING_DEFAULTS, advanceGrazing, condenseDistantApexGrazers, condenseGrazerPopulation, enforceEcologicalBiomassBudget, findGrazingClusters, getGrazerSporeYield, isRipe } from "./systems/grazing.js?v=fresh-20260910-2116-a2e643d1";
-import { createRandom, hashNumbers } from "./systems/random.js?v=fresh-20260910-2116-a2e643d1";
-import { HAULER_PALETTES, RELIEF_HAULER_PALETTE, createNpcRouteShips, createRouteShip } from "./systems/npcRoutes.js?v=fresh-20260910-2116-a2e643d1";
-import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260910-2116-a2e643d1";
-import { createResourceField } from "./systems/resourceField.js?v=fresh-20260910-2116-a2e643d1";
-import { createScanner } from "./systems/scanner.js?v=fresh-20260910-2116-a2e643d1";
-import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260910-2116-a2e643d1";
-import { createIncursionField } from "./systems/incursionField.js?v=fresh-20260910-2116-a2e643d1";
-import { completeInternalProtectionResponse, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, getAvailablePatrolCraft, markPatrolCraftStatus, servicePatrolCraft, startInternalProtectionResponse } from "./systems/patrolOperations.js?v=fresh-20260910-2116-a2e643d1";
-import { createPatrolRuntimeActor } from "./systems/patrolRuntime.js?v=fresh-20260910-2116-a2e643d1";
-import { listPendingPatrolResponses } from "./systems/patrolDispatch.js?v=fresh-20260910-2116-a2e643d1";
-import { closeProtectionRequestsForThreat, evaluateProtectionThreat, getPlayerProtectionJobsForSite, reviewProtectionRequests } from "./systems/protectionPlanning.js?v=fresh-20260910-2116-a2e643d1";
-import { completePlayerProtectionRequest, completeProtectionContract, ensureProtectionProviders, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "./systems/protectionProviders.js?v=fresh-20260910-2116-a2e643d1";
-import { fileAttackReport, nearestActiveReport, resolveAttackReport } from "./systems/securityReports.js?v=fresh-20260910-2116-a2e643d1";
-import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260910-2116-a2e643d1";
-import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260910-2116-a2e643d1";
-import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260910-2116-a2e643d1";
-import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./systems/worldNetworkRegistry.js?v=fresh-20260910-2116-a2e643d1";
-import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260910-2116-a2e643d1";
-import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260910-2116-a2e643d1";
-import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260910-2116-a2e643d1";
-import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260910-2116-a2e643d1";
-import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260910-2116-a2e643d1";
-import { awardGateBountyToPatrol } from "./systems/gateBounty.js?v=fresh-20260910-2116-a2e643d1";
-import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260910-2116-a2e643d1";
-import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260910-2116-a2e643d1";
-import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260910-2116-a2e643d1";
-import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260910-2116-a2e643d1";
-import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260910-2116-a2e643d1";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260910-2116-a2e643d1";
-import { createCommercialCraftPublicIdentity, createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260910-2116-a2e643d1";
-import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260910-2116-a2e643d1";
-import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260910-2116-a2e643d1";
-import { createClaimField } from "./systems/claimField.js?v=fresh-20260910-2116-a2e643d1";
-import { getContractGrantedClaimIds, getPlotRestriction } from "./systems/operatingRights.js?v=fresh-20260910-2116-a2e643d1";
-import { getNearbyWorldSite, getNearestWorldSite, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260910-2116-a2e643d1";
-import { createGameState } from "./state/gameState.js?v=fresh-20260910-2116-a2e643d1";
-import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260910-2116-a2e643d1";
-import { getResourceColor, getResourceShape } from "./systems/resourceDefinitions.js?v=fresh-20260910-2116-a2e643d1";
-import { terminateDestroyedActor } from "./systems/actorLifecycle.js?v=fresh-20260910-2116-a2e643d1";
+﻿import { Bullet } from "./entities/Bullet.js?v=fresh-20260913-1906-b780c151";
+import { steerAroundObstacles } from "./systems/obstacleNavigation.js?v=fresh-20260913-1906-b780c151";
+import { getHullOutline } from "./content/ships/hullOutlines.js?v=fresh-20260913-1906-b780c151";
+import { getBuildProgress } from "./systems/shipyards.js?v=fresh-20260913-1906-b780c151";
+import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260913-1906-b780c151";
+import { infrastructureNavigationObstacles } from "./systems/infrastructureNavigation.js?v=fresh-20260913-1906-b780c151";
+import { breakAsteroid, WHITE_ASTEROID_COLOR } from "./entities/Asteroid.js?v=fresh-20260913-1906-b780c151";
+import { createResourcePickupsFromAsteroid, ResourcePickup } from "./entities/ResourcePickup.js?v=fresh-20260913-1906-b780c151";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260913-1906-b780c151";
+import { Ship } from "./entities/Ship.js?v=fresh-20260913-1906-b780c151";
+import { ShipWreck } from "./entities/ShipWreck.js?v=fresh-20260913-1906-b780c151";
+import { completeWreckSalvage, registerOwnedWreck } from "./systems/wreckRegistry.js?v=fresh-20260913-1906-b780c151";
+import { createAsteroidChunks, getOreClusterSeedsInRadius } from "./systems/asteroidField.js?v=fresh-20260913-1906-b780c151";
+import { applyPanelPatch, getHullRepairRateMultiplier, HULL_REPAIR_DELAY_SECONDS, HULL_REPAIR_RATE, accumulatePanelWear, ensurePanelCondition, panelStageIndex, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260913-1906-b780c151";
+import { ENGINE_CONDITION_CONFIG, computeEngineWearDelta, getEngineStageEffects } from "./systems/engineCondition.js?v=fresh-20260913-1906-b780c151";
+import { MINER_CONDITION_CONFIG, computeMinerWearPerShot, getMinerStageEffects } from "./systems/minerCondition.js?v=fresh-20260913-1906-b780c151";
+import { COLLECTOR_CONDITION_CONFIG, computeCollectorWearPerSecond, getCollectorStageEffects } from "./systems/collectorCondition.js?v=fresh-20260913-1906-b780c151";
+import { createCamera } from "./systems/camera.js?v=fresh-20260913-1906-b780c151";
+import { createInput } from "./systems/input.js?v=fresh-20260913-1906-b780c151";
+import { GREATBLOOM_EYE_RADIUS } from "./entities/Lifeform.js?v=fresh-20260913-1906-b780c151";
+import { BLOOM_HARVEST_RESOURCE, BLOOM_KILLS_PER_GREATBLOOM, createAmbientLifeBatch, createGrazerAtFeast, createHunterNearShip, createHunterRespawn, createLifeField, createSurfacingGreatbloom, rollBloomHarvest, seedChunkRockmoss } from "./systems/lifeField.js?v=fresh-20260913-1906-b780c151";
+import { ROCKMOSS_CRAWLER_TYPE, ROCKMOSS_STRAINS, pickRockmossStrain } from "./systems/rockmossStrains.js?v=fresh-20260913-1906-b780c151";
+import { GRAZING_DEFAULTS, advanceGrazing, condenseDistantApexGrazers, condenseGrazerPopulation, enforceEcologicalBiomassBudget, findGrazingClusters, getGrazerSporeYield, isRipe } from "./systems/grazing.js?v=fresh-20260913-1906-b780c151";
+import { createRandom, hashNumbers } from "./systems/random.js?v=fresh-20260913-1906-b780c151";
+import { HAULER_PALETTES, RELIEF_HAULER_PALETTE, createNpcRouteShips, createRouteShip } from "./systems/npcRoutes.js?v=fresh-20260913-1906-b780c151";
+import { clearScreen, drawGrid, drawVector, isVisible } from "./systems/rendering.js?v=fresh-20260913-1906-b780c151";
+import { createResourceField } from "./systems/resourceField.js?v=fresh-20260913-1906-b780c151";
+import { createScanner } from "./systems/scanner.js?v=fresh-20260913-1906-b780c151";
+import { createDriftMouthField } from "./systems/driftMouthField.js?v=fresh-20260913-1906-b780c151";
+import { createIncursionField, createSeededDevice } from "./systems/incursionField.js?v=fresh-20260913-1906-b780c151";
+import { completeInternalProtectionResponse, ensurePatrolOperations, failInternalProtectionResponse, finishInternalProtectionReturn, getAvailablePatrolCraft, markPatrolCraftStatus, servicePatrolCraft, startInternalProtectionResponse } from "./systems/patrolOperations.js?v=fresh-20260913-1906-b780c151";
+import { createPatrolRuntimeActor } from "./systems/patrolRuntime.js?v=fresh-20260913-1906-b780c151";
+import { listPendingPatrolResponses } from "./systems/patrolDispatch.js?v=fresh-20260913-1906-b780c151";
+import { closeProtectionRequestsForThreat, evaluateProtectionThreat, getPlayerProtectionJobsForSite, reviewProtectionRequests } from "./systems/protectionPlanning.js?v=fresh-20260913-1906-b780c151";
+import { completePlayerProtectionRequest, completeProtectionContract, ensureProtectionProviders, failProtectionContract, finishProtectionReturn, serviceProtectionProviders, startProtectionContract } from "./systems/protectionProviders.js?v=fresh-20260913-1906-b780c151";
+import { fileAttackReport, nearestActiveReport, resolveAttackReport } from "./systems/securityReports.js?v=fresh-20260913-1906-b780c151";
+import { injectBountyJobs } from "./systems/bountyContracts.js?v=fresh-20260913-1906-b780c151";
+import { injectCargoRuns } from "./systems/cargoContracts.js?v=fresh-20260913-1906-b780c151";
+import { getStandingFreightJobsForSite } from "./systems/logistics.js?v=fresh-20260913-1906-b780c151";
+import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./systems/worldNetworkRegistry.js?v=fresh-20260913-1906-b780c151";
+import { applyCorridorMaintenance, createTransportCorridors, getCorridorClearance } from "./systems/transportCorridors.js?v=fresh-20260913-1906-b780c151";
+import { getStandingMiningJobsForSite } from "./systems/miningOperation.js?v=fresh-20260913-1906-b780c151";
+import { generateSurveyContractDefinition, generateSurveyJobBoardDefinitions } from "./systems/surveyContracts.js?v=fresh-20260913-1906-b780c151";
+import { createEncounterDirector } from "./systems/encounterDirector.js?v=fresh-20260913-1906-b780c151";
+import { createPortalTrophy, getHostileLootCount, rollHostileLoot } from "./systems/hostileLoot.js?v=fresh-20260913-1906-b780c151";
+import { awardGateBountyToPatrol } from "./systems/gateBounty.js?v=fresh-20260913-1906-b780c151";
+import { createThreadwyrmField } from "./systems/threadwyrmField.js?v=fresh-20260913-1906-b780c151";
+import { recordVisitedZone } from "./systems/legalRecords.js?v=fresh-20260913-1906-b780c151";
+import { getSectorDesignation } from "./systems/sectorCodes.js?v=fresh-20260913-1906-b780c151";
+import { sampleEnvironment, getFlowAngle } from "./systems/worldHazards.js?v=fresh-20260913-1906-b780c151";
+import { inspectPublicIdentity } from "./systems/authorityInspections.js?v=fresh-20260913-1906-b780c151";
+import { getRegistryEntityIdForSite, getRegistrySubject, hasRegistryStatus, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260913-1906-b780c151";
+import { createCommercialCraftPublicIdentity, createControlledShipPublicIdentity, createNpcShipPublicIdentity } from "./systems/publicIdentity.js?v=fresh-20260913-1906-b780c151";
+import { getZoneProfile, WORLD_ZONES, getZoneInfluence } from "./systems/worldZones.js?v=fresh-20260913-1906-b780c151";
+import { getRegionProfile } from "./systems/worldRegions.js?v=fresh-20260913-1906-b780c151";
+import { createClaimField } from "./systems/claimField.js?v=fresh-20260913-1906-b780c151";
+import { getContractGrantedClaimIds, getPlotRestriction } from "./systems/operatingRights.js?v=fresh-20260913-1906-b780c151";
+import { getNearbyWorldSite, getNearestWorldSite, isInSiteRange } from "./systems/worldSites.js?v=fresh-20260913-1906-b780c151";
+import { createGameState } from "./state/gameState.js?v=fresh-20260913-1906-b780c151";
+import { canSpendCredits, debitCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260913-1906-b780c151";
+import { PLAYER_ATTRIBUTED_CAUSES } from "./systems/eventLedger.js?v=fresh-20260913-1906-b780c151";
+import { getResourceColor, getResourceShape, resourceTypesMatch } from "./systems/resourceDefinitions.js?v=fresh-20260913-1906-b780c151";
+import { terminateDestroyedActor } from "./systems/actorLifecycle.js?v=fresh-20260913-1906-b780c151";
 
 // Game is the main simulation coordinator for the viewport canvas. It owns world
 // objects, advances gameplay rules, then reports display-ready state back to
@@ -77,6 +78,32 @@ const FIRE_COOLDOWN_SECONDS = 0.18;
 const AMMO_PER_SHOT = 1;
 const SCANERGY_PER_SCAN = 100;
 const SHIP_COLLISION_RADIUS = 18;
+// A contract lead is an area, not a point. Get within this of the pin and
+// you are "there".
+const CONTRACT_LEAD_ARRIVAL_RADIUS = 360;
+const LEAD_BEARINGS = {
+  east: { x: 1, y: 0 },
+  west: { x: -1, y: 0 },
+  north: { x: 0, y: -1 },
+  south: { x: 0, y: 1 },
+  northeast: { x: Math.SQRT1_2, y: -Math.SQRT1_2 },
+  northwest: { x: -Math.SQRT1_2, y: -Math.SQRT1_2 },
+  southeast: { x: Math.SQRT1_2, y: Math.SQRT1_2 },
+  southwest: { x: -Math.SQRT1_2, y: Math.SQRT1_2 },
+};
+// cos(70°): a bearing is a general direction, not a heading. "Northeast"
+// takes anything from just shy of north round to just shy of east.
+const LEAD_BEARING_TOLERANCE = 0.34;
+// Matching rocks within this of each other count as one cluster for the
+// purpose of choosing where the pin goes.
+const LEAD_CLUSTER_RADIUS = 320;
+// The zone banner goes up at 0.55 influence, so below that a point is
+// "outside" an avoided zone. Up to the fringe value it is inside but near the
+// edge — acceptable only when the ore is nowhere else.
+const LEAD_ZONE_OUTSIDE_INFLUENCE = 0.55;
+const LEAD_ZONE_FRINGE_INFLUENCE = 0.8;
+// How many times a lead will re-pin itself on finding its rock gone.
+const LEAD_MAX_MOVES = 2;
 // Striking a bloom. The bell is soft and the ship's nose is the only part of it
 // that is sharp, so this is a question of aim rather than of contact: line the
 // point up and drive it in. A sideways drift through one should part its
@@ -201,6 +228,12 @@ const PATROL_TRANSIT_RADIUS_FACTOR = 1.6;
 const HUB_SENSOR_RADIUS_MULTIPLIER = 2;
 const PATROL_SCAN_SECONDS = 1.35;
 const PATROL_TETHER_DAMPING = 0.88;
+// A flagged patrol rides the hub's beacon lane: it drops out at standoff
+// distance from the ship, down the line it already had on it, and takes the
+// standoff from there. The timeout is the longest any patrol is left in
+// transit (a docked ship is the case it still flies to).
+const PATROL_LANE_JUMP_TIMEOUT_SECONDS = 8;
+const PATROL_LANE_JUMP_FLASH_COLOR = "#7ee7ff";
 const PATROL_WAYPOINT_COUNT = 8;
 const PATROL_WAYPOINT_RADIUS_FACTOR = 3.5;
 const PATROL_WAYPOINT_REACH_DIST = 120;
@@ -295,6 +328,8 @@ const INCURSION_SENTINEL_SHOT_SPEED = 245;
 const INCURSION_SENTINEL_SHOT_SECONDS = 3.2;
 const INCURSION_SENTINEL_DAMAGE = 9;
 const INCURSION_DRAG_BLOOM_DAMPING = 0.34;
+const INCURSION_BLOOM_FORCE = 92;
+const INCURSION_VENOM_DAMAGE_PER_SECOND = 3.5;
 const INCURSION_RIFT_MINE_RANGE = 250;
 const INCURSION_RIFT_MINE_SHOT_SPEED = 155;
 const INCURSION_RIFT_MINE_SHOT_SECONDS = 2.8;
@@ -573,6 +608,16 @@ export class Game {
     this.audio?.playPower(isPowered);
 
     if (isPowered && !wasPowered) {
+      // A worn drive coughs on the way up: a puff out of the back and the
+      // fault sound, before it settles into running. Same wear ladder that
+      // makes it misfire under load; the first thing a campaign hand hears.
+      const condition = ensurePanelCondition(this.state.components.engine);
+      const effects = getEngineStageEffects(condition.stage);
+      if (effects.startupCough > 0 && Math.random() < effects.startupCough) {
+        this.ship.emitExhaustPuff(1.6);
+        this.audio?.playEngineFault(condition.stage);
+        this.state.ledger.recordEvent("engine.startupCough", { stage: condition.stage }, { visible: false });
+      }
       this.state.ledger.recordEvent(
         "engine.powered",
         {
@@ -735,6 +780,7 @@ export class Game {
         claimId: target.claimId,
         claimIds: target.claimIds,
       }));
+    const leadBeacons = this.getContractLeadTargets();
     const ecologyBeacons = (locator.ecologyBeacons ?? [])
       .filter((target) => target?.position)
       .map((target) => ({
@@ -754,7 +800,7 @@ export class Game {
       portalId: portal.id,
     }));
 
-    return [...rememberedHubs, ...personalBeacons, ...contractBeacons, ...ecologyBeacons, ...incursionBeacons];
+    return [...rememberedHubs, ...personalBeacons, ...contractBeacons, ...leadBeacons, ...ecologyBeacons, ...incursionBeacons];
   }
 
   getBeaconTarget(beaconId) {
@@ -1005,12 +1051,202 @@ export class Game {
     return targets;
   }
 
+  // A contract's lead: where the issuer BELIEVES the ore is. Not a claim with
+  // a fence around it — a pin on the locator saying "start looking here", so
+  // a hand with no scanner has a direction instead of a compass rose. The
+  // position is read from the same ore-cluster seeds chunk generation uses,
+  // so the pin sits on rock that actually exists.
+  getContractLeadTargets() {
+    return Object.values(this.state.contracts?.records ?? {})
+      .filter((contract) => contract.status === "active" && contract.terms?.sourceLead)
+      .map((contract) => {
+        const position = this.resolveContractLead(contract);
+        if (!position) return null;
+        return {
+          id: `contract-${contract.id}-lead`,
+          beaconId: `contract-${contract.id}-lead`,
+          name: contract.terms.sourceLead.label ?? `${contract.title} lead`,
+          position,
+          type: "contract-lead",
+          contractId: contract.id,
+          resourceType: contract.terms.resourceType ?? null,
+        };
+      })
+      .filter(Boolean);
+  }
+
+  // Resolved once per contract run and written back onto the record, so the
+  // pin does not wander between frames or across a reload.
+  resolveContractLead(contract) {
+    const lead = contract.terms?.sourceLead;
+    if (!lead) return null;
+    if (lead.position) return lead.position;
+
+    const origin = this.worldSites.find((site) => site.id === lead.fromSiteId)?.position
+      ?? this.worldSites.find((site) => site.id === contract.terms.destinationSiteId)?.position;
+    if (!origin) return null;
+
+    const bearing = LEAD_BEARINGS[lead.bearing] ?? null;
+    const maxDistance = lead.maxDistance ?? 2200;
+    // Far enough that the pin is never inside the arrival radius of the hub's
+    // own dock: a lead you have reached before you undock is not a lead.
+    const minDistance = lead.minDistance ?? CONTRACT_LEAD_ARRIVAL_RADIUS + 200;
+    const avoidZoneIds = new Set(lead.avoidZoneIds ?? []);
+    const resourceType = contract.terms.resourceType;
+    const chunkSize = this.canvas.width;
+
+    // Everything that could be the lead has to be in range, roughly on the
+    // bearing, and clear of any zone the issuer is steering the pilot away
+    // from. Same test for a live rock and for a cluster seed. `zoneLimit` is
+    // how much of an avoided zone is tolerated: the zone banner goes up at
+    // 0.55, so that is "outside"; the fringe tier lets a pin sit just inside
+    // when the ore is nowhere else (Red Teeth's edge is where First Reach's
+    // red rock actually is).
+    const qualifies = (point, zoneLimit) => {
+      const dx = point.x - origin.x;
+      const dy = point.y - origin.y;
+      const range = Math.hypot(dx, dy) || 1;
+      const alignment = bearing ? (dx * bearing.x + dy * bearing.y) / range : 1;
+      if (range < minDistance || range > maxDistance) return null;
+      if (bearing && alignment < LEAD_BEARING_TOLERANCE) return null;
+      if (avoidZoneIds.size > 0) {
+        const zone = getZoneProfile(point.x, point.y);
+        if (avoidZoneIds.has(zone.strongestZoneId) && zone.influence >= zoneLimit) return null;
+      }
+      return { range, alignment };
+    };
+    // Nearest first, with a nudge toward the stated bearing so "east" does
+    // not resolve to a rock due north that happens to be ten units closer.
+    const byPreference = (a, b) => (a.range - a.alignment * 300) - (b.range - b.alignment * 300);
+
+    // First choice: rock that is actually there. The contract is accepted at
+    // a hub with the field around it loaded, so the pin can go on the
+    // nearest CLUSTER of the right ore rather than on a seed whose cell may
+    // hold no ore rock at all (First Reach is sparse by design). A cluster
+    // is a rock plus whatever qualifying matching rocks sit within a screen
+    // of it — only qualifying ones, so the centroid cannot drift into the
+    // zone the pin is meant to keep clear of.
+    const oreRocks = this.asteroids.filter((asteroid) => resourceTypesMatch(getAsteroidDominantResourceId(asteroid), resourceType));
+    const pickRockCluster = (zoneLimit) => {
+      const fits = new Map(oreRocks.map((asteroid) => [asteroid, qualifies(asteroid.position, zoneLimit)]));
+      return oreRocks
+        .map((asteroid) => {
+          const fit = fits.get(asteroid);
+          if (!fit) return null;
+          const neighbours = oreRocks.filter((other) => fits.get(other) && distance(other.position, asteroid.position) <= LEAD_CLUSTER_RADIUS);
+          const centroid = {
+            x: neighbours.reduce((sum, other) => sum + other.position.x, 0) / neighbours.length,
+            y: neighbours.reduce((sum, other) => sum + other.position.y, 0) / neighbours.length,
+          };
+          return { ...fit, position: centroid, size: neighbours.length };
+        })
+        .filter(Boolean)
+        // A bigger cluster is worth a little extra distance.
+        .sort((a, b) => byPreference({ ...a, range: a.range - a.size * 60 }, { ...b, range: b.range - b.size * 60 }))[0] ?? null;
+    };
+
+    const outside = pickRockCluster(LEAD_ZONE_OUTSIDE_INFLUENCE);
+    const fringe = outside ? null : pickRockCluster(lead.fringeInfluence ?? LEAD_ZONE_FRINGE_INFLUENCE);
+    const rockPick = outside ?? fringe;
+
+    if (rockPick) {
+      lead.position = { x: Math.round(rockPick.position.x), y: Math.round(rockPick.position.y) };
+      lead.resolvedFrom = outside ? "rocks" : "rocks-fringe";
+      return lead.position;
+    }
+
+    // Second choice: the ore-cluster seeds chunk generation uses, for a lead
+    // resolved somewhere the field is not loaded.
+    const seedCandidates = getOreClusterSeedsInRadius(origin.x, origin.y, maxDistance, chunkSize, this.resourceField)
+      .filter((seed) => resourceTypesMatch(seed.resourceId, resourceType))
+      .map((seed) => {
+        const fit = qualifies(seed, LEAD_ZONE_OUTSIDE_INFLUENCE);
+        return fit ? { ...fit, position: seed } : null;
+      })
+      .filter(Boolean)
+      .sort(byPreference);
+
+    if (seedCandidates[0]) {
+      lead.position = { x: Math.round(seedCandidates[0].position.x), y: Math.round(seedCandidates[0].position.y) };
+      lead.resolvedFrom = "seed";
+      return lead.position;
+    }
+
+    // Nothing of that ore in range: point down the bearing anyway, so the
+    // locator still says "that way" rather than nothing.
+    lead.position = {
+      x: Math.round(origin.x + (bearing?.x ?? 1) * 900),
+      y: Math.round(origin.y + (bearing?.y ?? 0) * 900),
+    };
+    lead.resolvedFrom = "bearing";
+    return lead.position;
+  }
+
+  // The moment the ship gets to the lead is the moment a coach should say
+  // "this is the area, start looking" — once per run, whether or not the
+  // locator was pointed at it.
+  updateContractLeadArrival() {
+    // Tethered to a hub is not "arrived" anywhere, however close the pin.
+    if (this.shipDestroyed || this.dockedSite) return;
+
+    this.getContractLeadTargets().forEach((target) => {
+      const contract = this.state.contracts.records[target.contractId];
+      if (!contract || contract.flags?.leadReached) return;
+      if (distance(this.ship.position, target.position) > CONTRACT_LEAD_ARRIVAL_RADIUS) return;
+
+      contract.flags ??= {};
+
+      // The pin was placed at signing. Hubs run their own miners on the same
+      // rock, so by the time the ship gets here the cluster may be gone. A
+      // lead that arrives at nothing moves rather than announcing "this is
+      // the area" over empty space — a couple of times, then it stands.
+      const lead = contract.terms.sourceLead;
+      const resourceType = contract.terms.resourceType;
+      const rockStillHere = this.asteroids.some((asteroid) =>
+        resourceTypesMatch(getAsteroidDominantResourceId(asteroid), resourceType)
+        && distance(asteroid.position, target.position) <= LEAD_CLUSTER_RADIUS);
+      if (!rockStillHere && resourceType && (lead.moved ?? 0) < LEAD_MAX_MOVES) {
+        const from = { ...target.position };
+        delete lead.position;
+        const to = this.resolveContractLead(contract);
+        if (to && (to.x !== from.x || to.y !== from.y)) {
+          lead.moved = (lead.moved ?? 0) + 1;
+          this.state.ledger.recordEvent(
+            "contract.leadMoved",
+            { contractId: contract.id, contractGroup: contract.group ?? null, beaconId: target.beaconId, from, to, resolvedFrom: lead.resolvedFrom },
+            { visible: false },
+          );
+          this.onHudChange(this.state);
+          return;
+        }
+      }
+
+      contract.flags.leadReached = true;
+      this.state.ledger.recordEvent(
+        "contract.leadReached",
+        {
+          contractId: contract.id,
+          contractGroup: contract.group ?? null,
+          beaconId: target.beaconId,
+          resourceType: target.resourceType,
+          hasScanner: Boolean(this.state.components.scanner?.installed),
+          x: Math.round(this.ship.position.x),
+          y: Math.round(this.ship.position.y),
+        },
+        { visible: false },
+      );
+    });
+  }
+
   syncContractBeaconTarget(contract) {
     if (!this.state.components.beaconLocator?.installed || contract?.status !== "active") {
       return;
     }
 
-    const targets = this.getContractClaimTargets().filter((candidate) => candidate.contractId === contract.id);
+    const targets = [
+      ...this.getContractClaimTargets().filter((candidate) => candidate.contractId === contract.id),
+      ...this.getContractLeadTargets().filter((candidate) => candidate.contractId === contract.id),
+    ];
     if (targets.length === 0) {
       return;
     }
@@ -1206,6 +1442,7 @@ export class Game {
     this.updateWorldSiteInteraction();
     this.updateZoneTitle();
     this.updateSectorTitle();
+    this.updateContractLeadArrival();
     this.updateEnvironmentalHazards(deltaSeconds);
     if (this.state.components.engine.fuel !== previousFuel || this.state.components.miner.ammo !== previousAmmo) {
       this.onHudChange(this.state);
@@ -1255,6 +1492,7 @@ export class Game {
     const incursionTargets = this.getIncursionAttackableTargets();
     const activeLifeforms = this.lifeforms.filter((lifeform) =>
       isNearSimulationArea(lifeform, this.canvas, this.camera, this.ship, LIFE_SIMULATION_MARGIN)
+      || lifeform.type === "rift-seeder"
       || (lifeform.sourcePortalId && incursionTargets.some((target) => distance(lifeform.position, target.position) <= LIFE_SIMULATION_MARGIN * 1.8)),
     );
     const activeAsteroids = this.asteroids.filter((asteroid) =>
@@ -1271,9 +1509,22 @@ export class Game {
         portalPosition: lifeform.sourcePortalId
           ? this.incursionField.getActivePortals().find((portal) => portal.id === lifeform.sourcePortalId)?.position
           : null,
+        worldSites: this.worldSites,
       });
       if (lifeform.type === "fighter") {
         this.incursionShots.push(...lifeform.consumeShots());
+      }
+      if (lifeform.type === "lantern") {
+        this.incursionShots.push(...lifeform.consumeShots());
+      }
+      if (lifeform.type === "rift-seeder") {
+        const portal = this.incursionField.getActivePortals().find((candidate) => candidate.id === lifeform.sourcePortalId);
+        lifeform.consumeDeployments().forEach((deployment, index) => {
+          if (portal && portal.devices.filter((device) => device.isAlive).length < 72) {
+            portal.devices.push(createSeededDevice(portal, deployment, index));
+          }
+        });
+        this.chewSeederAsteroids(lifeform, activeAsteroids);
       }
     });
     this.activeLifeformCount = activeLifeforms.length;
@@ -1565,8 +1816,94 @@ export class Game {
 
     const hasLateralThrusters = this.state.components.engine.upgrades?.includes("lateral-thrusters-mk1");
     if (this.input.wasPressed("KeyE") && !hasLateralThrusters && this.nearbySite && this.state.components.docking.installed) {
+      if (!this.dockedSite && this.isDockingClearancePending(this.nearbySite.id)) {
+        this.recordDockingClearanceDenied(this.nearbySite);
+        return;
+      }
       this.setDockedSite(this.dockedSite ? null : this.nearbySite);
     }
+  }
+
+  // A hub that has flagged the ship does not grant docking until the ship is
+  // cleared. "Should I wait for the patrol?" is not a question: you cannot
+  // dock, and the patrol comes to you. Pending means a patrol of that hub is
+  // intercepting, or the hub has asked for papers it has not yet seen (the
+  // desk's set of open presentations, handed in from main.js).
+  isDockingClearancePending(siteId) {
+    if (!siteId) return false;
+    const intercepting = this.activePatrolIntercepts.some((patrol) =>
+      patrol.isAlive !== false
+      && patrol.site?.id === siteId
+      && ["transit", "standoff", "approach", "hold"].includes(patrol.phase)
+      && !(patrol.flaggedDismissTimer > 0));
+    return intercepting || Boolean(this.externalClearancePending?.(siteId));
+  }
+
+  recordDockingClearanceDenied(site) {
+    const now = performance.now();
+    if (now - (this.lastClearanceDeniedAt ?? 0) < 4000) return;
+    this.lastClearanceDeniedAt = now;
+    const patrol = this.activePatrolIntercepts.find((candidate) => candidate.site?.id === site.id && candidate.isAlive !== false);
+    this.state.ledger.recordEvent(
+      "patrol.dockingBlocked",
+      { siteId: site.id, siteName: site.name, patrolName: patrol?.name ?? null },
+      { visible: false },
+    );
+  }
+
+  // The hub owns the beacon lanes around it, and its patrol has priority on
+  // them. The moment a patrol has its line on the ship it comes DOWN that
+  // line: it drops out at standoff distance from the ship, on the bearing it
+  // was already on, and takes the standoff from there — no long chase, and
+  // no ship docking before its check.
+  laneJumpPatrol(patrol, why = {}) {
+    const fromPatrol = normalizeVector(patrol.position.x - this.ship.position.x, patrol.position.y - this.ship.position.y);
+    const standoffAngle = Math.atan2(fromPatrol.y, fromPatrol.x);
+    const arrival = {
+      x: this.ship.position.x + fromPatrol.x * PATROL_ORBIT_RADIUS * 1.8,
+      y: this.ship.position.y + fromPatrol.y * PATROL_ORBIT_RADIUS * 1.8,
+    };
+    const from = { ...patrol.position };
+    patrol.position.x = arrival.x;
+    patrol.position.y = arrival.y;
+    patrol.velocity.x = 0;
+    patrol.velocity.y = 0;
+    patrol.heading = Math.atan2(this.ship.position.y - arrival.y, this.ship.position.x - arrival.x);
+    patrol.phase = "standoff";
+    patrol.standoffOrbitAngle = standoffAngle;
+    patrol.standoffTimer = 0;
+    patrol.hasArrived = false;
+    patrol.orbitAngle = null;
+    patrol.interceptClock = 0;
+    patrol.laneJumped = true;
+    this.createHunterBurst(
+      { position: arrival, radius: PATROL_ORBIT_RADIUS * 0.35, velocity: { x: 0, y: 0 } },
+      { x: -fromPatrol.x * 40, y: -fromPatrol.y * 40 },
+      { count: 22, sparkEvery: 1, color: PATROL_LANE_JUMP_FLASH_COLOR },
+    );
+    this.audio?.playScanner();
+    this.state.ledger.recordEvent(
+      "patrol.laneJumped",
+      {
+        patrolId: patrol.id, patrolName: patrol.name, siteId: patrol.site.id, siteName: patrol.site.name,
+        from: { x: Math.round(from.x), y: Math.round(from.y) }, to: { x: Math.round(arrival.x), y: Math.round(arrival.y) },
+        ...why,
+      },
+      { visible: false },
+    );
+  }
+
+  // A patrol flagged onto a flying ship takes the lane at once. Flying the
+  // intercept was tried: the line went on, the craft crawled in from wherever
+  // its loop had left it, and the arrival was a jump anyway when the timer
+  // ran out — the worst of both. A ship already at the berth is the one case
+  // the patrol still flies: it comes to the dock.
+  beginPatrolIntercept(patrol) {
+    patrol.interceptClock = 0;
+    patrol.laneJumped = false;
+    if (this.dockedSite) return;
+    if (distance(patrol.position, this.ship.position) <= PATROL_ORBIT_RADIUS * 2.4) return;
+    this.laneJumpPatrol(patrol, { reason: "flagged", range: Math.round(distance(patrol.position, this.ship.position)) });
   }
 
   tryForwardBoost(directInputSuspended) {
@@ -1708,6 +2045,7 @@ export class Game {
         id: `asteroid:${getEntityStoryId(asteroid)}`,
         targetType: "asteroid",
         targetName: getAsteroidResourceType(asteroid),
+        resourceId: getAsteroidDominantResourceId(asteroid),
         position: asteroid.position,
         radius: asteroid.radius,
       })),
@@ -1746,6 +2084,7 @@ export class Game {
           targetId: candidate.id,
           targetType: candidate.targetType,
           targetName: candidate.targetName,
+          resourceId: candidate.resourceId ?? null,
           distance: Math.round(Math.max(0, distanceToSurface)),
           x: Math.round(this.ship.position.x),
           y: Math.round(this.ship.position.y),
@@ -1929,6 +2268,7 @@ export class Game {
           reasons: result.reasons,
           siteId: site?.id ?? null,
           siteName: site?.name ?? null,
+          inspectorName: inspector?.type === "patrol" ? inspector.name ?? null : null,
           entityId: result.entityId,
           identityKind: result.identityKind,
           pilotLicenseId: result.pilotLicenseId,
@@ -1947,6 +2287,7 @@ export class Game {
           reasons: result.reasons,
           siteId: site?.id ?? null,
           siteName: site?.name ?? null,
+          inspectorName: inspector?.type === "patrol" ? inspector.name ?? null : null,
           entityId: result.entityId,
           identityKind: result.identityKind,
           pilotLicenseId: result.pilotLicenseId,
@@ -2074,6 +2415,7 @@ export class Game {
         existing.scanTimer = 0;
         existing.hasScanned = false;
         existing.orbitAngle = null;
+        this.beginPatrolIntercept(existing);
       }
 
       return true;
@@ -2111,6 +2453,7 @@ export class Game {
     });
     this.activePatrolIntercepts.push(patrol);
     markPatrolCraftStatus(this.state, siteId, "deployed");
+    this.beginPatrolIntercept(patrol);
 
     this.state.ledger.recordEvent(
       "patrol.dispatched",
@@ -2371,7 +2714,15 @@ export class Game {
           const cacheKey = getInspectionCacheKey(patrol.site, identity);
 
           const exemptSiteIds = this.state.journey?.mission?.patrolExemptSiteIds ?? [];
-          if (!this.hubInspectionCache.has(cacheKey) && !exemptSiteIds.includes(patrol.site.id)) {
+          // A ship this hub's registry already holds as cleared — released
+          // from its own lot this morning, or checked on an earlier visit —
+          // is not flagged again. The check would only clear it.
+          const knownCleared = hasRegistryStatus(this.state, {
+            registryEntityId: getRegistryEntityIdForSite(patrol.site),
+            subjectEntityId: identity.entityId,
+            status: "cleared",
+          });
+          if (!this.hubInspectionCache.has(cacheKey) && !exemptSiteIds.includes(patrol.site.id) && !knownCleared) {
             patrol.phase = "transit";
             patrol.reason = "traffic-inspection";
             patrol.flybyTarget = null;
@@ -2379,6 +2730,7 @@ export class Game {
             patrol.hasArrived = false;
             patrol.scanTimer = 0;
             patrol.hasScanned = false;
+            this.beginPatrolIntercept(patrol);
             return;
           }
         }
@@ -2492,7 +2844,22 @@ export class Game {
     // Every intercept now flies from the patrol's real position. Mission and
     // ambient dispatches use the same transit phase.
     if (patrol.phase === "transit") {
-      const transitTarget = this.getPatrolTransitTarget(patrol);
+      // Left in transit too long — the loop geometry, a rock in the way — the
+      // patrol takes the lane. Nothing may keep a flagged ship waiting at a
+      // dock it is not allowed to use.
+      patrol.interceptClock = (patrol.interceptClock ?? 0) + deltaSeconds;
+      if (!this.dockedSite && patrol.interceptClock >= PATROL_LANE_JUMP_TIMEOUT_SECONDS) {
+        this.laneJumpPatrol(patrol, { reason: "timeout" });
+        return;
+      }
+      // The transit target is a point on the hub's range ring in the ship's
+      // direction — right for a ship inbound from outside. A ship that beat the
+      // patrol to the dock is INSIDE that ring, at the hub itself, and a patrol
+      // steering for the ring parked there, out of approach range, forever:
+      // the check never ran and the mission waiting on it never moved. Docked,
+      // the ship is the target; the patrol comes to the berth and runs the
+      // check there.
+      const transitTarget = this.dockedSite ? this.ship.position : this.getPatrolTransitTarget(patrol);
       this.steerPatrolIntercept(patrol, transitTarget, PATROL_APPROACH_SPEED, deltaSeconds);
 
       if (distance(patrol.position, this.ship.position) <= PATROL_ORBIT_RADIUS * 2.4) {
@@ -2969,20 +3336,11 @@ export class Game {
       return;
     }
 
-    // Block docking at a hub while its patrol has an active intercept in progress.
-    if (!this.dockedSite && this.nearbySite) {
-      const patrol = this.playerFacingPatrol();
-      const intercepting = patrol?.site?.id === this.nearbySite.id &&
-        (patrol.phase === "standoff" || patrol.phase === "approach" || patrol.phase === "hold");
-
-      if (intercepting) {
-        this.state.ledger.recordEvent(
-          "patrol.dockingBlocked",
-          { siteId: this.nearbySite.id, siteName: this.nearbySite.name },
-          { visible: false },
-        );
-        return;
-      }
+    // A flagged ship is not docking anywhere until it is cleared — same rule
+    // as the E key.
+    if (!this.dockedSite && this.nearbySite && this.isDockingClearancePending(this.nearbySite.id)) {
+      this.recordDockingClearanceDenied(this.nearbySite);
+      return;
     }
 
     this.setDockedSite(this.dockedSite ? null : this.nearbySite);
@@ -3840,7 +4198,7 @@ export class Game {
     const fragments = this.breakAsteroid(obstacle, {
       x: tow.velocity.x + Math.cos(tow.heading) * 280,
       y: tow.velocity.y + Math.sin(tow.heading) * 280,
-    });
+    }, { brokenBy: "tow" });
 
     this.asteroids = this.asteroids.filter((asteroid) => asteroid !== obstacle);
     this.asteroids.push(...fragments);
@@ -4369,7 +4727,7 @@ export class Game {
           this.createShipSparks(shipHitAsteroid);
         }
         hitAsteroids.add(shipHitAsteroid);
-        newAsteroids.push(...this.breakAsteroid(shipHitAsteroid, this.ship.velocity, { localPlayer: true }));
+        newAsteroids.push(...this.breakAsteroid(shipHitAsteroid, this.ship.velocity, { localPlayer: true, byHull: true }));
       }
     }
 
@@ -4425,6 +4783,25 @@ export class Game {
             { count: 8, sparkEvery: 2, color: "#ff6fc4" },
           );
         }
+        return;
+      }
+
+      const struckLantern = this.lifeforms.find((lifeform) =>
+        lifeform.type === "lantern" && lifeform.isAlive && !hitHostiles.has(lifeform)
+        && circlesOverlap(bullet.position, bullet.radius, lifeform.position, lifeform.radius),
+      );
+      if (struckLantern) {
+        bullet.destroy();
+        hitHostiles.add(struckLantern);
+        struckLantern.hitLantern();
+        this.createHunterBurst(struckLantern, bullet.velocity, {
+          count: 10, sparkEvery: 2,
+          color: struckLantern.aimStage === 1 ? "#ff78c8" : "#ff4d5a",
+        });
+        this.state.ledger.recordEvent("life.lanternProvoked", {
+          stage: struckLantern.aimStage,
+          x: Math.round(struckLantern.position.x), y: Math.round(struckLantern.position.y),
+        }, { visible: false });
         return;
       }
 
@@ -4576,12 +4953,9 @@ export class Game {
 
     portals.forEach((portal) => {
       portal.devices?.filter((device) => device.isAlive).forEach((device) => {
-        if (device.type === "drag-bloom") {
-          if (distance(this.ship.position, device.position) <= device.radius && !this.shipDestroyed) {
-            const damping = Math.max(0, 1 - INCURSION_DRAG_BLOOM_DAMPING * deltaSeconds);
-            this.ship.velocity.x *= damping;
-            this.ship.velocity.y *= damping;
-          }
+        this.updateIncursionDeviceMotion(device);
+        if (device.type.endsWith("bloom")) {
+          this.applyIncursionBloom(device, deltaSeconds);
           return;
         }
 
@@ -4605,6 +4979,59 @@ export class Game {
         this.fireIncursionSentry(device, portal);
       });
     });
+  }
+
+  updateIncursionDeviceMotion(device) {
+    if (!device.motion) return;
+    const offset = Math.sin((device.pulse ?? 0) * device.motion.speed + device.motion.phase) * device.motion.distance;
+    device.position.x = device.motion.origin.x + device.motion.axis.x * offset;
+    device.position.y = device.motion.origin.y + device.motion.axis.y * offset;
+  }
+
+  applyIncursionBloom(device, deltaSeconds) {
+    if (this.shipDestroyed || distance(this.ship.position, device.position) > device.radius) return;
+    const pulseActive = device.type !== "pulse-bloom" || Math.sin((device.pulse ?? 0) * 2.4) > -0.15;
+    if (!pulseActive) return;
+    const dx = this.ship.position.x - device.position.x;
+    const dy = this.ship.position.y - device.position.y;
+    const range = Math.max(1, Math.hypot(dx, dy));
+    const nx = dx / range;
+    const ny = dy / range;
+    const force = INCURSION_BLOOM_FORCE * (device.large ? 1.3 : 1);
+
+    if (device.type === "drag-bloom") {
+      const damping = Math.max(0, 1 - INCURSION_DRAG_BLOOM_DAMPING * deltaSeconds);
+      this.ship.velocity.x *= damping; this.ship.velocity.y *= damping;
+    } else if (device.type === "slip-bloom") {
+      this.ship.velocity.x *= Math.max(0, 1 - 0.06 * deltaSeconds);
+      this.ship.velocity.y *= Math.max(0, 1 - 0.06 * deltaSeconds);
+      this.ship.environmentThrustMultiplier = Math.min(this.ship.environmentThrustMultiplier ?? 1, 0.58);
+    } else if (device.type === "gust-bloom" || device.type === "pulse-bloom") {
+      this.ship.velocity.x += nx * force * deltaSeconds; this.ship.velocity.y += ny * force * deltaSeconds;
+    } else if (device.type === "spiral-bloom") {
+      this.ship.velocity.x += -ny * force * deltaSeconds; this.ship.velocity.y += nx * force * deltaSeconds;
+    } else if (device.type === "thrust-bloom") {
+      this.ship.velocity.x *= 1 + 0.24 * deltaSeconds; this.ship.velocity.y *= 1 + 0.24 * deltaSeconds;
+    } else if (device.type === "brake-bloom") {
+      const braking = Math.max(0, 1 - 1.15 * deltaSeconds);
+      this.ship.velocity.x *= braking; this.ship.velocity.y *= braking;
+    } else if (device.type === "static-bloom") {
+      this.ship.environmentThrustMultiplier = Math.min(this.ship.environmentThrustMultiplier ?? 1, 0.78);
+      this.ship.environmentMaxSpeedMultiplier = Math.min(this.ship.environmentMaxSpeedMultiplier ?? 1, 0.72);
+    } else if (device.type === "venom-bloom") {
+      this.damageHull(INCURSION_VENOM_DAMAGE_PER_SECOND * deltaSeconds);
+    }
+  }
+
+  chewSeederAsteroids(seeder, activeAsteroids) {
+    const destroyed = activeAsteroids.filter((asteroid) => {
+      const front = { x: seeder.position.x + Math.cos(seeder.angle) * 43, y: seeder.position.y + Math.sin(seeder.angle) * 43 };
+      return circlesOverlap(front, 28, asteroid.position, asteroid.radius);
+    });
+    if (destroyed.length === 0) return;
+    const removed = new Set(destroyed);
+    const fragments = destroyed.flatMap((asteroid) => this.breakAsteroid(asteroid, seeder.velocity, { brokenBy: "rift-seeder" }));
+    this.asteroids = [...this.asteroids.filter((asteroid) => !removed.has(asteroid)), ...fragments];
   }
 
   fireIncursionSentry(device, portal) {
@@ -4679,7 +5106,7 @@ export class Game {
         if (shot.sourceType === "fighter") {
           if (!destroyedAsteroids.has(hitAsteroid)) {
             destroyedAsteroids.add(hitAsteroid);
-            asteroidFragments.push(...this.breakAsteroid(hitAsteroid, shot.velocity));
+            asteroidFragments.push(...this.breakAsteroid(hitAsteroid, shot.velocity, { brokenBy: "fighter" }));
           }
         } else {
           this.createIncursionShotImpactSparks(shot);
@@ -4688,7 +5115,7 @@ export class Game {
       }
 
       const patrolTargets = this.activePatrolIntercepts.filter((patrol) => patrol.isAlive);
-      const npcTarget = [...this.npcShips, ...this.workerShips, ...patrolTargets]
+      const npcTarget = (shot.playerOnly ? [] : [...this.npcShips, ...this.workerShips, ...patrolTargets])
         .filter((ship) => ship.isAlive)
         .filter((ship) => !shot.targetId || ship.id === shot.targetId)
         .find((ship) => circlesOverlap(shot.position, shot.radius, ship.position, ship.radius));
@@ -4740,7 +5167,7 @@ export class Game {
         this.createShipSparks({ position: shot.position, velocity: shot.velocity });
       }
       this.state.ledger.recordEvent(
-        "incursion.sentryHit",
+        shot.sourceType === "lantern" ? "life.lanternRetaliated" : "incursion.sentryHit",
         {
           portalId: shot.portalId,
           damage: shot.damage,
@@ -5053,36 +5480,43 @@ export class Game {
   }
 
   updateLifeformContacts(activeLifeforms) {
+    // A contact is something the player SAW. Before the viewport is switched
+    // on (campaign's paperwork beats) nothing is seen, so nothing is contacted;
+    // otherwise Murmur narrates rockmoss the player has no window onto. Each
+    // type contacts once, so a contact spent blind would be spent for good.
+    if (this.state.ui?.panels?.viewport?.available === false) return;
     const shipPosition = this.ship.position;
+    // And it has to be on the glass, not merely within its trigger range.
+    const onGlass = Math.max(24, Math.min(this.canvas.width, this.canvas.height) / 2 - 18);
     const contactChecks = [
       {
         type: "rockmoss",
         target: this.asteroids.find((asteroid) =>
-          asteroid.rockmoss && distance(shipPosition, asteroid.position) <= asteroid.radius + LIFEFORM_CONTACT_RANGES.rockmoss,
+          asteroid.rockmoss && distance(shipPosition, asteroid.position) <= Math.min(onGlass, asteroid.radius + LIFEFORM_CONTACT_RANGES.rockmoss),
         ),
       },
       {
         type: "lantern",
         target: activeLifeforms.find((lifeform) =>
-          lifeform.type === "lantern" && distance(shipPosition, lifeform.position) <= LIFEFORM_CONTACT_RANGES.lantern,
+          lifeform.type === "lantern" && distance(shipPosition, lifeform.position) <= Math.min(onGlass, LIFEFORM_CONTACT_RANGES.lantern),
         ),
       },
       {
         type: "skitter",
         target: activeLifeforms.find((lifeform) =>
-          lifeform.type === "skitter" && distance(shipPosition, lifeform.position) <= LIFEFORM_CONTACT_RANGES.skitter,
+          lifeform.type === "skitter" && distance(shipPosition, lifeform.position) <= Math.min(onGlass, LIFEFORM_CONTACT_RANGES.skitter),
         ),
       },
       {
         type: "threadwyrm",
         target: this.threadwyrms.find((threadwyrm) =>
-          threadwyrm.getDistanceTo(shipPosition) <= LIFEFORM_CONTACT_RANGES.threadwyrm,
+          threadwyrm.getDistanceTo(shipPosition) <= Math.min(onGlass, LIFEFORM_CONTACT_RANGES.threadwyrm),
         ),
       },
       {
         type: "drift-mouth",
         target: this.driftMouths.find((mouth) =>
-          (mouth.hasRevealed || mouth.reveal > 0.1) && distance(shipPosition, mouth.position) <= LIFEFORM_CONTACT_RANGES["drift-mouth"],
+          (mouth.hasRevealed || mouth.reveal > 0.1) && distance(shipPosition, mouth.position) <= Math.min(onGlass, LIFEFORM_CONTACT_RANGES["drift-mouth"]),
         ),
       },
     ];
@@ -5559,6 +5993,9 @@ export class Game {
     this.state.ledger.recordEvent("enemy.destroyed", {
       enemyType,
       cause,
+      // Patrols, hub guns and rock collisions kill hunters too. Anything that
+      // praises a kill has to be able to tell whose it was.
+      byPlayer: PLAYER_ATTRIBUTED_CAUSES.has(cause),
     });
   }
 
@@ -5691,6 +6128,22 @@ export class Game {
     ) {
       this.engineMisfireRemaining = effects.misfireDuration;
       this.audio?.playEngineFault(condition.stage);
+      // The flame goes out and a puff of unburnt whatever comes out instead.
+      ship.emitExhaustPuff(condition.stage === "emergency" ? 1.4 : 1);
+      // At Emergency the misfire is not a cough, it is a shove: the drive
+      // fires off-axis and the ship is put off course.
+      if (effects.misfireKick > 0) {
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const across = ship.angle + side * Math.PI / 2;
+        ship.velocity.x += Math.cos(across) * effects.misfireKick;
+        ship.velocity.y += Math.sin(across) * effects.misfireKick;
+        ship.angle += side * effects.misfireJolt * (0.6 + Math.random() * 0.8);
+      }
+      this.state.ledger.recordEvent(
+        "engine.misfired",
+        { stage: condition.stage, kicked: effects.misfireKick > 0, x: Math.round(ship.position.x), y: Math.round(ship.position.y) },
+        { visible: false },
+      );
     }
     ship.conditionThrustBlocked = this.engineMisfireRemaining > 0;
 
@@ -5922,9 +6375,27 @@ export class Game {
     };
   }
 
+  // `audioContext` doubles as attribution: `localPlayer` is the player's
+  // charge or hull, `npcMining` a company miner, `tow`/`fighter` the rest.
+  // The events below carry that, because a coach who reacts to "a rock
+  // broke" will congratulate the player on a hauler's work two screens away.
   breakAsteroid(asteroid, impactVelocity, audioContext = {}) {
     this.impactSeed += 1;
     const resourceType = getAsteroidResourceType(asteroid);
+    const resourceId = getAsteroidDominantResourceId(asteroid);
+    const brokenBy = audioContext.localPlayer
+      ? "player"
+      : audioContext.npcMining
+        ? "npc"
+        : audioContext.brokenBy ?? "world";
+    const attribution = {
+      resourceId,
+      brokenBy,
+      byPlayer: brokenBy === "player",
+      // A hull that ploughs through a rock breaks it too. The coach wants to
+      // know the difference between that and a charge.
+      method: audioContext.byHull ? "hull" : "charge",
+    };
     const sourceClaim = this.getAsteroidSourceClaim(asteroid);
     asteroid.sourceClaimId = sourceClaim?.id ?? asteroid.sourceClaimId ?? null;
     asteroid.sourceClaimName = sourceClaim?.strongestZoneName ?? asteroid.sourceClaimName ?? null;
@@ -5940,6 +6411,7 @@ export class Game {
       "asteroid.destroyed",
       {
         resourceType,
+        ...attribution,
         tier: asteroid.tier,
         finalBreak: asteroid.tier <= 1,
         radius: asteroid.radius,
@@ -5966,6 +6438,7 @@ export class Game {
           {
             sourceType: "asteroid",
             resourceType,
+            ...attribution,
             totalUnits: minedPickups.length,
             units: unitsByType,
             x: Math.round(asteroid.position.x),
@@ -7478,7 +7951,9 @@ export class Game {
     this.drawParticles(drawCamera);
     this.drawCollectorField(drawCamera);
     this.bullets.forEach((bullet) => bullet.draw(this.context, drawCamera));
-    drawVector(this.context, this.ship.position, this.ship.velocity, drawCamera);
+    if (this.state.ui?.cockpit?.velocityVector !== false) {
+      drawVector(this.context, this.ship.position, this.ship.velocity, drawCamera);
+    }
     this.scanner.draw(this.context, drawCamera, this.ship, {
       viewportBoundary: circularViewport
         ? { type: "circle", ...this.getCircularViewportGeometry() }
@@ -7489,8 +7964,16 @@ export class Game {
     // follows the cockpit phosphor as it always has. This is what makes the
     // player's company skiff read as one of Rook's craft rather than as "the
     // player's ship" in a different colour from everything around it.
-    this.ship.displayColor = this.state.ship?.displayColor ?? this.state.ui?.cockpit?.phosphorColor ?? "#7dffe0";
-    this.ship.displayFill = this.state.ship?.displayFill ?? null;
+    // The player's hull is the cockpit's primary colour and its drive the
+    // secondary, unless a hull carries its own paint.
+    const phosphor = this.state.ui?.cockpit?.phosphorColor ?? "#7dffe0";
+    this.ship.displayColor = this.state.ship?.displayColor ?? phosphor;
+    this.ship.displayFill = this.state.ship?.displayFill ?? hexToRgba(phosphor, 0.16);
+    this.ship.engineColor = this.state.ship?.engineColor ?? this.state.ui?.cockpit?.resolvedAccentColor ?? null;
+    // The engine is drawn on the hull only once it is both fitted and revealed
+    // to the cockpit — in campaign that is the beat where Rook gets it online.
+    this.ship.hasEngineFitted = Boolean(this.state.components?.engine?.installed)
+      && this.state.ui?.panels?.engine?.available !== false;
     this.ship.draw(this.context, drawCamera);
     this.context.restore();
 
@@ -7613,6 +8096,11 @@ export class Game {
     this.incursionField.getActivePortals().forEach((portal) => {
       if (isVisible(portal, canvas, camera)) {
         portal.draw(this.context, camera);
+      }
+      // Seeded devices may be thousands of units from their parent gate.
+      // Their visibility is independent of whether the gate is onscreen.
+      if (portal.devices?.some((device) => device.isAlive && isVisible({ position: device.position, radius: device.radius }, canvas, camera))) {
+        portal.drawDevices(this.context, camera);
       }
     });
   }
@@ -9426,7 +9914,7 @@ function getEntityTypeCounts(entities) {
 }
 
 function isCombatHostile(lifeform) {
-  return lifeform?.type === "hunter" || lifeform?.type === "fighter";
+  return lifeform?.type === "hunter" || lifeform?.type === "fighter" || lifeform?.type === "rift-seeder";
 }
 
 function getIncursionPortalReward(waveCount) {
@@ -9544,6 +10032,22 @@ function pseudoRandom(seed, index) {
   return value - Math.floor(value);
 }
 
+// The rock's actual dominant resource id ("iron-nickel", "copper"...), or
+// "common" for plain stone. `getAsteroidResourceType` below collapses that to
+// the two audio/visual buckets, which is no use to anything asking whether the
+// rock the player just broke was the red one.
+function getAsteroidDominantResourceId(asteroid) {
+  if (asteroid.color === WHITE_ASTEROID_COLOR || !asteroid.resources) {
+    return "common";
+  }
+
+  const dominant = Object.entries(asteroid.resources)
+    .filter(([resource]) => resource !== "stone")
+    .reduce((best, [resource, amount]) => (amount > best.amount ? { resource, amount } : best), { resource: null, amount: 0 });
+
+  return dominant.resource ?? "common";
+}
+
 function getAsteroidResourceType(asteroid) {
   if (asteroid.color === WHITE_ASTEROID_COLOR) {
     return "common";
@@ -9564,4 +10068,11 @@ function getAsteroidResourceType(asteroid) {
   // strange resources use "crystal" (higher-pitched sound); everything else "fuel".
   const CRYSTAL_AUDIO_RESOURCES = new Set(["water-ice", "methane-ice", "hydrogen", "crystal-matrix", "anomaly-shard"]);
   return CRYSTAL_AUDIO_RESOURCES.has(dominantResource) ? "crystal" : "fuel";
+}
+
+function hexToRgba(hex, alpha) {
+  const match = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
+  if (!match) return "rgba(0, 0, 0, 0)";
+  const value = parseInt(match[1], 16);
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
 }

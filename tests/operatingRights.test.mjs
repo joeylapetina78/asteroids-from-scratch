@@ -44,7 +44,7 @@ test("claimed hub ground names the hub, missing right, and clearance office", ()
   assert.equal(restriction.label, "Scrap Porch JURISDICTION");
   assert.deepEqual(restriction.detailLines, [
     "MINING RIGHTS REQUIRED",
-    "CLEAR AT YARD EXCHANGE TRAVEL AUTHORITY",
+    "CLEAR AT YARD EXCHANGE HUB AUTHORITY",
   ]);
   assert.deepEqual(restriction.color, porch.color);
   assert.equal(isPlotRestrictedForPlayer(state, controlled), true);
