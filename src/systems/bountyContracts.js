@@ -1,5 +1,5 @@
-import { getRegionProfile } from "./worldRegions.js?v=fresh-20260915-2134-e6602ab8";
-import { getZoneProfile } from "./worldZones.js?v=fresh-20260915-2134-e6602ab8";
+import { getRegionProfile } from "./worldRegions.js?v=fresh-20260916-1801-027b2ea4";
+import { getZoneProfile } from "./worldZones.js?v=fresh-20260916-1801-027b2ea4";
 
 // Bounty contracts are the combat sibling of survey runs. Where a survey asks
 // the world what ORE exists near a hub, a bounty asks where the DANGER is: the

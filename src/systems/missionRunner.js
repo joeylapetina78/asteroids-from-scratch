@@ -1,5 +1,5 @@
-import { runMissionActions } from "./missionActions.js?v=fresh-20260915-2134-e6602ab8";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260915-2134-e6602ab8";
+import { runMissionActions } from "./missionActions.js?v=fresh-20260916-1801-027b2ea4";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260916-1801-027b2ea4";
 
 export function createMissionRunner({ missionDefinition, state, actions }) {
   const beatDefs = missionDefinition.beats ?? missionDefinition.steps;
@@ -55,7 +55,11 @@ export function createMissionRunner({ missionDefinition, state, actions }) {
       },
       { visible: false },
     );
-    goToStep(missionDefinition.startBeatId ?? missionDefinition.startStepId);
+    // A mission may open at a different beat depending on how the run was
+    // started — quick start skips the interview's paperwork lessons — and the
+    // definition decides that, not the caller.
+    const chosenStart = missionDefinition.selectStartBeat?.({ state }) ?? null;
+    goToStep(chosenStart ?? missionDefinition.startBeatId ?? missionDefinition.startStepId);
   }
 
   // A "No" is its own answer. A beat that offers a decline can give it its

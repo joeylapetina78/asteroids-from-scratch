@@ -1,13 +1,13 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260915-2134-e6602ab8";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260915-2134-e6602ab8";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260915-2134-e6602ab8";
-import { modworksProcessorLesson } from "../content/missions/modworksProcessorLesson.js?v=fresh-20260915-2134-e6602ab8";
-import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260915-2134-e6602ab8";
-import { createMissionRunner } from "./missionRunner.js?v=fresh-20260915-2134-e6602ab8";
-import { runMissionActions } from "./missionActions.js?v=fresh-20260915-2134-e6602ab8";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260915-2134-e6602ab8";
-import { GLOBAL_CONSIDERATIONS } from "../content/considerations/globalConsiderations.js?v=fresh-20260915-2134-e6602ab8";
-import { ensurePanelCondition, repairPanelCondition } from "./panelMaintenance.js?v=fresh-20260915-2134-e6602ab8";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260916-1801-027b2ea4";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260916-1801-027b2ea4";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260916-1801-027b2ea4";
+import { modworksProcessorLesson } from "../content/missions/modworksProcessorLesson.js?v=fresh-20260916-1801-027b2ea4";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260916-1801-027b2ea4";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260916-1801-027b2ea4";
+import { runMissionActions } from "./missionActions.js?v=fresh-20260916-1801-027b2ea4";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260916-1801-027b2ea4";
+import { GLOBAL_CONSIDERATIONS } from "../content/considerations/globalConsiderations.js?v=fresh-20260916-1801-027b2ea4";
+import { ensurePanelCondition, repairPanelCondition } from "./panelMaintenance.js?v=fresh-20260916-1801-027b2ea4";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission, modworksProcessorLesson].map((missionDefinition) => [missionDefinition.id, missionDefinition]),
@@ -23,6 +23,7 @@ export function createJourneyDirector({
   grantContract = () => {},
   showComponent = () => {},
   dockComponent = () => {},
+  floatComponent = () => {},
   unlockHubService = () => {},
   requestAttention = () => {},
   runInspection = () => {},
@@ -468,6 +469,7 @@ export function createJourneyDirector({
       grantContract,
       hideComponent: (componentId) => showComponent(componentId, false),
       dockComponent: (componentId) => dockComponent(componentId),
+      floatComponent: (componentId) => floatComponent(componentId),
       recordEvent: (...args) => state.ledger.recordEvent(...args),
       runInspection,
       // Scripted dialogue outranks the same speaker's ambient lines (a

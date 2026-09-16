@@ -26,6 +26,11 @@ export const MISSION_ACTION_DEFINITIONS = {
     description: "Return a cockpit module to the module bay so the player must switch it on.",
     required: ["componentId"],
   },
+  floatComponent: {
+    label: "Switch Module On",
+    description: "Bring a cockpit module's display out of the bay onto the desk, at the spot the pilot keeps it, as if they had switched it on themselves.",
+    required: ["componentId"],
+  },
   offerContract: {
     label: "Offer Contract",
     description: "Open or create a contract offer through the contract system.",
@@ -206,6 +211,8 @@ function runMissionAction(action, { state, actions, missionDefinition, goToStep 
     actions.hideComponent(action.componentId);
   } else if (action.type === "dockComponent") {
     actions.dockComponent?.(action.componentId);
+  } else if (action.type === "floatComponent") {
+    actions.floatComponent?.(action.componentId);
   } else if (action.type === "offerContract") {
     actions.offerContract(action.contractId);
   } else if (action.type === "grantContract") {

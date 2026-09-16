@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260915-2134-e6602ab8";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260916-1801-027b2ea4";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -258,6 +258,10 @@ export const chapterOneInterviewMission = {
   // The two opening lines are presented before the license application. Once
   // the player submits it, the issued license lands on the desk here.
   startBeatId: "show-license",
+  // Quick start: Rook's first line is the whole cold open, and the mission
+  // itself says the second one while it turns the ship on. The flag is set by
+  // the start mode, before the mission is accepted.
+  selectStartBeat: ({ state }) => (state.journey.globalFlags?.quickStart ? "quick-start" : null),
   considerations: [
     {
       // The delivery is the mission's real end condition, and it can be met
@@ -372,6 +376,52 @@ export const chapterOneInterviewMission = {
     ...ASSESSMENT_FLIGHT_CONSIDERATIONS,
   ],
   beats: [
+    {
+      // Quick start's whole induction, in one beat. Everything the first leg
+      // needs — the papers signed and filed, the bay open, the viewport lit,
+      // the hull and locator out on the desk where the pilot keeps them, the
+      // locator already on Yard Exchange — arrives with Rook's second line,
+      // because he says he has it all right here. The engine is the one thing
+      // left racked: getting that wreck of a drive lit is still the lesson.
+      id: "quick-start",
+      objective: "Listen to Rook.",
+      helpText: "Click the finished chatter box to continue. Your papers are filed in the drawer, the bay is open and the locator is set.",
+      onEnter: [
+        { type: "setFlag", flag: "drawerRevealed" },
+        { type: "setFlag", flag: "moduleBayRevealed" },
+        { type: "setFlag", flag: "moduleBayOpened" },
+        { type: "setPaperworkFiling", isEnabled: true },
+        { type: "showComponent", componentId: "license", componentName: "License" },
+        { type: "grantContract", contractId: "rook-yard-exchange-delivery" },
+        { type: "setFlag", flag: "offerContractAccepted" },
+        { type: "filePaperwork", componentId: "license" },
+        { type: "filePaperwork", componentId: "contract" },
+        { type: "setFlag", flag: "licenseFiled" },
+        { type: "setFlag", flag: "contractFiled" },
+        { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
+        { type: "showComponent", componentId: "hull", componentName: "Hull" },
+        { type: "setFlag", flag: "hullPanelAdded" },
+        { type: "setFlag", flag: "hullPanelMoved" },
+        { type: "setComponentValue", componentId: "beaconLocator", key: "beaconMemoryIds", value: ["scrap-porch", "yard-exchange"] },
+        { type: "setComponentValue", componentId: "beaconLocator", key: "activeBeaconId", value: "yard-exchange" },
+        { type: "setComponentValue", componentId: "beaconLocator", key: "beaconLocatorUsed", value: true },
+        { type: "showComponent", componentId: "beacon-locator", componentName: "Beacon Locator" },
+        { type: "setFlag", flag: "beaconLocatorAdded" },
+        { type: "setFlag", flag: "beaconTunedToYard" },
+        { type: "openModuleBay" },
+        { type: "floatComponent", componentId: "hull" },
+        { type: "floatComponent", componentId: "beacon-locator" },
+        {
+          type: "say", speaker: "Rook",
+          text: "You wanna take to the stars, see what's out there, explore the black? You'll need a ship and the proper paperwork, and I have both right here.",
+          acknowledgement: { label: "Continue" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "goToStep", stepId: "show-engine" },
+      ],
+    },
     {
       id: "want-stars",
       objective: "Listen to Rook.",
