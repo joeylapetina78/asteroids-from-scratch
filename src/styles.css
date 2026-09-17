@@ -7512,3 +7512,356 @@ body.is-cockpit-layout.is-campaign-induction .viewport-transmission {
     transform: translateY(-50%);
   }
 }
+
+
+/* ── Sheets ───────────────────────────────────────────────────────────────── */
+
+/* Paperwork is not part of the ship. The instruments are the pilot's own,
+   one phosphor colour hand-drawn on a tube; a sheet was produced by an
+   institution with a budget, twenty years later, and looks it: flat colour
+   fields, rounded ends, one or two very large figures, small secondary type,
+   and air. Two computers from two decades on the same desk, and they are
+   told apart at arm's length.
+
+   The band is the issuer's colour (`--paper-band`, set per sheet), and it
+   is the loud part. The front carries three facts and one action. The back
+   carries the fine print, and is allowed to be dense — fine print should
+   look like fine print. */
+.paper-sheet {
+  --paper-band: #8fd3ff;
+  --paper-ink: #e2e8f3;
+  --paper-mute: #8792a8;
+  --paper-field: #0d1220;
+  display: grid;
+  gap: 0;
+  width: 300px;
+  padding: 0 0 18px;
+  border: 1px solid color-mix(in srgb, var(--paper-band) 30%, #1a2030);
+  border-radius: 16px 16px 10px 10px;
+  background: linear-gradient(180deg, #10162a, #090c14 60%);
+  color: var(--paper-ink);
+  font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.paper-sheet.license-panel {
+  width: 250px;
+}
+
+/* The band. It is also the drag handle, which is why it keeps the title
+   class; only its face changes. The band's own text is dark on the colour. */
+.paper-sheet .component-panel-title.paper-band {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 14px 16px 12px 18px;
+  border-radius: 16px 16px 0 0;
+  background: var(--paper-band);
+  color: #060810;
+}
+
+.paper-sheet .paper-band > div {
+  min-width: 0;
+}
+
+.paper-sheet .paper-band .paper-kind {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.paper-sheet .paper-band strong {
+  display: block;
+  margin-top: 3px;
+  color: #060810;
+  font-size: 1.06rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.paper-sheet .paper-band .paper-issuer {
+  display: block;
+  margin-top: 4px;
+  color: #060810;
+  font-size: 0.7rem;
+  font-weight: 600;
+  opacity: 0.78;
+}
+
+/* Controls on the band: dark pills on the colour. */
+.paper-sheet .paper-band .paper-panel-controls {
+  margin-top: 2px;
+}
+
+.paper-sheet .paper-band .paper-panel-control {
+  border: 1px solid rgba(6, 8, 16, 0.35);
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: rgba(6, 8, 16, 0.18);
+  color: #060810;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.paper-sheet .paper-band .paper-panel-control:hover,
+.paper-sheet .paper-band .paper-panel-control:focus-visible {
+  background: rgba(6, 8, 16, 0.82);
+  color: var(--paper-band);
+  outline: 0;
+}
+
+.paper-front,
+.paper-back {
+  display: grid;
+  gap: 14px;
+  padding: 16px 18px 0;
+}
+
+.paper-sheet.is-paper-flipped .paper-front,
+.paper-sheet:not(.is-paper-flipped) .paper-back {
+  display: none;
+}
+
+.paper-status {
+  justify-self: start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--paper-band) 16%, transparent);
+  color: var(--paper-band);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.paper-sheet p {
+  margin: 0;
+  color: var(--paper-mute);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.paper-back-heading {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--paper-mute);
+}
+
+/* The facts. A label over a value, stacked with air; the reward is the
+   biggest thing on the sheet and in the issuer's colour. */
+.paper-sheet .paper-facts {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.paper-sheet .paper-facts div {
+  display: grid;
+  justify-content: start;
+  gap: 2px;
+}
+
+.paper-facts dt,
+.paper-sheet .license-card-row span {
+  color: var(--paper-mute);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.paper-facts dd,
+.paper-sheet .license-card-row strong {
+  margin: 0;
+  color: #ffffff;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.paper-facts .is-reward dd {
+  color: var(--paper-band);
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* One action, full width, in the issuer's colour. */
+.paper-sheet .paper-action {
+  margin-top: 4px;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: var(--paper-band);
+  color: #060810;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.paper-sheet .paper-action:hover:not(:disabled),
+.paper-sheet .paper-action:focus-visible {
+  filter: brightness(1.12);
+  outline: 0;
+}
+
+.paper-sheet .paper-action:disabled {
+  background: color-mix(in srgb, var(--paper-band) 18%, transparent);
+  color: color-mix(in srgb, var(--paper-band) 55%, transparent);
+  cursor: default;
+  opacity: 1;
+}
+
+.paper-sheet .contract-progress {
+  gap: 6px;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--paper-field);
+  font-size: 0.72rem;
+  color: var(--paper-mute);
+}
+
+.paper-sheet .contract-progress strong {
+  color: #ffffff;
+}
+
+.paper-sheet .contract-progress-bar {
+  height: 6px;
+  background: #1a2030;
+}
+
+.paper-sheet .contract-progress-bar span {
+  background: var(--paper-band);
+}
+
+.paper-sheet .contract-payment {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--paper-field);
+}
+
+.paper-sheet .contract-payment label {
+  color: var(--paper-mute);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.paper-sheet .contract-payment input {
+  border-color: #1a2030;
+  border-radius: 8px;
+  background: #070a12;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.paper-sheet .contract-nav-button {
+  border-color: color-mix(in srgb, var(--paper-band) 40%, #1a2030);
+  color: var(--paper-band);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.paper-sheet .contract-clauses {
+  gap: 8px;
+  padding-left: 16px;
+  color: var(--paper-ink);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.paper-sheet .contract-clauses li::marker {
+  color: var(--paper-band);
+}
+
+.paper-sheet .contract-nav {
+  border-top-color: #1a2030;
+  padding-top: 10px;
+  color: var(--paper-mute);
+  font-size: 0.68rem;
+}
+
+/* The license. Name big, ref as a pill you can present, class and scope
+   side by side, the balance big in the band colour. */
+.paper-sheet .license-card {
+  gap: 14px;
+}
+
+.paper-sheet .license-card-row {
+  display: grid;
+  justify-content: start;
+  justify-items: start;
+  gap: 3px;
+}
+
+.paper-sheet .license-card-row.is-name strong {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.paper-sheet .license-card-row.is-credits strong,
+.paper-sheet #license-credits {
+  color: var(--paper-band);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.paper-facts-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.paper-sheet .identity-click-target {
+  justify-self: start;
+  border: 1px solid color-mix(in srgb, var(--paper-band) 45%, transparent);
+  border-radius: 999px;
+  padding: 5px 12px;
+  background: color-mix(in srgb, var(--paper-band) 10%, transparent);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.paper-sheet .license-toggle-row {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.paper-sheet .rights-overlay-toggle {
+  border-color: color-mix(in srgb, var(--paper-band) 45%, transparent);
+  border-radius: 999px;
+  color: var(--paper-band);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}

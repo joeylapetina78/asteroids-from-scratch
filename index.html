@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap" />
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260916-1834-1656a7ca" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260916-1905-487e0960" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -62,7 +62,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260916-1834-1656a7ca</span>
+      <span class="build-tag">build: fresh-20260916-1905-487e0960</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -964,15 +964,22 @@
       <div class="drawer-shelf">
         <div id="contract-file-stack" class="contract-file-stack" aria-label="Contract files"></div>
 
-        <div class="component-panel license-panel is-component-locked" data-panel-id="license" aria-label="Pilot license">
-          <div class="component-panel-title">
+        <!-- A sheet: paperwork from outside the ship, in the issuer's own house
+             style rather than the cockpit's. A colour band across the top says
+             who issued it and what kind of thing it is; the front carries the
+             few facts that matter at a glance, big, with air around them; the
+             back (DETAILS) carries the fine print. Every id is unchanged — the
+             flows behind the sheet do not know it was redressed. -->
+        <div class="component-panel license-panel paper-sheet is-component-locked" data-panel-id="license" aria-label="Pilot license" style="--paper-band: #6fd9c9;">
+          <div class="component-panel-title paper-band">
             <div>
+              <span class="paper-kind">Pilot License</span>
               <strong>Reach Transit Commission</strong>
-              <span>provisional flight authorization</span>
+              <span class="paper-issuer">provisional flight authorization</span>
             </div>
           </div>
-          <div class="license-card">
-            <div class="license-card-row">
+          <div class="paper-front license-card">
+            <div class="license-card-row is-name">
               <span>Pilot</span>
               <strong id="license-pilot-name">&mdash;</strong>
             </div>
@@ -980,22 +987,26 @@
               <span>Ref</span>
               <button id="license-id" data-license-id="" class="identity-click-target" type="button">&mdash;</button>
             </div>
-            <div class="license-card-row">
-              <span>Class</span>
-              <strong id="license-class">Provisional &middot; 90-Day</strong>
+            <div class="paper-facts-pair">
+              <div class="license-card-row">
+                <span>Class</span>
+                <strong id="license-class">Provisional &middot; 90-Day</strong>
+              </div>
+              <div class="license-card-row">
+                <span>Scope</span>
+                <strong id="license-scope">Visitor access</strong>
+              </div>
             </div>
-            <div class="license-card-row">
-              <span>Scope</span>
-              <strong id="license-scope">Visitor access</strong>
+            <div class="license-card-row is-credits">
+              <span>Credits</span>
+              <strong id="license-credits">0 cr</strong>
             </div>
+          </div>
+          <div class="paper-back license-card">
+            <span class="paper-back-heading">Endorsements</span>
             <div class="license-card-row">
               <span>Mining via</span>
               <strong id="license-mining-via">Rook Ind. RI&ndash;7A3</strong>
-            </div>
-            <div class="license-card-divider"></div>
-            <div class="license-card-row">
-              <span>Credits</span>
-              <strong id="license-credits">0 cr</strong>
             </div>
             <div class="license-card-row license-toggle-row">
               <span>Rights overlay</span>
@@ -1050,17 +1061,18 @@
           </div>
         </div>
 
-        <div class="component-panel contract-panel is-component-locked" data-panel-id="contract" aria-label="Contract component">
-          <div class="component-panel-title">
+        <div class="component-panel contract-panel paper-sheet is-component-locked" data-panel-id="contract" aria-label="Contract component">
+          <div class="component-panel-title paper-band">
             <div>
+              <span class="paper-kind">Contract</span>
               <strong id="contract-title">Contract</strong>
-              <span id="contract-status">no offer</span>
+              <span id="contract-issuer" class="paper-issuer">&mdash;</span>
             </div>
           </div>
-          <div class="contract-readout" aria-live="polite">
-            <span id="contract-issuer">Issuer: --</span>
+          <div class="paper-front contract-readout" aria-live="polite">
+            <span id="contract-status" class="paper-status">no offer</span>
             <p id="contract-summary">No active contract.</p>
-            <dl>
+            <dl class="paper-facts">
               <div>
                 <dt id="contract-primary-label">VIN</dt>
                 <dd id="contract-vin">--</dd>
@@ -1069,7 +1081,7 @@
                 <dt id="contract-secondary-label">Destination</dt>
                 <dd id="contract-destination">--</dd>
               </div>
-              <div>
+              <div class="is-reward">
                 <dt id="contract-tertiary-label">Reward</dt>
                 <dd id="contract-reward">0 cr</dd>
               </div>
@@ -1087,12 +1099,15 @@
               </label>
               <button id="contract-payment-max" class="contract-nav-button" type="button">Max</button>
             </div>
-            <ul id="contract-clauses" class="contract-clauses"></ul>
+            <button id="contract-accept" class="contract-button paper-action" type="button" disabled>Accept Contract</button>
           </div>
-          <button id="contract-accept" class="contract-button" type="button" disabled>Accept Contract</button>
-          <div class="contract-nav">
-            <span id="contract-nav-count">0 contracts</span>
-            <button id="contract-next" class="contract-nav-button" type="button" disabled>Next &gt;</button>
+          <div class="paper-back">
+            <span class="paper-back-heading">Terms</span>
+            <ul id="contract-clauses" class="contract-clauses"></ul>
+            <div class="contract-nav">
+              <span id="contract-nav-count">0 contracts</span>
+              <button id="contract-next" class="contract-nav-button" type="button" disabled>Next &gt;</button>
+            </div>
           </div>
         </div>
 
@@ -1109,6 +1124,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260916-1834-1656a7ca"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260916-1905-487e0960"></script>
   </body>
 </html>
