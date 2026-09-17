@@ -7960,15 +7960,19 @@ body.is-cockpit-layout .cockpit-toolbar-section-button {
 
 /* The LCD. A pane, not a button: a recessed slab tinted with the phosphor,
    the line on it in a dot-matrix face, the unlit pane visible behind the
-   type the way an LCD's ghost segments are. Fixed width; the line moves,
-   not the pane. */
+   type the way an LCD's ghost segments are. Cut to the longest line on the
+   reel (`--lcd-width`, measured), with a ceiling; the line moves, not the
+   pane. The heading of each line is in the accent, the body in the phosphor. */
 body.is-cockpit-layout .cockpit-objective.cockpit-lcd {
-  flex: 0 1 46ch;
+  flex: 0 1 auto;
+  position: relative;
   align-self: center;
   display: block;
+  width: var(--lcd-width, 32ch);
   height: 30px;
-  min-width: 18ch;
-  padding: 0 10px;
+  min-width: 22ch;
+  max-width: 64ch;
+  padding: 0 12px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 40%, #000);
   border-radius: 3px;
@@ -7986,66 +7990,61 @@ body.is-cockpit-layout .cockpit-objective.cockpit-lcd {
 
 body.is-cockpit-layout .cockpit-objective.cockpit-lcd:hover,
 body.is-cockpit-layout .cockpit-objective.cockpit-lcd[aria-expanded="true"] {
-  border-color: var(--cockpit-phosphor);
+  border-color: var(--cockpit-accent);
 }
 
+body.is-cockpit-layout .cockpit-lcd-source { display: none; }
+
 body.is-cockpit-layout .cockpit-lcd-track {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 2ch;
+  display: inline-block;
   white-space: nowrap;
   will-change: transform;
 }
 
-/* The pieces of the line, all on one baseline, none of them ellipsised: the
-   whole line is on the pane, and the pane marches to show it. */
-body.is-cockpit-layout .cockpit-lcd .cockpit-objective-line {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 1.5ch;
-  flex: none;
-  min-width: 0;
+body.is-cockpit-layout .cockpit-lcd-line {
+  white-space: nowrap;
 }
 
-body.is-cockpit-layout .cockpit-lcd #cockpit-objective-title {
-  color: var(--cockpit-phosphor);
+body.is-cockpit-layout .cockpit-lcd-line strong {
+  color: var(--cockpit-accent);
   font: inherit;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-shadow: 0 0 6px color-mix(in srgb, var(--cockpit-accent) 55%, transparent);
 }
 
-body.is-cockpit-layout .cockpit-lcd #cockpit-objective-text,
-body.is-cockpit-layout .cockpit-lcd .cockpit-objective-tasks,
-body.is-cockpit-layout .cockpit-lcd .cockpit-objective-route {
-  flex: none;
-  overflow: visible;
-  text-overflow: clip;
-  margin: 0;
-  padding: 0;
-  color: inherit;
-  font: inherit;
+/* The measuring copy: same type, never seen. */
+body.is-cockpit-layout .cockpit-lcd-measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
-body.is-cockpit-layout .cockpit-lcd .cockpit-objective-tasks,
-body.is-cockpit-layout .cockpit-lcd .cockpit-objective-route {
-  opacity: 0.72;
+/* The reel. Out to the left, then the next line in from the right. A line
+   longer than the pane's ceiling marches instead: slides to its tail, holds,
+   slides home, holds. */
+body.is-cockpit-layout .cockpit-lcd.is-walking-out .cockpit-lcd-track {
+  animation: cockpit-lcd-out 1.6s ease-in 1 forwards;
 }
 
-body.is-cockpit-layout .cockpit-lcd .cockpit-objective-tasks.is-empty,
-body.is-cockpit-layout .cockpit-lcd .cockpit-objective-route[hidden],
-body.is-cockpit-layout .cockpit-lcd .cockpit-objective-route:empty {
-  display: none;
+body.is-cockpit-layout .cockpit-lcd.is-walking-in .cockpit-lcd-track {
+  animation: cockpit-lcd-in 1.8s ease-out 1;
 }
 
-/* Marching. Too long for the pane: slide to the tail, hold, slide home,
-   hold, forever. Fits: now and then, one pass off the left and back on
-   from the right. */
-body.is-cockpit-layout .cockpit-lcd.is-overflowing .cockpit-lcd-track {
+body.is-cockpit-layout .cockpit-lcd.is-overflowing:not(.is-walking-out):not(.is-walking-in) .cockpit-lcd-track {
   animation: cockpit-lcd-march var(--lcd-march-seconds, 8s) linear infinite;
 }
 
-body.is-cockpit-layout .cockpit-lcd.is-passing .cockpit-lcd-track {
-  animation: cockpit-lcd-pass 7s linear 1;
+@keyframes cockpit-lcd-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-100% - 24px)); }
+}
+
+@keyframes cockpit-lcd-in {
+  from { transform: translateX(calc(var(--lcd-pane, 400px) + 24px)); }
+  to { transform: translateX(0); }
 }
 
 @keyframes cockpit-lcd-march {
@@ -8054,15 +8053,23 @@ body.is-cockpit-layout .cockpit-lcd.is-passing .cockpit-lcd-track {
   100% { transform: translateX(0); }
 }
 
-@keyframes cockpit-lcd-pass {
-  0% { transform: translateX(0); }
-  46% { transform: translateX(calc(-100% - 16px)); }
-  46.01% { transform: translateX(calc(var(--lcd-pane, 400px) + 16px)); }
-  100% { transform: translateX(0); }
-}
-
 @media (prefers-reduced-motion: reduce) {
   body.is-cockpit-layout .cockpit-lcd .cockpit-lcd-track { animation: none !important; }
+}
+
+/* The accent, in small doses: an open section button and the menu under
+   the cursor. */
+body.is-cockpit-layout .cockpit-toolbar-section-button.is-open,
+body.is-cockpit-layout .cockpit-toolbar-section-button[aria-expanded="true"] {
+  border-color: var(--cockpit-accent);
+  color: var(--cockpit-accent);
+  background: color-mix(in srgb, var(--cockpit-accent) 10%, rgba(1, 7, 7, 0.9));
+}
+
+body.is-cockpit-layout .cockpit-toolbar-toggle:hover,
+body.is-cockpit-layout .cockpit-toolbar-toggle.is-open {
+  border-color: var(--cockpit-accent);
+  color: var(--cockpit-accent);
 }
 
 /* Where you are: as wide as the words, never cut. */

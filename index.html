@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap" />
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260916-1941-c4cee6d3" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260916-1949-5cd151f5" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -62,7 +62,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260916-1941-c4cee6d3</span>
+      <span class="build-tag">build: fresh-20260916-1949-5cd151f5</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -322,8 +322,11 @@
             <button id="cockpit-help-toggle" class="cockpit-toolbar-section-button" type="button"
                     aria-expanded="false" aria-controls="cockpit-help-popover">Help</button>
 
+            <!-- The three spans are the feed's SOURCE, written by the game and
+                 never shown: the LCD reads them and plays them as a reel, one
+                 line at a time, on the track. -->
             <button id="cockpit-objective" class="cockpit-objective cockpit-lcd" type="button" aria-expanded="false">
-              <span class="cockpit-lcd-track">
+              <span class="cockpit-lcd-source" hidden>
                 <span class="cockpit-objective-line">
                   <strong id="cockpit-objective-title">Journey</strong>
                   <span id="cockpit-objective-text">Awaiting instructions.</span>
@@ -331,6 +334,7 @@
                 <span id="cockpit-objective-tasks" class="cockpit-objective-tasks"></span>
                 <span id="cockpit-objective-route" class="cockpit-objective-route">Open mission details</span>
               </span>
+              <span class="cockpit-lcd-track"><span class="cockpit-lcd-line"></span></span>
             </button>
 
             <span class="cockpit-toolbar-spacer"></span>
@@ -1132,6 +1136,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260916-1941-c4cee6d3"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260916-1949-5cd151f5"></script>
   </body>
 </html>
