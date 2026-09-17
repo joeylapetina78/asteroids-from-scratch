@@ -1,4 +1,4 @@
-import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260916-2047-f04aec86";
+import { FRONTIER_FREIGHT_CORRIDOR } from "./corridorArchetypes.js?v=fresh-20260916-2049-e9c47436";
 
 // A trade community is the ordinary economic neighborhood whose freight board
 // local carriers know. Long roads may connect communities physically without

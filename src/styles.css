@@ -7281,6 +7281,22 @@ body.is-campaign-cold-open .license-application {
   display: none !important;
 }
 
+/* The chambers' sockets are laid out off the chambers. With the chambers not
+   yet revealed they sat at the desk's origin, and one showed as a ring
+   peeking out of the top-left corner during the cold open. They go with
+   the chambers. */
+body.is-cockpit-layout.is-campaign-induction:not(.has-campaign-viewport) .processor-route-socket,
+body.is-cockpit-layout.is-campaign-induction:not(.has-campaign-viewport) .cargo-route-socket {
+  display: none !important;
+}
+
+/* The cold open is a voice on a dark desk. Nothing else is up yet — not the
+   status bar either; it comes on with the ship. */
+body.is-cockpit-layout.is-campaign-cold-open .cockpit-toolbar {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* A failed processor belongs to the ship's two-colour phosphor system. Amber
    made it look like an unrelated warning pasted over the newly standardized
    rack; the secondary phosphor is already the cockpit's fault/accent channel. */

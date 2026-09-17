@@ -1,5 +1,5 @@
-import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260916-2047-f04aec86";
-import { creditPayee } from "./contractTreasury.js?v=fresh-20260916-2047-f04aec86";
+import { canSpendCredits, getCredits, spendCredits } from "./accounts.js?v=fresh-20260916-2049-e9c47436";
+import { creditPayee } from "./contractTreasury.js?v=fresh-20260916-2049-e9c47436";
 
 export function createPaymentRequest({
   payableType,
