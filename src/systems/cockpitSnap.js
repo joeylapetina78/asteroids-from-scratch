@@ -36,6 +36,14 @@ export function getCockpitRingStep(scopeRadius) {
 
 // The circular docking zone over the viewport: centre, radius and ring pitch.
 // `main.js` hands the same numbers to the stylesheet.
+// How far the scope's rim sits in from the nearest edge of the glass. It was
+// 18px when a drawer lip ran along the bottom of the screen and the status
+// bar was a solid band across the top; both are gone or glass now, so the
+// scope goes to the edge. Every reader of the circle — the frame, the clip,
+// the chamber walls, the chatter's rim, the on-glass check — takes it from
+// here rather than carrying its own 18.
+export const VIEWPORT_SCOPE_MARGIN = 2;
+
 export function getCockpitScope(deskSize) {
   const width = Math.max(1, deskSize?.width ?? 1);
   const height = Math.max(1, deskSize?.height ?? 1);
