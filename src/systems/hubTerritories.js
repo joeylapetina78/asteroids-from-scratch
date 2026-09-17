@@ -1,18 +1,22 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260916-1949-5cd151f5";
-import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260916-1949-5cd151f5";
-import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260916-1949-5cd151f5";
-import { upsertPlace } from "./placeRegistry.js?v=fresh-20260916-1949-5cd151f5";
-import { WORLD_SITES } from "./worldSites.js?v=fresh-20260916-1949-5cd151f5";
-import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260916-1949-5cd151f5";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260916-2002-07db9a05";
+import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260916-2002-07db9a05";
+import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260916-2002-07db9a05";
+import { upsertPlace } from "./placeRegistry.js?v=fresh-20260916-2002-07db9a05";
+import { WORLD_SITES } from "./worldSites.js?v=fresh-20260916-2002-07db9a05";
+import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260916-2002-07db9a05";
 
 const MIN_TERRITORY_RADIUS = 1400;
 const MAX_TERRITORY_RADIUS = 12000;
 const NEIGHBOR_RADIUS_FACTOR = 0.52;
 const VISITOR_APPROACH_RADIUS = 650;
 const CLEARANCE_OFFICE_NAME = "Yard Exchange Hub Authority";
+// Territory paint is laid at low alpha over near-black, so a hue has to
+// survive being darkened. Orange does not: Scrap Porch's old [255, 145, 72]
+// went brown on the desk. The Porch is hot magenta now — the one 80s neon
+// no other hub in the Reach wears — and it stays a colour at any alpha.
 const TERRITORY_COLORS = Object.freeze({
   "yard-exchange": [62, 214, 255],
-  "scrap-porch": [255, 145, 72],
+  "scrap-porch": [255, 48, 168],
   "the-ledge": [255, 211, 82],
   "blue-lantern": [117, 137, 255],
   "morrow-shoal": [83, 224, 156],

@@ -1,9 +1,9 @@
-import { TARGET_COVERAGE_SECONDS, TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260916-1949-5cd151f5";
-import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260916-1949-5cd151f5";
-import { FIRST_REACH_CARRIER_POLICY } from "../content/transportation/firstReachNetwork.js?v=fresh-20260916-1949-5cd151f5";
-import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./worldNetworkRegistry.js?v=fresh-20260916-1949-5cd151f5";
-import { createTransportationNetwork, findTransportationRoute, maximumServiceableDistance } from "./transportationPlanning.js?v=fresh-20260916-1949-5cd151f5";
-import { getEffectiveTransportPolicy } from "./shipDrives.js?v=fresh-20260916-1949-5cd151f5";
+import { TARGET_COVERAGE_SECONDS, TRADED_FAMILIES, getInventoryPosition } from "./hubInventory.js?v=fresh-20260916-2002-07db9a05";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260916-2002-07db9a05";
+import { FIRST_REACH_CARRIER_POLICY } from "../content/transportation/firstReachNetwork.js?v=fresh-20260916-2002-07db9a05";
+import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./worldNetworkRegistry.js?v=fresh-20260916-2002-07db9a05";
+import { createTransportationNetwork, findTransportationRoute, maximumServiceableDistance } from "./transportationPlanning.js?v=fresh-20260916-2002-07db9a05";
+import { getEffectiveTransportPolicy } from "./shipDrives.js?v=fresh-20260916-2002-07db9a05";
 
 // Trade between two regions that are both being simulated as rates.
 //

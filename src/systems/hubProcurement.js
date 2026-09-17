@@ -25,19 +25,19 @@
 // existing carrier market prices and assigns it with no special case, and so a
 // hauler at either end of the relationship can take it.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260916-1949-5cd151f5";
-import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260916-1949-5cd151f5";
-import { STANDING_MINING_ORDERS, getStandingMiningDefinitions } from "./miningOperation.js?v=fresh-20260916-1949-5cd151f5";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260916-1949-5cd151f5";
-import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260916-1949-5cd151f5";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260916-1949-5cd151f5";
-import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260916-1949-5cd151f5";
-import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260916-1949-5cd151f5";
-import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260916-1949-5cd151f5";
-import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260916-1949-5cd151f5";
-import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260916-1949-5cd151f5";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260916-1949-5cd151f5";
-import { getRuntimeWorldConnections } from "./worldNetworkRegistry.js?v=fresh-20260916-1949-5cd151f5";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getPhysicalUnitsForEffective, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260916-2002-07db9a05";
+import { getImportFamilies, getInventoryPosition, getMinedFamilies } from "./hubInventory.js?v=fresh-20260916-2002-07db9a05";
+import { STANDING_MINING_ORDERS, getStandingMiningDefinitions } from "./miningOperation.js?v=fresh-20260916-2002-07db9a05";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260916-2002-07db9a05";
+import { evaluateProcurement, evaluateSupplierAsk, urgencyFromCoverage } from "./valuation.js?v=fresh-20260916-2002-07db9a05";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260916-2002-07db9a05";
+import { getActorOfferTypes, getActorProtectedCash, getActorTraits } from "./actorConfig.js?v=fresh-20260916-2002-07db9a05";
+import { BLOCKER_KIND, DIAGNOSTIC_STATE, clearBlocker, createBlocker, recordBlocker, recordDecision } from "./diagnostics.js?v=fresh-20260916-2002-07db9a05";
+import { getGoodwill, getRelationshipProjection } from "./relationshipProjections.js?v=fresh-20260916-2002-07db9a05";
+import { resolveNegotiationPolicy } from "./negotiation.js?v=fresh-20260916-2002-07db9a05";
+import { shouldActThisTick } from "./detailLevel.js?v=fresh-20260916-2002-07db9a05";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260916-2002-07db9a05";
+import { getRuntimeWorldConnections } from "./worldNetworkRegistry.js?v=fresh-20260916-2002-07db9a05";
 
 export const PROCUREMENT_STATUS = Object.freeze({
   OFFERED: "offered",       // posted, waiting for a supplier to accept

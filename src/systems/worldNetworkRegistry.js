@@ -1,5 +1,5 @@
-import { FIRST_REACH_TRADE_COMMUNITIES, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260916-1949-5cd151f5";
-import { WORLD_SITES } from "./worldSites.js?v=fresh-20260916-1949-5cd151f5";
+import { FIRST_REACH_TRADE_COMMUNITIES, FIRST_REACH_TRANSPORT_CONNECTIONS } from "../content/transportation/firstReachNetwork.js?v=fresh-20260916-2002-07db9a05";
+import { WORLD_SITES } from "./worldSites.js?v=fresh-20260916-2002-07db9a05";
 
 // The durable physical/economic graph. Authored First Reach is merely its first
 // registered history; procedural founding projects add records through the same

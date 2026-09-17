@@ -1,13 +1,13 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260916-1949-5cd151f5";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260916-1949-5cd151f5";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260916-1949-5cd151f5";
-import { modworksProcessorLesson } from "../content/missions/modworksProcessorLesson.js?v=fresh-20260916-1949-5cd151f5";
-import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260916-1949-5cd151f5";
-import { createMissionRunner } from "./missionRunner.js?v=fresh-20260916-1949-5cd151f5";
-import { runMissionActions } from "./missionActions.js?v=fresh-20260916-1949-5cd151f5";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260916-1949-5cd151f5";
-import { GLOBAL_CONSIDERATIONS } from "../content/considerations/globalConsiderations.js?v=fresh-20260916-1949-5cd151f5";
-import { ensurePanelCondition, repairPanelCondition } from "./panelMaintenance.js?v=fresh-20260916-1949-5cd151f5";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260916-2002-07db9a05";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260916-2002-07db9a05";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260916-2002-07db9a05";
+import { modworksProcessorLesson } from "../content/missions/modworksProcessorLesson.js?v=fresh-20260916-2002-07db9a05";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260916-2002-07db9a05";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260916-2002-07db9a05";
+import { runMissionActions } from "./missionActions.js?v=fresh-20260916-2002-07db9a05";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260916-2002-07db9a05";
+import { GLOBAL_CONSIDERATIONS } from "../content/considerations/globalConsiderations.js?v=fresh-20260916-2002-07db9a05";
+import { ensurePanelCondition, repairPanelCondition } from "./panelMaintenance.js?v=fresh-20260916-2002-07db9a05";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission, modworksProcessorLesson].map((missionDefinition) => [missionDefinition.id, missionDefinition]),

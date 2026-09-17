@@ -4,7 +4,7 @@ import {
   getGrazingSteerTarget,
   getGrowthScale,
   isRipe,
-} from "../systems/grazing.js?v=fresh-20260916-1949-5cd151f5";
+} from "../systems/grazing.js?v=fresh-20260916-2002-07db9a05";
 
 // How hard a grazer commits once it has locked onto food. Idle wandering keeps
 // the old dreamy steering; a creature crossing a field to a meal does not.
