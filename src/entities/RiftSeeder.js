@@ -1,4 +1,4 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260916-2054-7f234196";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260917-1715-cca5018f";
 
 // This is an industrial siege craft, not a fighter. Its mass and saw-mouth
 // should read as patient, inevitable machinery rather than a fast fly-by.

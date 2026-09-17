@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260916-2054-7f234196";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260917-1715-cca5018f";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -330,6 +330,33 @@ export const chapterOneInterviewMission = {
       ],
     },
     {
+      // Quick start's engine lesson, the hull lesson's shape.
+      id: "qs-engine-module-added",
+      fromBeat: "qs-engine-fitted",
+      throughBeat: "qs-engine-fitted",
+      eventType: "cockpit.moduleToggled",
+      payloadEquals: { componentId: "engine", expanded: true },
+      setFlag: "enginePanelAdded",
+      once: true,
+      actions: [
+        {
+          type: "say",
+          speaker: "Rook",
+          text: "That's it. Now drag it over by the hull.",
+        },
+      ],
+    },
+    {
+      id: "qs-engine-panel-moved",
+      fromBeat: "qs-engine-fitted",
+      throughBeat: "qs-engine-fitted",
+      eventType: "component.dragged",
+      payloadEquals: { componentId: "engine" },
+      setFlag: "enginePanelMoved",
+      once: true,
+      actions: [],
+    },
+    {
       // Once floating, a cockpit module is an ordinary draggable panel, so the
       // hull CAN satisfy a drag gate here — unlike in the bay, where it never
       // could.
@@ -385,19 +412,12 @@ export const chapterOneInterviewMission = {
       // left racked: getting that wreck of a drive lit is still the lesson.
       id: "quick-start",
       objective: "Listen to Rook.",
-      helpText: "Click the finished chatter box to continue. Your papers are filed in the drawer, the bay is open and the locator is set.",
+      helpText: "Click the finished chatter box to continue.",
       onEnter: [
         { type: "setFlag", flag: "drawerRevealed" },
         { type: "setFlag", flag: "moduleBayRevealed" },
         { type: "setFlag", flag: "moduleBayOpened" },
         { type: "setPaperworkFiling", isEnabled: true },
-        { type: "showComponent", componentId: "license", componentName: "License" },
-        { type: "grantContract", contractId: "rook-yard-exchange-delivery" },
-        { type: "setFlag", flag: "offerContractAccepted" },
-        { type: "filePaperwork", componentId: "license" },
-        { type: "filePaperwork", componentId: "contract" },
-        { type: "setFlag", flag: "licenseFiled" },
-        { type: "setFlag", flag: "contractFiled" },
         { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
         // The two chambers too: the hold is the hull's and works; the
         // processor chamber is the hull's but the unit in it died in the
@@ -424,7 +444,102 @@ export const chapterOneInterviewMission = {
       ],
       onAcknowledge: [
         { type: "clearMessage" },
-        { type: "goToStep", stepId: "show-engine" },
+        { type: "goToStep", stepId: "qs-rundown" },
+      ],
+    },
+    {
+      // The papers, out on the glass: the license the Authority signed for
+      // them at the door, and Rook's contract, unsigned. Rook gives the
+      // rundown over them. Nothing here teaches filing; the sheets stay out
+      // once signed and it is the player's to work out how to put them away.
+      id: "qs-rundown",
+      objective: "Listen to Rook.",
+      helpText: "Click the finished chatter box to continue.",
+      onEnter: [
+        { type: "showComponent", componentId: "license", componentName: "License" },
+        { type: "placePaperworkOnDesk", componentId: "license" },
+        { type: "offerContract", contractId: "rook-yard-exchange-delivery" },
+        {
+          type: "say", speaker: "Rook",
+          text: "Here's how it is. The Authority put you on the labor roll. Nobody asked you, and nobody's asking why you're here—I'm not, anyway. What I've got is a ship that needs flying, and what you've got is nothing else on.",
+          acknowledgement: { label: "Continue" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "goToStep", stepId: "qs-sign" },
+      ],
+    },
+    {
+      id: "qs-sign",
+      objective: "Sign Rook's contract.",
+      tasks: [
+        { label: "Accept the delivery contract", flag: "offerContractAccepted", attention: "element:contract-accept" },
+      ],
+      helpText:
+        "Rook's contract is on the glass beside your license. Press Accept Contract on it. The job pays when this hull docks at Yard Exchange and is powered down.",
+      onEnter: [
+        {
+          type: "say", speaker: "Rook",
+          text: "And it's a sweet gig, believe me. Pass one test: get that scrapped hull running and over to Yard Exchange, so the Authority sees she flies. After that they'll let her go for a steal, and you're a contractor with Rook Industries—I've got plenty more work where this came from. Sign the paperwork and let's get going.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "contract.accepted",
+          payloadEquals: { contractId: "rook-yard-exchange-delivery" },
+          setFlag: "offerContractAccepted",
+          actions: [{ type: "clearMessage" }],
+          delayMs: 900,
+          nextStepId: "qs-fit-engine",
+        },
+      ],
+    },
+    {
+      id: "qs-fit-engine",
+      objective: "Listen to Rook.",
+      helpText: "Click the finished chatter box to continue.",
+      onEnter: [
+        {
+          type: "say", speaker: "Rook",
+          text: "Good. Now—I think I can get this thing going. She just needs a drive. Let me put one in.",
+          acknowledgement: { label: "Continue" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "goToStep", stepId: "qs-engine-fitted" },
+      ],
+    },
+    {
+      // The one lesson quick start keeps: what the module bay is. The drive
+      // goes in and its control module appears in the bay, racked; the
+      // player brings its display out and puts it by the hull's.
+      id: "qs-engine-fitted",
+      objective: "Bring the Engine display out.",
+      tasks: [
+        { label: "Click the Engine module's face", flag: "enginePanelAdded", attention: "panel:engine" },
+        { label: "Drag the display over by the hull", flag: "enginePanelMoved", attention: "panel:engine" },
+      ],
+      helpText:
+        "The ENGINE control module is racked in the module bay on the left, under the hull and the locator. Click its face to bring the display out onto the desk, then drag the display over beside the hull readout.",
+      onEnter: [
+        { type: "showComponent", componentId: "engine", componentName: "Engine" },
+        { type: "dockComponent", componentId: "engine" },
+        { type: "openModuleBay" },
+        {
+          type: "say", speaker: "Rook",
+          text: "There. Drive's in—well, it's a drive. See the module bay on the left? Every part of this ship has a control module racked in there; that's the drive's, under the hull's. Click its face to bring the display out, then drag it over by the hull readout where you can keep an eye on it.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "component.dragged",
+          requiresFlags: ["enginePanelAdded", "enginePanelMoved"],
+          actions: [{ type: "clearMessage" }],
+          delayMs: 600,
+          nextStepId: "power-on",
+        },
       ],
     },
     {

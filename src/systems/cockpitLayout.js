@@ -11,7 +11,7 @@
 // Removed rather than repaired: instruments are placed by hand now, onto the
 // grid, and that is the whole model. See docs/panel-mounting-standard.md.
 
-import { normalizeDustSettings } from "./dustDials.js?v=fresh-20260916-2054-7f234196";
+import { normalizeDustSettings } from "./dustDials.js?v=fresh-20260917-1715-cca5018f";
 
 export const DEFAULT_COCKPIT_PHOSPHOR = "#7dffe0";
 
