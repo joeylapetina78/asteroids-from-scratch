@@ -7865,3 +7865,59 @@ body.is-cockpit-layout.is-campaign-induction .viewport-transmission {
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+
+/* The split pill on a sheet's band: two halves of one control, a hairline
+   between them. Left turns the sheet over (+ / −), right files it (→). A
+   sheet with no back has only the arrow, and the pill is just the arrow. */
+.paper-sheet .paper-band .paper-pill,
+.paper-panel .paper-pill {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid rgba(6, 8, 16, 0.35);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(6, 8, 16, 0.18);
+}
+
+.paper-sheet .paper-band .paper-pill .paper-panel-control {
+  border: 0;
+  border-radius: 0;
+  min-width: 30px;
+  padding: 4px 10px;
+  background: transparent;
+  color: #060810;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.paper-sheet .paper-band .paper-pill .paper-panel-control + .paper-panel-control {
+  border-left: 1px solid rgba(6, 8, 16, 0.35);
+}
+
+.paper-sheet .paper-band .paper-pill .paper-panel-control:hover:not(:disabled),
+.paper-sheet .paper-band .paper-pill .paper-panel-control:focus-visible {
+  background: rgba(6, 8, 16, 0.82);
+  color: var(--paper-band);
+}
+
+.paper-sheet .paper-band .paper-pill .paper-panel-control:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* The same pill on the field guide, in its own (phosphor-bordered) idiom. */
+.paper-panel:not(.paper-sheet) .paper-pill {
+  border-color: rgba(115, 210, 255, 0.34);
+  background: rgba(115, 210, 255, 0.07);
+}
+
+.paper-panel:not(.paper-sheet) .paper-pill .paper-file-button {
+  border: 0;
+  border-radius: 0;
+  padding: 3px 10px;
+  background: transparent;
+  font-size: 0.86rem;
+  font-weight: 700;
+}

@@ -1,4 +1,4 @@
-import { chapterOneRoute, yardExchangeServices } from "../storyWorld.js?v=fresh-20260916-1905-487e0960";
+import { chapterOneRoute, yardExchangeServices } from "../storyWorld.js?v=fresh-20260916-1919-2bf50e29";
 
 // The deal. The hull the player just delivered is the Authority's: a wreck out
 // of impound, released to Rook for one flight so the Authority could see it
