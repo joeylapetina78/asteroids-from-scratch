@@ -22,7 +22,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap" />
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260917-1740-9ef1ac32" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260917-1750-23723d68" />
   </head>
   <body>
     <!-- The door. One form, two faces: the Commission's flight application
@@ -44,7 +44,7 @@
           <span class="license-form-meta">Form RTC&ndash;109&ndash;P &middot; First Reach Zone &middot; Sponsored Entry Class</span>
         </header>
         <header class="license-form-header is-roll-face">
-          <span class="labor-roll-stamp" aria-hidden="true">Entered</span>
+          <span class="labor-roll-stamp is-entry" aria-hidden="true">Entered</span>
           <span class="license-form-org">SCRAP PORCH HUB AUTHORITY &mdash; LABOR ROLL</span>
           <strong class="license-form-title">Entry of Indentured Service</strong>
           <span class="license-form-meta">Form HA&ndash;14&ndash;W &middot; Residents&rsquo; Roll &middot; Entry is not optional</span>
@@ -87,9 +87,9 @@
               <span>Standing</span>
               <strong>Without means &middot; Entered on the roll</strong>
             </div>
-            <div class="license-readonly-item">
+            <div class="license-readonly-item is-assignment-field">
               <span>Assigned to</span>
-              <strong>Rook Industries &middot; Operator of record</strong>
+              <strong><span class="labor-roll-blank" aria-hidden="true">&mdash;</span><span class="labor-roll-stamp is-assignment">Rook Industries</span></strong>
             </div>
             <div class="license-readonly-item">
               <span>Term</span>
@@ -113,7 +113,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260917-1740-9ef1ac32</span>
+      <span class="build-tag">build: fresh-20260917-1750-23723d68</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -1187,6 +1187,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260917-1740-9ef1ac32"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260917-1750-23723d68"></script>
   </body>
 </html>

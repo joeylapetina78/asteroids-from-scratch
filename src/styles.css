@@ -2642,21 +2642,88 @@ html.is-quick-start .license-submit-button:focus-visible {
   color: #ffffff;
 }
 
+/* The stamps. Neither is on the roll when it is handed over: ENTERED comes
+   down when the name goes on, and the operator's stamp lands in the
+   assignment box a beat after. Each drops in from above the page — big,
+   then down onto the paper with a little overshoot. */
 .labor-roll-stamp {
-  position: absolute;
-  top: 18px;
-  right: 22px;
+  display: inline-block;
   padding: 4px 10px;
   border: 2px solid rgba(255, 48, 168, 0.7);
   border-radius: 3px;
-  color: rgba(255, 48, 168, 0.8);
+  color: rgba(255, 48, 168, 0.85);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  transform: rotate(-9deg);
   pointer-events: none;
   mix-blend-mode: screen;
+  opacity: 0;
+  transform: rotate(-9deg) scale(2.6);
+}
+
+.labor-roll-stamp.is-entry {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+}
+
+/* Rook's, in Rook's colour, sitting where the blank was. */
+.labor-roll-stamp.is-assignment {
+  position: absolute;
+  top: -4px;
+  left: -2px;
+  border-color: rgba(255, 159, 90, 0.8);
+  color: rgba(255, 159, 90, 0.92);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  transform: rotate(-4deg) scale(2.6);
+}
+
+.is-assignment-field strong {
+  position: relative;
+  display: block;
+  min-height: 1.4em;
+}
+
+.labor-roll-blank {
+  color: #596273;
+}
+
+.license-application.is-assigned .labor-roll-blank {
+  visibility: hidden;
+}
+
+.license-application.is-entered .labor-roll-stamp.is-entry {
+  animation: labor-roll-stamp-drop 0.34s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+  --stamp-tilt: -9deg;
+}
+
+.license-application.is-assigned .labor-roll-stamp.is-assignment {
+  animation: labor-roll-stamp-drop 0.34s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+  --stamp-tilt: -4deg;
+}
+
+@keyframes labor-roll-stamp-drop {
+  0% { opacity: 0; transform: rotate(var(--stamp-tilt, -9deg)) scale(2.6); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: rotate(var(--stamp-tilt, -9deg)) scale(1); }
+}
+
+/* While it is being stamped the roll is out of the resident's hands. */
+.license-application.is-stamping .license-form-field input,
+.license-application.is-stamping .license-submit-button {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .labor-roll-stamp { transition: opacity 0.2s; }
+  .license-application.is-entered .labor-roll-stamp.is-entry,
+  .license-application.is-assigned .labor-roll-stamp.is-assignment {
+    animation: none;
+    opacity: 1;
+    transform: rotate(var(--stamp-tilt, -9deg)) scale(1);
+  }
 }
 
 .license-form-shell {
