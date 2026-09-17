@@ -8101,3 +8101,24 @@ body.is-cockpit-layout .cockpit-help-popover {
   right: auto;
   left: 8px;
 }
+
+
+/* ── The two bays run the full height; the bar fits between them ────────────
+   The bays used to start under the status bar and the bar ran the whole
+   width, most of it empty. Now the bays go top to bottom, and the bar is cut
+   to the gap between their inner edges — open or shut, it is always that
+   width, so the bays can be as tall as the glass and the bar has no slack. */
+body.is-cockpit-layout .cockpit-module-tray,
+body.is-cockpit-layout .paperwork-drawer {
+  top: 6px;
+  bottom: 6px;
+}
+
+body.is-cockpit-layout .cockpit-toolbar {
+  inset: 6px calc(var(--panel-content-full) + 10px) auto;
+}
+
+/* The help card hangs under its button, which is now at the bar's left end. */
+body.is-cockpit-layout .cockpit-help-popover {
+  left: calc(var(--panel-content-full) + 10px);
+}
