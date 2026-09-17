@@ -16,7 +16,7 @@
 //
 // It owns nothing and decides nothing. It reads, records, and reports.
 
-import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260917-1750-23723d68";
+import { appendBoundedHistory } from "./boundedHistory.js?v=fresh-20260917-1758-ebd45ea2";
 
 export const FLEET_SAMPLE_INTERVAL_MS = 10_000;
 const MAX_SAMPLES = 720;   // two hours at the sample interval

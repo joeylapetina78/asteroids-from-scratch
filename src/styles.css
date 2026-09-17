@@ -2,6 +2,12 @@
   box-sizing: border-box;
 }
 
+html {
+  /* The page never scrolls: the cockpit is the window. Declared on the root
+     so not even the frame before the cockpit class lands can grow bars. */
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   min-height: 100vh;

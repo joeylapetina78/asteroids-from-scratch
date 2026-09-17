@@ -1,6 +1,6 @@
-import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260917-1750-23723d68";
-import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260917-1750-23723d68";
-import { normalizeDustSettings } from "./dustDials.js?v=fresh-20260917-1750-23723d68";
+import { createVectorResourceFill, drawResourceShape, getVectorResourceOutline } from "../entities/ResourcePickup.js?v=fresh-20260917-1758-ebd45ea2";
+import { RESOURCE_COLOR, clampDensity, getResourceDensity, getResourceShape } from "./resourceDefinitions.js?v=fresh-20260917-1758-ebd45ea2";
+import { normalizeDustSettings } from "./dustDials.js?v=fresh-20260917-1758-ebd45ea2";
 
 const UNIT_SIZE = 22;
 const GRAVITY = 780;

@@ -1,9 +1,9 @@
-import { DETAIL, DETAIL_DEFAULTS, detailCadence, resolveDetailLevel, getRuntimeSimulationSites } from "./detailLevel.js?v=fresh-20260917-1750-23723d68";
-import { DISTANT_DEFAULTS } from "./distantSimulation.js?v=fresh-20260917-1750-23723d68";
-import { listHubIds } from "./hubActors.js?v=fresh-20260917-1750-23723d68";
-import { describeObservation, estimateFlowDrift } from "./regionFlow.js?v=fresh-20260917-1750-23723d68";
-import { getEconomySamples } from "./economySampler.js?v=fresh-20260917-1750-23723d68";
-import { ensureDistantSimulationState } from "./simulationMode.js?v=fresh-20260917-1750-23723d68";
+import { DETAIL, DETAIL_DEFAULTS, detailCadence, resolveDetailLevel, getRuntimeSimulationSites } from "./detailLevel.js?v=fresh-20260917-1758-ebd45ea2";
+import { DISTANT_DEFAULTS } from "./distantSimulation.js?v=fresh-20260917-1758-ebd45ea2";
+import { listHubIds } from "./hubActors.js?v=fresh-20260917-1758-ebd45ea2";
+import { describeObservation, estimateFlowDrift } from "./regionFlow.js?v=fresh-20260917-1758-ebd45ea2";
+import { getEconomySamples } from "./economySampler.js?v=fresh-20260917-1758-ebd45ea2";
+import { ensureDistantSimulationState } from "./simulationMode.js?v=fresh-20260917-1758-ebd45ea2";
 
 // What the level-of-detail boundary is currently doing, as a read model.
 //
