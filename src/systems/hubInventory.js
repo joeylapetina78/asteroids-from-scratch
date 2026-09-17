@@ -10,14 +10,14 @@
 // draws from a family and substitutes freely within it. A hub does not need
 // iron-nickel specifically; it needs structural material.
 
-import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260916-1919-2bf50e29";
-import { recordAcquisition } from "./costBasis.js?v=fresh-20260916-1919-2bf50e29";
-import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260916-1919-2bf50e29";
-import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260916-1919-2bf50e29";
-import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260916-1919-2bf50e29";
+import { getEffectiveMaterialUnits, getInstitutionalFeedstockTradeValue, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260916-1920-a4ac4329";
+import { recordAcquisition } from "./costBasis.js?v=fresh-20260916-1920-a4ac4329";
+import { NEED_KIND, POPULATION_NEEDS, POPULATION_PROFILES, getScaledDemandInterval } from "./populationDemand.js?v=fresh-20260916-1920-a4ac4329";
+import { settlementExtractionDefinitions } from "../content/economy/firstReachSettlements.js?v=fresh-20260916-1920-a4ac4329";
+import { listGeneratedExtractionDefinitions } from "./settlementSeedPipeline.js?v=fresh-20260916-1920-a4ac4329";
 // The store only — deliberately not `miningOperation`, which imports THIS
 // module. See `miningOrderBook` for why the derivation lives elsewhere.
-import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260916-1919-2bf50e29";
+import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260916-1920-a4ac4329";
 
 // How many seconds of consumption a hub tries to keep on the shelf. Higher
 // means fatter buffers and less frequent, larger orders.
