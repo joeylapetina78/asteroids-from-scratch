@@ -7896,10 +7896,15 @@ body.is-cockpit-layout.is-campaign-induction .viewport-transmission {
   border-left: 1px solid rgba(6, 8, 16, 0.35);
 }
 
-/* The filing half is a solid triangle toward the bay, drawn a touch small
-   so it sits on the same optical line as the + beside it. */
-.paper-pill .paper-file-button {
-  font-size: 0.66rem;
+/* Both halves carry a drawn glyph of the same stroke, centred. */
+.paper-pill .paper-panel-control svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.paper-pill .paper-panel-control {
+  display: grid;
+  place-items: center;
 }
 
 .paper-sheet .paper-band .paper-pill .paper-panel-control:hover:not(:disabled),
