@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=fresh-20260916-1926-2e0f7c15";
+import { chapterOneRoute, storyZones, yardExchangeServices } from "../storyWorld.js?v=fresh-20260916-1933-11cfe7e0";
 
 // First Red Run. The player owns a ship, owes Mako, and has a miner, a beacon
 // locator, and no scanner. Rook's job is to get five red ore into the hold and

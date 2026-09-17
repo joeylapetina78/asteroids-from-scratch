@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap" />
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260916-1926-2e0f7c15" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260916-1933-11cfe7e0" />
   </head>
   <body>
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
@@ -62,7 +62,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260916-1926-2e0f7c15</span>
+      <span class="build-tag">build: fresh-20260916-1933-11cfe7e0</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -312,20 +312,28 @@
                readout owns the width, because that is what a player needs at a
                glance; layout controls are housekeeping and live behind the
                control at the right end. -->
+          <!-- The status bar, left to right: the two section buttons, then the
+               mission feed on a fixed-width LCD (it marches when the line is
+               longer than the pane), then where you are (relocated here by
+               main.js, as wide as it needs), then air, then the layout menu. -->
           <header class="cockpit-toolbar" aria-label="Mission status and layout controls">
-            <button id="cockpit-objective" class="cockpit-objective" type="button" aria-expanded="false">
-              <span class="cockpit-objective-line">
-                <strong id="cockpit-objective-title">Journey</strong>
-                <span id="cockpit-objective-text">Awaiting instructions.</span>
-              </span>
-              <span id="cockpit-objective-tasks" class="cockpit-objective-tasks"></span>
-              <span id="cockpit-objective-route" class="cockpit-objective-route">Open mission details</span>
-            </button>
-
             <button id="cockpit-log-toggle" class="cockpit-toolbar-section-button" type="button"
                     aria-expanded="false" aria-controls="journey-log-panel">Log</button>
             <button id="cockpit-help-toggle" class="cockpit-toolbar-section-button" type="button"
                     aria-expanded="false" aria-controls="cockpit-help-popover">Help</button>
+
+            <button id="cockpit-objective" class="cockpit-objective cockpit-lcd" type="button" aria-expanded="false">
+              <span class="cockpit-lcd-track">
+                <span class="cockpit-objective-line">
+                  <strong id="cockpit-objective-title">Journey</strong>
+                  <span id="cockpit-objective-text">Awaiting instructions.</span>
+                </span>
+                <span id="cockpit-objective-tasks" class="cockpit-objective-tasks"></span>
+                <span id="cockpit-objective-route" class="cockpit-objective-route">Open mission details</span>
+              </span>
+            </button>
+
+            <span class="cockpit-toolbar-spacer"></span>
 
             <button id="cockpit-toolbar-toggle" class="cockpit-toolbar-toggle" type="button"
                     aria-expanded="false" aria-controls="cockpit-toolbar-menu" aria-label="Layout controls">
@@ -1124,6 +1132,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260916-1926-2e0f7c15"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260916-1933-11cfe7e0"></script>
   </body>
 </html>
