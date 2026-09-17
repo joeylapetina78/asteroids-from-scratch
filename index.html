@@ -9,21 +9,45 @@
       if (devStart === "explorer" || devStart === "panorama") {
         document.documentElement.classList.add("is-free-play-start");
       }
+      // Quick start's door is the Porch's labor roll, not the Commission's
+      // application. Decided here, before anything paints, so the roll is the
+      // first thing seen and not a face swapped onto the wrong form a second
+      // after boot.
+      if (devStart === "quickstart") {
+        document.documentElement.classList.add("is-quick-start");
+      }
     </script>
     <!-- Chatter type: an early-PC terminal face. Falls back to the local
          monospace stack if the font host is unreachable. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap" />
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260917-1723-4fe2dd07" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260917-1740-9ef1ac32" />
   </head>
   <body>
+    <!-- The door. One form, two faces: the Commission's flight application
+         (campaign) and the Porch's labor roll (quick start). The face is
+         chosen by a class the boot script sets before first paint; the
+         inputs and the submit are shared, so the game behind the door does
+         not know which face was shown.
+
+         The roll is the opening image. Everything the player will learn
+         about their standing is already on it: a resident of Scrap Porch,
+         without means, entered on the roll and assigned to an operator, for
+         a term that ends when the roll says so. How they came to it is not
+         recorded — not by the Authority, and not by us. -->
     <div id="license-application" class="license-application" aria-label="Provisional flight license application">
       <div class="license-form-shell">
-        <header class="license-form-header">
+        <header class="license-form-header is-rtc-face">
           <span class="license-form-org">REACH TRANSIT COMMISSION &mdash; OUTER OPERATIONS DIVISION</span>
           <strong class="license-form-title">Provisional Flight Authorization</strong>
           <span class="license-form-meta">Form RTC&ndash;109&ndash;P &middot; First Reach Zone &middot; Sponsored Entry Class</span>
+        </header>
+        <header class="license-form-header is-roll-face">
+          <span class="labor-roll-stamp" aria-hidden="true">Entered</span>
+          <span class="license-form-org">SCRAP PORCH HUB AUTHORITY &mdash; LABOR ROLL</span>
+          <strong class="license-form-title">Entry of Indentured Service</strong>
+          <span class="license-form-meta">Form HA&ndash;14&ndash;W &middot; Residents&rsquo; Roll &middot; Entry is not optional</span>
         </header>
         <form id="license-form" class="license-form" autocomplete="off" novalidate>
           <div class="license-form-row">
@@ -36,7 +60,7 @@
               <input id="license-last-name" type="text" maxlength="32" placeholder="As registered" spellcheck="false" value="Franks" />
             </div>
           </div>
-          <div class="license-form-readonly">
+          <div class="license-form-readonly is-rtc-face">
             <div class="license-readonly-item">
               <span>Issuing Body</span>
               <strong>Reach Transit Commission</strong>
@@ -54,15 +78,42 @@
               <strong>Provisional &middot; 90-Day Review</strong>
             </div>
           </div>
-          <p class="license-form-notice">By submitting this application, you request provisional flight privileges in First Reach under Rook Industries sponsorship and agree to keep those privileges in good standing. Mining rights are extended only through the sponsoring operator&rsquo;s active Commission permit. Unauthorized zone entry is logged and reviewed at next hub contact.</p>
+          <div class="license-form-readonly is-roll-face">
+            <div class="license-readonly-item">
+              <span>Resident of</span>
+              <strong>Scrap Porch &middot; First Reach</strong>
+            </div>
+            <div class="license-readonly-item">
+              <span>Standing</span>
+              <strong>Without means &middot; Entered on the roll</strong>
+            </div>
+            <div class="license-readonly-item">
+              <span>Assigned to</span>
+              <strong>Rook Industries &middot; Operator of record</strong>
+            </div>
+            <div class="license-readonly-item">
+              <span>Term</span>
+              <strong>Until the roll releases you</strong>
+            </div>
+            <div class="license-readonly-item">
+              <span>Flight papers</span>
+              <strong>RTC Provisional &middot; issued with the assignment</strong>
+            </div>
+            <div class="license-readonly-item">
+              <span>Cause of entry</span>
+              <strong>Not recorded</strong>
+            </div>
+          </div>
+          <p class="license-form-notice is-rtc-face">By submitting this application, you request provisional flight privileges in First Reach under Rook Industries sponsorship and agree to keep those privileges in good standing. Mining rights are extended only through the sponsoring operator&rsquo;s active Commission permit. Unauthorized zone entry is logged and reviewed at next hub contact.</p>
+          <p class="license-form-notice is-roll-face">The Porch keeps no one who cannot keep themselves. A resident entered on this roll is assigned to an operator of record and works the assignment until the roll releases them. Flight papers are issued with the assignment so that it can be worked, and are held under the operator&rsquo;s Commission permit. The Authority does not record how a resident came to the roll, and does not ask.</p>
           <p id="license-form-error" class="license-form-error" hidden>First and last name required to process application.</p>
-          <button type="submit" class="license-submit-button">Submit Application</button>
+          <button type="submit" class="license-submit-button"><span class="is-rtc-face">Submit Application</span><span class="is-roll-face">Enter my name on the roll</span></button>
         </form>
       </div>
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260917-1723-4fe2dd07</span>
+      <span class="build-tag">build: fresh-20260917-1740-9ef1ac32</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -1136,6 +1187,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260917-1723-4fe2dd07"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260917-1740-9ef1ac32"></script>
   </body>
 </html>

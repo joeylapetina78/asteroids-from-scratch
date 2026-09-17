@@ -2605,6 +2605,60 @@ body:not(.is-cockpit-layout) .journey-panel {
   display: none;
 }
 
+/* Which face the door wears. The class is on the root from the boot script,
+   before first paint; nothing swaps after. */
+html.is-quick-start .is-rtc-face,
+html:not(.is-quick-start) .is-roll-face {
+  display: none !important;
+}
+
+/* The roll. The Commission's application is a clean municipal form; the
+   roll is the Porch's — its own colour at the top, and a stamp already on
+   it before the name is, because the entry was decided before the resident
+   was asked. */
+html.is-quick-start .license-form-shell {
+  position: relative;
+  border-color: rgba(255, 48, 168, 0.36);
+}
+
+html.is-quick-start .license-form-org {
+  color: #ff30a8;
+}
+
+html.is-quick-start .license-form-field input:focus {
+  border-color: rgba(255, 48, 168, 0.6);
+}
+
+html.is-quick-start .license-submit-button {
+  background: rgba(255, 48, 168, 0.1);
+  border-color: rgba(255, 48, 168, 0.5);
+  color: #ff8fd0;
+}
+
+html.is-quick-start .license-submit-button:hover,
+html.is-quick-start .license-submit-button:focus-visible {
+  background: rgba(255, 48, 168, 0.2);
+  border-color: rgba(255, 48, 168, 0.85);
+  color: #ffffff;
+}
+
+.labor-roll-stamp {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  padding: 4px 10px;
+  border: 2px solid rgba(255, 48, 168, 0.7);
+  border-radius: 3px;
+  color: rgba(255, 48, 168, 0.8);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  transform: rotate(-9deg);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
 .license-form-shell {
   width: min(520px, calc(100vw - 40px));
   border: 1px solid rgba(115, 210, 255, 0.32);

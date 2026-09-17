@@ -103,4 +103,4 @@ export function evaluateTransportPlan({ network, originId, destinationId, paymen
     score: payment - distanceCost - projectedWear * (policy.wearPenalty ?? 0),
   };
 }
-import { createTransportCorridors, expandTransportationPath } from "./transportCorridors.js?v=fresh-20260917-1723-4fe2dd07";
+import { createTransportCorridors, expandTransportationPath } from "./transportCorridors.js?v=fresh-20260917-1740-9ef1ac32";
