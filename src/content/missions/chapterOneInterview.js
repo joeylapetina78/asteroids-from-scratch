@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260916-1921-ee007091";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260916-1926-2e0f7c15";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -399,6 +399,11 @@ export const chapterOneInterviewMission = {
         { type: "setFlag", flag: "licenseFiled" },
         { type: "setFlag", flag: "contractFiled" },
         { type: "showComponent", componentId: "viewport", componentName: "Viewport" },
+        // The two chambers too: the hold is the hull's and works; the
+        // processor chamber is the hull's but the unit in it died in the
+        // incursion, so it is shown as the empty rack it is and reads ERR.
+        { type: "showComponent", componentId: "cargo", componentName: "Cargo Hold" },
+        { type: "showEmptyRack", componentId: "processor", componentName: "Processor" },
         { type: "showComponent", componentId: "hull", componentName: "Hull" },
         { type: "setFlag", flag: "hullPanelAdded" },
         { type: "setFlag", flag: "hullPanelMoved" },

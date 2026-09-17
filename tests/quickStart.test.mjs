@@ -17,7 +17,9 @@ test("quick start hands over everything the first leg needs except the engine", 
   const actions = quickStart.onEnter;
   const shown = actions.filter((action) => action.type === "showComponent").map((action) => action.componentId);
   const floated = actions.filter((action) => action.type === "floatComponent").map((action) => action.componentId);
-  assert.deepEqual([...shown].sort(), ["beacon-locator", "hull", "license", "viewport"]);
+  assert.deepEqual([...shown].sort(), ["beacon-locator", "cargo", "hull", "license", "viewport"]);
+  const emptyRacks = actions.filter((action) => action.type === "showEmptyRack").map((action) => action.componentId);
+  assert.deepEqual(emptyRacks, ["processor"], "the dead processor is shown as the empty rack it is, not fitted");
   assert.deepEqual([...floated].sort(), ["beacon-locator", "hull"]);
   assert.ok(!shown.includes("engine") && !floated.includes("engine"), "the engine stays for the lesson");
   assert.ok(actions.some((action) => action.type === "openModuleBay"));

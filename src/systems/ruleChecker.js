@@ -1,7 +1,7 @@
-import { getRightTypeForAction, isRecordActive, limitsAllowAction } from "./authorityModel.js?v=fresh-20260916-1921-ee007091";
-import { actorHasPower, getAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260916-1921-ee007091";
-import { isSameOrChildPlace } from "./placeRegistry.js?v=fresh-20260916-1921-ee007091";
-import { getWorldDocument } from "./worldRecords.js?v=fresh-20260916-1921-ee007091";
+import { getRightTypeForAction, isRecordActive, limitsAllowAction } from "./authorityModel.js?v=fresh-20260916-1926-2e0f7c15";
+import { actorHasPower, getAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260916-1926-2e0f7c15";
+import { isSameOrChildPlace } from "./placeRegistry.js?v=fresh-20260916-1926-2e0f7c15";
+import { getWorldDocument } from "./worldRecords.js?v=fresh-20260916-1926-2e0f7c15";
 
 export function canActorDoAction(state, {
   actorId,
