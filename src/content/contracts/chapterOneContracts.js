@@ -1,4 +1,4 @@
-import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260917-1715-cca5018f";
+import { chapterOneRoute, storySites } from "../storyWorld.js?v=fresh-20260917-1723-4fe2dd07";
 
 const RESOURCE_CONTRACTS = [
   {
@@ -104,7 +104,9 @@ export const chapterOneContracts = [
       credits: 750,
     },
     clauses: [
-      "250 cr advance releases on signing; 750 cr balance on delivery.",
+      // A clause can carry when it is done, and the sheet strikes it through
+      // once it is: the advance clause is spent the moment the money lands.
+      { text: "250 cr advance releases on signing; 750 cr balance on delivery.", done: "advancePaid" },
       "Terms are satisfied when the listed VIN docks at the destination hub with ship power down.",
       "Payment releases when the completed contract is confirmed.",
       "Damage penalties are waived for this assessment contract.",

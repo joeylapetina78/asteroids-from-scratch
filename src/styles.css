@@ -8138,3 +8138,27 @@ body.is-cockpit-layout .cockpit-toolbar {
 body.is-cockpit-layout .cockpit-help-popover {
   left: calc(var(--panel-content-full) + 10px);
 }
+
+/* A spent clause: struck through, and a small stamp after it. */
+.paper-sheet .contract-clauses li.is-done {
+  color: var(--paper-mute);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--paper-band) 70%, transparent);
+  text-decoration-thickness: 1.5px;
+}
+
+.paper-sheet .contract-clause-stamp {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border: 1px solid var(--paper-band);
+  border-radius: 3px;
+  color: var(--paper-band);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+  vertical-align: middle;
+}
