@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260917-1758-ebd45ea2";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260918-1754-895838cd";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -330,6 +330,22 @@ export const chapterOneInterviewMission = {
       ],
     },
     {
+      // The contract is on the glass from the rundown on, and a player may
+      // sign it the moment they see it, a beat or two before Rook asks. The
+      // signature counts whenever it lands; the beats read the flag.
+      id: "qs-signed-early",
+      // The rundown is a line waiting to be read, and a signature during it
+      // has to count, so this listens through the acknowledgement.
+      allowWhilePending: true,
+      fromBeat: "qs-rundown",
+      throughBeat: "qs-sign",
+      eventType: "contract.accepted",
+      payloadEquals: { contractId: "rook-yard-exchange-delivery" },
+      setFlag: "offerContractAccepted",
+      once: true,
+      actions: [],
+    },
+    {
       // Quick start's engine lesson, the hull lesson's shape.
       id: "qs-engine-module-added",
       fromBeat: "qs-engine-fitted",
@@ -467,7 +483,27 @@ export const chapterOneInterviewMission = {
       ],
       onAcknowledge: [
         { type: "clearMessage" },
+        // Signed before being asked: skip the pitch, Rook likes that.
+        { type: "goToStepIfFlags", flags: ["offerContractAccepted"], stepId: "qs-eager" },
         { type: "goToStep", stepId: "qs-sign" },
+      ],
+    },
+    {
+      // The player signed while Rook was still explaining. No pitch, then;
+      // a nod, and straight to the drive.
+      id: "qs-eager",
+      objective: "Listen to Rook.",
+      helpText: "Click the finished chatter box to continue.",
+      onEnter: [
+        {
+          type: "say", speaker: "Rook",
+          text: "Signed already. Good—I'll skip the speech. Let's get this ship to Yard Exchange and get you working. Let me see about the drive.",
+          acknowledgement: { label: "Continue" },
+        },
+      ],
+      onAcknowledge: [
+        { type: "clearMessage" },
+        { type: "goToStep", stepId: "qs-engine-fitted" },
       ],
     },
     {
@@ -479,6 +515,7 @@ export const chapterOneInterviewMission = {
       helpText:
         "Rook's contract is on the glass beside your license. Press Accept Contract on it. The job pays when this hull docks at Yard Exchange and is powered down.",
       onEnter: [
+        { type: "goToStepIfFlags", flags: ["offerContractAccepted"], stepId: "qs-eager" },
         {
           type: "say", speaker: "Rook",
           text: "And it's a sweet gig, believe me. Pass one test: get that scrapped hull running and over to Yard Exchange, so the Authority sees she flies. After that they'll let her go for a steal, and you're a contractor with Rook Industries—I've got plenty more work where this came from. Sign the paperwork and let's get going.",

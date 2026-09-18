@@ -1,5 +1,5 @@
-import { getNpcName } from "../npcs.js?v=fresh-20260917-1758-ebd45ea2";
-import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260917-1758-ebd45ea2";
+import { getNpcName } from "../npcs.js?v=fresh-20260918-1754-895838cd";
+import { storySites, yardExchangeServices } from "../storyWorld.js?v=fresh-20260918-1754-895838cd";
 
 const COMMON_FRONTIER_ORE_VALUES = Object.freeze({
   "water-ice": 30,

@@ -190,8 +190,17 @@ export function getMissionActionDefinition(actionType) {
   return MISSION_ACTION_DEFINITIONS[actionType] ?? null;
 }
 
+// A jump ends the list. An action that moves the mission to another beat
+// has already run that beat's own entrance; anything after it in THIS list
+// belongs to the beat that was left, and would land on top of the new
+// beat's line. Every authored goToStep is the last action of its list, so
+// this only changes what goToStepIfFlags can do: skip ahead cleanly.
 export function runMissionActions(actionList, context) {
-  actionList.forEach((action) => runMissionAction(action, context));
+  const startedAt = context.state?.journey?.currentStepId ?? null;
+  for (const action of actionList) {
+    runMissionAction(action, context);
+    if ((context.state?.journey?.currentStepId ?? null) !== startedAt) break;
+  }
 }
 
 function runMissionAction(action, { state, actions, missionDefinition, goToStep }) {

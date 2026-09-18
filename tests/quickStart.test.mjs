@@ -58,3 +58,32 @@ test("floatComponent is a declared action with the same shape as dockComponent",
   assert.ok(MISSION_ACTION_TYPES.includes("floatComponent"));
   assert.deepEqual(MISSION_ACTION_DEFINITIONS.floatComponent.required, MISSION_ACTION_DEFINITIONS.dockComponent.required);
 });
+
+test("signing before being asked skips the pitch instead of jamming", () => {
+  const early = chapterOneInterviewMission.considerations.find((c) => c.id === "qs-signed-early");
+  assert.ok(early, "the signature is heard from the rundown on");
+  assert.equal(early.eventType, "contract.accepted");
+  assert.equal(early.setFlag, "offerContractAccepted");
+  assert.ok(early.allowWhilePending, "heard even while Rook's line is waiting to be read");
+  assert.equal(early.fromBeat, "qs-rundown");
+  assert.equal(early.throughBeat, "qs-sign");
+  const rundownSkip = beatById.get("qs-rundown").onAcknowledge.find((action) => action.type === "goToStepIfFlags");
+  assert.deepEqual(rundownSkip, { type: "goToStepIfFlags", flags: ["offerContractAccepted"], stepId: "qs-eager" });
+  const signSkip = beatById.get("qs-sign").onEnter[0];
+  assert.deepEqual(signSkip, { type: "goToStepIfFlags", flags: ["offerContractAccepted"], stepId: "qs-eager" });
+  assert.equal(beatById.get("qs-eager").onAcknowledge.find((action) => action.type === "goToStep")?.stepId, "qs-engine-fitted");
+});
+
+test("a jump ends an action list, so a skipped beat's line never lands on the next beat", async () => {
+  const { runMissionActions } = await import("../src/systems/missionActions.js");
+  const state = { journey: { currentStepId: "a", flags: { done: true } }, legal: {} };
+  const said = [];
+  const actions = { say: (speaker, text) => said.push(text), clearMessage: () => {} };
+  const goToStep = (stepId) => { state.journey.currentStepId = stepId; };
+  runMissionActions([
+    { type: "goToStepIfFlags", flags: ["done"], stepId: "b" },
+    { type: "say", speaker: "Rook", text: "should not be said" },
+  ], { state, actions, missionDefinition: {}, goToStep });
+  assert.equal(state.journey.currentStepId, "b");
+  assert.deepEqual(said, []);
+});
