@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260918-1754-895838cd";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260918-1800-ebd21f89";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -1031,9 +1031,12 @@ export const chapterOneInterviewMission = {
     {
       id: "dock-yard-exchange",
       objective: "Dock and power down at Yard Exchange.",
+      // The arrows wait for the ship: the dock button cannot take until Yard
+      // Exchange is in range, and powering down anywhere else is the opposite
+      // of help. Both come on as the ship arrives and go off if it leaves.
       tasks: [
-        { label: "Dock at Yard Exchange", flag: "dockedYardExchange", attention: "element:dock-toggle" },
-        { label: "Power ship down", flag: "shipPoweredDown", attention: "element:ship-power" },
+        { label: "Dock at Yard Exchange", flag: "dockedYardExchange", attention: "element:dock-toggle", attentionWhenNearSiteId: chapterOneRoute.destinationSite.id },
+        { label: "Power ship down", flag: "shipPoweredDown", attention: "element:ship-power", attentionWhenDockedAtSiteId: chapterOneRoute.destinationSite.id },
       ],
       helpText:
         "Dock at Yard Exchange, then power the ship down. The contract will not accept delivery until this VIN is docked and the ship is off.",

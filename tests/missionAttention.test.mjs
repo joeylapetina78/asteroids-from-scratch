@@ -23,3 +23,15 @@ test("finishing a task clears its attention regardless of control state", () => 
     activeBeaconId: "yard-exchange",
   }), false);
 });
+
+test("a dock arrow waits for the hub to be in range, and a power-down arrow for the dock", () => {
+  const dock = { attention: "element:dock-toggle", flag: "docked", attentionWhenNearSiteId: "yard-exchange" };
+  const power = { attention: "element:ship-power", flag: "down", attentionWhenDockedAtSiteId: "yard-exchange" };
+  assert.equal(shouldShowMissionTaskAttention(dock, { flags: {} }), false, "far away: no dock arrow");
+  assert.equal(shouldShowMissionTaskAttention(dock, { flags: {}, nearbySiteId: "scrap-porch" }), false, "the wrong hub: no dock arrow");
+  assert.equal(shouldShowMissionTaskAttention(dock, { flags: {}, nearbySiteId: "yard-exchange" }), true, "in range: dock arrow");
+  assert.equal(shouldShowMissionTaskAttention(dock, { flags: {}, dockedSiteId: "yard-exchange" }), true, "docked counts as near");
+  assert.equal(shouldShowMissionTaskAttention(power, { flags: {}, nearbySiteId: "yard-exchange" }), false, "near but not docked: no power arrow");
+  assert.equal(shouldShowMissionTaskAttention(power, { flags: {}, dockedSiteId: "yard-exchange" }), true, "docked: power arrow");
+  assert.equal(shouldShowMissionTaskAttention(power, { flags: {}, dockedSiteId: "scrap-porch" }), false, "docked elsewhere: no power arrow");
+});
