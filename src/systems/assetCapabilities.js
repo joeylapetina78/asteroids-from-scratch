@@ -1,6 +1,6 @@
-import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260919-1545-58175c8b";
-import { getAssetArchetype } from "../content/assets/assetArchetypes.js?v=fresh-20260919-1545-58175c8b";
-import { ACTOR_ROLE, getActorRecord, listActors } from "./actorRegistry.js?v=fresh-20260919-1545-58175c8b";
+import { INSTITUTION_ARCHETYPES } from "../content/institutions/institutionArchetypes.js?v=fresh-20260919-1551-7192aadf";
+import { getAssetArchetype } from "../content/assets/assetArchetypes.js?v=fresh-20260919-1551-7192aadf";
+import { ACTOR_ROLE, getActorRecord, listActors } from "./actorRegistry.js?v=fresh-20260919-1551-7192aadf";
 
 // A capability portfolio is a projection, never a second owner of state.
 // Domain systems keep their ships, factories and facilities. Sources expose
