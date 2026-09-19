@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260918-1912-aafa3d27";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260918-1918-133a739f";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -589,6 +589,17 @@ export const chapterOneInterviewMission = {
           actions: [{ type: "clearMessage" }],
           delayMs: 600,
           nextStepId: "power-on",
+        },
+        // Powered up and flying without ever moving the display: the lesson
+        // has lost its audience. Let them fly.
+        {
+          eventType: "ship.thrusted",
+          setFlag: "firstThrust",
+          actions: [
+            { type: "setFlag", flag: "enginePanelMoved" },
+            { type: "say", speaker: "Rook", text: "Or leave it where it is. Fine. Follow the beacon to Yard Exchange—and if she dies on us, we call a tow." },
+          ],
+          nextStepId: "find-yard-exchange",
         },
       ],
     },

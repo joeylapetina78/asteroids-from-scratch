@@ -1,7 +1,7 @@
-import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260918-1912-aafa3d27";
-import { getResourceFamily, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260918-1912-aafa3d27";
-import { registerActorSource } from "./actorRegistry.js?v=fresh-20260918-1912-aafa3d27";
-import { recordDiagnostic } from "./diagnostics.js?v=fresh-20260918-1912-aafa3d27";
+import { MiningWorkerShip } from "../entities/MiningWorkerShip.js?v=fresh-20260918-1918-133a739f";
+import { getResourceFamily, normalizeResourceType } from "./resourceDefinitions.js?v=fresh-20260918-1918-133a739f";
+import { registerActorSource } from "./actorRegistry.js?v=fresh-20260918-1918-133a739f";
+import { recordDiagnostic } from "./diagnostics.js?v=fresh-20260918-1918-133a739f";
 
 const RECOVERABLE_FAMILIES = new Set(["volatile", "structural", "industrial"]);
 const COMMISSION_THRESHOLD = 6;

@@ -1,13 +1,13 @@
-import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260918-1912-aafa3d27";
-import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260918-1912-aafa3d27";
-import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260918-1912-aafa3d27";
-import { modworksProcessorLesson } from "../content/missions/modworksProcessorLesson.js?v=fresh-20260918-1912-aafa3d27";
-import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260918-1912-aafa3d27";
-import { createMissionRunner } from "./missionRunner.js?v=fresh-20260918-1912-aafa3d27";
-import { runMissionActions } from "./missionActions.js?v=fresh-20260918-1912-aafa3d27";
-import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260918-1912-aafa3d27";
-import { GLOBAL_CONSIDERATIONS } from "../content/considerations/globalConsiderations.js?v=fresh-20260918-1912-aafa3d27";
-import { ensurePanelCondition, repairPanelCondition } from "./panelMaintenance.js?v=fresh-20260918-1912-aafa3d27";
+import { chapterOneInterviewMission } from "../content/missions/chapterOneInterview.js?v=fresh-20260918-1918-133a739f";
+import { chapterOneNewShipMission } from "../content/missions/chapterOneNewShip.js?v=fresh-20260918-1918-133a739f";
+import { chapterOneRedWorkMission } from "../content/missions/chapterOneRedWork.js?v=fresh-20260918-1918-133a739f";
+import { modworksProcessorLesson } from "../content/missions/modworksProcessorLesson.js?v=fresh-20260918-1918-133a739f";
+import { getComponentStateIdForPanel, STARTUP_HIDDEN_PANEL_IDS } from "./componentRegistry.js?v=fresh-20260918-1918-133a739f";
+import { createMissionRunner } from "./missionRunner.js?v=fresh-20260918-1918-133a739f";
+import { runMissionActions } from "./missionActions.js?v=fresh-20260918-1918-133a739f";
+import { applyRuleMarkers, getRuleActions, matchesEventRule } from "./missionRules.js?v=fresh-20260918-1918-133a739f";
+import { GLOBAL_CONSIDERATIONS } from "../content/considerations/globalConsiderations.js?v=fresh-20260918-1918-133a739f";
+import { ensurePanelCondition, repairPanelCondition } from "./panelMaintenance.js?v=fresh-20260918-1918-133a739f";
 
 const MISSION_DEFINITIONS = new Map(
   [chapterOneInterviewMission, chapterOneNewShipMission, chapterOneRedWorkMission, modworksProcessorLesson].map((missionDefinition) => [missionDefinition.id, missionDefinition]),

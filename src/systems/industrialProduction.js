@@ -1,13 +1,13 @@
-import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260918-1912-aafa3d27";
-import { listShipyards, shipyardPartShortage } from "./shipyards.js?v=fresh-20260918-1912-aafa3d27";
-import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./worldNetworkRegistry.js?v=fresh-20260918-1912-aafa3d27";
-import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260918-1912-aafa3d27";
-import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260918-1912-aafa3d27";
-import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260918-1912-aafa3d27";
-import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260918-1912-aafa3d27";
-import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260918-1912-aafa3d27";
-import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260918-1912-aafa3d27";
-import { isHubAggregated } from "./simulationMode.js?v=fresh-20260918-1912-aafa3d27";
+import { PROCUREMENT_STATUS, estimateOpeningFreightBudget } from "./hubProcurement.js?v=fresh-20260918-1918-133a739f";
+import { listShipyards, shipyardPartShortage } from "./shipyards.js?v=fresh-20260918-1918-133a739f";
+import { getRuntimeWorldConnections, getRuntimeWorldSites } from "./worldNetworkRegistry.js?v=fresh-20260918-1918-133a739f";
+import { createTransportationNetwork, findTransportationRoute } from "./transportationPlanning.js?v=fresh-20260918-1918-133a739f";
+import { getResourceFamily, getResourceTradeValue } from "./resourceDefinitions.js?v=fresh-20260918-1918-133a739f";
+import { getActorProtectedCash } from "./actorConfig.js?v=fresh-20260918-1918-133a739f";
+import { findHubPopulation, getPopulationLaborSummary, recruitPopulationLabor } from "./populationLabor.js?v=fresh-20260918-1918-133a739f";
+import { recordHubNeed, resolveHubNeed, transitionHubProject } from "./hubActors.js?v=fresh-20260918-1918-133a739f";
+import { HUB_RESPONSE_KIND, planHubNeed } from "./hubPlanning.js?v=fresh-20260918-1918-133a739f";
+import { isHubAggregated } from "./simulationMode.js?v=fresh-20260918-1918-133a739f";
 
 export const INDUSTRIAL_PARTS = Object.freeze(["hull-plate", "machine-part"]);
 

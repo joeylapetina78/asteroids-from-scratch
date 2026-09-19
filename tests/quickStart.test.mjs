@@ -96,3 +96,10 @@ test("powering on before dragging the display is heard, and the power beat is sk
   assert.equal(early.fromBeat, "qs-engine-fitted");
   assert.deepEqual(beatById.get("power-on").onEnter[0], { type: "goToStepIfFlags", flags: ["shipPoweredOn"], stepId: "first-thrust" });
 });
+
+test("flying off during the engine lesson ends it instead of holding the player", () => {
+  const fitted = beatById.get("qs-engine-fitted");
+  const flew = fitted.transitions.find((transition) => transition.eventType === "ship.thrusted");
+  assert.equal(flew?.nextStepId, "find-yard-exchange");
+  assert.equal(flew?.setFlag, "firstThrust");
+});
