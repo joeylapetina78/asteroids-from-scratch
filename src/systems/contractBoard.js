@@ -15,13 +15,13 @@
 //   WHO IS DOING IT   supplier — null while it is still up for grabs
 //   WHERE IS IT       one of available / taken / done / blocked
 
-import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260918-2018-10803e1a";
-import { findActorRecord } from "./actorConfig.js?v=fresh-20260918-2018-10803e1a";
-import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260918-2018-10803e1a";
-import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260918-2018-10803e1a";
-import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260918-2018-10803e1a";
-import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js?v=fresh-20260918-2018-10803e1a";
-import { ensureGateBounty } from "./gateBounty.js?v=fresh-20260918-2018-10803e1a";
+import { getEffectiveMaterialUnits, getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260919-1403-60bcbe99";
+import { findActorRecord } from "./actorConfig.js?v=fresh-20260919-1403-60bcbe99";
+import { PROCUREMENT_STATUS, listOrders } from "./hubProcurement.js?v=fresh-20260919-1403-60bcbe99";
+import { getPostedMiningOrders } from "./miningOperation.js?v=fresh-20260919-1403-60bcbe99";
+import { getMiningOrderBook } from "./miningOrderBook.js?v=fresh-20260919-1403-60bcbe99";
+import { listProtectionRequests, PROTECTION_REQUEST_STATUS } from "./protectionPlanning.js?v=fresh-20260919-1403-60bcbe99";
+import { ensureGateBounty } from "./gateBounty.js?v=fresh-20260919-1403-60bcbe99";
 
 export const CONTRACT_STATE = Object.freeze({
   AVAILABLE: "available",   // posted, nobody has taken it

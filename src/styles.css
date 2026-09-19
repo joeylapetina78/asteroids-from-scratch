@@ -8301,3 +8301,41 @@ body.is-cockpit-layout .cockpit-help-popover {
   transform: translateX(calc(100% - 28px));
   transition: transform 170ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
 }
+
+/* The pilot's stamp on a signed contract, across the action, in the
+   issuer's colour. Dropped when the contract is signed; there after. */
+.paper-sheet .paper-front {
+  position: relative;
+}
+
+.paper-signature-stamp {
+  position: absolute;
+  left: 50%;
+  padding: 3px 12px;
+  border: 2px solid var(--paper-band);
+  border-radius: 3px;
+  color: var(--paper-band);
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  transform: translate(-50%, -50%) rotate(-7deg) scale(1);
+  --stamp-tilt: -7deg;
+}
+
+.paper-signature-stamp.is-dropping {
+  animation: paper-signature-drop 0.34s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes paper-signature-drop {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--stamp-tilt)) scale(2.6); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--stamp-tilt)) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paper-signature-stamp.is-dropping { animation: none; }
+}
