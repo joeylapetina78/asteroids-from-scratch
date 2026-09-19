@@ -55,17 +55,33 @@ test("signing leads to the drive, and the drive is the module-bay lesson", () =>
   assert.deepEqual(considerations.map((c) => c.setFlag).sort(), ["enginePanelAdded", "enginePanelMoved"]);
 });
 
-test("powering on, asked or not, gets Rook's comment on the drive and the keys", () => {
+test("powering on, asked or not, gets Rook's comment on the drive; the keys are the guidance layer's", () => {
   const lit = beatById.get("qs-drive-lit");
   const surprise = beatById.get("qs-drive-surprise");
   assert.equal(beatById.get("qs-power-on").transitions.find((t) => t.eventType === "engine.powered")?.nextStepId, "qs-drive-lit");
   assert.equal(beatById.get("qs-engine-fitted").transitions.find((t) => t.eventType === "engine.powered")?.nextStepId, "qs-drive-surprise");
   [lit, surprise].forEach((beat) => {
     const line = beat.onEnter.find((action) => action.type === "say").text;
-    assert.match(line, /W forward, A and D to turn, S to brake/);
+    assert.doesNotMatch(line, /W|WASD|click|select|display/i, "Rook speaks from inside the world");
+    assert.match(line, /Take her out/);
+    const task = beat.tasks[0];
+    assert.equal(task.attention, "element:ship-marker", "the prompt points at the ship");
+    assert.match(task.prompt, /W A S D/);
     assert.equal(beat.transitions.find((t) => t.eventType === "ship.thrusted")?.nextStepId, "find-yard-exchange");
   });
   assert.match(surprise.onEnter.find((action) => action.type === "say").text, /^Whoa/);
+});
+
+test("the story says what; every quick-start task with an arrow says how", () => {
+  const qsBeats = chapterOneInterviewMission.beats.filter((beat) => beat.id.startsWith("qs-"));
+  qsBeats.forEach((beat) => {
+    (beat.tasks ?? []).forEach((task) => {
+      if (task.attention) assert.ok(task.prompt, `${beat.id}: ${task.label} has a prompt`);
+    });
+    beat.onEnter.filter((action) => action.type === "say").forEach((action) => {
+      assert.doesNotMatch(action.text, /click|drag|WASD|keys?|button/i, `${beat.id}: no interface talk in the story`);
+    });
+  });
 });
 
 test("floatComponent is a declared action with the same shape as dockComponent", () => {

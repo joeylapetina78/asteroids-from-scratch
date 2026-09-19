@@ -8339,3 +8339,47 @@ body.is-cockpit-layout .cockpit-help-popover {
 @media (prefers-reduced-motion: reduce) {
   .paper-signature-stamp.is-dropping { animation: none; }
 }
+
+/* ── The guidance layer's prompt ──────────────────────────────────────────
+   The arrow says where; this says how, in the controls' own words ("select
+   ACCEPT", "use W A S D"). It sits on the arrow's outer side in the arrow's
+   colour, and is never more than a line or two. The story never has to say
+   any of this. */
+.attention-prompt {
+  --arrow-color: #ffd36b;
+  position: absolute;
+  max-width: 30ch;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--arrow-color) 70%, transparent);
+  border-radius: 2px;
+  background: rgba(1, 7, 7, 0.9);
+  color: var(--arrow-color);
+  font: 700 var(--type-s, 10px)/1.35 "Courier New", monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transform: translate(0, -50%);
+  pointer-events: none;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--arrow-color) 30%, transparent);
+  animation: attention-prompt-in 0.28s ease-out both;
+}
+
+.attention-prompt[data-side="left"] {
+  transform: translate(-100%, -50%);
+  text-align: right;
+}
+
+@keyframes attention-prompt-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* The ship, as a thing on the desk an arrow can point at. */
+.ship-marker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 2px;
+  margin: -1px 0 0 -1px;
+  pointer-events: none;
+}

@@ -1,4 +1,4 @@
-import { getActorAccount } from "./actorConfig.js?v=fresh-20260919-1403-60bcbe99";
+import { getActorAccount } from "./actorConfig.js?v=fresh-20260919-1410-c4309ce4";
 
 const DEFAULT_RECOVERY_FEE = 120;
 const DEFAULT_DISMANTLING_COST = 40;
