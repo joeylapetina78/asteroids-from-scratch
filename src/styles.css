@@ -8391,12 +8391,14 @@ body.is-cockpit-layout .cockpit-help-popover {
   border: 0;
   background: transparent;
   color: color-mix(in srgb, var(--arrow-color) 84%, transparent);
-  font: 900 clamp(1.3rem, 2.4vh, 1.9rem)/1.05 "Arial Black", "Impact", "Helvetica Neue", Arial, sans-serif;
-  letter-spacing: 0.06em;
+  /* Eurostile Extended, the 80s hardware face; wide, so a touch smaller than
+     the previous face and stroked for the weight the face itself lacks. */
+  font: 400 clamp(1.05rem, 2vh, 1.5rem)/1.2 "Michroma", "Eurostile Extended", "Microgramma D Extended", "Orbitron", "Arial Black", sans-serif;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: normal;
   pointer-events: none;
-  -webkit-text-stroke: 0.6px color-mix(in srgb, var(--arrow-color) 95%, white);
+  -webkit-text-stroke: 1.1px color-mix(in srgb, var(--arrow-color) 95%, white);
   paint-order: stroke fill;
   text-shadow:
     0 0 2px #000,

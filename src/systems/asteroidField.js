@@ -1,9 +1,9 @@
-﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260919-1535-d4837bf6";
-import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260919-1535-d4837bf6";
-import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260919-1535-d4837bf6";
-import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260919-1535-d4837bf6";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260919-1535-d4837bf6";
-import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260919-1535-d4837bf6";
+﻿import { createCommonAsteroid, createRandomAsteroid } from "../entities/Asteroid.js?v=fresh-20260919-1538-9d02b382";
+import { createRandom, hashNumbers, randomRange } from "./random.js?v=fresh-20260919-1538-9d02b382";
+import { getResourceColor, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260919-1538-9d02b382";
+import { getAmbientSurvivalResourceWeights, mixResourceColor } from "./resourceField.js?v=fresh-20260919-1538-9d02b382";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260919-1538-9d02b382";
+import { getCorridorClearance } from "./transportCorridors.js?v=fresh-20260919-1538-9d02b382";
 
 // Chunk-based asteroid streaming. The world is infinite: chunks are generated
 // on-demand as the player moves and unloaded when they move away. The same

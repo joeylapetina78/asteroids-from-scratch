@@ -21,8 +21,11 @@
          monospace stack if the font host is unreachable. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap" />
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260919-1535-d4837bf6" />
+    <!-- VT323 is the chatter's terminal face; Michroma is Eurostile Extended
+         by another name, the face on every piece of 80s hardware, for the
+         guidance layer's power phrases. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Michroma&display=swap" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260919-1538-9d02b382" />
   </head>
   <body>
     <!-- The cockpit is the only layout there is. main.js puts this class on
@@ -120,7 +123,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260919-1535-d4837bf6</span>
+      <span class="build-tag">build: fresh-20260919-1538-9d02b382</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -1194,6 +1197,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260919-1535-d4837bf6"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260919-1538-9d02b382"></script>
   </body>
 </html>
