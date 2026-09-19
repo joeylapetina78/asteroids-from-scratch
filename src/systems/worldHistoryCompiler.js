@@ -1,12 +1,12 @@
-import { FRONTIER_FREIGHT_CORRIDOR } from "../content/transportation/corridorArchetypes.js?v=fresh-20260918-1954-26db6381";
-import { createRandom, hashNumbers } from "./random.js?v=fresh-20260918-1954-26db6381";
-import { createProceduralSettlementSeed, registerGeneratedSettlement } from "./settlementSeedPipeline.js?v=fresh-20260918-1954-26db6381";
-import { createValueNoise } from "./valueNoise.js?v=fresh-20260918-1954-26db6381";
-import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260918-1954-26db6381";
-import { sampleEnvironment } from "./worldHazards.js?v=fresh-20260918-1954-26db6381";
+import { FRONTIER_FREIGHT_CORRIDOR } from "../content/transportation/corridorArchetypes.js?v=fresh-20260918-2005-906ca879";
+import { createRandom, hashNumbers } from "./random.js?v=fresh-20260918-2005-906ca879";
+import { createProceduralSettlementSeed, registerGeneratedSettlement } from "./settlementSeedPipeline.js?v=fresh-20260918-2005-906ca879";
+import { createValueNoise } from "./valueNoise.js?v=fresh-20260918-2005-906ca879";
+import { getChunkTerrainProfile } from "./worldTerrain.js?v=fresh-20260918-2005-906ca879";
+import { sampleEnvironment } from "./worldHazards.js?v=fresh-20260918-2005-906ca879";
 import {
   ensureWorldNetwork, registerTradeCommunity, registerWorldConnection,
-} from "./worldNetworkRegistry.js?v=fresh-20260918-1954-26db6381";
+} from "./worldNetworkRegistry.js?v=fresh-20260918-2005-906ca879";
 
 const YEAR = 365 * 24 * 60 * 60 * 1000;
 const CLUSTER_ID = "ashfall-compact";

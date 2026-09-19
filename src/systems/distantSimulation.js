@@ -1,11 +1,11 @@
-import { DETAIL, resolveDetailLevel, setSimulationFocus } from "./detailLevel.js?v=fresh-20260918-1954-26db6381";
-import { getEconomySamples } from "./economySampler.js?v=fresh-20260918-1954-26db6381";
-import { advanceRegionFlow, createRegionFlow } from "./regionFlow.js?v=fresh-20260918-1954-26db6381";
-import { listHubActors } from "./hubActors.js?v=fresh-20260918-1954-26db6381";
-import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260918-1954-26db6381";
-import { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated } from "./simulationMode.js?v=fresh-20260918-1954-26db6381";
-import { clearRegionalTrade } from "./regionalClearing.js?v=fresh-20260918-1954-26db6381";
-import { getUnitCost } from "./costBasis.js?v=fresh-20260918-1954-26db6381";
+import { DETAIL, resolveDetailLevel, setSimulationFocus } from "./detailLevel.js?v=fresh-20260918-2005-906ca879";
+import { getEconomySamples } from "./economySampler.js?v=fresh-20260918-2005-906ca879";
+import { advanceRegionFlow, createRegionFlow } from "./regionFlow.js?v=fresh-20260918-2005-906ca879";
+import { listHubActors } from "./hubActors.js?v=fresh-20260918-2005-906ca879";
+import { getResourceEffectiveYield, getResourceFamily } from "./resourceDefinitions.js?v=fresh-20260918-2005-906ca879";
+import { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated } from "./simulationMode.js?v=fresh-20260918-2005-906ca879";
+import { clearRegionalTrade } from "./regionalClearing.js?v=fresh-20260918-2005-906ca879";
+import { getUnitCost } from "./costBasis.js?v=fresh-20260918-2005-906ca879";
 
 export { DISTANT_SIMULATION_VERSION, ensureDistantSimulationState, getHubSimulationRecord, isHubAggregated };
 export const DISTANT_DEFAULTS = Object.freeze({ aggregateAfterMs: 30_000 });

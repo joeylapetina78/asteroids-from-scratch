@@ -1,9 +1,9 @@
-import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260918-1954-26db6381";
-import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260918-1954-26db6381";
-import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260918-1954-26db6381";
-import { upsertPlace } from "./placeRegistry.js?v=fresh-20260918-1954-26db6381";
-import { WORLD_SITES } from "./worldSites.js?v=fresh-20260918-1954-26db6381";
-import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260918-1954-26db6381";
+import { FIRST_REACH_SETTLEMENTS } from "../content/economy/firstReachSettlements.js?v=fresh-20260918-2005-906ca879";
+import { PLACE_TYPES, POWER_TYPES, RIGHT_TYPES } from "./authorityModel.js?v=fresh-20260918-2005-906ca879";
+import { upsertAuthorityGrant } from "./authorityRegistry.js?v=fresh-20260918-2005-906ca879";
+import { upsertPlace } from "./placeRegistry.js?v=fresh-20260918-2005-906ca879";
+import { WORLD_SITES } from "./worldSites.js?v=fresh-20260918-2005-906ca879";
+import { listGeneratedSettlements } from "./settlementSeedPipeline.js?v=fresh-20260918-2005-906ca879";
 
 const MIN_TERRITORY_RADIUS = 1400;
 const MAX_TERRITORY_RADIUS = 12000;
