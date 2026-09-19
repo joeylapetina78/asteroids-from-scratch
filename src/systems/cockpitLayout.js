@@ -11,7 +11,8 @@
 // Removed rather than repaired: instruments are placed by hand now, onto the
 // grid, and that is the whole model. See docs/panel-mounting-standard.md.
 
-import { normalizeDustSettings } from "./dustDials.js?v=fresh-20260919-1538-9d02b382";
+import { normalizeDustSettings } from "./dustDials.js?v=fresh-20260919-1545-58175c8b";
+import { normalizeGuidanceSettings } from "./guidanceDials.js?v=fresh-20260919-1545-58175c8b";
 
 export const DEFAULT_COCKPIT_PHOSPHOR = "#7dffe0";
 
@@ -64,6 +65,8 @@ export function createCockpitLayoutState(source = null) {
     // back into the pipe. Part of the desk, not the ship, for the same reason
     // as the phosphor — it is how the pilot likes the cockpit to look.
     dust: normalizeDustSettings(source?.dust),
+    // The guidance layer's dials: the face and weight of the power phrase.
+    guidance: normalizeGuidanceSettings(source?.guidance),
   };
 }
 

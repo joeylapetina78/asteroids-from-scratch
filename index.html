@@ -24,8 +24,8 @@
     <!-- VT323 is the chatter's terminal face; Michroma is Eurostile Extended
          by another name, the face on every piece of 80s hardware, for the
          guidance layer's power phrases. -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Michroma&display=swap" />
-    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260919-1538-9d02b382" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Michroma&family=Orbitron:wght@500;700&family=Audiowide&family=Press+Start+2P&display=swap" />
+    <link rel="stylesheet" href="./src/styles.css?v=fresh-20260919-1545-58175c8b" />
   </head>
   <body>
     <!-- The cockpit is the only layout there is. main.js puts this class on
@@ -123,7 +123,7 @@
     </div>
 
     <nav class="quick-links" aria-label="Project links and test starts">
-      <span class="build-tag">build: fresh-20260919-1538-9d02b382</span>
+      <span class="build-tag">build: fresh-20260919-1545-58175c8b</span>
       <a href="./">Continue</a>
       <a href="./?resetSave=1">New run</a>
       <a href="./?devStart=red-work">Red work test</a>
@@ -494,6 +494,17 @@
                 </span>
               </header>
               <div id="cockpit-sparkle-dials" class="cockpit-sparkle-dials"></div>
+            </section>
+            <section class="cockpit-sparkle cockpit-guidance" aria-label="Guidance control">
+              <header class="cockpit-sparkle-header">
+                <span><strong>Guidance</strong><small>The power phrase beside the arrow: face, size, weight, glow.</small></span>
+                <span class="cockpit-sparkle-actions">
+                  <button id="cockpit-guidance-preview" type="button">Show</button>
+                  <button id="cockpit-guidance-reset" type="button">Reset</button>
+                </span>
+              </header>
+              <div id="cockpit-guidance-fonts" class="cockpit-guidance-fonts" role="group" aria-label="Guidance typeface"></div>
+              <div id="cockpit-guidance-dials" class="cockpit-sparkle-dials"></div>
             </section>
             <div id="cockpit-config-list" class="cockpit-config-list"></div>
           </section>
@@ -1197,6 +1208,6 @@
         document.documentElement.dataset.runtimeError = String(event.reason?.stack ?? event.reason ?? "Unhandled rejection");
       });
     </script>
-    <script type="module" src="./src/main.js?v=fresh-20260919-1538-9d02b382"></script>
+    <script type="module" src="./src/main.js?v=fresh-20260919-1545-58175c8b"></script>
   </body>
 </html>

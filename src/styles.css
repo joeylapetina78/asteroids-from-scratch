@@ -8390,23 +8390,26 @@ body.is-cockpit-layout .cockpit-help-popover {
   padding: 0;
   border: 0;
   background: transparent;
-  color: color-mix(in srgb, var(--arrow-color) 84%, transparent);
-  /* Eurostile Extended, the 80s hardware face; wide, so a touch smaller than
-     the previous face and stroked for the weight the face itself lacks. */
-  font: 400 clamp(1.05rem, 2vh, 1.5rem)/1.2 "Michroma", "Eurostile Extended", "Microgramma D Extended", "Orbitron", "Arial Black", sans-serif;
-  letter-spacing: 0.04em;
+  /* Every figure here is a dial on Configure cockpit → Guidance, published
+     as a custom property on the root. The literals are the defaults. */
+  color: color-mix(in srgb, var(--arrow-color) var(--guide-alpha, 84%), transparent);
+  font-family: var(--guide-font, "Michroma", "Eurostile Extended", "Microgramma D Extended", sans-serif);
+  font-size: var(--guide-size, 1.1rem);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: var(--guide-spacing, 0.04em);
   text-transform: uppercase;
   white-space: normal;
   pointer-events: none;
-  -webkit-text-stroke: 1.1px color-mix(in srgb, var(--arrow-color) 95%, white);
+  -webkit-text-stroke: var(--guide-stroke, 0.9px) color-mix(in srgb, var(--arrow-color) 95%, white);
   paint-order: stroke fill;
   text-shadow:
     0 0 2px #000,
     0 0 6px rgba(0, 0, 0, 0.95),
     0 0 12px rgba(0, 0, 0, 0.8),
-    0 0 5px color-mix(in srgb, var(--arrow-color) 95%, transparent),
-    0 0 12px color-mix(in srgb, var(--arrow-color) 65%, transparent),
-    0 0 26px color-mix(in srgb, var(--arrow-color) 35%, transparent);
+    0 0 calc(5px * var(--guide-glow, 1)) color-mix(in srgb, var(--arrow-color) 95%, transparent),
+    0 0 calc(12px * var(--guide-glow, 1)) color-mix(in srgb, var(--arrow-color) 65%, transparent),
+    0 0 calc(26px * var(--guide-glow, 1)) color-mix(in srgb, var(--arrow-color) 35%, transparent);
   animation: attention-prompt-in 0.28s ease-out both;
 }
 
@@ -8428,4 +8431,29 @@ body.is-cockpit-layout .cockpit-help-popover {
   height: 2px;
   margin: -1px 0 0 -1px;
   pointer-events: none;
+}
+
+/* The Guidance section's face picker: each face set in itself. */
+.cockpit-guidance-fonts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.cockpit-guidance-fonts button {
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--cockpit-phosphor) 40%, transparent);
+  border-radius: 0;
+  background: rgba(0, 10, 9, 0.62);
+  color: color-mix(in srgb, var(--cockpit-phosphor) 78%, transparent);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.cockpit-guidance-fonts button[aria-pressed="true"] {
+  border-color: var(--cockpit-accent);
+  color: var(--cockpit-accent);
+  background: color-mix(in srgb, var(--cockpit-accent) 10%, rgba(0, 10, 9, 0.9));
 }

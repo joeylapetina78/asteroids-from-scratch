@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { DUST_DIALS, DUST_DEFAULTS, normalizeDustSettings } from "../src/systems/dustDials.js";
 import { createCockpitLayoutState } from "../src/systems/cockpitLayout.js";
+import { GUIDANCE_DEFAULTS, GUIDANCE_FONTS, normalizeGuidanceSettings } from "../src/systems/guidanceDials.js";
 
 test("every sparkle dial has a default inside its own range", () => {
   DUST_DIALS.forEach((dial) => {
@@ -27,4 +28,14 @@ test("the cockpit's stored layout carries the sparkle dials and normalises them"
   const restored = createCockpitLayoutState({ dust: { grains: 30, ramp: 5 } });
   assert.equal(restored.dust.grains, 30);
   assert.equal(restored.dust.ramp, 0.6);
+});
+
+test("the guidance dials normalise a saved set and reject an unknown face", () => {
+  assert.deepEqual(normalizeGuidanceSettings(null), GUIDANCE_DEFAULTS);
+  const saved = normalizeGuidanceSettings({ font: "comic-sans", size: 9, glow: -1 });
+  assert.equal(saved.font, GUIDANCE_DEFAULTS.font);
+  assert.equal(saved.size, 2.4);
+  assert.equal(saved.glow, 0);
+  assert.ok(GUIDANCE_FONTS.every((face) => face.stack.includes(face.label) || face.id === "courier"));
+  assert.deepEqual(createCockpitLayoutState({ guidance: { font: "vt323" } }).guidance.font, "vt323");
 });
