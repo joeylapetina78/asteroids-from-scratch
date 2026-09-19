@@ -9,6 +9,12 @@ were right.
 
 If you read nothing else, read **What keeps going wrong** near the bottom.
 
+> **September 2026:** the cockpit, the missions' opening, and the guidance
+> layer changed substantially in an interface run that is still in progress.
+> [interface-run-2026-09.md](interface-run-2026-09.md) is the current word on
+> those; where this document and that one disagree about the cockpit, that
+> one wins.
+
 ---
 
 ## What this is

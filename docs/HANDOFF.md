@@ -10,6 +10,17 @@ The older August 6 session note is historical context, not the current checkpoin
 > it holds itself to, what is built, where the work stands, and the specific ways
 > this codebase has repeatedly fooled people who were sure they were right.
 
+## Interface run, September 2026 — IN PROGRESS
+
+The most recent work is a cockpit/interface run (2026-09-15 → 09-19):
+Quick Start mode, the paperwork bay, redressed sheets, the LCD status bar,
+the story/guidance/help split with power-phrase arrows, and a dozen smaller
+fixes. **Read [interface-run-2026-09.md](interface-run-2026-09.md) before
+touching the cockpit, the missions, or main.js's boot order** — it carries
+the rules that run established, what landed, and where it stopped. Campaign
+mode is paused; Quick Start and Explorer are the live modes. The checkpoint
+below describes the economy/simulation side and is still accurate for it.
+
 ## Stable checkpoint
 
 - Branch: `main`. Simulation-boundary observability is in the working tree on
