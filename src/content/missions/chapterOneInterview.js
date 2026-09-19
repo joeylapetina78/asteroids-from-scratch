@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260918-1918-133a739f";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260918-1931-f3b668ea";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -358,22 +358,9 @@ export const chapterOneInterviewMission = {
         {
           type: "say",
           speaker: "Rook",
-          text: "That's it. Now drag it over by the hull.",
+          text: "That's it. Now drag it across to the hull, over on the right.",
         },
       ],
-    },
-    {
-      // The Power switch is on the display, so it is reachable the moment the
-      // display is out — before the drag has been done. Heard here so the
-      // power beat can be skipped instead of waiting for a switch already on.
-      id: "qs-powered-early",
-      allowWhilePending: true,
-      fromBeat: "qs-engine-fitted",
-      throughBeat: "qs-engine-fitted",
-      eventType: "engine.powered",
-      setFlag: "shipPoweredOn",
-      once: true,
-      actions: [],
     },
     {
       id: "qs-engine-panel-moved",
@@ -569,17 +556,17 @@ export const chapterOneInterviewMission = {
       objective: "Bring the Engine display out.",
       tasks: [
         { label: "Click the Engine module's face", flag: "enginePanelAdded", attention: "panel:engine" },
-        { label: "Drag the display over by the hull", flag: "enginePanelMoved", attention: "panel:engine" },
+        { label: "Drag the display across to the hull", flag: "enginePanelMoved", attention: "panel:engine" },
       ],
       helpText:
-        "The ENGINE control module is racked in the module bay on the left, under the hull and the locator. Click its face to bring the display out onto the desk, then drag the display over beside the hull readout.",
+        "The ENGINE control module is racked in the module bay on the left, under the hull and the locator. Click its face and the display pops out beside the bay; then drag the display across to the right side, next to the hull readout.",
       onEnter: [
         { type: "showComponent", componentId: "engine", componentName: "Engine" },
         { type: "dockComponent", componentId: "engine" },
         { type: "openModuleBay" },
         {
           type: "say", speaker: "Rook",
-          text: "There. Drive's in—well, it's a drive. See the module bay on the left? Every part of this ship has a control module racked in there; that's the drive's, under the hull's. Click its face to bring the display out, then drag it over by the hull readout where you can keep an eye on it.",
+          text: "There. Drive's in—well, it's a drive. See the module bay on the left? Every part of this ship has a control module racked in there; that's the drive's, under the hull's. Click its face and its display pops out beside the bay. Then drag it across to the right, next to the hull, where you can keep an eye on it.",
         },
       ],
       transitions: [
@@ -588,17 +575,106 @@ export const chapterOneInterviewMission = {
           requiresFlags: ["enginePanelAdded", "enginePanelMoved"],
           actions: [{ type: "clearMessage" }],
           delayMs: 600,
-          nextStepId: "power-on",
+          nextStepId: "qs-power-on",
         },
-        // Powered up and flying without ever moving the display: the lesson
-        // has lost its audience. Let them fly.
+        // The switch is on the display, and a player can hit it the moment
+        // the display is out. Rook did not expect that.
+        {
+          eventType: "engine.powered",
+          setFlag: "shipPoweredOn",
+          actions: [{ type: "clearMessage" }],
+          nextStepId: "qs-drive-surprise",
+        },
+      ],
+    },
+    {
+      id: "qs-power-on",
+      objective: "Power the ship.",
+      tasks: [
+        { label: "Power the ship on", flag: "shipPoweredOn", attention: "element:ship-power" },
+      ],
+      helpText: "Click POWER on the Engine display.",
+      onEnter: [
+        {
+          type: "say", speaker: "Rook",
+          text: "Good. Somewhere you'll actually look at it. Now power her on. Let's see whether it holds together.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "authority.identityRequested",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          requiresCondition: yardExchangeIdentityNeedsReview,
+          nextStepId: "yard-traffic-check",
+        },
+        {
+          eventType: "engine.powered",
+          setFlag: "shipPoweredOn",
+          actions: [{ type: "clearMessage" }],
+          delayMs: 900,
+          nextStepId: "qs-drive-lit",
+        },
+      ],
+    },
+    {
+      // The drive is lit, the way the player was asked. Rook hears what the
+      // player hears, then the keys.
+      id: "qs-drive-lit",
+      objective: "Head for Yard Exchange.",
+      tasks: [
+        { label: "Thrust toward Yard Exchange", flag: "firstThrust" },
+      ],
+      helpText:
+        "W thrusts, A and D turn, S brakes. Keep the ship inside the cleared Starter Drift route and follow the beacon to Yard Exchange.",
+      onEnter: [
+        {
+          type: "say", speaker: "Rook",
+          text: "Hear that? That's her. Original drive—the only thing on this hull that is. She coughs, she kicks, she pulls to one side; nurse her. The control module maps her to the keys: W forward, A and D to turn, S to brake. Follow the beacon to Yard Exchange, and if she dies on us, we call a tow.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "authority.identityRequested",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          requiresCondition: yardExchangeIdentityNeedsReview,
+          nextStepId: "yard-traffic-check",
+        },
         {
           eventType: "ship.thrusted",
           setFlag: "firstThrust",
-          actions: [
-            { type: "setFlag", flag: "enginePanelMoved" },
-            { type: "say", speaker: "Rook", text: "Or leave it where it is. Fine. Follow the beacon to Yard Exchange—and if she dies on us, we call a tow." },
-          ],
+          delayMs: 1200,
+          nextStepId: "find-yard-exchange",
+        },
+      ],
+    },
+    {
+      // Powered before being asked, display still beside the bay. Rook was
+      // mid-sentence.
+      id: "qs-drive-surprise",
+      objective: "Head for Yard Exchange.",
+      tasks: [
+        { label: "Thrust toward Yard Exchange", flag: "firstThrust" },
+      ],
+      helpText:
+        "W thrusts, A and D turn, S brakes. Keep the ship inside the cleared Starter Drift route and follow the beacon to Yard Exchange. Drag the Engine display wherever you want it.",
+      onEnter: [
+        { type: "setFlag", flag: "enginePanelMoved" },
+        {
+          type: "say", speaker: "Rook",
+          text: "Whoa—hey! Okay. Okay. That was the drive. Told you she was original—she coughs, she kicks, she pulls to one side. Since she's lit: that control module maps her to the keys. W forward, A and D to turn, S to brake. Nurse her, follow the beacon to Yard Exchange, and if she dies on us, we call a tow.",
+        },
+      ],
+      transitions: [
+        {
+          eventType: "authority.identityRequested",
+          payloadEquals: { siteId: chapterOneRoute.destinationSite.id },
+          requiresCondition: yardExchangeIdentityNeedsReview,
+          nextStepId: "yard-traffic-check",
+        },
+        {
+          eventType: "ship.thrusted",
+          setFlag: "firstThrust",
+          delayMs: 1200,
           nextStepId: "find-yard-exchange",
         },
       ],
@@ -867,10 +943,6 @@ export const chapterOneInterviewMission = {
       helpText:
         "Use the Engine panel and click Power Ship. W thrusts, A/D rotate, and S brakes after the ship is powered.",
       onEnter: [
-        // The switch is on the display, and the display is out before this
-        // beat asks for it: a player who hit Power while the display was still
-        // beside the bay has done this already.
-        { type: "goToStepIfFlags", flags: ["shipPoweredOn"], stepId: "first-thrust" },
         {
           type: "say",
           speaker: "Rook",

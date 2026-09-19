@@ -49,9 +49,23 @@ test("signing leads to the drive, and the drive is the module-bay lesson", () =>
   assert.ok(fitted.onEnter.some((action) => action.type === "dockComponent" && action.componentId === "engine"), "racked, so the player switches it on");
   const moved = fitted.transitions.find((transition) => transition.eventType === "component.dragged");
   assert.deepEqual([...moved.requiresFlags].sort(), ["enginePanelAdded", "enginePanelMoved"]);
-  assert.equal(moved.nextStepId, "power-on");
+  assert.equal(moved.nextStepId, "qs-power-on", "dragged: now power on, with the arrow on the switch");
+  assert.equal(beatById.get("qs-power-on").tasks[0].attention, "element:ship-power");
   const considerations = chapterOneInterviewMission.considerations.filter((c) => c.fromBeat === "qs-engine-fitted");
-  assert.deepEqual(considerations.map((c) => c.setFlag).sort(), ["enginePanelAdded", "enginePanelMoved", "shipPoweredOn"]);
+  assert.deepEqual(considerations.map((c) => c.setFlag).sort(), ["enginePanelAdded", "enginePanelMoved"]);
+});
+
+test("powering on, asked or not, gets Rook's comment on the drive and the keys", () => {
+  const lit = beatById.get("qs-drive-lit");
+  const surprise = beatById.get("qs-drive-surprise");
+  assert.equal(beatById.get("qs-power-on").transitions.find((t) => t.eventType === "engine.powered")?.nextStepId, "qs-drive-lit");
+  assert.equal(beatById.get("qs-engine-fitted").transitions.find((t) => t.eventType === "engine.powered")?.nextStepId, "qs-drive-surprise");
+  [lit, surprise].forEach((beat) => {
+    const line = beat.onEnter.find((action) => action.type === "say").text;
+    assert.match(line, /W forward, A and D to turn, S to brake/);
+    assert.equal(beat.transitions.find((t) => t.eventType === "ship.thrusted")?.nextStepId, "find-yard-exchange");
+  });
+  assert.match(surprise.onEnter.find((action) => action.type === "say").text, /^Whoa/);
 });
 
 test("floatComponent is a declared action with the same shape as dockComponent", () => {
@@ -86,20 +100,4 @@ test("a jump ends an action list, so a skipped beat's line never lands on the ne
   ], { state, actions, missionDefinition: {}, goToStep });
   assert.equal(state.journey.currentStepId, "b");
   assert.deepEqual(said, []);
-});
-
-test("powering on before dragging the display is heard, and the power beat is skipped", () => {
-  const early = chapterOneInterviewMission.considerations.find((c) => c.id === "qs-powered-early");
-  assert.ok(early);
-  assert.equal(early.eventType, "engine.powered");
-  assert.equal(early.setFlag, "shipPoweredOn");
-  assert.equal(early.fromBeat, "qs-engine-fitted");
-  assert.deepEqual(beatById.get("power-on").onEnter[0], { type: "goToStepIfFlags", flags: ["shipPoweredOn"], stepId: "first-thrust" });
-});
-
-test("flying off during the engine lesson ends it instead of holding the player", () => {
-  const fitted = beatById.get("qs-engine-fitted");
-  const flew = fitted.transitions.find((transition) => transition.eventType === "ship.thrusted");
-  assert.equal(flew?.nextStepId, "find-yard-exchange");
-  assert.equal(flew?.setFlag, "firstThrust");
 });

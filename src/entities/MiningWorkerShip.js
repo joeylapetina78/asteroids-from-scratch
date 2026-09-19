@@ -1,8 +1,8 @@
-import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260918-1918-133a739f";
-import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260918-1918-133a739f";
-import { steerAroundObstacles } from "../systems/obstacleNavigation.js?v=fresh-20260918-1918-133a739f";
-import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260918-1918-133a739f";
-import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260918-1918-133a739f";
+import { advanceFlightBody, getTurnTowardAngle, wrapAngle } from "../systems/flightPhysics.js?v=fresh-20260918-1931-f3b668ea";
+import { getEngineModel } from "../content/ships/engineModels.js?v=fresh-20260918-1931-f3b668ea";
+import { steerAroundObstacles } from "../systems/obstacleNavigation.js?v=fresh-20260918-1931-f3b668ea";
+import { normalizeResourceType } from "../systems/resourceDefinitions.js?v=fresh-20260918-1931-f3b668ea";
+import { addCommitment, createCommitmentPortfolio, moveCommitmentToFront, removeCommitment, remainingCapacity } from "../systems/commitmentPortfolio.js?v=fresh-20260918-1931-f3b668ea";
 
 const FLIGHT = { rotationSpeed: 2.35, thrustPower: 98, maxSpeed: 112, brakeDrag: 0.9, spaceDrag: 0.994 };
 const MINING_RANGE = 250;
