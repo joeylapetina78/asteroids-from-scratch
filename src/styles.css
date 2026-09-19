@@ -5877,7 +5877,11 @@ body.is-cockpit-layout .engine-panel.is-cockpit-expanded .component-meter-track 
   height: 42px;
   border-radius: 50%;
   background: transparent;
-  z-index: var(--z-chamber-plug-live);
+  /* The socket is the chamber's pipe mouth: part of the wall, not a thing
+     lying on the desk like the plug. It sits under the module bay, so a bay
+     sliding out over the pipe covers it, the way it covers the chamber. The
+     plug and its cable stay above the bay. */
+  z-index: calc(var(--z-module-bay) - 1);
 }
 
 /* The canvas pipe art is wider than the logical routing target. Paint a full
