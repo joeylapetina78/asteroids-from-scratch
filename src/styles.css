@@ -430,7 +430,6 @@ body.is-cockpit-layout .cockpit-align-guide.is-horizontal { left: 0; right: 0; h
   position: absolute;
   width: var(--arrow-w);
   height: var(--arrow-h);
-  transform: translate(0, -50%);
   filter:
     drop-shadow(0 0 3px color-mix(in srgb, var(--arrow-color) 90%, transparent))
     drop-shadow(0 0 9px color-mix(in srgb, var(--arrow-color) 55%, transparent))
@@ -439,8 +438,17 @@ body.is-cockpit-layout .cockpit-align-guide.is-horizontal { left: 0; right: 0; h
 }
 
 .attention-arrow[data-side="left"] {
-  transform: translate(-100%, -50%);
   --knock: 11px;
+}
+
+/* Above the thing, pointing down; below it, pointing up. The jab goes the
+   same way the tip does. */
+.attention-arrow[data-side="up"] {
+  --knock: 11px;
+}
+
+.attention-arrow[data-side="down"] {
+  --knock: -11px;
 }
 
 .attention-arrow > span {
@@ -460,6 +468,22 @@ body.is-cockpit-layout .cockpit-align-guide.is-horizontal { left: 0; right: 0; h
     linear-gradient(270deg, color-mix(in srgb, var(--arrow-color) 92%, white) 0, color-mix(in srgb, var(--arrow-color) 58%, transparent) 55%, color-mix(in srgb, var(--arrow-color) 30%, transparent) 100%);
 }
 
+.attention-arrow[data-side="up"] > span {
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 2px, rgba(0, 0, 0, 0.32) 2px 3px),
+    linear-gradient(0deg, color-mix(in srgb, var(--arrow-color) 92%, white) 0, color-mix(in srgb, var(--arrow-color) 58%, transparent) 55%, color-mix(in srgb, var(--arrow-color) 30%, transparent) 100%);
+  animation-name: attention-arrow-knock-y;
+}
+
+.attention-arrow[data-side="down"] > span {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 2px, rgba(0, 0, 0, 0.32) 2px 3px),
+    linear-gradient(180deg, color-mix(in srgb, var(--arrow-color) 92%, white) 0, color-mix(in srgb, var(--arrow-color) 58%, transparent) 55%, color-mix(in srgb, var(--arrow-color) 30%, transparent) 100%);
+  animation-name: attention-arrow-knock-y;
+}
+
 .attention-arrow-tip {
   opacity: 0.92;
 }
@@ -477,6 +501,17 @@ body.is-cockpit-layout .cockpit-align-guide.is-horizontal { left: 0; right: 0; h
 
 /* Two jabs at the thing, then hold. The phosphor brightens on each jab and
    flickers as it settles. */
+@keyframes attention-arrow-knock-y {
+  0% { transform: translateY(0); filter: brightness(1); }
+  9% { transform: translateY(var(--knock)); filter: brightness(1.6); }
+  18% { transform: translateY(0); filter: brightness(0.95); }
+  27% { transform: translateY(calc(var(--knock) * 0.7)); filter: brightness(1.45); }
+  36% { transform: translateY(0); filter: brightness(0.9); }
+  41% { filter: brightness(1.1); }
+  46% { filter: brightness(0.92); }
+  100% { transform: translateY(0); filter: brightness(1); }
+}
+
 @keyframes attention-arrow-knock {
   0% { transform: translateX(0); filter: brightness(1); }
   9% { transform: translateX(var(--knock)); filter: brightness(1.6); }
@@ -8344,38 +8379,38 @@ body.is-cockpit-layout .cockpit-help-popover {
    The arrow says where; this says how, as a power phrase: SIGN THE
    CONTRACT, POWER SHIP ON, W,A,S,D TO FLY SHIP. It sits on the arrow's
    outer side with no box around it — the arrow is the nose and this is the
-   body — big, block caps, in the arrow's colour with the arrow's glow. The
-   story never has to say any of this. */
+   body — in the arrow's colour, drawn the way the arrow is: translucent
+   phosphor, so there has to be a lot of it. Heavy, tall, stroked, and lit
+   from behind with the arrow's own glow over a dark halo. The story never
+   has to say any of this. */
 .attention-prompt {
   --arrow-color: #ffd36b;
   position: absolute;
-  max-width: 22ch;
+  max-width: 24ch;
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--arrow-color);
-  font: 700 clamp(1rem, 1.6vh, 1.35rem)/1.15 "Courier New", monospace;
-  letter-spacing: 0.1em;
+  color: color-mix(in srgb, var(--arrow-color) 84%, transparent);
+  font: 900 clamp(1.3rem, 2.4vh, 1.9rem)/1.05 "Arial Black", "Impact", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: normal;
-  transform: translate(0, -50%);
   pointer-events: none;
-  /* A dark halo under the glow, so the phrase stays legible when it lands
-     across a sheet or a busy patch of glass without needing a box. */
+  -webkit-text-stroke: 0.6px color-mix(in srgb, var(--arrow-color) 95%, white);
+  paint-order: stroke fill;
   text-shadow:
     0 0 2px #000,
-    0 0 5px rgba(0, 0, 0, 0.95),
-    0 0 9px rgba(0, 0, 0, 0.8),
-    0 0 4px color-mix(in srgb, var(--arrow-color) 90%, transparent),
-    0 0 10px color-mix(in srgb, var(--arrow-color) 55%, transparent),
-    0 0 20px color-mix(in srgb, var(--arrow-color) 30%, transparent);
+    0 0 6px rgba(0, 0, 0, 0.95),
+    0 0 12px rgba(0, 0, 0, 0.8),
+    0 0 5px color-mix(in srgb, var(--arrow-color) 95%, transparent),
+    0 0 12px color-mix(in srgb, var(--arrow-color) 65%, transparent),
+    0 0 26px color-mix(in srgb, var(--arrow-color) 35%, transparent);
   animation: attention-prompt-in 0.28s ease-out both;
 }
 
-.attention-prompt[data-side="left"] {
-  transform: translate(-100%, -50%);
-  text-align: right;
-}
+.attention-prompt[data-side="left"] { text-align: right; }
+.attention-prompt[data-side="up"],
+.attention-prompt[data-side="down"] { text-align: center; }
 
 @keyframes attention-prompt-in {
   from { opacity: 0; }

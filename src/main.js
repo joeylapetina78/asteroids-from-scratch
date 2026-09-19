@@ -1,89 +1,89 @@
-import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260919-1427-78a47919";
-import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType, resourceTypesMatch } from "./systems/resourceDefinitions.js?v=fresh-20260919-1427-78a47919";
-import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260919-1427-78a47919";
-import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260919-1427-78a47919";
-import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260919-1427-78a47919";
-import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260919-1427-78a47919";
-import { accumulatePanelWear, addToTank, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260919-1427-78a47919";
-import { CAMPAIGN_ENGINE_LIFETIME_DEGRADATION, CAMPAIGN_ENGINE_PRIOR_SERVICES, CAMPAIGN_ENGINE_START_WEAR, ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260919-1427-78a47919";
-import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260919-1427-78a47919";
-import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260919-1427-78a47919";
-import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260919-1427-78a47919";
-import { getMeterGrain, getPanelMaker, getPanelMakerId, getPanelPlate } from "./content/ships/panelMakers.js?v=fresh-20260919-1427-78a47919";
-import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260919-1427-78a47919";
-import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260919-1427-78a47919";
-import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260919-1427-78a47919";
-import { Game } from "./game.js?v=fresh-20260919-1427-78a47919";
-import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260919-1427-78a47919";
-import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260919-1427-78a47919";
-import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260919-1427-78a47919";
-import { createGameAudio } from "./systems/audio.js?v=fresh-20260919-1427-78a47919";
-import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260919-1427-78a47919";
+import { getProcessorOutputs, normalizeProcessorOutput } from "./components/componentRules.js?v=fresh-20260919-1535-d4837bf6";
+import { getResourceColor, getResourceGuideEntries, getResourceProcessValue, getResourceShape, getResourceTradeValue, normalizeResourceType, resourceTypesMatch } from "./systems/resourceDefinitions.js?v=fresh-20260919-1535-d4837bf6";
+import { ROCKMOSS_CRAWLER_TYPE, getStrainAppearance } from "./systems/rockmossStrains.js?v=fresh-20260919-1535-d4837bf6";
+import { sellMaterialToHub } from "./systems/hubInventory.js?v=fresh-20260919-1535-d4837bf6";
+import { RIFT_TROPHY_RESOURCE_TYPE } from "./systems/hostileLoot.js?v=fresh-20260919-1535-d4837bf6";
+import { ensureGateBounty, redeemGateTrophy } from "./systems/gateBounty.js?v=fresh-20260919-1535-d4837bf6";
+import { accumulatePanelWear, addToTank, repairPanelCondition } from "./systems/panelMaintenance.js?v=fresh-20260919-1535-d4837bf6";
+import { CAMPAIGN_ENGINE_LIFETIME_DEGRADATION, CAMPAIGN_ENGINE_PRIOR_SERVICES, CAMPAIGN_ENGINE_START_WEAR, ENGINE_CONDITION_CONFIG } from "./systems/engineCondition.js?v=fresh-20260919-1535-d4837bf6";
+import { MINER_CONDITION_CONFIG } from "./systems/minerCondition.js?v=fresh-20260919-1535-d4837bf6";
+import { COLLECTOR_CONDITION_CONFIG } from "./systems/collectorCondition.js?v=fresh-20260919-1535-d4837bf6";
+import { getEngineModel } from "./content/ships/engineModels.js?v=fresh-20260919-1535-d4837bf6";
+import { getMeterGrain, getPanelMaker, getPanelMakerId, getPanelPlate } from "./content/ships/panelMakers.js?v=fresh-20260919-1535-d4837bf6";
+import { drawResourceShape } from "./entities/ResourcePickup.js?v=fresh-20260919-1535-d4837bf6";
+import { shipOffers } from "./content/ships/shipOffers.js?v=fresh-20260919-1535-d4837bf6";
+import { chapterOneRoute, storyRegions, yardExchangeServices } from "./content/storyWorld.js?v=fresh-20260919-1535-d4837bf6";
+import { Game } from "./game.js?v=fresh-20260919-1535-d4837bf6";
+import { createContractManager, registerContractDefinition } from "./systems/contractManager.js?v=fresh-20260919-1535-d4837bf6";
+import { acquireWreckForSprc, createWreckSalvageContract } from "./systems/wreckRegistry.js?v=fresh-20260919-1535-d4837bf6";
+import { COMMS_SOURCES, createCommsDirector } from "./systems/commsDirector.js?v=fresh-20260919-1535-d4837bf6";
+import { createGameAudio } from "./systems/audio.js?v=fresh-20260919-1535-d4837bf6";
+import { canSpendCredits, depositCredits, getCredits, spendCredits } from "./systems/accounts.js?v=fresh-20260919-1535-d4837bf6";
 import {
   getHubServiceBehavior,
   getHubServicePrompt,
   getServiceTypesForPanel,
   shouldKeepServiceWindowOpen,
-} from "./systems/hubServiceBehaviors.js?v=fresh-20260919-1427-78a47919";
-import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260919-1427-78a47919";
-import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260919-1427-78a47919";
-import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260919-1427-78a47919";
-import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260919-1427-78a47919";
-import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260919-1427-78a47919";
-import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260919-1427-78a47919";
-import { getShipAssetId } from "./systems/worldRecords.js?v=fresh-20260919-1427-78a47919";
-import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260919-1427-78a47919";
-import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260919-1427-78a47919";
-import { Processor, getProcessorConsumptionQuantity } from "./systems/processor.js?v=fresh-20260919-1427-78a47919";
-import { createBayInertia } from "./systems/bayInertia.js?v=fresh-20260919-1427-78a47919";
-import { chamberYieldsClick } from "./systems/chamberClickOwner.js?v=fresh-20260919-1427-78a47919";
-import { deriveAccentColor, resolveAccentColor } from "./systems/cockpitAccent.js?v=fresh-20260919-1427-78a47919";
-import { describeModuleReadout } from "./systems/moduleReadout.js?v=fresh-20260919-1427-78a47919";
-import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260919-1427-78a47919";
-import { purchaseSalvageHullFromAuthority, purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260919-1427-78a47919";
-import { createGameState } from "./state/gameState.js?v=fresh-20260919-1427-78a47919";
-import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260919-1427-78a47919";
-import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260919-1427-78a47919";
-import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260919-1427-78a47919";
-import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260919-1427-78a47919";
-import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260919-1427-78a47919";
-import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260919-1427-78a47919";
-import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260919-1427-78a47919";
-import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260919-1427-78a47919";
-import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260919-1427-78a47919";
-import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260919-1427-78a47919";
-import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260919-1427-78a47919";
-import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260919-1427-78a47919";
-import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS, ROOK_MINING_SEED } from "./content/economy/miningInstitutions.js?v=fresh-20260919-1427-78a47919";
-import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260919-1427-78a47919";
-import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260919-1427-78a47919";
-import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260919-1427-78a47919";
-import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260919-1427-78a47919";
-import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260919-1427-78a47919";
-import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260919-1427-78a47919";
-import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260919-1427-78a47919";
-import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260919-1427-78a47919";
-import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260919-1427-78a47919";
-import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260919-1427-78a47919";
-import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260919-1427-78a47919";
-import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260919-1427-78a47919";
-import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260919-1427-78a47919";
-import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260919-1427-78a47919";
-import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260919-1427-78a47919";
-import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260919-1427-78a47919";
-import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260919-1427-78a47919";
-import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260919-1427-78a47919";
-import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260919-1427-78a47919";
-import { FLEET_SAMPLE_INTERVAL_MS, HULL_EVENT, auditFleetIntegrity, getFleetSamples, getHullEvents, readFleetCensus, recordFleetSample } from "./systems/fleetCensus.js?v=fresh-20260919-1427-78a47919";
-import { clampToViewport, fromAnchoredPosition, hasAnchoredPosition, toAnchoredPosition } from "./systems/panelAnchoring.js?v=fresh-20260919-1427-78a47919";
-import { CAMPAIGN_BROKEN_COMPONENT_IDS, CAMPAIGN_FITTED_COMPONENT_IDS, CAMPAIGN_MINER_AMMO, CAMPAIGN_MINER_PRIOR_SERVICES, CAMPAIGN_MINER_WEAR_FRACTION, CAMPAIGN_PANEL_IDS, CAMPAIGN_SHIP_FRAME_ID, CAMPAIGN_SHIP_NAME, CAMPAIGN_UNFITTED_COMPONENT_IDS } from "./content/ships/campaignLoadout.js?v=fresh-20260919-1427-78a47919";
-import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260919-1427-78a47919";
-import { getCockpitScale, getCockpitScaleProperties } from "./systems/cockpitScale.js?v=fresh-20260919-1427-78a47919";
-import { COCKPIT_MODULE_IDS, createCockpitLayoutState, resetCockpitLayout } from "./systems/cockpitLayout.js?v=fresh-20260919-1427-78a47919";
-import { DUST_DIALS, DUST_DEFAULTS } from "./systems/dustDials.js?v=fresh-20260919-1427-78a47919";
-import { getTaskAttentionTargets } from "./systems/taskAttention.js?v=fresh-20260919-1427-78a47919";
-import { shouldShowMissionTaskAttention } from "./systems/missionAttention.js?v=fresh-20260919-1427-78a47919";
-import { alignCockpitPanel, createResponsiveCockpitPosition, getCockpitScope, restoreResponsiveCockpitPosition, ceilToColumn, floorToColumn, snapCockpitPanel, snapCockpitPanelToBay, VIEWPORT_SCOPE_MARGIN } from "./systems/cockpitSnap.js?v=fresh-20260919-1427-78a47919";
+} from "./systems/hubServiceBehaviors.js?v=fresh-20260919-1535-d4837bf6";
+import { getAllHubServiceContractIds, getInProgressServiceContractId, getNextHubServiceContractId, isServiceContractLadderComplete } from "./systems/hubServiceContracts.js?v=fresh-20260919-1535-d4837bf6";
+import { getHubService, getHubServices } from "./systems/hubServices.js?v=fresh-20260919-1535-d4837bf6";
+import { syncActiveHullFromComponents } from "./systems/hulls.js?v=fresh-20260919-1535-d4837bf6";
+import { createJourneyDirector } from "./systems/journeyDirector.js?v=fresh-20260919-1535-d4837bf6";
+import { COMPONENT_STATE_BY_PANEL_ID } from "./systems/componentRegistry.js?v=fresh-20260919-1535-d4837bf6";
+import { getRegistryEntityIdForSite, getRegistrySubject, rememberRegistrySubject } from "./systems/entityRegistry.js?v=fresh-20260919-1535-d4837bf6";
+import { getShipAssetId } from "./systems/worldRecords.js?v=fresh-20260919-1535-d4837bf6";
+import { getPilotLicense, issuePilotLicense, registerStarterDeliveryShipRecords, updateCurrentShipLegal } from "./systems/legalRecords.js?v=fresh-20260919-1535-d4837bf6";
+import { createShipPaperworkInspectionReport } from "./systems/paperworkInspections.js?v=fresh-20260919-1535-d4837bf6";
+import { Processor, getProcessorConsumptionQuantity } from "./systems/processor.js?v=fresh-20260919-1535-d4837bf6";
+import { createBayInertia } from "./systems/bayInertia.js?v=fresh-20260919-1535-d4837bf6";
+import { chamberYieldsClick } from "./systems/chamberClickOwner.js?v=fresh-20260919-1535-d4837bf6";
+import { deriveAccentColor, resolveAccentColor } from "./systems/cockpitAccent.js?v=fresh-20260919-1535-d4837bf6";
+import { describeModuleReadout } from "./systems/moduleReadout.js?v=fresh-20260919-1535-d4837bf6";
+import { clearSavedProfile, getDevStart, loadSavedProfile, peekSavedDevStartId, restoreSavedWorld, saveProfile, shouldResetSave } from "./systems/saveManager.js?v=fresh-20260919-1535-d4837bf6";
+import { purchaseSalvageHullFromAuthority, purchaseShipOffer } from "./systems/shipPurchase.js?v=fresh-20260919-1535-d4837bf6";
+import { createGameState } from "./state/gameState.js?v=fresh-20260919-1535-d4837bf6";
+import { createSprcOperation, SPRC } from "./systems/sprcOperation.js?v=fresh-20260919-1535-d4837bf6";
+import { createFarmOperation, FARM_INSPECTION_SERVICE_ID } from "./systems/farmOperation.js?v=fresh-20260919-1535-d4837bf6";
+import { INSTITUTION_ARCHETYPES } from "./content/institutions/institutionArchetypes.js?v=fresh-20260919-1535-d4837bf6";
+import { createLogisticsManager } from "./systems/logistics.js?v=fresh-20260919-1535-d4837bf6";
+import { compileOldUniverseHistory, getHistoricalMiningSeeds } from "./systems/worldHistoryCompiler.js?v=fresh-20260919-1535-d4837bf6";
+import { createTowServiceManager } from "./systems/towService.js?v=fresh-20260919-1535-d4837bf6";
+import { createFleetInsuranceManager } from "./systems/fleetInsurance.js?v=fresh-20260919-1535-d4837bf6";
+import { createFleetProtectionManager } from "./systems/fleetProtection.js?v=fresh-20260919-1535-d4837bf6";
+import { acceptPlayerProtectionRequest } from "./systems/protectionProviders.js?v=fresh-20260919-1535-d4837bf6";
+import { getPlayerProtectionJobsForSite } from "./systems/protectionPlanning.js?v=fresh-20260919-1535-d4837bf6";
+import { createMiningOperation, getStandingMiningOrderAvailability } from "./systems/miningOperation.js?v=fresh-20260919-1535-d4837bf6";
+import { createEcologicalRecoveryOperation } from "./systems/ecologicalRecovery.js?v=fresh-20260919-1535-d4837bf6";
+import { FLINT_MINING_SEED, FRONTIER_MINING_SEEDS, ROOK_MINING_SEED } from "./content/economy/miningInstitutions.js?v=fresh-20260919-1535-d4837bf6";
+import { createPopulationOperation } from "./systems/populationDemand.js?v=fresh-20260919-1535-d4837bf6";
+import { createHubProcurementOperation } from "./systems/hubProcurement.js?v=fresh-20260919-1535-d4837bf6";
+import { createIndustrialProductionOperation } from "./systems/industrialProduction.js?v=fresh-20260919-1535-d4837bf6";
+import { advanceShipyards } from "./systems/shipyards.js?v=fresh-20260919-1535-d4837bf6";
+import { seedDevOperatingContinuity } from "./systems/devOperatingContinuity.js?v=fresh-20260919-1535-d4837bf6";
+import { createHubPlanningOperation } from "./systems/hubPlanning.js?v=fresh-20260919-1535-d4837bf6";
+import { createNpcDevelopmentOperation } from "./systems/npcDevelopment.js?v=fresh-20260919-1535-d4837bf6";
+import { createDistantSimulationOperation } from "./systems/distantSimulation.js?v=fresh-20260919-1535-d4837bf6";
+import { SIMULATION_REASON, summarizeSimulationDetail } from "./systems/simulationObservatory.js?v=fresh-20260919-1535-d4837bf6";
+import { summarizePlayerTerritoryRights } from "./systems/hubTerritories.js?v=fresh-20260919-1535-d4837bf6";
+import { TICK_PHASE, createWorldClock } from "./systems/worldClock.js?v=fresh-20260919-1535-d4837bf6";
+import { refreshMiningOrderBook } from "./systems/miningOperation.js?v=fresh-20260919-1535-d4837bf6";
+import { issueWorldDocument } from "./systems/worldRecords.js?v=fresh-20260919-1535-d4837bf6";
+import { inspectActor, listInspectableActors, listInspectableInfrastructure } from "./systems/actorInspector.js?v=fresh-20260919-1535-d4837bf6";
+import { facilityOffset } from "./systems/hubLayout.js?v=fresh-20260919-1535-d4837bf6";
+import { listBlocked } from "./systems/diagnostics.js?v=fresh-20260919-1535-d4837bf6";
+import { CONTRACT_STATE, filterContracts, listContractParties, listContracts, summarizeContracts } from "./systems/contractBoard.js?v=fresh-20260919-1535-d4837bf6";
+import { collectFilterOptions, describeEvent, describeEventRetention, extractEventReferences, filterEvents, getEventVisibility, sortEvents, summarizeEvent } from "./systems/ledgerQuery.js?v=fresh-20260919-1535-d4837bf6";
+import { ECONOMY_WINDOWS, SAMPLE_INTERVAL_MS, collectSeriesKeys, ensureEconomyHistory, getEconomySamples, latestValue, reconcileMoney, recordEconomySample, seriesChange, toRateSeries, toSeries } from "./systems/economySampler.js?v=fresh-20260919-1535-d4837bf6";
+import { FLEET_SAMPLE_INTERVAL_MS, HULL_EVENT, auditFleetIntegrity, getFleetSamples, getHullEvents, readFleetCensus, recordFleetSample } from "./systems/fleetCensus.js?v=fresh-20260919-1535-d4837bf6";
+import { clampToViewport, fromAnchoredPosition, hasAnchoredPosition, toAnchoredPosition } from "./systems/panelAnchoring.js?v=fresh-20260919-1535-d4837bf6";
+import { CAMPAIGN_BROKEN_COMPONENT_IDS, CAMPAIGN_FITTED_COMPONENT_IDS, CAMPAIGN_MINER_AMMO, CAMPAIGN_MINER_PRIOR_SERVICES, CAMPAIGN_MINER_WEAR_FRACTION, CAMPAIGN_PANEL_IDS, CAMPAIGN_SHIP_FRAME_ID, CAMPAIGN_SHIP_NAME, CAMPAIGN_UNFITTED_COMPONENT_IDS } from "./content/ships/campaignLoadout.js?v=fresh-20260919-1535-d4837bf6";
+import { colorForKey, createBarChart, createGroupedBarChart, createLineChart, createStackedAreaChart, createStatTile, formatCredits, formatRate, formatUnits } from "./systems/economyCharts.js?v=fresh-20260919-1535-d4837bf6";
+import { getCockpitScale, getCockpitScaleProperties } from "./systems/cockpitScale.js?v=fresh-20260919-1535-d4837bf6";
+import { COCKPIT_MODULE_IDS, createCockpitLayoutState, resetCockpitLayout } from "./systems/cockpitLayout.js?v=fresh-20260919-1535-d4837bf6";
+import { DUST_DIALS, DUST_DEFAULTS } from "./systems/dustDials.js?v=fresh-20260919-1535-d4837bf6";
+import { getTaskAttentionTargets } from "./systems/taskAttention.js?v=fresh-20260919-1535-d4837bf6";
+import { shouldShowMissionTaskAttention } from "./systems/missionAttention.js?v=fresh-20260919-1535-d4837bf6";
+import { alignCockpitPanel, createResponsiveCockpitPosition, getCockpitScope, restoreResponsiveCockpitPosition, ceilToColumn, floorToColumn, snapCockpitPanel, snapCockpitPanelToBay, VIEWPORT_SCOPE_MARGIN } from "./systems/cockpitSnap.js?v=fresh-20260919-1535-d4837bf6";
 
 // main.js is the browser/page coordinator. It creates the game systems, wires
 // DOM controls to component state, and keeps the visible panels in sync.
@@ -5676,43 +5676,113 @@ function positionAttentionArrow(targetId, label, anchor, prompt = null) {
     arrow.title = title;
   }
 
-  // Beside the thing on whichever side has room, pointing at it. Left of
-  // centre puts the arrow on the right, and the other way about, so it sits
-  // between the thing and the middle of the screen where the eye is.
+  // Which side of the thing to sit on. Four are possible now — beside it
+  // to the left or right, or above or below it — and the arrow and its
+  // phrase together are placed where they cover the least of what the
+  // player is meant to be reading: the chatter, the sheets on the desk, the
+  // other instruments, the open bays. The viewport itself is fair game;
+  // the eye is on the target. Left of centre prefers the right side and the
+  // other way about, then above, then below; a tie goes to that order.
   const rect = anchor.getBoundingClientRect();
   const gap = 12;
-  const roomRight = window.innerWidth - rect.right;
-  const roomLeft = rect.left;
-  const side = rect.left + rect.width / 2 < window.innerWidth / 2
-    ? (roomRight >= 40 ? "right" : "left")
-    : (roomLeft >= 40 ? "left" : "right");
+  const arrowW = 24;
+  const arrowH = 26;
+  const promptGap = 4;
 
+  let plate = attentionCalloutLayer.querySelector(`[data-callout-prompt="${CSS.escape(targetId)}"]`);
+  if (prompt) {
+    if (!plate) {
+      plate = document.createElement("div");
+      plate.className = "attention-prompt";
+      plate.dataset.calloutPrompt = targetId;
+      attentionCalloutLayer.append(plate);
+    }
+    if (plate.textContent !== prompt) plate.textContent = prompt;
+  } else {
+    plate?.remove();
+    plate = null;
+  }
+  // The phrase's box does not depend on where it is put, only on its words.
+  const promptW = plate ? plate.offsetWidth : 0;
+  const promptH = plate ? plate.offsetHeight : 0;
+
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const footprints = {
+    right: {
+      arrow: { left: rect.right + gap, top: cy - arrowH / 2, width: arrowW, height: arrowH },
+      prompt: { left: rect.right + gap + arrowW + promptGap, top: cy - promptH / 2, width: promptW, height: promptH },
+    },
+    left: {
+      arrow: { left: rect.left - gap - arrowW, top: cy - arrowH / 2, width: arrowW, height: arrowH },
+      prompt: { left: rect.left - gap - arrowW - promptGap - promptW, top: cy - promptH / 2, width: promptW, height: promptH },
+    },
+    up: {
+      arrow: { left: cx - arrowW / 2, top: rect.top - gap - arrowH, width: arrowW, height: arrowH },
+      prompt: { left: cx - promptW / 2, top: rect.top - gap - arrowH - promptGap - promptH, width: promptW, height: promptH },
+    },
+    down: {
+      arrow: { left: cx - arrowW / 2, top: rect.bottom + gap, width: arrowW, height: arrowH },
+      prompt: { left: cx - promptW / 2, top: rect.bottom + gap + arrowH + promptGap, width: promptW, height: promptH },
+    },
+  };
+  const obstacles = collectGuidanceObstacles(anchor);
+  const cost = (box) => {
+    if (!box.width || !box.height) return 0;
+    let covered = 0;
+    obstacles.forEach((o) => {
+      covered += (o.weight ?? 1) * Math.max(0, Math.min(box.left + box.width, o.right) - Math.max(box.left, o.left))
+        * Math.max(0, Math.min(box.top + box.height, o.bottom) - Math.max(box.top, o.top));
+    });
+    // Off the screen is worse than over anything.
+    const off = Math.max(0, -box.left) * box.height + Math.max(0, box.left + box.width - window.innerWidth) * box.height
+      + Math.max(0, -box.top) * box.width + Math.max(0, box.top + box.height - window.innerHeight) * box.width;
+    return covered + off * 3;
+  };
+  const preferred = cx < window.innerWidth / 2 ? ["right", "left", "up", "down"] : ["left", "right", "up", "down"];
+  let side = preferred[0];
+  let best = Infinity;
+  preferred.forEach((candidate) => {
+    const total = cost(footprints[candidate].arrow) + cost(footprints[candidate].prompt);
+    if (total < best - 0.5) { best = total; side = candidate; }
+  });
+
+  const placed = footprints[side];
   arrow.dataset.side = side;
-  arrow.style.top = `${rect.top + rect.height / 2}px`;
-  arrow.style.left = side === "right" ? `${rect.right + gap}px` : `${rect.left - gap}px`;
+  arrow.style.left = `${placed.arrow.left}px`;
+  arrow.style.top = `${placed.arrow.top}px`;
   arrow.style.setProperty("--arrow-color", alternateCockpitColor(anchor));
 
-  // The prompt: the guidance layer's one line, on the arrow's outer side —
-  // "how", where the story only said "what". Nothing but the arrow itself
-  // is drawn without one; a target with no prompt is just pointed at.
-  let plate = attentionCalloutLayer.querySelector(`[data-callout-prompt="${CSS.escape(targetId)}"]`);
-  if (!prompt) {
-    plate?.remove();
-    return;
+  if (plate) {
+    plate.dataset.side = side;
+    plate.style.left = `${placed.prompt.left}px`;
+    plate.style.top = `${placed.prompt.top}px`;
+    plate.style.setProperty("--arrow-color", alternateCockpitColor(anchor));
   }
-  if (!plate) {
-    plate = document.createElement("div");
-    plate.className = "attention-prompt";
-    plate.dataset.calloutPrompt = targetId;
-    attentionCalloutLayer.append(plate);
-  }
-  if (plate.textContent !== prompt) plate.textContent = prompt;
-  // Right behind the arrow, the way a rocket's body follows its nose.
-  const arrowWidth = 24;
-  plate.dataset.side = side;
-  plate.style.top = `${rect.top + rect.height / 2}px`;
-  plate.style.left = side === "right" ? `${rect.right + gap + arrowWidth + 4}px` : `${rect.left - gap - arrowWidth - 4}px`;
-  plate.style.setProperty("--arrow-color", alternateCockpitColor(anchor));
+}
+
+// What a prompt must try not to cover: the chatter, the sheets on the desk,
+// the instruments out on the desk (other than the one the target is on), the
+// bays when open, and the status bar. The viewport is not in this list.
+function collectGuidanceObstacles(anchor) {
+  const own = anchor.closest(".component-panel");
+  const weighted = (rect, weight) => ({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height, weight });
+  // The target's own sheet or instrument counts too, at half weight: the
+  // arrow has to be near the target, but the phrase should land on empty
+  // glass rather than across the sheet's own title when there is any.
+  const ownRect = own?.getBoundingClientRect();
+  const nodes = [
+    ...document.querySelectorAll(".viewport-transmission"),
+    ...[...document.querySelectorAll(".hud > .component-panel")]
+      .filter((panel) => panel !== own && !panel.classList.contains("is-component-locked") && !panel.classList.contains("is-panel-hidden") && !panel.hidden),
+    ...[...document.querySelectorAll(".is-cockpit-module.is-cockpit-floating")].filter((panel) => panel !== own),
+    document.querySelector(".cockpit-module-tray.is-open"),
+    document.querySelector("#paperwork-drawer.is-open"),
+    document.querySelector(".cockpit-toolbar"),
+  ];
+  const rects = nodes.filter(Boolean).map((node) => weighted(node.getBoundingClientRect(), 1)).filter((r) => r.width && r.height);
+  if (ownRect?.width && ownRect?.height) rects.push(weighted(ownRect, 0.5));
+  return rects;
 }
 
 function setPanelHidden(panel, isHidden) {
