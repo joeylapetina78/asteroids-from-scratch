@@ -51,7 +51,7 @@ test("signing leads to the drive, and the drive is the module-bay lesson", () =>
   assert.deepEqual([...moved.requiresFlags].sort(), ["enginePanelAdded", "enginePanelMoved"]);
   assert.equal(moved.nextStepId, "power-on");
   const considerations = chapterOneInterviewMission.considerations.filter((c) => c.fromBeat === "qs-engine-fitted");
-  assert.deepEqual(considerations.map((c) => c.setFlag).sort(), ["enginePanelAdded", "enginePanelMoved"]);
+  assert.deepEqual(considerations.map((c) => c.setFlag).sort(), ["enginePanelAdded", "enginePanelMoved", "shipPoweredOn"]);
 });
 
 test("floatComponent is a declared action with the same shape as dockComponent", () => {
@@ -86,4 +86,13 @@ test("a jump ends an action list, so a skipped beat's line never lands on the ne
   ], { state, actions, missionDefinition: {}, goToStep });
   assert.equal(state.journey.currentStepId, "b");
   assert.deepEqual(said, []);
+});
+
+test("powering on before dragging the display is heard, and the power beat is skipped", () => {
+  const early = chapterOneInterviewMission.considerations.find((c) => c.id === "qs-powered-early");
+  assert.ok(early);
+  assert.equal(early.eventType, "engine.powered");
+  assert.equal(early.setFlag, "shipPoweredOn");
+  assert.equal(early.fromBeat, "qs-engine-fitted");
+  assert.deepEqual(beatById.get("power-on").onEnter[0], { type: "goToStepIfFlags", flags: ["shipPoweredOn"], stepId: "first-thrust" });
 });

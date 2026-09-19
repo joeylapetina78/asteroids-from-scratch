@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260918-1800-ebd21f89";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260918-1912-aafa3d27";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -361,6 +361,19 @@ export const chapterOneInterviewMission = {
           text: "That's it. Now drag it over by the hull.",
         },
       ],
+    },
+    {
+      // The Power switch is on the display, so it is reachable the moment the
+      // display is out — before the drag has been done. Heard here so the
+      // power beat can be skipped instead of waiting for a switch already on.
+      id: "qs-powered-early",
+      allowWhilePending: true,
+      fromBeat: "qs-engine-fitted",
+      throughBeat: "qs-engine-fitted",
+      eventType: "engine.powered",
+      setFlag: "shipPoweredOn",
+      once: true,
+      actions: [],
     },
     {
       id: "qs-engine-panel-moved",
@@ -843,6 +856,10 @@ export const chapterOneInterviewMission = {
       helpText:
         "Use the Engine panel and click Power Ship. W thrusts, A/D rotate, and S brakes after the ship is powered.",
       onEnter: [
+        // The switch is on the display, and the display is out before this
+        // beat asks for it: a player who hit Power while the display was still
+        // beside the bay has done this already.
+        { type: "goToStepIfFlags", flags: ["shipPoweredOn"], stepId: "first-thrust" },
         {
           type: "say",
           speaker: "Rook",
