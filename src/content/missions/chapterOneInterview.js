@@ -1,4 +1,4 @@
-import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260919-1410-c4309ce4";
+import { chapterOneRoute, storyRegions, storySites, storyZones } from "../storyWorld.js?v=fresh-20260919-1427-78a47919";
 
 const yardExchangeIdentityCleared = ({ state }) =>
   Boolean(state.journey.flags.yardVinPresented && state.journey.flags.yardLicensePresented);
@@ -330,6 +330,31 @@ export const chapterOneInterviewMission = {
       ],
     },
     {
+      // Filing is never asked for in the story; the guidance layer points it
+      // out during the drive beat. Heard from the rundown on so a sheet put
+      // away early counts, and while a line is waiting to be read.
+      id: "qs-license-filed",
+      allowWhilePending: true,
+      fromBeat: "qs-rundown",
+      throughBeat: "qs-engine-fitted",
+      eventType: "component.filed",
+      payloadEquals: { componentId: "license", destination: "drawer" },
+      setFlag: "licenseFiled",
+      once: true,
+      actions: [],
+    },
+    {
+      id: "qs-contract-filed",
+      allowWhilePending: true,
+      fromBeat: "qs-rundown",
+      throughBeat: "qs-engine-fitted",
+      eventType: "component.filed",
+      payloadEquals: { componentId: "contract", destination: "drawer" },
+      setFlag: "contractFiled",
+      once: true,
+      actions: [],
+    },
+    {
       // The contract is on the glass from the rundown on, and a player may
       // sign it the moment they see it, a beat or two before Rook asks. The
       // signature counts whenever it lands; the beats read the flag.
@@ -510,7 +535,7 @@ export const chapterOneInterviewMission = {
       id: "qs-sign",
       objective: "Sign Rook's contract.",
       tasks: [
-        { label: "Sign the delivery contract", flag: "offerContractAccepted", attention: "element:contract-accept", prompt: "Sign the contract by selecting ACCEPT." },
+        { label: "Sign the delivery contract", flag: "offerContractAccepted", attention: "element:contract-accept", prompt: "Sign the contract" },
       ],
       helpText:
         "Rook's contract is on the glass beside your license. Press Accept Contract on it. The job pays when this hull docks at Yard Exchange and is powered down.",
@@ -535,7 +560,14 @@ export const chapterOneInterviewMission = {
     {
       id: "qs-fit-engine",
       objective: "Listen to Rook.",
-      helpText: "Click the finished chatter box to continue.",
+      // Nothing here needs doing before Rook goes on; the guidance layer uses
+      // the pause to point out that the signed papers can be put away — the
+      // one thing quick start never says in the story.
+      tasks: [
+        { label: "File the license", flag: "licenseFiled", attention: "selector:[data-panel-id='license'] .paper-file-button", prompt: "File paperwork" },
+        { label: "File the contract", flag: "contractFiled", attention: "selector:[data-panel-id='contract'] .paper-file-button", prompt: "File paperwork" },
+      ],
+      helpText: "Click the finished chatter box to continue. Each sheet's \u25B6 files it in the paperwork bay on the right; its card there brings it back out.",
       onEnter: [
         {
           type: "say", speaker: "Rook",
@@ -555,8 +587,8 @@ export const chapterOneInterviewMission = {
       id: "qs-engine-fitted",
       objective: "Bring the Engine display out.",
       tasks: [
-        { label: "Bring the Engine display out", flag: "enginePanelAdded", attention: "panel:engine", prompt: "Click the ENGINE module's face to bring its display out." },
-        { label: "Move the Engine display over by the hull", flag: "enginePanelMoved", attention: "panel:engine", prompt: "Drag the display across to the hull, on the right." },
+        { label: "Bring the Engine display out", flag: "enginePanelAdded", attention: "panel:engine", prompt: "Activate engine display" },
+        { label: "Move the Engine display over by the hull", flag: "enginePanelMoved", attention: "panel:engine", prompt: "Reposition engine display" },
       ],
       helpText:
         "The ENGINE control module is racked in the module bay on the left, under the hull and the locator. Click its face and the display pops out beside the bay; then drag the display across to the right side, next to the hull readout.",
@@ -591,7 +623,7 @@ export const chapterOneInterviewMission = {
       id: "qs-power-on",
       objective: "Power the ship.",
       tasks: [
-        { label: "Power the ship on", flag: "shipPoweredOn", attention: "element:ship-power", prompt: "Power up: select POWER on the Engine display." },
+        { label: "Power the ship on", flag: "shipPoweredOn", attention: "element:ship-power", prompt: "Power ship on" },
       ],
       helpText: "The POWER switch is on the Engine display. Once the ship is powered, W thrusts, A and D turn, S brakes.",
       onEnter: [
@@ -622,7 +654,7 @@ export const chapterOneInterviewMission = {
       id: "qs-drive-lit",
       objective: "Head for Yard Exchange.",
       tasks: [
-        { label: "Take the ship out", flag: "firstThrust", attention: "element:ship-marker", prompt: "Use W A S D to maneuver: W thrusts, A and D turn, S brakes." },
+        { label: "Take the ship out", flag: "firstThrust", attention: "element:ship-marker", prompt: "W,A,S,D to fly ship" },
       ],
       helpText:
         "W thrusts, A and D turn, S brakes. Keep the ship inside the cleared Starter Drift route and follow the beacon to Yard Exchange.",
@@ -653,7 +685,7 @@ export const chapterOneInterviewMission = {
       id: "qs-drive-surprise",
       objective: "Head for Yard Exchange.",
       tasks: [
-        { label: "Take the ship out", flag: "firstThrust", attention: "element:ship-marker", prompt: "Use W A S D to maneuver: W thrusts, A and D turn, S brakes." },
+        { label: "Take the ship out", flag: "firstThrust", attention: "element:ship-marker", prompt: "W,A,S,D to fly ship" },
       ],
       helpText:
         "W thrusts, A and D turn, S brakes. Keep the ship inside the cleared Starter Drift route and follow the beacon to Yard Exchange. Drag the Engine display wherever you want it.",
@@ -1135,8 +1167,8 @@ export const chapterOneInterviewMission = {
       // Exchange is in range, and powering down anywhere else is the opposite
       // of help. Both come on as the ship arrives and go off if it leaves.
       tasks: [
-        { label: "Dock at Yard Exchange", flag: "dockedYardExchange", attention: "element:dock-toggle", attentionWhenNearSiteId: chapterOneRoute.destinationSite.id, prompt: "Dock: select DOCK on the Hull display, once the hub is in range." },
-        { label: "Power ship down", flag: "shipPoweredDown", attention: "element:ship-power", attentionWhenDockedAtSiteId: chapterOneRoute.destinationSite.id, prompt: "Power down: select POWER on the Engine display." },
+        { label: "Dock at Yard Exchange", flag: "dockedYardExchange", attention: "element:dock-toggle", attentionWhenNearSiteId: chapterOneRoute.destinationSite.id, prompt: "Dock ship" },
+        { label: "Power ship down", flag: "shipPoweredDown", attention: "element:ship-power", attentionWhenDockedAtSiteId: chapterOneRoute.destinationSite.id, prompt: "Power ship down" },
       ],
       helpText:
         "Dock at Yard Exchange, then power the ship down. The contract will not accept delivery until this VIN is docked and the ship is off.",

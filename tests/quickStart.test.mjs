@@ -66,7 +66,7 @@ test("powering on, asked or not, gets Rook's comment on the drive; the keys are 
     assert.match(line, /Take her out/);
     const task = beat.tasks[0];
     assert.equal(task.attention, "element:ship-marker", "the prompt points at the ship");
-    assert.match(task.prompt, /W A S D/);
+    assert.equal(task.prompt, "W,A,S,D to fly ship");
     assert.equal(beat.transitions.find((t) => t.eventType === "ship.thrusted")?.nextStepId, "find-yard-exchange");
   });
   assert.match(surprise.onEnter.find((action) => action.type === "say").text, /^Whoa/);

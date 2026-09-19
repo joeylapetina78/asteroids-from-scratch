@@ -8341,25 +8341,34 @@ body.is-cockpit-layout .cockpit-help-popover {
 }
 
 /* ── The guidance layer's prompt ──────────────────────────────────────────
-   The arrow says where; this says how, in the controls' own words ("select
-   ACCEPT", "use W A S D"). It sits on the arrow's outer side in the arrow's
-   colour, and is never more than a line or two. The story never has to say
-   any of this. */
+   The arrow says where; this says how, as a power phrase: SIGN THE
+   CONTRACT, POWER SHIP ON, W,A,S,D TO FLY SHIP. It sits on the arrow's
+   outer side with no box around it — the arrow is the nose and this is the
+   body — big, block caps, in the arrow's colour with the arrow's glow. The
+   story never has to say any of this. */
 .attention-prompt {
   --arrow-color: #ffd36b;
   position: absolute;
-  max-width: 30ch;
-  padding: 6px 10px;
-  border: 1px solid color-mix(in srgb, var(--arrow-color) 70%, transparent);
-  border-radius: 2px;
-  background: rgba(1, 7, 7, 0.9);
+  max-width: 22ch;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--arrow-color);
-  font: 700 var(--type-s, 10px)/1.35 "Courier New", monospace;
-  letter-spacing: 0.06em;
+  font: 700 clamp(1rem, 1.6vh, 1.35rem)/1.15 "Courier New", monospace;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  white-space: normal;
   transform: translate(0, -50%);
   pointer-events: none;
-  box-shadow: 0 0 10px color-mix(in srgb, var(--arrow-color) 30%, transparent);
+  /* A dark halo under the glow, so the phrase stays legible when it lands
+     across a sheet or a busy patch of glass without needing a box. */
+  text-shadow:
+    0 0 2px #000,
+    0 0 5px rgba(0, 0, 0, 0.95),
+    0 0 9px rgba(0, 0, 0, 0.8),
+    0 0 4px color-mix(in srgb, var(--arrow-color) 90%, transparent),
+    0 0 10px color-mix(in srgb, var(--arrow-color) 55%, transparent),
+    0 0 20px color-mix(in srgb, var(--arrow-color) 30%, transparent);
   animation: attention-prompt-in 0.28s ease-out both;
 }
 
